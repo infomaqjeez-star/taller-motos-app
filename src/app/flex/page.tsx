@@ -112,6 +112,8 @@ export default function FlexPage() {
     let guardados = 0;
     let duplicados = 0;
 
+    const errores: string[] = [];
+
     for (const p of validos) {
       try {
         await flexDb.create({
@@ -150,12 +152,14 @@ export default function FlexPage() {
         if (msg.includes("unique") || msg.includes("duplicate") || msg.includes("23505")) {
           duplicados++;
         } else {
-          console.error("Error al guardar envío:", msg);
+          errores.push(msg);
         }
       }
     }
     await load();
-    if (nuevasAlertas.length > 0) {
+    if (errores.length > 0) {
+      alert(`ERROR al guardar:\n${errores[0]}`);
+    } else if (nuevasAlertas.length > 0) {
       setAlertas(nuevasAlertas);
     } else if (validos.length > 0) {
       const resumen = duplicados > 0

@@ -461,33 +461,38 @@ export const flexDb = {
   },
 
   async create(e: FlexEnvio): Promise<{ duplicado: boolean }> {
-    // UPSERT: si el nro_seguimiento ya existe, actualiza en vez de duplicar
-    const { error } = await supabase.from("flex_envios").upsert(
-      {
-        id:                  e.id,
-        fecha:               e.fecha,
-        localidad:           e.localidad,
-        zona:                e.zona,
-        precio_ml:           e.precioML,
-        pago_flete:          e.pagoFlete,
-        ganancia:            e.ganancia,
-        descripcion:         e.descripcion,
-        nro_seguimiento:     e.nroSeguimiento,
-        usuario_ml:          e.usuarioML,
-        nombre_destinatario: e.nombreDestinatario,
-        direccion:           e.direccion,
-        codigo_postal:       e.codigoPostal,
-        producto_sku:        e.productoSku,
-        pack_id:             e.packId,
-        regalo_sugerido:     e.regaloSugerido,
-        created_at:          e.createdAt,
-      },
-      {
-        onConflict: "nro_seguimiento",   // si el ID ya existe → actualiza
+    const row = {
+      id:                  e.id,
+      fecha:               e.fecha,
+      localidad:           e.localidad,
+      zona:                e.zona,
+      precio_ml:           e.precioML,
+      pago_flete:          e.pagoFlete,
+      ganancia:            e.ganancia,
+      descripcion:         e.descripcion,
+      nro_seguimiento:     e.nroSeguimiento || null,
+      usuario_ml:          e.usuarioML,
+      nombre_destinatario: e.nombreDestinatario,
+      direccion:           e.direccion,
+      codigo_postal:       e.codigoPostal,
+      producto_sku:        e.productoSku,
+      pack_id:             e.packId || null,
+      regalo_sugerido:     e.regaloSugerido,
+      created_at:          e.createdAt,
+    };
+
+    // Si tiene nro_seguimiento, usar UPSERT para evitar duplicados
+    // Si no tiene ID, usar INSERT simple (cada paquete sin ID es único)
+    if (e.nroSeguimiento) {
+      const { error } = await supabase.from("flex_envios").upsert(row, {
+        onConflict: "nro_seguimiento",
         ignoreDuplicates: false,
-      }
-    );
-    if (error) throw error;
+      });
+      if (error) throw error;
+    } else {
+      const { error } = await supabase.from("flex_envios").insert(row);
+      if (error) throw error;
+    }
     return { duplicado: false };
   },
 
