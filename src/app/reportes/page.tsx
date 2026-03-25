@@ -212,7 +212,7 @@ export default function ReportesPage() {
                           ))}
                         </Pie>
                         <Tooltip
-                          formatter={(value: number, name: string) => [value + " envíos", name]}
+                          formatter={(value, name) => [String(value) + " envíos", String(name)]}
                           contentStyle={{ background: "#1f2937", border: "1px solid #374151", borderRadius: "12px", color: "#fff" }}
                         />
                       </PieChart>
@@ -243,7 +243,7 @@ export default function ReportesPage() {
                         <XAxis dataKey="fecha" tick={{ fontSize: 9, fill: "#9ca3af" }} />
                         <YAxis tick={{ fontSize: 9, fill: "#9ca3af" }} tickFormatter={v => "$" + (v/1000).toFixed(0) + "k"} />
                         <Tooltip
-                          formatter={(v: number) => [fmt(v), "Ganancia"]}
+                          formatter={(v) => [fmt(Number(v)), "Ganancia"]}
                           contentStyle={{ background: "#1f2937", border: "1px solid #374151", borderRadius: "12px", color: "#fff" }}
                         />
                         <Bar dataKey="ganancia" fill="#22c55e" radius={[4, 4, 0, 0]} />
@@ -261,7 +261,7 @@ export default function ReportesPage() {
                       <XAxis type="number" tick={{ fontSize: 10, fill: "#9ca3af" }} tickFormatter={v => "$" + (v/1000).toFixed(0) + "k"} />
                       <YAxis type="category" dataKey="localidad" tick={{ fontSize: 10, fill: "#d1d5db" }} width={78} />
                       <Tooltip
-                        formatter={(v: number, name: string) => [fmt(v), name === "ganancia" ? "Ganancia" : "ML"]}
+                        formatter={(v, name) => [fmt(Number(v)), String(name) === "ganancia" ? "Ganancia" : "ML"]}
                         labelFormatter={(label: string) => {
                           const item = barData.find(b => b.localidad === label);
                           return item?.fullName ?? label;
