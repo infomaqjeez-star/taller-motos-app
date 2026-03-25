@@ -97,8 +97,12 @@ const CP_MAP: Record<string, string> = {
   "1727": "Marcos Paz",
   // ── La Matanza SUR - Media ──
   "1759": "La Matanza Sur", "1761": "La Matanza Sur", "1763": "La Matanza Sur",
-  // ── Ezeiza - Cercana ──
-  "1802": "Ezeiza",       "1804": "Ezeiza",       "1812": "Ezeiza",
+  // ── Ezeiza (Cercana $4490) — SOLO estos CPs: Ezeiza, Carlos Spegazzini, Tristán Suárez, Canning ──
+  "1802": "Ezeiza",
+  "1804": "Ezeiza",   // Canning → partido Ezeiza
+  "1812": "Ezeiza",   // Carlos Spegazzini
+  "1814": "Ezeiza",   // Tristán Suárez
+  "1816": "Ezeiza",   // Tristán Suárez (código alternativo)
   // ── Esteban Echeverría - Media ──
   "1842": "Esteban Echeverría",
   // ── GBA SUR - Lejana ──
@@ -167,9 +171,13 @@ function detectLocalidadFromText(text: string): string | null {
   if (byCP) return byCP;
 
   // 2. Aliases con prioridad explícita (sin sort por longitud que cause colisiones)
-  //    EZEIZA va PRIMERO para que no sea pisado por ENSENADA
+  //    EZEIZA y sus localidades van PRIMERO — prioridad máxima
   const aliases: [RegExp, string][] = [
-    [/\bEZEIZA\b/, "Ezeiza"],
+    [/\bEZEIZA\b/,               "Ezeiza"],
+    [/\bSPEGAZZINI\b/,           "Ezeiza"],   // Carlos Spegazzini → Ezeiza
+    [/\bCARLOS\s+SPEGAZZINI\b/,  "Ezeiza"],
+    [/\bTRISTAN\s+SUAREZ\b/,     "Ezeiza"],   // Tristán Suárez → Ezeiza
+    [/\bCANNING\b/,              "Ezeiza"],   // Canning → partido Ezeiza
     [/\bFLORENCIO\s+VARELA\b/, "Florencio Varela"],
     [/\bFLORENCIO\b/, "Florencio Varela"],
     [/\bTRES\s+DE\s+FEBRERO\b/, "Tres de Febrero"],
