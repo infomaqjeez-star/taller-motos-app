@@ -378,7 +378,7 @@ export default function AgendaPage() {
           <div className="space-y-2">
             {search && (
               <p className="text-gray-500 text-xs px-1">
-                {filtered.length} resultado{filtered.length !== 1 ? "s" : ""} para "{search}"
+                {filtered.length} resultado{filtered.length !== 1 ? "s" : ""} para &quot;{search}&quot;
               </p>
             )}
             {filtered.map(c => (
