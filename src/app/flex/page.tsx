@@ -109,6 +109,8 @@ export default function FlexPage() {
     const hoy = new Date().toISOString().slice(0, 10);
     const validos = paquetes.filter(p => p.localidad && p.estado === "ok");
     const nuevasAlertas: FidelAlerta[] = [];
+    let guardados = 0;
+    let duplicados = 0;
 
     for (const p of validos) {
       try {
@@ -130,7 +132,7 @@ export default function FlexPage() {
           packId:             p.packId ?? "",
           createdAt:          new Date().toISOString(),
         });
-        // Registrar compra en sistema de fidelización
+        guardados++;
         if (p.usuarioML) {
           const alerta = await clientesFlexDb.registrarCompra(
             p.usuarioML,
@@ -142,12 +144,24 @@ export default function FlexPage() {
           );
           if (alerta) nuevasAlertas.push(alerta);
         }
-      } catch (_) {}
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        if (msg.includes("unique") || msg.includes("duplicate") || msg.includes("23505")) {
+          duplicados++;
+        }
+      }
     }
     await load();
-    if (nuevasAlertas.length > 0) setAlertas(nuevasAlertas);
-    else if (validos.length > 0) alert(`✓ ${validos.length} envíos guardados correctamente.`);
-    else alert("No se detectaron zonas válidas en las fotos.");
+    if (nuevasAlertas.length > 0) {
+      setAlertas(nuevasAlertas);
+    } else if (validos.length > 0) {
+      const resumen = duplicados > 0
+        ? `✓ ${guardados} guardados — ⚠ ${duplicados} duplicados rechazados`
+        : `✓ ${guardados} envíos guardados correctamente`;
+      alert(resumen);
+    } else {
+      alert("No se detectaron zonas válidas en las fotos.");
+    }
   };
 
   // ── Stats generales ──

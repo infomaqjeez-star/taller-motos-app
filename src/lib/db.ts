@@ -459,26 +459,34 @@ export const flexDb = {
     return (data ?? []).map(r => toFlex(r as Record<string, unknown>));
   },
 
-  async create(e: FlexEnvio): Promise<void> {
-    const { error } = await supabase.from("flex_envios").insert({
-      id:                  e.id,
-      fecha:               e.fecha,
-      localidad:           e.localidad,
-      zona:                e.zona,
-      precio_ml:           e.precioML,
-      pago_flete:          e.pagoFlete,
-      ganancia:            e.ganancia,
-      descripcion:         e.descripcion,
-      nro_seguimiento:     e.nroSeguimiento,
-      usuario_ml:          e.usuarioML,
-      nombre_destinatario: e.nombreDestinatario,
-      direccion:           e.direccion,
-      codigo_postal:       e.codigoPostal,
-      producto_sku:        e.productoSku,
-      pack_id:             e.packId,
-      created_at:          e.createdAt,
-    });
+  async create(e: FlexEnvio): Promise<{ duplicado: boolean }> {
+    // UPSERT: si el nro_seguimiento ya existe, actualiza en vez de duplicar
+    const { error } = await supabase.from("flex_envios").upsert(
+      {
+        id:                  e.id,
+        fecha:               e.fecha,
+        localidad:           e.localidad,
+        zona:                e.zona,
+        precio_ml:           e.precioML,
+        pago_flete:          e.pagoFlete,
+        ganancia:            e.ganancia,
+        descripcion:         e.descripcion,
+        nro_seguimiento:     e.nroSeguimiento,
+        usuario_ml:          e.usuarioML,
+        nombre_destinatario: e.nombreDestinatario,
+        direccion:           e.direccion,
+        codigo_postal:       e.codigoPostal,
+        producto_sku:        e.productoSku,
+        pack_id:             e.packId,
+        created_at:          e.createdAt,
+      },
+      {
+        onConflict: "nro_seguimiento",   // si el ID ya existe → actualiza
+        ignoreDuplicates: false,
+      }
+    );
     if (error) throw error;
+    return { duplicado: false };
   },
 
   async delete(id: string): Promise<void> {
