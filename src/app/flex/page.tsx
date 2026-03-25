@@ -132,7 +132,6 @@ export default function FlexPage() {
           codigoPostal:       p.codigoPostal ?? "",
           productoSku:        p.productoSku ?? "",
           packId:             p.packId ?? "",
-          regaloSugerido:     p.regaloSugerido ?? "",
           createdAt:          new Date().toISOString(),
         });
         guardados++;

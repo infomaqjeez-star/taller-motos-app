@@ -247,7 +247,6 @@ export interface FlexEnvio {
   codigoPostal: string;
   productoSku: string;
   packId: string;
-  regaloSugerido: string;
   createdAt: string;
 }
 

@@ -133,7 +133,6 @@ export default function FlexRafaga({ tarifas, onClose, onSaved }: Props) {
       codigoPostal:       "",
       productoSku:        "",
       packId:             "",
-      regaloSugerido:     "",
       createdAt:          new Date().toISOString(),
     }));
 
