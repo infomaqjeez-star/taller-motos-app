@@ -158,3 +158,87 @@ export const PART_ORDER_STATUS_LABELS: Record<
   pedido: "Pedido",
   recibido: "Recibido",
 };
+
+// ============================================================
+// LOGÍSTICA FLEX — Mercado Libre
+// ============================================================
+
+export type FlexZona = "cercana" | "media" | "lejana";
+
+export interface FlexTarifa {
+  zona: FlexZona;
+  label: string;
+  precio: number;
+}
+
+export const FLEX_TARIFAS: FlexTarifa[] = [
+  { zona: "cercana", label: "Zona Cercana", precio: 4490 },
+  { zona: "media",   label: "Zona Media",   precio: 6490 },
+  { zona: "lejana",  label: "Zona Lejana",  precio: 8490 },
+];
+
+export const FLEX_LOCALIDADES: { nombre: string; zona: FlexZona }[] = [
+  // Cercanas
+  { nombre: "Ezeiza",                zona: "cercana" },
+  // Media distancia
+  { nombre: "Esteban Echeverría",    zona: "media" },
+  { nombre: "La Matanza Sur",        zona: "media" },
+  // Lejanas
+  { nombre: "Alte. Brown",           zona: "lejana" },
+  { nombre: "Avellaneda",            zona: "lejana" },
+  { nombre: "Berazategui",           zona: "lejana" },
+  { nombre: "Berisso",               zona: "lejana" },
+  { nombre: "CABA",                  zona: "lejana" },
+  { nombre: "Campana",               zona: "lejana" },
+  { nombre: "Cañuelas",              zona: "lejana" },
+  { nombre: "Del Viso",              zona: "lejana" },
+  { nombre: "Derqui",                zona: "lejana" },
+  { nombre: "Ensenada",              zona: "lejana" },
+  { nombre: "Escobar",               zona: "lejana" },
+  { nombre: "Florencio Varela",      zona: "lejana" },
+  { nombre: "Garín",                 zona: "lejana" },
+  { nombre: "Gral. Rodríguez",       zona: "lejana" },
+  { nombre: "Guernica",              zona: "lejana" },
+  { nombre: "Hurlingham",            zona: "lejana" },
+  { nombre: "Ing. Maschwitz",        zona: "lejana" },
+  { nombre: "Ituzaingó",             zona: "lejana" },
+  { nombre: "José C. Paz",           zona: "lejana" },
+  { nombre: "La Matanza Norte",      zona: "lejana" },
+  { nombre: "La Plata Centro",       zona: "lejana" },
+  { nombre: "La Plata Norte",        zona: "lejana" },
+  { nombre: "La Plata Oeste",        zona: "lejana" },
+  { nombre: "Lanús",                 zona: "lejana" },
+  { nombre: "Lomas de Zamora",       zona: "lejana" },
+  { nombre: "Luján",                 zona: "lejana" },
+  { nombre: "Malvinas Argentinas",   zona: "lejana" },
+  { nombre: "Marcos Paz",            zona: "lejana" },
+  { nombre: "Merlo",                 zona: "lejana" },
+  { nombre: "Moreno",                zona: "lejana" },
+  { nombre: "Morón",                 zona: "lejana" },
+  { nombre: "Nordelta",              zona: "lejana" },
+  { nombre: "Pilar",                 zona: "lejana" },
+  { nombre: "Quilmes",               zona: "lejana" },
+  { nombre: "San Fernando",          zona: "lejana" },
+  { nombre: "San Isidro",            zona: "lejana" },
+  { nombre: "San Martín",            zona: "lejana" },
+  { nombre: "San Miguel",            zona: "lejana" },
+  { nombre: "San Vicente",           zona: "lejana" },
+  { nombre: "Tigre",                 zona: "lejana" },
+  { nombre: "Tres de Febrero",       zona: "lejana" },
+  { nombre: "Vicente López",         zona: "lejana" },
+  { nombre: "Villa Rosa",            zona: "lejana" },
+  { nombre: "Zárate",                zona: "lejana" },
+];
+
+export interface FlexEnvio {
+  id: string;
+  fecha: string;
+  localidad: string;
+  zona: FlexZona;
+  precioML: number;
+  pagoFlete: number;
+  ganancia: number;
+  descripcion: string;
+  nroSeguimiento: string;
+  createdAt: string;
+}

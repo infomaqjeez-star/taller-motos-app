@@ -3,7 +3,7 @@
 // ============================================================
 
 import { supabase } from "./supabase";
-import { WorkOrder, StockItem, PartToOrder, Pago, PlantillaWhatsApp, AgendaCliente, HistorialReparacion } from "./types";
+import { WorkOrder, StockItem, PartToOrder, Pago, PlantillaWhatsApp, AgendaCliente, HistorialReparacion, FlexEnvio } from "./types";
 
 // ─── Helpers de mapeo (snake_case DB ↔ camelCase app) ────────
 
@@ -422,6 +422,63 @@ export const historialDb = {
     const { error } = await supabase
       .from("historial_reparaciones")
       .upsert(record, { onConflict: "id" });
+    if (error) throw error;
+  },
+};
+
+// ─── Logística Flex ───────────────────────────────────────────
+
+function toFlex(r: Record<string, unknown>): FlexEnvio {
+  return {
+    id:             r.id as string,
+    fecha:          r.fecha as string,
+    localidad:      r.localidad as string,
+    zona:           r.zona as FlexEnvio["zona"],
+    precioML:       r.precio_ml as number,
+    pagoFlete:      r.pago_flete as number,
+    ganancia:       r.ganancia as number,
+    descripcion:    r.descripcion as string,
+    nroSeguimiento: r.nro_seguimiento as string,
+    createdAt:      r.created_at as string,
+  };
+}
+
+export const flexDb = {
+  async getAll(): Promise<FlexEnvio[]> {
+    const { data, error } = await supabase
+      .from("flex_envios")
+      .select("*")
+      .order("fecha", { ascending: false });
+    if (error) throw error;
+    return (data ?? []).map(r => toFlex(r as Record<string, unknown>));
+  },
+
+  async create(e: FlexEnvio): Promise<void> {
+    const { error } = await supabase.from("flex_envios").insert({
+      id:             e.id,
+      fecha:          e.fecha,
+      localidad:      e.localidad,
+      zona:           e.zona,
+      precio_ml:      e.precioML,
+      pago_flete:     e.pagoFlete,
+      ganancia:       e.ganancia,
+      descripcion:    e.descripcion,
+      nro_seguimiento: e.nroSeguimiento,
+      created_at:     e.createdAt,
+    });
+    if (error) throw error;
+  },
+
+  async delete(id: string): Promise<void> {
+    const { error } = await supabase.from("flex_envios").delete().eq("id", id);
+    if (error) throw error;
+  },
+
+  async updateTarifa(zona: string, nuevoPrecio: number): Promise<void> {
+    const { error } = await supabase
+      .from("flex_tarifas")
+      .update({ precio: nuevoPrecio })
+      .eq("zona", zona);
     if (error) throw error;
   },
 };
