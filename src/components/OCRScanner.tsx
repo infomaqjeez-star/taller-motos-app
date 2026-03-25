@@ -32,204 +32,55 @@ function beep() {
   } catch (_) {}
 }
 
-// ─── Mapa de códigos postales a localidades ─────────────────────────────────
+// ─── Mapa de códigos postales a localidades (datos oficiales ML Flex) ────────
+// CABA se detecta por rango 1000-1499 en detectCPFromText (no se lista aquí)
 const CP_MAP: Record<string, string> = {
-  // Ezeiza (Cercana)
-  "1802": "Ezeiza", "1741": "Ezeiza", "1742": "Ezeiza", "1743": "Ezeiza",
-  // Esteban Echeverría (Media)
-  "1842": "Esteban Echeverría", "1843": "Esteban Echeverría",
-  "1844": "Esteban Echeverría", "1845": "Esteban Echeverría",
-  "1846": "Esteban Echeverría",
-  // La Matanza Sur (Media)
-  "1754": "La Matanza Sur", "1755": "La Matanza Sur", "1756": "La Matanza Sur",
-  "1757": "La Matanza Sur", "1758": "La Matanza Sur", "1759": "La Matanza Sur",
-  // Florencio Varela (Lejana)
-  "1887": "Florencio Varela", "1888": "Florencio Varela", "1889": "Florencio Varela",
-  // Berisso (Lejana)
-  "1923": "Berisso",
-  // Campana (Lejana)
-  "2804": "Campana",
-  // Cañuelas (Lejana)
-  "1814": "Cañuelas",
-  // Del Viso (Lejana)
-  "1669": "Del Viso",
-  // Derqui (Lejana)
-  "1631": "Derqui",
-  // Ensenada (Lejana)
+  // ── CERCANA ($4490) ───────────────────────────────────────────────────────
+  "1804": "Ezeiza",
+  // ── MEDIA ($6490) ─────────────────────────────────────────────────────────
+  "1842": "Esteban Echeverría",
+  "1759": "La Matanza Sur", "1761": "La Matanza Sur",
+  // ── LEJANA ($8490) ────────────────────────────────────────────────────────
+  // (CABA 1000-1499 se detecta por rango, ver función detectCPFromText)
+  "1870": "Avellaneda",
+  "1824": "Lanús",
+  "1832": "Lomas de Zamora",
+  "1878": "Quilmes",
+  "1880": "Berazategui", "1884": "Berazategui",
+  "1888": "Florencio Varela",
+  "1846": "Alte. Brown",
+  "1650": "San Martín",
+  "1675": "Tres de Febrero",
+  "1708": "Morón",
+  "1686": "Hurlingham",
+  "1714": "Ituzaingó",
+  "1663": "San Miguel",
+  "1642": "San Isidro",
+  "1602": "Vicente López",
+  "1644": "San Fernando",
+  "1648": "Tigre",
+  "1613": "Malvinas Argentinas",
+  "1665": "José C. Paz",
+  "1722": "Merlo",
+  "1744": "Moreno",
+  "1629": "Pilar",
+  "1625": "Escobar",
+  "1900": "La Plata Centro",
   "1925": "Ensenada",
-  // Escobar (Lejana)
-  "1625": "Escobar", "1626": "Escobar", "1627": "Escobar", "1628": "Escobar",
-  // Gral. Rodríguez (Lejana)
-  "1748": "Gral. Rodríguez",
-  // Guernica (Lejana)
-  "1862": "Guernica",
-  // Ing. Maschwitz (Lejana)
-  "1623": "Ing. Maschwitz", "1624": "Ing. Maschwitz",
-  // La Plata (Lejana)
-  "1900": "La Plata Centro", "1901": "La Plata Centro", "1902": "La Plata Centro",
-  "1903": "La Plata Norte", "1904": "La Plata Norte", "1905": "La Plata Norte",
-  "1906": "La Plata Oeste", "1907": "La Plata Oeste",
-  // Luján (Lejana)
+  "1923": "Berisso",
   "6700": "Luján",
-  // Marcos Paz (Lejana)
-  "1721": "Marcos Paz", "1722": "Marcos Paz",
-  // Nordelta (Lejana)
-  "1670": "Nordelta",
-  // Pilar (Lejana)
-  "1629": "Pilar", "1630": "Pilar", "1632": "Pilar", "1633": "Pilar",
-  "1634": "Pilar", "1635": "Pilar",
-  // San Vicente (Lejana)
-  "1861": "San Vicente",
-  // Villa Rosa (Lejana)
-  "1636": "Villa Rosa",
-  // Zárate (Lejana)
+  "1748": "Gral. Rodríguez",
+  "1727": "Marcos Paz",
+  "1806": "Cañuelas",
+  "1865": "San Vicente",
+  "1862": "Guernica",
+  "2804": "Campana",
   "2800": "Zárate",
-  // Garín (Lejana)
-  "1619": "Garín",
-  // Alte. Brown (Lejana)
-  "1840": "Alte. Brown", "1841": "Alte. Brown",
-  "1847": "Alte. Brown", "1849": "Alte. Brown", "1850": "Alte. Brown", "1851": "Alte. Brown",
-  // Avellaneda (Lejana)
-  "1870": "Avellaneda", "1871": "Avellaneda", "1872": "Avellaneda",
-  // Berazategui (Lejana)
-  "1880": "Berazategui", "1881": "Berazategui", "1882": "Berazategui",
-  // CABA (Lejana) — rangos comunes
-  "1001": "CABA", "1002": "CABA", "1003": "CABA", "1004": "CABA",
-  "1005": "CABA", "1006": "CABA", "1007": "CABA", "1008": "CABA",
-  "1009": "CABA", "1010": "CABA", "1011": "CABA", "1012": "CABA",
-  "1013": "CABA", "1014": "CABA", "1015": "CABA", "1020": "CABA",
-  "1025": "CABA", "1030": "CABA", "1035": "CABA", "1040": "CABA",
-  "1043": "CABA", "1045": "CABA", "1048": "CABA", "1050": "CABA",
-  "1053": "CABA", "1055": "CABA", "1057": "CABA", "1059": "CABA",
-  "1063": "CABA", "1065": "CABA", "1068": "CABA", "1069": "CABA",
-  "1070": "CABA", "1072": "CABA", "1074": "CABA", "1076": "CABA",
-  "1082": "CABA", "1083": "CABA", "1084": "CABA", "1086": "CABA",
-  "1087": "CABA", "1088": "CABA", "1090": "CABA", "1091": "CABA",
-  "1092": "CABA", "1093": "CABA", "1094": "CABA", "1096": "CABA",
-  "1098": "CABA", "1100": "CABA", "1101": "CABA", "1102": "CABA",
-  "1103": "CABA", "1104": "CABA", "1105": "CABA", "1107": "CABA",
-  "1109": "CABA", "1111": "CABA", "1113": "CABA", "1114": "CABA",
-  "1115": "CABA", "1116": "CABA", "1117": "CABA", "1118": "CABA",
-  "1119": "CABA", "1120": "CABA", "1121": "CABA", "1122": "CABA",
-  "1124": "CABA", "1125": "CABA", "1126": "CABA", "1128": "CABA",
-  "1130": "CABA", "1131": "CABA", "1132": "CABA", "1133": "CABA",
-  "1135": "CABA", "1136": "CABA", "1137": "CABA", "1138": "CABA",
-  "1139": "CABA", "1140": "CABA", "1141": "CABA", "1142": "CABA",
-  "1143": "CABA", "1144": "CABA", "1145": "CABA", "1147": "CABA",
-  "1148": "CABA", "1149": "CABA", "1150": "CABA", "1151": "CABA",
-  "1152": "CABA", "1153": "CABA", "1154": "CABA", "1155": "CABA",
-  "1156": "CABA", "1157": "CABA", "1158": "CABA", "1159": "CABA",
-  "1160": "CABA", "1161": "CABA", "1162": "CABA", "1163": "CABA",
-  "1164": "CABA", "1165": "CABA", "1166": "CABA", "1169": "CABA",
-  "1170": "CABA", "1171": "CABA", "1172": "CABA", "1173": "CABA",
-  "1174": "CABA", "1175": "CABA", "1176": "CABA", "1177": "CABA",
-  "1178": "CABA", "1179": "CABA", "1180": "CABA", "1181": "CABA",
-  "1182": "CABA", "1183": "CABA", "1184": "CABA", "1185": "CABA",
-  "1186": "CABA", "1187": "CABA", "1188": "CABA", "1189": "CABA",
-  "1190": "CABA", "1191": "CABA", "1192": "CABA", "1193": "CABA",
-  "1194": "CABA", "1195": "CABA", "1196": "CABA", "1197": "CABA",
-  "1198": "CABA", "1199": "CABA", "1200": "CABA", "1201": "CABA",
-  "1202": "CABA", "1203": "CABA", "1204": "CABA", "1205": "CABA",
-  "1206": "CABA", "1207": "CABA", "1208": "CABA", "1209": "CABA",
-  "1210": "CABA", "1211": "CABA", "1212": "CABA", "1213": "CABA",
-  "1214": "CABA", "1215": "CABA", "1216": "CABA", "1217": "CABA",
-  "1218": "CABA", "1219": "CABA", "1220": "CABA", "1221": "CABA",
-  "1222": "CABA", "1223": "CABA", "1224": "CABA", "1225": "CABA",
-  "1226": "CABA", "1227": "CABA", "1228": "CABA", "1229": "CABA",
-  "1230": "CABA", "1231": "CABA", "1232": "CABA", "1233": "CABA",
-  "1234": "CABA", "1235": "CABA", "1236": "CABA", "1237": "CABA",
-  "1238": "CABA", "1239": "CABA", "1240": "CABA", "1241": "CABA",
-  "1242": "CABA", "1243": "CABA", "1244": "CABA", "1245": "CABA",
-  "1246": "CABA", "1247": "CABA", "1248": "CABA", "1249": "CABA",
-  "1250": "CABA", "1270": "CABA", "1280": "CABA", "1290": "CABA",
-  "1300": "CABA", "1305": "CABA", "1306": "CABA", "1307": "CABA",
-  "1308": "CABA", "1309": "CABA", "1310": "CABA", "1320": "CABA",
-  "1330": "CABA", "1335": "CABA", "1340": "CABA", "1343": "CABA",
-  "1344": "CABA", "1345": "CABA", "1346": "CABA", "1348": "CABA",
-  "1350": "CABA", "1355": "CABA", "1360": "CABA", "1362": "CABA",
-  "1363": "CABA", "1364": "CABA", "1365": "CABA", "1366": "CABA",
-  "1368": "CABA", "1369": "CABA", "1370": "CABA", "1371": "CABA",
-  "1372": "CABA", "1373": "CABA", "1374": "CABA", "1376": "CABA",
-  "1380": "CABA", "1382": "CABA", "1384": "CABA", "1385": "CABA",
-  "1386": "CABA", "1388": "CABA", "1390": "CABA", "1391": "CABA",
-  "1392": "CABA", "1393": "CABA", "1394": "CABA", "1395": "CABA",
-  "1396": "CABA", "1397": "CABA", "1398": "CABA", "1399": "CABA",
-  "1400": "CABA", "1401": "CABA", "1402": "CABA", "1403": "CABA",
-  "1404": "CABA", "1405": "CABA", "1406": "CABA", "1407": "CABA",
-  "1408": "CABA", "1409": "CABA", "1410": "CABA", "1411": "CABA",
-  "1412": "CABA", "1413": "CABA", "1414": "CABA", "1415": "CABA",
-  "1416": "CABA", "1417": "CABA", "1419": "CABA", "1420": "CABA",
-  "1421": "CABA", "1422": "CABA", "1423": "CABA", "1424": "CABA",
-  "1425": "CABA", "1426": "CABA", "1427": "CABA", "1428": "CABA",
-  "1429": "CABA", "1430": "CABA", "1431": "CABA", "1432": "CABA",
-  "1433": "CABA", "1434": "CABA", "1435": "CABA", "1436": "CABA",
-  "1437": "CABA", "1438": "CABA", "1439": "CABA", "1440": "CABA",
-  "1441": "CABA", "1442": "CABA", "1443": "CABA", "1444": "CABA",
-  "1445": "CABA", "1446": "CABA", "1447": "CABA", "1448": "CABA",
-  "1449": "CABA", "1450": "CABA", "1451": "CABA", "1452": "CABA",
-  "1453": "CABA", "1454": "CABA", "1455": "CABA", "1456": "CABA",
-  "1457": "CABA", "1458": "CABA", "1459": "CABA", "1460": "CABA",
-  "1461": "CABA", "1462": "CABA", "1463": "CABA", "1464": "CABA",
-  "1465": "CABA", "1466": "CABA", "1467": "CABA", "1468": "CABA",
-  "1469": "CABA", "1470": "CABA", "1471": "CABA", "1472": "CABA",
-  "1473": "CABA", "1474": "CABA", "1475": "CABA", "1476": "CABA",
-  "1477": "CABA", "1478": "CABA", "1479": "CABA", "1480": "CABA",
-  // Hurlingham (Lejana)
-  "1686": "Hurlingham", "1688": "Hurlingham",
-  // Ituzaingó (Lejana)
-  "1714": "Ituzaingó", "1715": "Ituzaingó",
-  // José C. Paz (Lejana)
-  "1665": "José C. Paz", "1666": "José C. Paz", "1667": "José C. Paz",
-  "1668": "José C. Paz",
-  // La Matanza Norte (Lejana)
-  "1752": "La Matanza Norte", "1753": "La Matanza Norte",
-  "1760": "La Matanza Norte", "1761": "La Matanza Norte",
-  "1762": "La Matanza Norte", "1763": "La Matanza Norte",
-  // Lanús (Lejana)
-  "1820": "Lanús", "1821": "Lanús", "1822": "Lanús", "1823": "Lanús",
-  "1824": "Lanús", "1825": "Lanús",
-  // Lomas de Zamora (Lejana)
-  "1832": "Lomas de Zamora", "1833": "Lomas de Zamora", "1834": "Lomas de Zamora",
-  "1835": "Lomas de Zamora", "1836": "Lomas de Zamora",
-  // Malvinas Argentinas (Lejana)
-  "1613": "Malvinas Argentinas", "1614": "Malvinas Argentinas",
-  "1615": "Malvinas Argentinas",
-  // Merlo (Lejana)
-  "1723": "Merlo", "1724": "Merlo", "1725": "Merlo",
-  // Moreno (Lejana)
-  "1744": "Moreno", "1745": "Moreno", "1746": "Moreno", "1747": "Moreno",
-  "1749": "Moreno", "1750": "Moreno", "1751": "Moreno",
-  // Morón (Lejana)
-  "1708": "Morón", "1709": "Morón", "1710": "Morón", "1711": "Morón",
-  "1712": "Morón",
-  // Quilmes (Lejana)
-  "1878": "Quilmes", "1879": "Quilmes",
-  // San Fernando (Lejana)
-  "1646": "San Fernando", "1647": "San Fernando",
-  // San Isidro (Lejana)
-  "1642": "San Isidro", "1643": "San Isidro", "1644": "San Isidro",
-  "1645": "San Isidro",
-  // San Martín (Lejana)
-  "1650": "San Martín", "1651": "San Martín", "1652": "San Martín",
-  "1653": "San Martín", "1654": "San Martín",
-  // San Miguel (Lejana)
-  "1661": "San Miguel", "1662": "San Miguel", "1663": "San Miguel",
-  "1664": "San Miguel",
-  // Tigre (Lejana)
-  "1618": "Tigre", "1620": "Tigre", "1621": "Tigre", "1648": "Tigre",
-  // Tres de Febrero (Lejana)
-  "1674": "Tres de Febrero", "1675": "Tres de Febrero", "1676": "Tres de Febrero",
-  "1677": "Tres de Febrero", "1678": "Tres de Febrero", "1679": "Tres de Febrero",
-  "1680": "Tres de Febrero", "1682": "Tres de Febrero", "1683": "Tres de Febrero",
-  "1684": "Tres de Febrero",
-  // Vicente López (Lejana)
-  "1638": "Vicente López", "1639": "Vicente López", "1640": "Vicente López",
-  "1641": "Vicente López",
 };
 
-// Detectar localidad por CP numérico en el texto OCR
+// Detectar localidad por CP numérico — busca "CP: 1888", "CP 1888", "1888" suelto, etc.
+// CABA se detecta por rango 1000-1499 sin necesidad de listarlo en CP_MAP.
 function detectCPFromText(text: string): string | null {
-  // Buscar patrones: "CP: 1888", "CP 1888", "C.P. 1888", o simplemente 4 dígitos solos
   const patterns = [
     /CP[:\s.]*(\d{4})/i,
     /C\.P\.[:\s]*(\d{4})/i,
@@ -242,6 +93,9 @@ function detectCPFromText(text: string): string | null {
       const re = new RegExp(pattern.source, pattern.flags);
       let match = re.exec(text);
       while (match !== null) {
+        const cp = parseInt(match[1], 10);
+        // CABA: rango 1000-1499
+        if (cp >= 1000 && cp <= 1499) return "CABA";
         const loc = CP_MAP[match[1]];
         if (loc) return loc;
         match = re.exec(text);
@@ -249,6 +103,8 @@ function detectCPFromText(text: string): string | null {
     } else {
       const match = text.match(pattern);
       if (match) {
+        const cp = parseInt(match[1], 10);
+        if (cp >= 1000 && cp <= 1499) return "CABA";
         const loc = CP_MAP[match[1]];
         if (loc) return loc;
       }
