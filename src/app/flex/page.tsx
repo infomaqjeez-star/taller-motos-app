@@ -11,7 +11,7 @@ import {
 } from "@/lib/types";
 import {
   Truck, Trash2, TrendingUp, DollarSign,
-  MapPin, Package, Camera, BarChart2, Settings,
+  MapPin, Package, Camera, BarChart2, Settings, Calendar,
 } from "lucide-react";
 
 const fmt = (n: number) =>
@@ -21,6 +21,11 @@ const ZONA_COLORS: Record<FlexZona, string> = {
   cercana: "bg-green-500/20 text-green-300 border-green-500/40",
   media:   "bg-yellow-500/20 text-yellow-300 border-yellow-500/40",
   lejana:  "bg-red-500/20 text-red-300 border-red-500/40",
+};
+const ZONA_BAR: Record<FlexZona, string> = {
+  cercana: "bg-green-500",
+  media:   "bg-yellow-500",
+  lejana:  "bg-red-500",
 };
 const ZONA_LABELS: Record<FlexZona, string> = {
   cercana: "Cercana",
@@ -41,16 +46,47 @@ function useTarifas() {
   return { tarifas, update };
 }
 
+type Periodo = "dia" | "semana" | "mes";
+
+function filtrarPorPeriodo(envios: FlexEnvio[], periodo: Periodo): FlexEnvio[] {
+  const now  = new Date();
+  const hoy  = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  return envios.filter(e => {
+    const d = new Date(e.fecha);
+    if (periodo === "dia")    return d >= hoy;
+    if (periodo === "semana") {
+      const lunes = new Date(hoy);
+      lunes.setDate(hoy.getDate() - ((hoy.getDay() + 6) % 7));
+      return d >= lunes;
+    }
+    // mes
+    return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+  });
+}
+
+// Agrupa envíos por fecha YYYY-MM-DD y cuenta por zona
+function agruparPorDia(envios: FlexEnvio[]): { fecha: string; cercana: number; media: number; lejana: number }[] {
+  const map: Record<string, { cercana: number; media: number; lejana: number }> = {};
+  envios.forEach(e => {
+    if (!map[e.fecha]) map[e.fecha] = { cercana: 0, media: 0, lejana: 0 };
+    map[e.fecha][e.zona]++;
+  });
+  return Object.entries(map)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([fecha, v]) => ({ fecha, ...v }));
+}
+
 export default function FlexPage() {
-  const [envios, setEnvios] = useState<FlexEnvio[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [envios, setEnvios]           = useState<FlexEnvio[]>([]);
+  const [loading, setLoading]         = useState(true);
   const [showSettings, setShowSettings] = useState(false);
-  const [showOCR, setShowOCR] = useState(false);
+  const [showOCR, setShowOCR]         = useState(false);
   const { tarifas, update: updateTarifa } = useTarifas();
   const [settingEdit, setSettingEdit] = useState<Record<FlexZona, string>>({
     cercana: "4490", media: "6490", lejana: "8490",
   });
-  const [filterZona, setFilterZona] = useState<FlexZona | "todas">("todas");
+  const [filterZona, setFilterZona]   = useState<FlexZona | "todas">("todas");
+  const [periodo, setPeriodo]         = useState<Periodo>("semana");
 
   const load = async () => {
     setLoading(true);
@@ -97,6 +133,7 @@ export default function FlexPage() {
     else alert("No se detectaron zonas válidas en las fotos.");
   };
 
+  // ── Stats generales ──
   const stats = useMemo(() => {
     const filtered = filterZona === "todas" ? envios : envios.filter(e => e.zona === filterZona);
     const totalML       = filtered.reduce((s, e) => s + e.precioML, 0);
@@ -119,6 +156,23 @@ export default function FlexPage() {
     return { totalML, totalFlete, totalGanancia, porZona, topLocalidades, filtered };
   }, [envios, filterZona]);
 
+  // ── Stats por período ──
+  const grafStats = useMemo(() => {
+    const base = filtrarPorPeriodo(envios, periodo);
+    const total   = base.length;
+    const ganancia = base.reduce((s, e) => s + e.ganancia, 0);
+    const porZona = (["cercana", "media", "lejana"] as FlexZona[]).map(z => ({
+      zona: z,
+      count: base.filter(e => e.zona === z).length,
+    }));
+    const dias = agruparPorDia(base);
+    return { total, ganancia, porZona, dias };
+  }, [envios, periodo]);
+
+  const maxDayTotal = useMemo(() =>
+    Math.max(...grafStats.dias.map(d => d.cercana + d.media + d.lejana), 1),
+  [grafStats.dias]);
+
   return (
     <>
       <Navbar />
@@ -139,7 +193,6 @@ export default function FlexPage() {
             <button
               onClick={() => setShowSettings(!showSettings)}
               className="p-2.5 rounded-xl bg-gray-800 text-gray-400 hover:text-white border border-gray-700 transition-colors"
-              title="Configurar tarifas"
             >
               <Settings className="w-5 h-5" />
             </button>
@@ -147,12 +200,12 @@ export default function FlexPage() {
               onClick={() => setShowOCR(true)}
               className="flex items-center gap-1.5 bg-purple-600 hover:bg-purple-500 text-white font-bold px-4 py-2.5 rounded-xl transition-colors"
             >
-              <Camera className="w-4 h-4" /> Escanear Etiquetas
+              <Camera className="w-4 h-4" /> Escanear
             </button>
           </div>
         </div>
 
-        {/* Panel de tarifas editables */}
+        {/* Panel tarifas */}
         {showSettings && (
           <div className="bg-gray-800/80 rounded-2xl border border-gray-700 p-5 space-y-4">
             <h2 className="text-white font-bold flex items-center gap-2">
@@ -177,9 +230,7 @@ export default function FlexPage() {
                         if (val > 0) updateTarifa(zona, val);
                       }}
                       className="bg-yellow-500 hover:bg-yellow-400 text-black font-bold px-3 rounded-lg text-sm transition-colors"
-                    >
-                      OK
-                    </button>
+                    >OK</button>
                   </div>
                   <p className="text-yellow-300 text-xs font-semibold">{fmt(tarifas[zona])}</p>
                 </div>
@@ -188,61 +239,152 @@ export default function FlexPage() {
           </div>
         )}
 
-        {/* Cards resumen */}
+        {/* Cards resumen total */}
         <div className="grid grid-cols-3 gap-3">
           <div className="bg-gray-800/60 rounded-2xl border border-gray-700 p-4 text-center">
             <DollarSign className="w-5 h-5 text-yellow-400 mx-auto mb-1" />
-            <p className="text-xs text-gray-400">Cobrado a ML</p>
-            <p className="text-white font-black text-lg">{fmt(stats.totalML)}</p>
+            <p className="text-xs text-gray-400">Total ML</p>
+            <p className="text-white font-black text-lg leading-tight">{fmt(stats.totalML)}</p>
           </div>
           <div className="bg-gray-800/60 rounded-2xl border border-gray-700 p-4 text-center">
             <Truck className="w-5 h-5 text-blue-400 mx-auto mb-1" />
-            <p className="text-xs text-gray-400">Pago Flete (80%)</p>
-            <p className="text-white font-black text-lg">{fmt(stats.totalFlete)}</p>
+            <p className="text-xs text-gray-400">Pago Flete</p>
+            <p className="text-white font-black text-lg leading-tight">{fmt(stats.totalFlete)}</p>
           </div>
           <div className="bg-green-900/40 rounded-2xl border border-green-700/50 p-4 text-center">
             <TrendingUp className="w-5 h-5 text-green-400 mx-auto mb-1" />
-            <p className="text-xs text-gray-400">Ganancia (20%)</p>
-            <p className="text-green-300 font-black text-lg">{fmt(stats.totalGanancia)}</p>
+            <p className="text-xs text-gray-400">Ganancia</p>
+            <p className="text-green-300 font-black text-lg leading-tight">{fmt(stats.totalGanancia)}</p>
           </div>
         </div>
 
-        {/* Gráfico por zonas */}
-        <div className="bg-gray-800/60 rounded-2xl border border-gray-700 p-5 space-y-3">
-          <h2 className="text-white font-bold flex items-center gap-2">
-            <BarChart2 className="w-4 h-4 text-yellow-400" /> Envíos por Zona
-          </h2>
-          <div className="space-y-3">
-            {stats.porZona.map(({ zona, count, ganancia }) => {
-              const maxCount = Math.max(...stats.porZona.map(z => z.count), 1);
-              const pct = Math.round((count / maxCount) * 100);
+        {/* ══════════════════════════════════════
+            ZONA DE GRÁFICOS
+        ══════════════════════════════════════ */}
+        <div className="bg-gray-800/60 rounded-2xl border border-gray-700 p-5 space-y-5">
+          {/* Header gráficos + selector período */}
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <h2 className="text-white font-bold flex items-center gap-2">
+              <BarChart2 className="w-4 h-4 text-yellow-400" /> Análisis de Envíos
+            </h2>
+            <div className="flex items-center gap-1 bg-gray-900/60 rounded-xl p-1 border border-gray-700">
+              {(["dia", "semana", "mes"] as Periodo[]).map(p => (
+                <button
+                  key={p}
+                  onClick={() => setPeriodo(p)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+                    periodo === p
+                      ? "bg-yellow-500 text-black"
+                      : "text-gray-400 hover:text-white"
+                  }`}
+                >
+                  {p === "dia" ? "Hoy" : p === "semana" ? "Semana" : "Mes"}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Mini resumen del período */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-gray-900/50 rounded-xl p-3 flex items-center gap-3">
+              <Package className="w-8 h-8 text-yellow-400 flex-shrink-0" />
+              <div>
+                <p className="text-gray-400 text-xs">Paquetes</p>
+                <p className="text-white font-black text-2xl leading-tight">{grafStats.total}</p>
+                <p className="text-gray-500 text-xs capitalize flex items-center gap-1">
+                  <Calendar className="w-3 h-3" />
+                  {periodo === "dia" ? "hoy" : periodo === "semana" ? "esta semana" : "este mes"}
+                </p>
+              </div>
+            </div>
+            <div className="bg-green-900/30 rounded-xl p-3 flex items-center gap-3 border border-green-700/30">
+              <TrendingUp className="w-8 h-8 text-green-400 flex-shrink-0" />
+              <div>
+                <p className="text-gray-400 text-xs">Ganancia</p>
+                <p className="text-green-300 font-black text-xl leading-tight">{fmt(grafStats.ganancia)}</p>
+                <p className="text-gray-500 text-xs">20% de gestión</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Gráfico de barras por zona */}
+          <div className="space-y-2">
+            <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider">Paquetes por Zona</p>
+            {grafStats.porZona.map(({ zona, count }) => {
+              const maxZ = Math.max(...grafStats.porZona.map(z => z.count), 1);
+              const pct  = Math.round((count / maxZ) * 100);
               return (
-                <div key={zona} className="space-y-1">
-                  <div className="flex justify-between text-sm">
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-bold border ${ZONA_COLORS[zona]}`}>
-                      {ZONA_LABELS[zona]} — {fmt(tarifas[zona])}
-                    </span>
-                    <span className="text-gray-400">{count} envíos · <span className="text-green-300 font-semibold">{fmt(ganancia)}</span></span>
-                  </div>
-                  <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+                <div key={zona} className="flex items-center gap-3">
+                  <span className={`w-20 text-xs font-bold shrink-0 ${
+                    zona === "cercana" ? "text-green-400" : zona === "media" ? "text-yellow-400" : "text-red-400"
+                  }`}>{ZONA_LABELS[zona]}</span>
+                  <div className="flex-1 h-6 bg-gray-700/60 rounded-lg overflow-hidden">
                     <div
-                      className={`h-full rounded-full transition-all duration-500 ${
-                        zona === "cercana" ? "bg-green-500" : zona === "media" ? "bg-yellow-500" : "bg-red-500"
-                      }`}
-                      style={{ width: `${pct}%` }}
-                    />
+                      className={`h-full rounded-lg flex items-center px-2 transition-all duration-700 ${ZONA_BAR[zona]}`}
+                      style={{ width: `${Math.max(pct, count > 0 ? 8 : 0)}%` }}
+                    >
+                      {count > 0 && (
+                        <span className="text-white text-xs font-black">{count}</span>
+                      )}
+                    </div>
                   </div>
+                  <span className="text-gray-400 text-xs w-12 text-right">{count} pkg</span>
                 </div>
               );
             })}
           </div>
+
+          {/* Gráfico de barras apiladas por día */}
+          {grafStats.dias.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider">
+                Paquetes por Día {periodo === "dia" ? "(hoy)" : periodo === "semana" ? "(esta semana)" : "(este mes)"}
+              </p>
+              <div className="flex items-end gap-1.5 h-28 overflow-x-auto pb-1">
+                {grafStats.dias.map(d => {
+                  const total = d.cercana + d.media + d.lejana;
+                  const h = Math.round((total / maxDayTotal) * 96);
+                  const fecha = new Date(d.fecha + "T12:00:00");
+                  const label = periodo === "mes"
+                    ? fecha.toLocaleDateString("es-AR", { day: "numeric" })
+                    : fecha.toLocaleDateString("es-AR", { weekday: "short", day: "numeric" });
+                  return (
+                    <div key={d.fecha} className="flex flex-col items-center gap-1 flex-shrink-0" style={{ minWidth: "36px" }}>
+                      <span className="text-white text-[10px] font-bold">{total}</span>
+                      <div className="flex flex-col justify-end rounded-md overflow-hidden w-8" style={{ height: "80px" }}>
+                        <div className="bg-gray-700/40 rounded-md overflow-hidden w-full flex flex-col justify-end" style={{ height: "80px" }}>
+                          <div className="bg-red-500 w-full transition-all duration-500"    style={{ height: `${Math.round((d.lejana  / maxDayTotal) * 80)}px` }} />
+                          <div className="bg-yellow-500 w-full transition-all duration-500" style={{ height: `${Math.round((d.media   / maxDayTotal) * 80)}px` }} />
+                          <div className="bg-green-500 w-full transition-all duration-500"  style={{ height: `${Math.round((d.cercana / maxDayTotal) * 80)}px` }} />
+                        </div>
+                      </div>
+                      <span className="text-gray-500 text-[9px] text-center leading-tight">{label}</span>
+                    </div>
+                  );
+                })}
+              </div>
+              {/* Leyenda */}
+              <div className="flex gap-4 justify-center">
+                {(["cercana","media","lejana"] as FlexZona[]).map(z => (
+                  <div key={z} className="flex items-center gap-1.5">
+                    <div className={`w-3 h-3 rounded-sm ${ZONA_BAR[z]}`} />
+                    <span className="text-gray-400 text-xs">{ZONA_LABELS[z]}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {grafStats.total === 0 && (
+            <p className="text-gray-500 text-sm text-center py-4">Sin datos para el período seleccionado</p>
+          )}
         </div>
 
         {/* Top localidades */}
         {stats.topLocalidades.length > 0 && (
           <div className="bg-gray-800/60 rounded-2xl border border-gray-700 p-5 space-y-3">
             <h2 className="text-white font-bold flex items-center gap-2">
-              <MapPin className="w-4 h-4 text-yellow-400" /> Top Localidades más Rentables
+              <MapPin className="w-4 h-4 text-yellow-400" /> Top 5 Localidades más Rentables
             </h2>
             <div className="space-y-2">
               {stats.topLocalidades.map(([loc, data], i) => {
@@ -267,7 +409,7 @@ export default function FlexPage() {
           </div>
         )}
 
-        {/* Filtro por zona + lista */}
+        {/* Filtro + lista de envíos */}
         <div className="space-y-3">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-gray-400 text-sm">Filtrar:</span>
@@ -294,7 +436,7 @@ export default function FlexPage() {
             <div className="text-center py-12 text-gray-500">
               <Package className="w-12 h-12 mx-auto mb-3 opacity-30" />
               <p className="font-semibold">Sin envíos registrados</p>
-              <p className="text-sm">Usá &quot;Escanear Etiquetas&quot; para cargar envíos con la cámara</p>
+              <p className="text-sm">Usá &quot;Escanear&quot; para cargar envíos con la cámara</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -309,11 +451,16 @@ export default function FlexPage() {
                         <span className="text-white font-semibold">{envio.localidad}</span>
                         <span className="text-gray-500 text-xs">{new Date(envio.fecha).toLocaleDateString("es-AR")}</span>
                       </div>
-                      {envio.descripcion && (
-                        <p className="text-gray-400 text-sm">{envio.descripcion}</p>
+                      {envio.nombreDestinatario && (
+                        <p className="text-gray-300 text-sm font-medium">{envio.nombreDestinatario}
+                          {envio.usuarioML && <span className="text-gray-500 text-xs ml-1">({envio.usuarioML})</span>}
+                        </p>
+                      )}
+                      {envio.direccion && (
+                        <p className="text-gray-500 text-xs mt-0.5"><MapPin className="w-3 h-3 inline mr-0.5" />{envio.direccion}</p>
                       )}
                       {envio.nroSeguimiento && (
-                        <p className="text-gray-500 text-xs mt-0.5">Nro: {envio.nroSeguimiento}</p>
+                        <p className="text-gray-500 text-xs mt-0.5 font-mono">ID: {envio.nroSeguimiento}</p>
                       )}
                     </div>
                     <div className="text-right flex-shrink-0">

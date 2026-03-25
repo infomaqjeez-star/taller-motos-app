@@ -255,33 +255,58 @@ function extractEtiquetaData(rawText: string): EtiquetaData {
   return { envioId, packId, usuarioML, nombreDestinatario, direccion, codigoPostal, productoSku };
 }
 
-// Extraer el ID de envío ML desde el contenido del QR
-// ML Flex codifica: URL con shipment_id, o el número directo
-function extractIdFromQR(qrData: string): string | null {
-  // Formato URL: ...shipment_id=46719267146 o ...tracking/46719267146
-  const urlMatch = qrData.match(/[?&/](?:shipment_id=|tracking[/=])(\d{10,13})/i);
-  if (urlMatch) return urlMatch[1];
-  // Formato numérico directo: solo 11 dígitos
-  const numMatch = qrData.match(/^(\d{11})$/);
-  if (numMatch) return numMatch[1];
-  // Cualquier número de 10-13 dígitos dentro del string
-  const anyMatch = qrData.match(/\b(\d{11})\b/);
-  if (anyMatch) return anyMatch[1];
-  return null;
+interface QRParsed { envioId: string | null; usuarioML: string | null; }
+
+// ML Flex QR puede codificar:
+//   URL: https://…?shipment_id=46719267146&buyer=ADOLFORECO
+//   JSON: {"shipment_id":"46719267146","buyer":"ADOLFORECO"}
+//   Texto plano: "46719267146|ADOLFORECO"
+function extractIdFromQR(qrData: string): QRParsed {
+  let envioId:  string | null = null;
+  let usuarioML: string | null = null;
+
+  // ── Intentar parsear como JSON ──
+  try {
+    const obj = JSON.parse(qrData);
+    envioId   = obj.shipment_id ?? obj.envio_id ?? obj.id ?? null;
+    usuarioML = obj.buyer ?? obj.usuario ?? obj.user ?? null;
+    if (envioId) return { envioId: String(envioId), usuarioML };
+  } catch (_) {}
+
+  // ── Buscar shipment_id y buyer en URL / query string ──
+  const shipMatch = qrData.match(/[?&/](?:shipment_id=|tracking[/=])(\d{10,13})/i);
+  if (shipMatch) envioId = shipMatch[1];
+
+  const buyerMatch = qrData.match(/[?&](?:buyer|usuario|user)=([A-Za-z0-9_.-]{3,30})/i);
+  if (buyerMatch) usuarioML = buyerMatch[1].toUpperCase();
+
+  // ── Número directo de 11 dígitos (formato más común ML) ──
+  if (!envioId) {
+    const numMatch = qrData.match(/\b(\d{11})\b/);
+    if (numMatch) envioId = numMatch[1];
+  }
+
+  // ── Buscar usuario entre paréntesis en el texto del QR ──
+  if (!usuarioML) {
+    const userParens = qrData.match(/\(([A-Z0-9_]{3,20})\)/);
+    if (userParens) usuarioML = userParens[1];
+  }
+
+  return { envioId, usuarioML };
 }
 
 // Escanear QR del canvas usando jsQR (sincrónico, muy rápido)
-function scanQRFromCanvas(canvas: HTMLCanvasElement): string | null {
+function scanQRFromCanvas(canvas: HTMLCanvasElement): QRParsed {
   try {
     const ctx = canvas.getContext("2d");
-    if (!ctx) return null;
+    if (!ctx) return { envioId: null, usuarioML: null };
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     const result = jsQR(imageData.data, canvas.width, canvas.height, {
       inversionAttempts: "dontInvert",
     });
     if (result?.data) return extractIdFromQR(result.data);
   } catch (_) {}
-  return null;
+  return { envioId: null, usuarioML: null };
 }
 
 function calcPaquete(localidad: string, tarifas: Record<FlexZona, number>) {
@@ -453,8 +478,8 @@ export default function OCRScanner({ tarifas, onFinish, onClose }: Props) {
       const ctx = canvas.getContext("2d")!;
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-      // ── Paso 1: jsQR (sincrónico, ~2ms) — extrae ID del QR ──
-      const qrId = scanQRFromCanvas(canvas);
+      // ── Paso 1: jsQR (sincrónico, ~2ms) — extrae ID y usuario del QR ──
+      const qrParsed = scanQRFromCanvas(canvas);
 
       try {
         // ── Paso 2: OCR (async) — extrae todos los campos de la etiqueta ──
@@ -462,20 +487,21 @@ export default function OCRScanner({ tarifas, onFinish, onClose }: Props) {
         const { data: { text } } = await worker.recognize(processed);
         const loc      = detectLocalidadFromText(text);
         const etiqueta = extractEtiquetaData(text);
-        // QR tiene prioridad para el ID (más confiable que OCR)
-        const finalId  = qrId ?? etiqueta.envioId;
+        // QR tiene prioridad para ID y usuario (más confiable que OCR)
+        const finalId     = qrParsed.envioId ?? etiqueta.envioId;
+        const finalUsuario = qrParsed.usuarioML ?? etiqueta.usuarioML;
 
         if (!scanningRef.current) return;
 
         if (loc) {
           setLiveLocalidad(loc);
           setLiveEnvioId(finalId);
-          setLiveEtiqueta({ ...etiqueta, envioId: finalId });
+          setLiveEtiqueta({ ...etiqueta, envioId: finalId, usuarioML: finalUsuario });
           setLiveScan("found");
         } else {
           setLiveLocalidad(null);
           setLiveEnvioId(finalId);
-          setLiveEtiqueta(finalId ? { ...etiqueta, envioId: finalId } : null);
+          setLiveEtiqueta(finalId ? { ...etiqueta, envioId: finalId, usuarioML: finalUsuario } : null);
           setLiveScan("notfound");
         }
       } catch (_) {
