@@ -203,7 +203,7 @@ export default function FlexPage() {
             </div>
             <div>
               <h1 className="text-2xl font-black text-white">Logística Flex</h1>
-              <p className="text-gray-400 text-sm">Mercado Libre — Control de envíos y ganancias</p>
+              <p className="text-gray-400 text-sm">Mercado Libre — Control de envíos y descuentos</p>
             </div>
           </div>
           <div className="flex gap-2">
@@ -270,7 +270,7 @@ export default function FlexPage() {
           </div>
           <div className="bg-green-900/40 rounded-2xl border border-green-700/50 p-4 text-center">
             <TrendingUp className="w-5 h-5 text-green-400 mx-auto mb-1" />
-            <p className="text-xs text-gray-400">Ganancia</p>
+            <p className="text-xs text-gray-400">Descuento</p>
             <p className="text-green-300 font-black text-lg leading-tight">{fmt(stats.totalGanancia)}</p>
           </div>
         </div>
@@ -317,7 +317,7 @@ export default function FlexPage() {
             <div className="bg-green-900/30 rounded-xl p-3 flex items-center gap-3 border border-green-700/30">
               <TrendingUp className="w-8 h-8 text-green-400 flex-shrink-0" />
               <div>
-                <p className="text-gray-400 text-xs">Ganancia</p>
+                <p className="text-gray-400 text-xs">Descuento</p>
                 <p className="text-green-300 font-black text-xl leading-tight">{fmt(grafStats.ganancia)}</p>
                 <p className="text-gray-500 text-xs">20% de gestión</p>
               </div>
@@ -483,7 +483,7 @@ export default function FlexPage() {
                     <div className="text-right flex-shrink-0">
                       <p className="text-white text-sm">ML: <span className="font-bold">{fmt(envio.precioML)}</span></p>
                       <p className="text-blue-300 text-xs">Flete: {fmt(envio.pagoFlete)}</p>
-                      <p className="text-green-300 text-xs font-bold">Gan: {fmt(envio.ganancia)}</p>
+                      <p className="text-green-300 text-xs font-bold">Desc: {fmt(envio.ganancia)}</p>
                     </div>
                     <button
                       onClick={() => handleDelete(envio.id)}
