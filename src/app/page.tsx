@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Wrench, AlertTriangle, Package, CheckSquare, Clock, FileSpreadsheet, FileText } from "lucide-react";
+import { Plus, Wrench, AlertTriangle, Package, CheckSquare, Clock, FileSpreadsheet, FileText, CheckCircle } from "lucide-react";
 import { WorkOrder } from "@/lib/types";
 import { useOrders } from "@/hooks/useOrders";
 import { useInventory } from "@/hooks/useInventory";
@@ -50,6 +50,7 @@ export default function DashboardPage() {
     update,
     remove,
     overdueCount,
+    loading,
   } = useOrders();
   const { lowStockCount } = useInventory();
   const { pending, sentLog, markSent, unsentCount, refresh: refreshNotifications } =
@@ -58,15 +59,27 @@ export default function DashboardPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingOrder, setEditingOrder] = useState<WorkOrder | null>(null);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
 
-  const handleSave = (order: WorkOrder) => {
-    if (editingOrder) {
-      update(order.id, order);
-    } else {
-      create({ ...order, id: generateId(), entryDate: new Date().toISOString() });
+  const showToast = (msg: string, type: "success" | "error" = "success") => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3500);
+  };
+
+  const handleSave = async (order: WorkOrder) => {
+    try {
+      if (editingOrder) {
+        await update(order.id, order);
+        showToast("Orden actualizada con éxito");
+      } else {
+        await create({ ...order, id: generateId(), entryDate: new Date().toISOString() });
+        showToast("¡Orden guardada con éxito!");
+      }
+      setShowForm(false);
+      setEditingOrder(null);
+    } catch {
+      showToast("Error al guardar. Verificá la conexión.", "error");
     }
-    setShowForm(false);
-    setEditingOrder(null);
   };
 
   const handleEdit = (order: WorkOrder) => {
@@ -163,7 +176,12 @@ export default function DashboardPage() {
 
         {/* Lista de órdenes */}
         <div className="space-y-3">
-          {filtered.length === 0 ? (
+          {loading ? (
+            <div className="card flex flex-col items-center py-16 text-center">
+              <div className="w-10 h-10 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mb-4" />
+              <p className="text-gray-400 font-semibold">Cargando órdenes...</p>
+            </div>
+          ) : filtered.length === 0 ? (
             <div className="card flex flex-col items-center justify-center py-16 text-center">
               <Wrench className="w-12 h-12 text-gray-700 mb-4" />
               <p className="text-gray-400 font-semibold text-lg">
@@ -219,6 +237,19 @@ export default function DashboardPage() {
           onClearLog={() => { clearSentLog(); refreshNotifications(); }}
           onClose={() => setShowNotifications(false)}
         />
+      )}
+
+      {/* Toast de éxito / error */}
+      {toast && (
+        <div
+          className={`fixed bottom-28 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3
+            px-5 py-3.5 rounded-2xl shadow-2xl text-white font-semibold text-sm
+            transition-all animate-bounce-once
+            ${toast.type === "success" ? "bg-green-600" : "bg-red-600"}`}
+        >
+          <CheckCircle className="w-5 h-5 flex-shrink-0" />
+          {toast.msg}
+        </div>
       )}
     </>
   );
