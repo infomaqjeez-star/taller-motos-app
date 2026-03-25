@@ -3,46 +3,197 @@
 import { useState, useEffect, useMemo } from "react";
 import { AgendaCliente, WorkOrder, REPAIR_STATUS_LABELS, REPAIR_STATUS_COLORS } from "@/lib/types";
 import { agendaDb, ordersDb } from "@/lib/db";
-import { formatDate } from "@/lib/utils";
+import { formatDate, formatCurrency } from "@/lib/utils";
 import Navbar from "@/components/Navbar";
 import BottomNav from "@/components/BottomNav";
-import { Users, Search, Phone, ChevronRight, X, Clock, Wrench, Trash2 } from "lucide-react";
+import {
+  Users, Search, Phone, ChevronRight, X, Clock,
+  Wrench, Trash2, Camera, DollarSign, Calendar,
+  AlertTriangle, ChevronDown, ChevronUp,
+} from "lucide-react";
 
-function ClienteModal({
-  cliente,
-  onClose,
-}: {
-  cliente: AgendaCliente;
-  onClose: () => void;
-}) {
+// ─── Línea de tiempo de un cliente ──────────────────────────────
+
+function Timeline({ orders }: { orders: WorkOrder[] }) {
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const toggle = (id: string) => setExpanded(p => ({ ...p, [id]: !p[id] }));
+
+  if (orders.length === 0) return (
+    <div className="flex flex-col items-center py-10 text-gray-500">
+      <Wrench className="w-10 h-10 mb-2 opacity-30" />
+      <p className="text-sm">No hay reparaciones registradas</p>
+    </div>
+  );
+
+  return (
+    <ol className="relative border-l-2 border-orange-500/30 ml-4 space-y-0">
+      {orders.map((o, idx) => {
+        const isOpen = expanded[o.id];
+        return (
+          <li key={o.id} className="mb-0 ml-6">
+            {/* Dot */}
+            <span className={`absolute -left-[9px] flex items-center justify-center w-4 h-4 rounded-full border-2
+              ${idx === 0 ? "bg-orange-500 border-orange-400" : "bg-gray-700 border-gray-500"}`}
+            />
+
+            <div className="card mb-4 ml-0">
+              {/* Header de la visita */}
+              <button
+                className="w-full text-left"
+                onClick={() => toggle(o.id)}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap gap-1.5 mb-1">
+                      <span className={`text-xs font-black px-2 py-0.5 rounded-lg border
+                        ${o.motorType === "2T"
+                          ? "bg-blue-500/20 text-blue-300 border-blue-500/40"
+                          : "bg-orange-500/20 text-orange-300 border-orange-500/40"}`}>
+                        {o.motorType}
+                      </span>
+                      <span className={`badge ${REPAIR_STATUS_COLORS[o.status]}`}>
+                        {REPAIR_STATUS_LABELS[o.status]}
+                      </span>
+                      {idx === 0 && (
+                        <span className="badge bg-orange-900/40 text-orange-300 border-orange-600">
+                          Última visita
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-white font-bold">
+                      {o.brand} {o.model}
+                    </p>
+                    <p className="text-gray-500 text-xs flex items-center gap-1 mt-0.5">
+                      <Calendar className="w-3 h-3" /> {formatDate(o.entryDate)}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {o.budget !== null && (
+                      <span className="text-green-400 font-bold text-sm">
+                        {formatCurrency(o.budget)}
+                      </span>
+                    )}
+                    {isOpen
+                      ? <ChevronUp className="w-4 h-4 text-gray-500" />
+                      : <ChevronDown className="w-4 h-4 text-gray-500" />}
+                  </div>
+                </div>
+              </button>
+
+              {/* Detalle expandible */}
+              {isOpen && (
+                <div className="mt-3 pt-3 border-t border-gray-700/60 space-y-3">
+                  {/* Falla */}
+                  <div>
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+                      Falla reportada
+                    </p>
+                    <p className="text-gray-300 text-sm leading-relaxed">{o.reportedIssues}</p>
+                  </div>
+
+                  {/* Notas internas */}
+                  {o.internalNotes && (
+                    <div>
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+                        Trabajo realizado / Notas
+                      </p>
+                      <p className="text-gray-300 text-sm leading-relaxed">{o.internalNotes}</p>
+                    </div>
+                  )}
+
+                  {/* Fotos */}
+                  {(o.photoUrls?.length ?? 0) > 0 && (
+                    <div>
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 flex items-center gap-1">
+                        <Camera className="w-3 h-3" /> Fotos del ingreso ({o.photoUrls.length})
+                      </p>
+                      <div className="flex gap-2 overflow-x-auto pb-1">
+                        {o.photoUrls.map((url, i) => (
+                          <a key={i} href={url} target="_blank" rel="noopener noreferrer">
+                            <img
+                              src={url}
+                              alt={`Foto ${i + 1}`}
+                              className="h-20 w-20 object-cover rounded-xl border border-gray-600 flex-shrink-0 hover:border-orange-400 transition-colors"
+                            />
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Fechas */}
+                  <div className="flex flex-wrap gap-3 text-xs text-gray-500">
+                    {o.completionDate && (
+                      <span>✓ Listo: <span className="text-gray-300">{formatDate(o.completionDate)}</span></span>
+                    )}
+                    {o.deliveryDate && (
+                      <span>📦 Entregado: <span className="text-gray-300">{formatDate(o.deliveryDate)}</span></span>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+// ─── Modal ficha de cliente ──────────────────────────────────────
+
+function ClienteModal({ cliente, onClose }: { cliente: AgendaCliente; onClose: () => void }) {
   const [orders, setOrders] = useState<WorkOrder[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    ordersDb.getAll().then((all) => {
+    ordersDb.getAll().then(all => {
       const found = all
-        .filter((o) => o.clientPhone === cliente.telefono)
+        .filter(o => o.clientPhone === cliente.telefono)
         .sort((a, b) => new Date(b.entryDate).getTime() - new Date(a.entryDate).getTime());
       setOrders(found);
       setLoading(false);
     });
   }, [cliente.telefono]);
 
-  const totalGastado = orders.reduce((s, o) => s + (o.budget ?? 0), 0);
+  // Equipos únicos
+  const equipos = useMemo(() => {
+    const map = new Map<string, { brand: string; model: string; type: string; count: number }>();
+    orders.forEach(o => {
+      const key = `${o.brand}|${o.model}|${o.motorType}`;
+      const existing = map.get(key);
+      if (existing) existing.count++;
+      else map.set(key, { brand: o.brand, model: o.model, type: o.motorType, count: 1 });
+    });
+    return Array.from(map.values());
+  }, [orders]);
+
+  const totalFacturado = orders.reduce((s, o) => s + (o.budget ?? 0), 0);
+  const overdue90 = orders.filter(o => {
+    if (o.status !== "listo_para_retiro" || !o.completionDate) return false;
+    const days = Math.floor((Date.now() - new Date(o.completionDate).getTime()) / 86400000);
+    return days >= 90;
+  }).length;
 
   return (
     <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
-      <div className="bg-gray-900 w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl border border-gray-700 shadow-2xl max-h-[90vh] flex flex-col">
+      <div className="bg-gray-900 w-full sm:max-w-xl sm:rounded-2xl rounded-t-2xl border border-gray-700 shadow-2xl max-h-[92vh] flex flex-col">
+
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-700">
           <div className="flex items-center gap-3">
-            <div className="bg-blue-600 rounded-xl p-2.5">
-              <Users className="w-5 h-5 text-white" />
+            <div className="w-12 h-12 rounded-2xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center flex-shrink-0">
+              <span className="text-blue-300 font-black text-xl">
+                {cliente.nombre.charAt(0).toUpperCase()}
+              </span>
             </div>
             <div>
-              <h2 className="text-white font-bold text-lg">{cliente.nombre}</h2>
-              <p className="text-gray-400 text-xs flex items-center gap-1">
-                <Phone className="w-3 h-3" /> {cliente.telefono}
+              <h2 className="text-white font-bold text-lg leading-tight">{cliente.nombre}</h2>
+              <p className="text-gray-400 text-sm flex items-center gap-1">
+                <Phone className="w-3 h-3" />
+                <a href={`tel:${cliente.telefono}`} className="hover:text-orange-400 transition-colors">
+                  {cliente.telefono}
+                </a>
               </p>
             </div>
           </div>
@@ -53,70 +204,67 @@ function ClienteModal({
 
         {/* Stats */}
         {!loading && orders.length > 0 && (
-          <div className="grid grid-cols-2 gap-3 px-5 pt-4">
+          <div className="grid grid-cols-3 gap-2 px-5 pt-4">
             <div className="card py-3 text-center">
               <p className="text-2xl font-black text-orange-400">{orders.length}</p>
-              <p className="text-xs text-gray-500">Reparaciones</p>
+              <p className="text-xs text-gray-500">Visitas</p>
             </div>
             <div className="card py-3 text-center">
-              <p className="text-2xl font-black text-green-400">
-                ${totalGastado.toLocaleString("es-AR")}
+              <p className="text-2xl font-black text-green-400">{formatCurrency(totalFacturado)}</p>
+              <p className="text-xs text-gray-500">Total</p>
+            </div>
+            <div className={`card py-3 text-center ${overdue90 > 0 ? "border-red-600" : ""}`}>
+              <p className={`text-2xl font-black ${overdue90 > 0 ? "text-red-400" : "text-gray-400"}`}>
+                {equipos.length}
               </p>
-              <p className="text-xs text-gray-500">Total facturado</p>
+              <p className="text-xs text-gray-500">Equipos</p>
             </div>
           </div>
         )}
 
-        {/* Historial */}
-        <div className="overflow-y-auto flex-1 px-5 py-4 space-y-3">
+        {/* Alerta 90 días */}
+        {overdue90 > 0 && (
+          <div className="mx-5 mt-3 flex items-center gap-2 bg-red-900/30 border border-red-600/50 rounded-xl px-3 py-2">
+            <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0" />
+            <p className="text-red-300 text-xs font-semibold">
+              {overdue90} equipo{overdue90 > 1 ? "s" : ""} con más de 90 días esperando retiro
+            </p>
+          </div>
+        )}
+
+        {/* Equipos que trajo */}
+        {equipos.length > 0 && (
+          <div className="px-5 pt-4">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+              Equipos registrados
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {equipos.map((eq, i) => (
+                <div key={i} className="bg-gray-800 border border-gray-700 rounded-xl px-3 py-2">
+                  <p className="text-white text-sm font-semibold">{eq.brand} {eq.model}</p>
+                  <p className="text-gray-500 text-xs">
+                    {eq.type === "2T" ? "2 Tiempos" : "4 Tiempos"} · {eq.count} ingreso{eq.count !== 1 ? "s" : ""}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Línea de tiempo */}
+        <div className="overflow-y-auto flex-1 px-5 py-4">
           {loading ? (
             <div className="flex justify-center py-10">
               <div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
             </div>
-          ) : orders.length === 0 ? (
-            <div className="text-center py-10 text-gray-500">
-              <Wrench className="w-10 h-10 mx-auto mb-2 opacity-40" />
-              <p>No hay reparaciones registradas</p>
-            </div>
           ) : (
             <>
-              <p className="text-gray-500 text-xs uppercase tracking-wide font-semibold">
-                Historial completo — de más nuevo a más viejo
-              </p>
-              {orders.map((o, idx) => (
-                <div key={o.id} className="card space-y-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-black text-gray-500">#{orders.length - idx}</span>
-                      <span
-                        className={`text-xs font-black px-2 py-0.5 rounded-lg border
-                          ${o.motorType === "2T"
-                            ? "bg-blue-500/20 text-blue-300 border-blue-500/40"
-                            : "bg-orange-500/20 text-orange-300 border-orange-500/40"}`}
-                      >
-                        {o.motorType}
-                      </span>
-                      <span className={`badge ${REPAIR_STATUS_COLORS[o.status]}`}>
-                        {REPAIR_STATUS_LABELS[o.status]}
-                      </span>
-                    </div>
-                    <span className="text-xs text-gray-500 flex items-center gap-1 flex-shrink-0">
-                      <Clock className="w-3 h-3" /> {formatDate(o.entryDate)}
-                    </span>
-                  </div>
-                  <p className="text-white font-bold">
-                    {o.brand} {o.model}
-                  </p>
-                  <p className="text-gray-400 text-sm leading-snug line-clamp-2">
-                    {o.reportedIssues}
-                  </p>
-                  {o.budget !== null && (
-                    <p className="text-green-400 text-sm font-semibold">
-                      ${o.budget.toLocaleString("es-AR")}
-                    </p>
-                  )}
-                </div>
-              ))}
+              {orders.length > 0 && (
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-4">
+                  Línea de tiempo — {orders.length} visita{orders.length !== 1 ? "s" : ""}
+                </p>
+              )}
+              <Timeline orders={orders} />
             </>
           )}
         </div>
@@ -124,6 +272,8 @@ function ClienteModal({
     </div>
   );
 }
+
+// ─── Página principal de Agenda ──────────────────────────────────
 
 export default function AgendaPage() {
   const [clientes, setClientes] = useState<AgendaCliente[]>([]);
@@ -133,9 +283,7 @@ export default function AgendaPage() {
 
   const load = async () => {
     setLoading(true);
-    try {
-      setClientes(await agendaDb.getAll());
-    } catch {}
+    try { setClientes(await agendaDb.getAll()); } catch {}
     setLoading(false);
   };
 
@@ -144,15 +292,13 @@ export default function AgendaPage() {
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
     if (!q) return clientes;
-    return clientes.filter(
-      (c) =>
-        c.nombre.toLowerCase().includes(q) ||
-        c.telefono.includes(q)
+    return clientes.filter(c =>
+      c.nombre.toLowerCase().includes(q) || c.telefono.includes(q)
     );
   }, [clientes, search]);
 
   const handleDelete = async (id: string, nombre: string) => {
-    if (!confirm(`¿Eliminar a ${nombre} de la agenda? Sus órdenes no se borran.`)) return;
+    if (!confirm(`¿Eliminar a ${nombre} de la agenda?\nSus órdenes no se borran.`)) return;
     await agendaDb.delete(id);
     await load();
   };
@@ -160,8 +306,9 @@ export default function AgendaPage() {
   return (
     <>
       <Navbar />
-      <main className="max-w-2xl mx-auto px-4 py-6 pb-24 sm:pb-6 space-y-5">
-        {/* Title */}
+      <main className="max-w-2xl mx-auto px-4 py-6 pb-28 sm:pb-8 space-y-5">
+
+        {/* Título */}
         <div className="flex items-center gap-3">
           <div className="bg-blue-600 rounded-xl p-2.5">
             <Users className="w-6 h-6 text-white" />
@@ -169,7 +316,7 @@ export default function AgendaPage() {
           <div>
             <h1 className="text-2xl font-black text-white">Agenda de Clientes</h1>
             <p className="text-gray-400 text-sm">
-              {clientes.length} cliente{clientes.length !== 1 ? "s" : ""} registrado{clientes.length !== 1 ? "s" : ""}
+              {clientes.length} cliente{clientes.length !== 1 ? "s" : ""} · Identificados por teléfono
             </p>
           </div>
         </div>
@@ -179,16 +326,14 @@ export default function AgendaPage() {
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
           <input
             type="text"
-            className="input pl-11"
+            className="input pl-11 text-base"
             placeholder="Buscar por nombre o teléfono..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={e => setSearch(e.target.value)}
           />
           {search && (
-            <button
-              onClick={() => setSearch("")}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"
-            >
+            <button onClick={() => setSearch("")}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 p-1">
               <X className="w-4 h-4" />
             </button>
           )}
@@ -208,40 +353,40 @@ export default function AgendaPage() {
             </p>
             <p className="text-gray-600 text-sm mt-1">
               {search
-                ? "Probá con otro nombre o teléfono"
+                ? "Probá con otro nombre o número"
                 : "Los clientes se agregan automáticamente al crear órdenes"}
             </p>
           </div>
         ) : (
           <div className="space-y-2">
             {search && (
-              <p className="text-gray-500 text-xs">
-                {filtered.length} resultado{filtered.length !== 1 ? "s" : ""}
+              <p className="text-gray-500 text-xs px-1">
+                {filtered.length} resultado{filtered.length !== 1 ? "s" : ""} para "{search}"
               </p>
             )}
-            {filtered.map((c) => (
-              <div
-                key={c.id}
-                className="card flex items-center justify-between gap-3 hover:border-blue-500/50 transition-colors cursor-pointer"
+            {filtered.map(c => (
+              <div key={c.id}
+                className="card flex items-center justify-between gap-3 cursor-pointer hover:border-blue-500/50 active:scale-[0.99] transition-all"
                 onClick={() => setSelected(c)}
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-10 h-10 rounded-xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center flex-shrink-0">
-                    <span className="text-blue-300 font-black text-base">
+                  <div className="w-11 h-11 rounded-xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center flex-shrink-0">
+                    <span className="text-blue-300 font-black text-lg">
                       {c.nombre.charAt(0).toUpperCase()}
                     </span>
                   </div>
                   <div className="min-w-0">
                     <p className="text-white font-bold truncate">{c.nombre}</p>
                     <p className="text-gray-400 text-sm flex items-center gap-1">
-                      <Phone className="w-3 h-3" /> {c.telefono}
+                      <Phone className="w-3 h-3 flex-shrink-0" />
+                      <span className="truncate">{c.telefono}</span>
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <button
-                    onClick={(e) => { e.stopPropagation(); handleDelete(c.id, c.nombre); }}
-                    className="p-2 rounded-lg text-gray-600 hover:text-red-400 hover:bg-red-900/30 transition-colors"
+                    onClick={e => { e.stopPropagation(); handleDelete(c.id, c.nombre); }}
+                    className="p-2.5 rounded-xl text-gray-600 hover:text-red-400 hover:bg-red-900/30 transition-colors"
                     title="Eliminar de la agenda"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -254,9 +399,7 @@ export default function AgendaPage() {
         )}
       </main>
 
-      {selected && (
-        <ClienteModal cliente={selected} onClose={() => setSelected(null)} />
-      )}
+      {selected && <ClienteModal cliente={selected} onClose={() => setSelected(null)} />}
       <BottomNav />
     </>
   );

@@ -326,7 +326,14 @@ export const agendaDb = {
       .select("id")
       .eq("telefono", phone)
       .maybeSingle();
-    if (!data) {
+    if (data) {
+      // Cliente existe: actualizar nombre por si cambió
+      await supabase
+        .from("agenda_clientes")
+        .update({ nombre: nombre.trim() })
+        .eq("telefono", phone);
+    } else {
+      // Cliente nuevo
       await supabase.from("agenda_clientes").insert({
         nombre: nombre.trim(),
         telefono: phone,

@@ -74,11 +74,12 @@ export default function DashboardPage() {
     try {
       if (editingOrder) {
         await update(order.id, order);
+        // Mantener agenda sincronizada si cambió nombre o teléfono
+        agendaDb.upsertByPhone(order.clientName, order.clientPhone).catch(() => {});
         showToast("Orden actualizada con éxito");
       } else {
         const newOrder = { ...order, id: generateId(), entryDate: new Date().toISOString() };
         await create(newOrder);
-        // Auto-registrar cliente en agenda si no existe
         agendaDb.upsertByPhone(newOrder.clientName, newOrder.clientPhone).catch(() => {});
         showToast("¡Orden guardada con éxito!");
       }
