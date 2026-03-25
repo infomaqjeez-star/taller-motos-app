@@ -21,57 +21,52 @@ const fmt = (n: number) => "$" + n.toLocaleString("es-AR");
 
 function generateId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
 
-// Sonido éxito — tipo "caja registradora": tono subiendo rápido + decay
-function beepOk() {
+// AudioContext compartido — debe crearse desde un gesto del usuario
+let _audioCtx: AudioContext | null = null;
+function getAudioCtx(): AudioContext | null {
   try {
-    const ctx = new AudioContext();
-    const t   = ctx.currentTime;
+    if (!_audioCtx || _audioCtx.state === "closed") {
+      _audioCtx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+    }
+    if (_audioCtx.state === "suspended") _audioCtx.resume();
+    return _audioCtx;
+  } catch (_) { return null; }
+}
 
-    // Nota 1: Do agudo (1047 Hz)
-    const osc1  = ctx.createOscillator();
-    const gain1 = ctx.createGain();
-    osc1.type = "triangle";
-    osc1.frequency.value = 1047;
-    gain1.gain.setValueAtTime(0, t);
-    gain1.gain.linearRampToValueAtTime(0.35, t + 0.01);
-    gain1.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
-    osc1.connect(gain1); gain1.connect(ctx.destination);
-    osc1.start(t); osc1.stop(t + 0.12);
-
-    // Nota 2: Mi más agudo (1319 Hz) — 80ms después
-    const osc2  = ctx.createOscillator();
-    const gain2 = ctx.createGain();
-    osc2.type = "triangle";
-    osc2.frequency.value = 1319;
-    gain2.gain.setValueAtTime(0, t + 0.08);
-    gain2.gain.linearRampToValueAtTime(0.4, t + 0.09);
-    gain2.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
-    osc2.connect(gain2); gain2.connect(ctx.destination);
-    osc2.start(t + 0.08); osc2.stop(t + 0.25);
+// Beep simple: un tono corto y agudo (funciona en iOS y Android)
+function beep() {
+  const ctx = getAudioCtx();
+  if (!ctx) return;
+  try {
+    const osc  = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.value = 880;
+    gain.gain.setValueAtTime(0.4, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.18);
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start(); osc.stop(ctx.currentTime + 0.18);
   } catch (_) {}
 }
 
-// Sonido error — doble beep grave
+// Beep error: dos tonos graves cortos
 function beepError() {
+  const ctx = getAudioCtx();
+  if (!ctx) return;
   try {
-    const ctx = new AudioContext();
-    const t   = ctx.currentTime;
-
-    [0, 0.18].forEach(offset => {
+    const t = ctx.currentTime;
+    [0, 0.22].forEach(offset => {
       const osc  = ctx.createOscillator();
       const gain = ctx.createGain();
-      osc.type = "square";
-      osc.frequency.value = 260; // grave
-      gain.gain.setValueAtTime(0.25, t + offset);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + offset + 0.14);
+      osc.type = "sine";
+      osc.frequency.value = 330;
+      gain.gain.setValueAtTime(0.35, t + offset);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + offset + 0.15);
       osc.connect(gain); gain.connect(ctx.destination);
-      osc.start(t + offset); osc.stop(t + offset + 0.14);
+      osc.start(t + offset); osc.stop(t + offset + 0.15);
     });
   } catch (_) {}
 }
-
-// Alias para compatibilidad (beep simple = ok)
-const beep = beepOk;
 
 // ─── Base de datos oficial ML Flex ───────────────────────────────────────────
 const CP_MAP: Record<string, string> = {
@@ -281,7 +276,7 @@ export default function OCRScanner({ tarifas, onFinish, onClose }: Props) {
   const [busqueda, setBusqueda]         = useState("");
   const [workerReady, setWorkerReady]   = useState(false);
   const [existingIds, setExistingIds]   = useState<Set<string>>(new Set());
-  const [duplicateMsg, setDuplicateMsg] = useState(false);
+  const [duplicateMsg, setDuplicateMsg] = useState<"" | "duplicado" | "sinid">("");
 
   // Estado del visor en tiempo real
   const [liveLocalidad, setLiveLocalidad] = useState<string | null>(null);
@@ -405,21 +400,29 @@ export default function OCRScanner({ tarifas, onFinish, onClose }: Props) {
     return () => { scanningRef.current = false; };
   }, [workerReady]);
 
-  // ─── Capturar — solo guarda si hay zona válida y no es duplicado ───────────
+  // ─── Capturar — solo guarda si hay zona válida, ID obligatorio y no es duplicado ───────────
   const capturar = useCallback(async () => {
     if (capturing || paquetes.length >= MAX) return;
     if (!liveLocalidad) return;
 
+    // ── ID de envío OBLIGATORIO ──
+    if (!liveEnvioId) {
+      navigator.vibrate?.([80, 50, 80]);
+      setDuplicateMsg("sinid");
+      setTimeout(() => setDuplicateMsg(""), 2500);
+      beepError();
+      return;
+    }
+
     // ── Anti-duplicados por ID de envío ──
-    if (liveEnvioId) {
-      const yaEnLista   = paquetes.some(p => p.envioId === liveEnvioId);
-      const yaEnSupabase = existingIds.has(liveEnvioId);
-      if (yaEnLista || yaEnSupabase) {
-        navigator.vibrate?.([80, 50, 80]); // vibración doble = error
-        setDuplicateMsg(true);
-        setTimeout(() => setDuplicateMsg(false), 2500);
-        return;
-      }
+    const yaEnLista    = paquetes.some(p => p.envioId === liveEnvioId);
+    const yaEnSupabase = existingIds.has(liveEnvioId);
+    if (yaEnLista || yaEnSupabase) {
+      navigator.vibrate?.([80, 50, 80]);
+      setDuplicateMsg("duplicado");
+      setTimeout(() => setDuplicateMsg(""), 2500);
+      beepError();
+      return;
     }
 
     const video  = videoRef.current;
@@ -519,11 +522,20 @@ export default function OCRScanner({ tarifas, onFinish, onClose }: Props) {
             <video ref={videoRef} className="absolute inset-0 w-full h-full object-cover" playsInline muted />
             <canvas ref={canvasRef} className="hidden" />
 
-            {/* Toast duplicado */}
+            {/* Toast error */}
             {duplicateMsg && (
               <div className="absolute top-16 inset-x-4 z-20 bg-red-600 rounded-2xl px-4 py-3 text-center shadow-2xl">
-                <p className="text-white font-black text-sm">Paquete ya escaneado</p>
-                <p className="text-red-200 text-xs mt-0.5">ID duplicado — ignorado</p>
+                {duplicateMsg === "sinid" ? (
+                  <>
+                    <p className="text-white font-black text-sm">Sin ID de envío</p>
+                    <p className="text-red-200 text-xs mt-0.5">Apuntá mejor a la etiqueta — ID obligatorio</p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-white font-black text-sm">Paquete ya escaneado</p>
+                    <p className="text-red-200 text-xs mt-0.5">ID duplicado — ignorado</p>
+                  </>
+                )}
               </div>
             )}
 
