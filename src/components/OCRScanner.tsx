@@ -5,7 +5,7 @@ import { FlexZona, FLEX_LOCALIDADES } from "@/lib/types";
 import {
   X, Camera, Search, ChevronRight,
   CheckCircle2, Loader2, Save, DollarSign, TrendingUp, Package,
-  AlertTriangle,
+  AlertTriangle, Trash2,
 } from "lucide-react";
 
 const MAX = 50;
@@ -75,30 +75,38 @@ const CP_MAP: Record<string, string> = {
 };
 
 // Detectar localidad por CP — CABA por rango 1000-1499
+// Prioridad ABSOLUTA sobre detección por nombre de texto.
 function detectCPFromText(text: string): string | null {
+  // Normalizar: quitar espacios entre dígitos que el OCR a veces inserta (ej: "1 8 0 4" → "1804")
+  const normalized = text.replace(/(\d)\s+(\d)/g, "$1$2")
+                         .replace(/(\d)\s+(\d)/g, "$1$2"); // segunda pasada por si hay 3+ espacios
+
   const patterns = [
-    /CP[:\s.]*(\d{4})/i,
-    /C\.P\.[:\s]*(\d{4})/i,
-    /\bCP(\d{4})\b/i,
-    /\b(\d{4})\b/g,
+    /CP[:\s.]*(\d{4,5})/i,
+    /C\.P\.[:\s]*(\d{4,5})/i,
+    /\bCP(\d{4,5})\b/i,
+    /\b(\d{4,5})\b/g,
   ];
+
   for (const pattern of patterns) {
     if (pattern.flags.includes("g")) {
       const re = new RegExp(pattern.source, pattern.flags);
-      let match = re.exec(text);
+      let match = re.exec(normalized);
       while (match !== null) {
-        const cp = parseInt(match[1], 10);
+        const num = match[1].length === 5 ? match[1].slice(0, 4) : match[1]; // tomar primeros 4 dígitos
+        const cp = parseInt(num, 10);
         if (cp >= 1000 && cp <= 1499) return "CABA";
-        const loc = CP_MAP[match[1]];
+        const loc = CP_MAP[num];
         if (loc) return loc;
-        match = re.exec(text);
+        match = re.exec(normalized);
       }
     } else {
-      const match = text.match(pattern);
+      const match = normalized.match(pattern);
       if (match) {
-        const cp = parseInt(match[1], 10);
+        const num = match[1].length === 5 ? match[1].slice(0, 4) : match[1];
+        const cp = parseInt(num, 10);
         if (cp >= 1000 && cp <= 1499) return "CABA";
-        const loc = CP_MAP[match[1]];
+        const loc = CP_MAP[num];
         if (loc) return loc;
       }
     }
@@ -374,6 +382,10 @@ export default function OCRScanner({ tarifas, onFinish, onClose }: Props) {
     setEditIdx(null); setBusqueda("");
   };
 
+  const borrarPaquete = (id: string) => {
+    setPaquetes(prev => prev.filter(p => p.id !== id));
+  };
+
   const okCount       = paquetes.length;
   const totalML       = paquetes.reduce((s, p) => s + p.precioML, 0);
   const totalGanancia = paquetes.reduce((s, p) => s + p.ganancia, 0);
@@ -417,8 +429,8 @@ export default function OCRScanner({ tarifas, onFinish, onClose }: Props) {
         </div>
       </div>
 
-      {/* Cámara — ocupa todo el espacio disponible */}
-      <div className="relative flex-1 overflow-hidden">
+      {/* Cámara — altura mínima garantizada para que el botón quede centrado/abajo cómodamente */}
+      <div className="relative overflow-hidden flex-shrink-0" style={{ height: "60vh", minHeight: "360px" }}>
         {camError ? (
           <div className="absolute inset-0 bg-gray-900 flex flex-col items-center justify-center text-center px-6">
             <AlertTriangle className="w-10 h-10 text-red-400 mb-3" />
@@ -575,11 +587,17 @@ export default function OCRScanner({ tarifas, onFinish, onClose }: Props) {
                           ML: {fmt(p.precioML)} · Flete: {fmt(p.pagoFlete)} · Gan: <span className="text-green-300">{fmt(p.ganancia)}</span>
                         </p>
                       </div>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <button onClick={() => borrarPaquete(p.id)}
+                        className="p-1.5 rounded-lg bg-red-900/30 text-red-400 hover:bg-red-600 hover:text-white transition-colors">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                       <button onClick={() => { setEditIdx(idx); setBusqueda(""); }}
-                        className="p-1.5 rounded-lg bg-gray-700 text-gray-400 hover:text-yellow-300 flex-shrink-0">
+                        className="p-1.5 rounded-lg bg-gray-700 text-gray-400 hover:text-yellow-300 transition-colors">
                         <ChevronRight className="w-4 h-4" />
                       </button>
                     </div>
+                  </div>
                   )}
                 </div>
               );
