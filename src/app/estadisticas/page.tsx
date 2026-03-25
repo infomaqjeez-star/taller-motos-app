@@ -14,7 +14,7 @@ export default function EstadisticasPage() {
   return (
     <>
       <Navbar overdueCount={overdueCount} lowStockCount={lowStockCount} />
-      <main className="max-w-5xl mx-auto px-4 py-6 pt-16 sm:pt-4 space-y-6">
+      <main className="max-w-5xl mx-auto px-4 py-6 pb-20 sm:pb-4 space-y-6">
         <div className="flex items-center gap-3">
           <div className="bg-orange-500 rounded-xl p-2.5">
             <BarChart2 className="w-6 h-6 text-white" />

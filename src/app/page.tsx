@@ -124,7 +124,7 @@ export default function DashboardPage() {
         onOpenNotifications={() => setShowNotifications(true)}
       />
 
-      <main className="max-w-5xl mx-auto px-4 py-6 pt-16 sm:pt-4 space-y-6">
+      <main className="max-w-5xl mx-auto px-4 py-6 pb-20 sm:pb-4 space-y-6">
         {/* Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <StatCard label="Activas" value={activeOrders.length} icon={Wrench} color="bg-orange-500" />
