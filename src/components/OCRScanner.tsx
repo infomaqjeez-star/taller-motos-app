@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { FlexZona, FLEX_LOCALIDADES } from "@/lib/types";
+import { flexDb } from "@/lib/db";
 import {
   X, Camera, Search, ChevronRight,
   CheckCircle2, Loader2, Save, DollarSign, TrendingUp, Package,
@@ -177,6 +178,14 @@ function detectLocalidadFromText(text: string): string | null {
   return null;
 }
 
+// Extraer el ID de envío ML — número de 10-13 dígitos que no sea un CP (4 dígitos)
+function extractEnvioId(text: string): string | null {
+  const matches = text.match(/\b(\d{10,13})\b/g);
+  if (!matches) return null;
+  // Preferir el más largo (IDs de ML suelen tener 11 dígitos)
+  return matches.sort((a, b) => b.length - a.length)[0] ?? null;
+}
+
 function calcPaquete(localidad: string, tarifas: Record<FlexZona, number>) {
   const loc = FLEX_LOCALIDADES.find(l => l.nombre === localidad);
   const zona: FlexZona = loc?.zona ?? "lejana";
@@ -208,6 +217,7 @@ export interface PaqueteOCR {
   pagoFlete: number;
   ganancia: number;
   fotoDataUrl: string;
+  envioId: string | null;
   estado: "ok";
 }
 
@@ -225,15 +235,18 @@ export default function OCRScanner({ tarifas, onFinish, onClose }: Props) {
   const scanningRef = useRef(false);   // flag para el loop de análisis en tiempo real
   const lastScanRef = useRef(0);
 
-  const [paquetes, setPaquetes]       = useState<PaqueteOCR[]>([]);
-  const [camError, setCamError]       = useState("");
-  const [capturing, setCapturing]     = useState(false);
-  const [editIdx, setEditIdx]         = useState<number | null>(null);
-  const [busqueda, setBusqueda]       = useState("");
-  const [workerReady, setWorkerReady] = useState(false);
+  const [paquetes, setPaquetes]         = useState<PaqueteOCR[]>([]);
+  const [camError, setCamError]         = useState("");
+  const [capturing, setCapturing]       = useState(false);
+  const [editIdx, setEditIdx]           = useState<number | null>(null);
+  const [busqueda, setBusqueda]         = useState("");
+  const [workerReady, setWorkerReady]   = useState(false);
+  const [existingIds, setExistingIds]   = useState<Set<string>>(new Set());
+  const [duplicateMsg, setDuplicateMsg] = useState(false);
 
   // Estado del visor en tiempo real
   const [liveLocalidad, setLiveLocalidad] = useState<string | null>(null);
+  const [liveEnvioId, setLiveEnvioId]     = useState<string | null>(null);
   const [liveScan, setLiveScan]           = useState<"scanning" | "found" | "notfound">("scanning");
 
   const localidadesFiltradas = busqueda.trim()
@@ -286,6 +299,14 @@ export default function OCRScanner({ tarifas, onFinish, onClose }: Props) {
 
   useEffect(() => { startCamera(); return () => stopCamera(); }, [startCamera, stopCamera]);
 
+  // Cargar IDs existentes en Supabase para anti-duplicados
+  useEffect(() => {
+    flexDb.getAll().then(envios => {
+      const ids = new Set(envios.map(e => e.nroSeguimiento).filter(Boolean) as string[]);
+      setExistingIds(ids);
+    }).catch(() => {});
+  }, []);
+
   // ─── Loop de análisis en tiempo real (cada 1.5s) ─────────────────────────
   useEffect(() => {
     if (!workerReady) return;
@@ -320,15 +341,18 @@ export default function OCRScanner({ tarifas, onFinish, onClose }: Props) {
       try {
         const processed = preprocessCanvas(canvas);
         const { data: { text } } = await worker.recognize(processed);
-        const loc = detectLocalidadFromText(text);
+        const loc    = detectLocalidadFromText(text);
+        const envId  = extractEnvioId(text);
 
         if (!scanningRef.current) return;
 
         if (loc) {
           setLiveLocalidad(loc);
+          setLiveEnvioId(envId);
           setLiveScan("found");
         } else {
           setLiveLocalidad(null);
+          setLiveEnvioId(null);
           setLiveScan("notfound");
         }
       } catch (_) {
@@ -342,10 +366,22 @@ export default function OCRScanner({ tarifas, onFinish, onClose }: Props) {
     return () => { scanningRef.current = false; };
   }, [workerReady]);
 
-  // ─── Capturar — solo guarda si hay zona válida detectada en tiempo real ───
+  // ─── Capturar — solo guarda si hay zona válida y no es duplicado ───────────
   const capturar = useCallback(async () => {
     if (capturing || paquetes.length >= MAX) return;
-    if (!liveLocalidad) return; // nada válido en visor → ignorar
+    if (!liveLocalidad) return;
+
+    // ── Anti-duplicados por ID de envío ──
+    if (liveEnvioId) {
+      const yaEnLista   = paquetes.some(p => p.envioId === liveEnvioId);
+      const yaEnSupabase = existingIds.has(liveEnvioId);
+      if (yaEnLista || yaEnSupabase) {
+        navigator.vibrate?.([80, 50, 80]); // vibración doble = error
+        setDuplicateMsg(true);
+        setTimeout(() => setDuplicateMsg(false), 2500);
+        return;
+      }
+    }
 
     const video  = videoRef.current;
     const canvas = canvasRef.current;
@@ -353,14 +389,13 @@ export default function OCRScanner({ tarifas, onFinish, onClose }: Props) {
     setCapturing(true);
     navigator.vibrate?.(60);
 
-    // Captura a resolución completa para guardar la foto
     canvas.width  = video.videoWidth;
     canvas.height = video.videoHeight;
     const ctx = canvas.getContext("2d")!;
     ctx.drawImage(video, 0, 0);
     const fotoDataUrl = canvas.toDataURL("image/jpeg", 0.8);
 
-    const calc = calcPaquete(liveLocalidad, tarifas);
+    const calc    = calcPaquete(liveLocalidad, tarifas);
     const nuevo: PaqueteOCR = {
       id:           generateId(),
       localidad:    liveLocalidad,
@@ -369,12 +404,13 @@ export default function OCRScanner({ tarifas, onFinish, onClose }: Props) {
       pagoFlete:    calc.pagoFlete,
       ganancia:     calc.ganancia,
       fotoDataUrl,
+      envioId:      liveEnvioId,
       estado:       "ok",
     };
     setPaquetes(prev => [...prev, nuevo]);
     beep();
     setCapturing(false);
-  }, [capturing, paquetes.length, liveLocalidad, tarifas]);
+  }, [capturing, paquetes, liveLocalidad, liveEnvioId, existingIds, tarifas]);
 
   const editarLocalidad = (idx: number, localidad: string) => {
     const calc = calcPaquete(localidad, tarifas);
@@ -444,6 +480,14 @@ export default function OCRScanner({ tarifas, onFinish, onClose }: Props) {
             <video ref={videoRef} className="absolute inset-0 w-full h-full object-cover" playsInline muted />
             <canvas ref={canvasRef} className="hidden" />
 
+            {/* Toast duplicado */}
+            {duplicateMsg && (
+              <div className="absolute top-16 inset-x-4 z-20 bg-red-600 rounded-2xl px-4 py-3 text-center shadow-2xl">
+                <p className="text-white font-black text-sm">Paquete ya escaneado</p>
+                <p className="text-red-200 text-xs mt-0.5">ID duplicado — ignorado</p>
+              </div>
+            )}
+
             {/* Marco de enfoque — color dinámico según detección */}
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ paddingBottom: "140px" }}>
               <div className="relative w-72 h-44">
@@ -461,6 +505,9 @@ export default function OCRScanner({ tarifas, onFinish, onClose }: Props) {
                       <p className="text-green-200 text-xs mt-0.5">
                         {ZONA_LABELS[FLEX_LOCALIDADES.find(l => l.nombre === liveLocalidad)?.zona ?? "lejana"]} · {fmt(calcPaquete(liveLocalidad, tarifas).precioML)}
                       </p>
+                      {liveEnvioId && (
+                        <p className="text-green-300 text-[10px] mt-1 font-mono">ID: {liveEnvioId}</p>
+                      )}
                     </div>
                   ) : (
                     <div className="bg-black/60 rounded-xl px-3 py-1.5 flex items-center gap-2">
@@ -586,6 +633,9 @@ export default function OCRScanner({ tarifas, onFinish, onClose }: Props) {
                         <p className="text-gray-500 text-[10px] mt-0.5">
                           ML: {fmt(p.precioML)} · Flete: {fmt(p.pagoFlete)} · Gan: <span className="text-green-300">{fmt(p.ganancia)}</span>
                         </p>
+                        {p.envioId && (
+                          <p className="text-gray-600 text-[10px] font-mono mt-0.5">ID: {p.envioId}</p>
+                        )}
                       </div>
                     <div className="flex items-center gap-1 flex-shrink-0">
                       <button onClick={() => borrarPaquete(p.id)}

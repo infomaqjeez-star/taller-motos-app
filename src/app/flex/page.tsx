@@ -81,7 +81,7 @@ export default function FlexPage() {
           pagoFlete:      p.pagoFlete,
           ganancia:       p.ganancia,
           descripcion:    "",
-          nroSeguimiento: "",
+          nroSeguimiento: p.envioId ?? "",
           createdAt:      new Date().toISOString(),
         });
       } catch (_) {}
