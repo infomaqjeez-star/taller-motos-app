@@ -341,6 +341,31 @@ export const agendaDb = {
     }
   },
 
+  async syncFromOrders(): Promise<number> {
+    const { data: orders } = await supabase
+      .from("reparaciones")
+      .select("client_name, client_phone")
+      .not("client_phone", "is", null);
+    if (!orders) return 0;
+    const seen = new Set<string>();
+    let count = 0;
+    for (const o of orders) {
+      const phone = (o.client_phone as string)?.trim();
+      if (!phone || seen.has(phone)) continue;
+      seen.add(phone);
+      const { data: existing } = await supabase
+        .from("agenda_clientes").select("id").eq("telefono", phone).maybeSingle();
+      if (!existing) {
+        await supabase.from("agenda_clientes").insert({
+          nombre: (o.client_name as string)?.trim() || "Sin nombre",
+          telefono: phone,
+        });
+        count++;
+      }
+    }
+    return count;
+  },
+
   async delete(id: string): Promise<void> {
     const { error } = await supabase.from("agenda_clientes").delete().eq("id", id);
     if (error) throw error;
