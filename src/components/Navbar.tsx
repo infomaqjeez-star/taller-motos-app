@@ -1,16 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
-  Wrench,
-  Package,
-  LayoutDashboard,
-  AlertTriangle,
-  MessageCircle,
-  BarChart2,
-  Users,
-  Truck,
+  Package, LayoutDashboard, AlertTriangle,
+  MessageCircle, BarChart2, Users, Truck,
 } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
 
@@ -30,12 +25,12 @@ export default function Navbar({
   const pathname = usePathname();
 
   const links = [
-    { href: "/",             label: "Dashboard",     icon: LayoutDashboard, badge: overdueCount,  badgeColor: "bg-red-500" },
-    { href: "/inventario",   label: "Inventario",    icon: Package,         badge: lowStockCount, badgeColor: "bg-yellow-500" },
-    { href: "/estadisticas", label: "Estadísticas",  icon: BarChart2,       badge: 0,             badgeColor: "" },
-    { href: "/agenda",       label: "Agenda",        icon: Users,           badge: 0,             badgeColor: "" },
-    { href: "/flex",         label: "Flex",          icon: Truck,           badge: 0,             badgeColor: "" },
-    { href: "/reportes",     label: "Reportes",      icon: BarChart2,       badge: 0,             badgeColor: "" },
+    { href: "/",             label: "Dashboard",    icon: LayoutDashboard, badge: overdueCount,  badgeColor: "bg-red-500" },
+    { href: "/inventario",   label: "Inventario",   icon: Package,         badge: lowStockCount, badgeColor: "bg-yellow-500" },
+    { href: "/estadisticas", label: "Estadísticas", icon: BarChart2,       badge: 0,             badgeColor: "" },
+    { href: "/agenda",       label: "Agenda",       icon: Users,           badge: 0,             badgeColor: "" },
+    { href: "/flex",         label: "Flex",         icon: Truck,           badge: 0,             badgeColor: "" },
+    { href: "/reportes",     label: "Reportes",     icon: BarChart2,       badge: 0,             badgeColor: "" },
   ];
 
   return (
@@ -43,13 +38,17 @@ export default function Navbar({
       <div className="max-w-5xl mx-auto px-4">
         <div className="flex items-center justify-between h-14">
 
-          {/* Logo */}
-          <div className="flex items-center gap-2">
-            <div className="bg-orange-500 rounded-xl p-1.5">
-              <Wrench className="w-5 h-5 text-white" />
-            </div>
-            <span className="font-black text-orange-400 text-xl tracking-tight">MAQJEEZ</span>
-          </div>
+          {/* Logo — clic lleva al inicio */}
+          <Link href="/" className="flex items-center h-full py-1">
+            <Image
+              src="/logo-maqjeez.png"
+              alt="MAQJEEZ"
+              width={130}
+              height={44}
+              className="object-contain h-full w-auto"
+              priority
+            />
+          </Link>
 
           {/* Desktop nav */}
           <nav className="hidden sm:flex items-center gap-1">
@@ -98,7 +97,7 @@ export default function Navbar({
             <ThemeToggle />
           </nav>
 
-          {/* Mobile: solo iconos de acción rápida */}
+          {/* Mobile: iconos rápidos */}
           <div className="sm:hidden flex items-center gap-2">
             {onOpenNotifications && notificationCount > 0 && (
               <button
@@ -117,7 +116,7 @@ export default function Navbar({
         </div>
       </div>
 
-      {/* Alerta barra roja */}
+      {/* Alerta equipos vencidos */}
       {overdueCount > 0 && (
         <div className="bg-red-600/20 border-t border-red-600/40 px-4 py-2">
           <div className="max-w-5xl mx-auto flex items-center gap-2 text-red-400 text-sm font-semibold">
