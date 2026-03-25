@@ -9,7 +9,7 @@ import BottomNav from "@/components/BottomNav";
 import {
   Users, Search, Phone, ChevronRight, X, Clock,
   Wrench, Trash2, Camera, DollarSign, Calendar,
-  AlertTriangle, ChevronDown, ChevronUp,
+  AlertTriangle, ChevronDown, ChevronUp, RefreshCw,
 } from "lucide-react";
 
 // ─── Línea de tiempo de un cliente ──────────────────────────────
@@ -278,6 +278,7 @@ function ClienteModal({ cliente, onClose }: { cliente: AgendaCliente; onClose: (
 export default function AgendaPage() {
   const [clientes, setClientes] = useState<AgendaCliente[]>([]);
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<AgendaCliente | null>(null);
 
@@ -285,6 +286,16 @@ export default function AgendaPage() {
     setLoading(true);
     try { setClientes(await agendaDb.getAll()); } catch {}
     setLoading(false);
+  };
+
+  const handleSync = async () => {
+    setSyncing(true);
+    try {
+      const count = await agendaDb.syncFromOrders();
+      await load();
+      alert(count > 0 ? `✓ ${count} cliente${count !== 1 ? "s" : ""} sincronizado${count !== 1 ? "s" : ""} desde las órdenes.` : "✓ La agenda ya estaba al día.");
+    } catch (e) { alert("Error al sincronizar: " + e); }
+    setSyncing(false);
   };
 
   useEffect(() => { load(); }, []);
@@ -319,6 +330,12 @@ export default function AgendaPage() {
               {clientes.length} cliente{clientes.length !== 1 ? "s" : ""} · Identificados por teléfono
             </p>
           </div>
+          <button onClick={handleSync} disabled={syncing}
+            className="ml-auto btn-secondary btn-sm rounded-xl flex items-center gap-2"
+            title="Sincronizar desde órdenes existentes">
+            <RefreshCw className={`w-4 h-4 ${syncing ? "animate-spin text-orange-400" : "text-gray-400"}`} />
+            <span className="hidden sm:inline text-xs">Sincronizar</span>
+          </button>
         </div>
 
         {/* Buscador */}
