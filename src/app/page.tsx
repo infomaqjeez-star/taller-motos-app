@@ -1,0 +1,225 @@
+"use client";
+
+import { useState } from "react";
+import { Plus, Wrench, AlertTriangle, Package, CheckSquare, Clock, FileSpreadsheet, FileText } from "lucide-react";
+import { WorkOrder } from "@/lib/types";
+import { useOrders } from "@/hooks/useOrders";
+import { useInventory } from "@/hooks/useInventory";
+import { useNotifications } from "@/hooks/useNotifications";
+import { generateId } from "@/lib/utils";
+import { exportOrdersToExcel } from "@/lib/exportExcel";
+import { exportOrdersReportPDF } from "@/lib/exportPDF";
+import { clearSentLog } from "@/lib/notifications";
+import Navbar from "@/components/Navbar";
+import FiltersBar from "@/components/FiltersBar";
+import OrderCard from "@/components/OrderCard";
+import OrderForm from "@/components/OrderForm";
+import NotificationsPanel from "@/components/NotificationsPanel";
+
+function StatCard({
+  label,
+  value,
+  icon: Icon,
+  color,
+}: {
+  label: string;
+  value: number;
+  icon: React.ElementType;
+  color: string;
+}) {
+  return (
+    <div className="card flex items-center gap-4">
+      <div className={`${color} rounded-xl p-3`}>
+        <Icon className="w-6 h-6 text-white" />
+      </div>
+      <div>
+        <p className="text-2xl font-black text-white leading-tight">{value}</p>
+        <p className="text-xs text-gray-500 font-medium">{label}</p>
+      </div>
+    </div>
+  );
+}
+
+export default function DashboardPage() {
+  const {
+    orders,
+    filtered,
+    filters,
+    setFilters,
+    create,
+    update,
+    remove,
+    overdueCount,
+  } = useOrders();
+  const { lowStockCount } = useInventory();
+  const { pending, sentLog, markSent, unsentCount, refresh: refreshNotifications } =
+    useNotifications(orders);
+
+  const [showForm, setShowForm] = useState(false);
+  const [editingOrder, setEditingOrder] = useState<WorkOrder | null>(null);
+  const [showNotifications, setShowNotifications] = useState(false);
+
+  const handleSave = (order: WorkOrder) => {
+    if (editingOrder) {
+      update(order.id, order);
+    } else {
+      create({ ...order, id: generateId(), entryDate: new Date().toISOString() });
+    }
+    setShowForm(false);
+    setEditingOrder(null);
+  };
+
+  const handleEdit = (order: WorkOrder) => {
+    setEditingOrder(order);
+    setShowForm(true);
+  };
+
+  const handleClose = () => {
+    setShowForm(false);
+    setEditingOrder(null);
+  };
+
+  // Estadísticas
+  const activeOrders = orders.filter((o) => o.status !== "entregado");
+  const readyOrders = orders.filter((o) => o.status === "listo_para_retiro");
+  const inRepairOrders = orders.filter((o) => o.status === "en_reparacion");
+  const waitingPartsOrders = orders.filter((o) => o.status === "esperando_repuesto");
+
+  return (
+    <>
+      <Navbar
+        overdueCount={overdueCount}
+        lowStockCount={lowStockCount}
+        notificationCount={unsentCount}
+        onOpenNotifications={() => setShowNotifications(true)}
+      />
+
+      <main className="max-w-5xl mx-auto px-4 py-6 space-y-6">
+        {/* Stats */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <StatCard label="Activas" value={activeOrders.length} icon={Wrench} color="bg-orange-500" />
+          <StatCard label="En Reparación" value={inRepairOrders.length} icon={Clock} color="bg-blue-600" />
+          <StatCard label="Listas para Retiro" value={readyOrders.length} icon={CheckSquare} color="bg-green-600" />
+          <StatCard label="Esp. Repuesto" value={waitingPartsOrders.length} icon={Package} color="bg-yellow-600" />
+        </div>
+
+        {/* Alerta 90 días prominente */}
+        {overdueCount > 0 && (
+          <div className="card-alert flex items-start gap-3">
+            <AlertTriangle className="w-6 h-6 text-red-400 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-red-300 font-bold text-base">
+                {overdueCount} equipo{overdueCount > 1 ? "s" : ""} con más de 90 días esperando retiro
+              </p>
+              <p className="text-red-400/70 text-sm mt-0.5">
+                Contactá al cliente para coordinar la devolución o el abandono del equipo.
+              </p>
+              <button
+                onClick={() => setFilters({ ...filters, overdueOnly: true })}
+                className="mt-2 text-sm text-red-300 underline underline-offset-2 hover:text-red-200"
+              >
+                Ver solo esas órdenes →
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Barra de filtros + Exportar */}
+        <div className="space-y-3">
+          <FiltersBar
+            filters={filters}
+            onChange={setFilters}
+            totalCount={orders.length}
+            filteredCount={filtered.length}
+          />
+          {filtered.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => exportOrdersToExcel(filtered)}
+                className="btn-secondary flex-1 sm:flex-none"
+              >
+                <FileSpreadsheet className="w-5 h-5 text-green-400" />
+                Excel
+                <span className="text-gray-500 text-sm font-normal">({filtered.length})</span>
+              </button>
+              <button
+                onClick={() => {
+                  const label =
+                    filters.motorType !== "all" ? `Motor ${filters.motorType}`
+                    : filters.status !== "all" ? `Estado: ${filters.status}`
+                    : filters.overdueOnly ? "Más de 90 días"
+                    : "Todas las órdenes";
+                  exportOrdersReportPDF(filtered, label);
+                }}
+                className="btn-secondary flex-1 sm:flex-none"
+              >
+                <FileText className="w-5 h-5 text-red-400" />
+                PDF
+                <span className="text-gray-500 text-sm font-normal">({filtered.length})</span>
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Lista de órdenes */}
+        <div className="space-y-3">
+          {filtered.length === 0 ? (
+            <div className="card flex flex-col items-center justify-center py-16 text-center">
+              <Wrench className="w-12 h-12 text-gray-700 mb-4" />
+              <p className="text-gray-400 font-semibold text-lg">
+                {orders.length === 0
+                  ? "No hay órdenes de trabajo todavía"
+                  : "No se encontraron órdenes con esos filtros"}
+              </p>
+              <p className="text-gray-600 text-sm mt-1">
+                {orders.length === 0
+                  ? "Tocá el botón naranja para ingresar tu primer equipo"
+                  : "Probá ajustar los filtros"}
+              </p>
+            </div>
+          ) : (
+            filtered.map((order) => (
+              <OrderCard
+                key={order.id}
+                order={order}
+                onEdit={handleEdit}
+                onDelete={remove}
+              />
+            ))
+          )}
+        </div>
+      </main>
+
+      {/* FAB — Nueva orden */}
+      <button
+        onClick={() => { setEditingOrder(null); setShowForm(true); }}
+        className="fixed bottom-6 right-6 btn-primary rounded-2xl shadow-2xl shadow-orange-500/40
+                   h-16 w-16 sm:w-auto sm:px-6 z-40"
+        aria-label="Nueva orden"
+      >
+        <Plus className="w-7 h-7 flex-shrink-0" />
+        <span className="hidden sm:inline text-base">Nueva Orden</span>
+      </button>
+
+      {/* Modal formulario */}
+      {showForm && (
+        <OrderForm
+          initial={editingOrder ?? undefined}
+          onSave={handleSave}
+          onClose={handleClose}
+        />
+      )}
+
+      {/* Panel de notificaciones */}
+      {showNotifications && (
+        <NotificationsPanel
+          pending={pending}
+          sentLog={sentLog}
+          onSend={(n, msg) => markSent(n, msg)}
+          onClearLog={() => { clearSentLog(); refreshNotifications(); }}
+          onClose={() => setShowNotifications(false)}
+        />
+      )}
+    </>
+  );
+}
