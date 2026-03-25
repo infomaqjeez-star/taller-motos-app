@@ -262,9 +262,9 @@ export default function ReportesPage() {
                       <YAxis type="category" dataKey="localidad" tick={{ fontSize: 10, fill: "#d1d5db" }} width={78} />
                       <Tooltip
                         formatter={(v, name) => [fmt(Number(v)), String(name) === "ganancia" ? "Ganancia" : "ML"]}
-                        labelFormatter={(label: string) => {
-                          const item = barData.find(b => b.localidad === label);
-                          return item?.fullName ?? label;
+                        labelFormatter={(label) => {
+                          const item = barData.find(b => b.localidad === String(label));
+                          return item?.fullName ?? String(label);
                         }}
                         contentStyle={{ background: "#1f2937", border: "1px solid #374151", borderRadius: "12px", color: "#fff" }}
                       />
