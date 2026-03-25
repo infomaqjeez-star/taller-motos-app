@@ -108,10 +108,15 @@ export default function FlexPage() {
     setShowOCR(false);
     const hoy = new Date().toISOString().slice(0, 10);
     const validos = paquetes.filter(p => p.localidad && p.estado === "ok");
+
+    if (validos.length === 0) {
+      alert("No se detectaron zonas válidas en las fotos.");
+      return;
+    }
+
     const nuevasAlertas: FidelAlerta[] = [];
     let guardados = 0;
     let duplicados = 0;
-
     const errores: string[] = [];
 
     for (const p of validos) {

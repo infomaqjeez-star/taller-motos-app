@@ -508,18 +508,12 @@ export const flexDb = {
   },
 };
 
-// ─── Lógica de regalo sugerido ────────────────────────────────────────────────
 function sugerirRegalo(producto: string): string {
   const p = producto.toLowerCase();
-  if (/desmalezadora|desmale|cabezal|cuchilla|arnes|arnés|tanza|nylon|trimmer/.test(p))
-    return "Tanza de nylon";
-  if (/motosierra|sierra|cadena|espada|motosier/.test(p))
-    return "Aceite de cadena";
-  if (/motor|cilindro|carburador|piston|pistón|bujia|bujía|filtro|bomba/.test(p))
-    return "Aceite 2T";
-  if (/hidrolavadora|hidrola|bomba agua|presion|presión/.test(p))
-    return "Kit de sellos";
-  return "Regalo sorpresa MAQJEEZ";
+  if (/desmalezadora|cabezal|cuchilla|arnes|tanza|nylon|trimmer/.test(p)) return "Tanza de nylon";
+  if (/motosierra|sierra|cadena|espada/.test(p)) return "Aceite de cadena";
+  if (/motor|cilindro|carburador|piston|pistón|bujia|filtro/.test(p)) return "Aceite 2T";
+  return "";
 }
 
 function faseLabel(fase: FidelFase): string {
@@ -612,4 +606,4 @@ export const clientesFlexDb = {
   },
 };
 
-export { faseLabel, sugerirRegalo };
+export { faseLabel };
