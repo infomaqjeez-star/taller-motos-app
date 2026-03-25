@@ -117,60 +117,63 @@ function detectCPFromText(text: string): string | null {
 function detectLocalidadFromText(text: string): string | null {
   const upper = text.toUpperCase().replace(/\n/g, " ").replace(/\s+/g, " ");
 
+  // 1. CP tiene PRIORIDAD ABSOLUTA — más confiable que el texto
   const byCP = detectCPFromText(upper);
   if (byCP) return byCP;
 
-  const sorted = [...FLEX_LOCALIDADES].sort((a, b) => b.nombre.length - a.nombre.length);
-  for (const loc of sorted) {
-    const name = loc.nombre.toUpperCase().replace(/\./g, "").replace(/\s+/g, "\\s+");
-    if (new RegExp(name).test(upper)) return loc.nombre;
+  // 2. Aliases con prioridad explícita (sin sort por longitud que cause colisiones)
+  //    EZEIZA va PRIMERO para que no sea pisado por ENSENADA
+  const aliases: [RegExp, string][] = [
+    [/\bEZEIZA\b/, "Ezeiza"],
+    [/\bFLORENCIO\s+VARELA\b/, "Florencio Varela"],
+    [/\bFLORENCIO\b/, "Florencio Varela"],
+    [/\bTRES\s+DE\s+FEBRERO\b/, "Tres de Febrero"],
+    [/\bMARCOS\s+PAZ\b/, "Marcos Paz"],
+    [/\bJOSE\s+C\.?\s*PAZ\b/, "José C. Paz"],
+    [/\bALTE\.?\s*BROWN\b/, "Alte. Brown"],
+    [/\bALMIRANTE\s+BROWN\b/, "Alte. Brown"],
+    [/\bGRAL\.?\s*RODRIGUEZ\b/, "Gral. Rodríguez"],
+    [/\bGENERAL\s+RODRIGUEZ\b/, "Gral. Rodríguez"],
+    [/\bLOMAS\s+DE\s+ZAMORA\b/, "Lomas de Zamora"],
+    [/\bSAN\s+MARTIN\b/, "San Martín"],
+    [/\bSAN\s+ISIDRO\b/, "San Isidro"],
+    [/\bSAN\s+FERNANDO\b/, "San Fernando"],
+    [/\bSAN\s+MIGUEL\b/, "San Miguel"],
+    [/\bSAN\s+VICENTE\b/, "San Vicente"],
+    [/\bVICENTE\s+LOPEZ\b/, "Vicente López"],
+    [/\bLA\s+PLATA\b/, "La Plata Centro"],
+    [/\bITUZAINGO\b/, "Ituzaingó"],
+    [/\bMORON\b/, "Morón"],
+    [/\bLUJAN\b/, "Luján"],
+    [/\bZARATE\b/, "Zárate"],
+    [/\bCANUELAS\b/, "Cañuelas"],
+    [/\bENSENADA\b/, "Ensenada"],    // ENSENADA va DESPUÉS de EZEIZA
+    [/\bBERISSO\b/, "Berisso"],
+    [/\bQUILMES\b/, "Quilmes"],
+    [/\bLANUS\b/, "Lanús"],
+    [/\bAVELLANEDA\b/, "Avellaneda"],
+    [/\bBERAZATEGUI\b/, "Berazategui"],
+    [/\bTIGRE\b/, "Tigre"],
+    [/\bPILAR\b/, "Pilar"],
+    [/\bCAMPANA\b/, "Campana"],
+    [/\bGARIN\b/, "Garín"],
+    [/\bNORDELTA\b/, "Nordelta"],
+    [/\bESCOBAR\b/, "Escobar"],
+    [/\bHURLINGHAM\b/, "Hurlingham"],
+    [/\bMERLO\b/, "Merlo"],
+    [/\bMORENU\b/, "Moreno"],
+    [/\bMORELO\b/, "Moreno"],
+    [/\bMORENO\b/, "Moreno"],
+    [/\bGUERNICA\b/, "Guernica"],
+    [/\bMALVINAS\b/, "Malvinas Argentinas"],
+    [/\bCABA\b/, "CABA"],
+    [/\bBUENOS\s+AIRES\b/, "CABA"],
+  ];
+
+  for (const [regex, localidad] of aliases) {
+    if (regex.test(upper)) return localidad;
   }
 
-  const aliases: Record<string, string> = {
-    "FLORENCIO VARELA": "Florencio Varela",
-    "TRES DE FEBRERO": "Tres de Febrero",
-    "MARCOS PAZ": "Marcos Paz",
-    "JOSE C PAZ": "José C. Paz",
-    "JOSE C. PAZ": "José C. Paz",
-    "ALTE BROWN": "Alte. Brown",
-    "ALMIRANTE BROWN": "Alte. Brown",
-    "GRAL RODRIGUEZ": "Gral. Rodríguez",
-    "GENERAL RODRIGUEZ": "Gral. Rodríguez",
-    "LA PLATA": "La Plata Centro",
-    "VICENTE LOPEZ": "Vicente López",
-    "LOMAS DE ZAMORA": "Lomas de Zamora",
-    "SAN MARTIN": "San Martín",
-    "SAN ISIDRO": "San Isidro",
-    "SAN FERNANDO": "San Fernando",
-    "SAN MIGUEL": "San Miguel",
-    "SAN VICENTE": "San Vicente",
-    "ITUZAINGO": "Ituzaingó",
-    "MORON": "Morón",
-    "LUJAN": "Luján",
-    "ZARATE": "Zárate",
-    "CANUELAS": "Cañuelas",
-    "BERISSO": "Berisso",
-    "ENSENADA": "Ensenada",
-    "QUILMES": "Quilmes",
-    "LANUS": "Lanús",
-    "AVELLANEDA": "Avellaneda",
-    "TIGRE": "Tigre",
-    "PILAR": "Pilar",
-    "CAMPANA": "Campana",
-    "GARIN": "Garín",
-    "NORDELTA": "Nordelta",
-    "ESCOBAR": "Escobar",
-    "HURLINGHAM": "Hurlingham",
-    "MERLO": "Merlo",
-    "MORENO": "Moreno",
-    "BERAZATEGUI": "Berazategui",
-    "EZEIZA": "Ezeiza",
-    "GUERNICA": "Guernica",
-    "FLORENCIO": "Florencio Varela",
-  };
-  for (const [alias, localidad] of Object.entries(aliases)) {
-    if (upper.includes(alias)) return localidad;
-  }
   return null;
 }
 
@@ -486,46 +489,43 @@ export default function OCRScanner({ tarifas, onFinish, onClose }: Props) {
               <p className="text-gray-300 text-[10px]">/{MAX}</p>
             </div>
 
-            {/* ── BOTÓN CAPTURAR — fijo en parte inferior ── */}
-            <div
-              className="absolute bottom-0 inset-x-0 pb-8 pt-6 flex flex-col items-center gap-2"
-              style={{ background: "linear-gradient(to top, rgba(0,0,0,0.9) 0%, transparent 100%)" }}
-            >
-              <p className={`text-xs font-semibold transition-colors ${canCapture ? "text-green-300" : "text-gray-400"}`}>
-                {paquetes.length >= MAX
-                  ? "Límite alcanzado"
-                  : !workerReady
-                  ? "Cargando motor OCR..."
-                  : canCapture
-                  ? `Tocá para guardar · ${liveLocalidad}`
-                  : "Buscando zona válida..."}
-              </p>
-
-              <button
-                onPointerDown={capturar}
-                disabled={!canCapture}
-                className="pointer-events-auto focus:outline-none"
-              >
-                <div className={`w-20 h-20 rounded-full border-4 flex items-center justify-center transition-all duration-200 shadow-2xl ${
-                  canCapture
-                    ? "border-green-400 bg-green-600/30 active:scale-90 active:bg-green-600/60"
-                    : "border-gray-600 bg-gray-800/50 opacity-50"
-                }`}>
-                  {capturing ? (
-                    <Loader2 className="w-8 h-8 text-white animate-spin" />
-                  ) : (
-                    <Camera className={`w-9 h-9 ${canCapture ? "text-green-300" : "text-gray-500"}`} />
-                  )}
-                </div>
-              </button>
-
-              {!canCapture && paquetes.length < MAX && workerReady && (
-                <p className="text-gray-600 text-[10px]">El botón se activa cuando detecte una zona</p>
-              )}
-            </div>
+            {/* NO hay botón aquí — está fijo abajo en la pantalla */}
           </>
         )}
       </div>
+
+      {/* ── BOTÓN CAPTURAR FIJO AL FONDO DE LA PANTALLA ── */}
+      {!camError && (
+        <div className="fixed bottom-0 inset-x-0 z-[70] flex flex-col items-center pb-8 pt-4 pointer-events-none"
+          style={{ background: "linear-gradient(to top, rgba(0,0,0,0.95) 0%, transparent 100%)" }}>
+          <p className={`text-xs font-semibold mb-3 transition-colors pointer-events-none ${canCapture ? "text-green-300" : "text-gray-500"}`}>
+            {paquetes.length >= MAX
+              ? "Límite alcanzado"
+              : !workerReady
+              ? "Cargando motor OCR..."
+              : canCapture
+              ? `✓ ${liveLocalidad} — tocá para guardar`
+              : "Buscando zona válida..."}
+          </p>
+          <button
+            onPointerDown={capturar}
+            disabled={!canCapture}
+            className="pointer-events-auto focus:outline-none"
+          >
+            <div className={`w-22 h-22 rounded-full border-4 flex items-center justify-center transition-all duration-200 shadow-2xl ${
+              canCapture
+                ? "border-green-400 bg-green-600/40 active:scale-90 active:bg-green-600/70"
+                : "border-gray-600 bg-gray-800/60 opacity-40"
+            }`} style={{ width: "80px", height: "80px" }}>
+              {capturing ? (
+                <Loader2 className="w-9 h-9 text-white animate-spin" />
+              ) : (
+                <Camera className={`w-10 h-10 ${canCapture ? "text-green-200" : "text-gray-600"}`} />
+              )}
+            </div>
+          </button>
+        </div>
+      )}
 
       {/* Lista de paquetes — panel inferior, solo paquetes válidos */}
       {paquetes.length > 0 && (
@@ -589,7 +589,8 @@ export default function OCRScanner({ tarifas, onFinish, onClose }: Props) {
                       </div>
                     <div className="flex items-center gap-1 flex-shrink-0">
                       <button onClick={() => borrarPaquete(p.id)}
-                        className="p-1.5 rounded-lg bg-red-900/30 text-red-400 hover:bg-red-600 hover:text-white transition-colors">
+                        className="w-9 h-9 rounded-full bg-cyan-500/20 border border-cyan-500/50 text-cyan-400 hover:bg-cyan-500 hover:text-white flex items-center justify-center transition-colors"
+                        title="Borrar captura">
                         <Trash2 className="w-4 h-4" />
                       </button>
                       <button onClick={() => { setEditIdx(idx); setBusqueda(""); }}
