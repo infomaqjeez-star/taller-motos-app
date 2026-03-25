@@ -375,6 +375,7 @@ export interface PaqueteOCR {
   codigoPostal:       string | null;
   productoSku:        string | null;
   productoNombre:     string | null;
+  regaloSugerido:     "ACEITE" | "TANZA" | null;
   estado: "ok";
 }
 
@@ -382,6 +383,15 @@ interface Props {
   tarifas: Record<FlexZona, number>;
   onFinish: (paquetes: PaqueteOCR[]) => void;
   onClose: () => void;
+}
+
+function detectarRegalo(productoNombre: string | null, productoSku: string | null): "ACEITE" | "TANZA" | null {
+  const texto = `${productoNombre ?? ""} ${productoSku ?? ""}`.toLowerCase();
+  const motorKw  = ["motor","motosierra","carburador","cilindro","piston","pistón","cadena","cigüeñal","ciguenal","bobina","carter","cárter","arranque","escape","filtro aire","bujia","bujía","culata","biela","embrague"];
+  const corteKw  = ["desmalezadora","cortadora","cabezal","cuchilla","tanza","hilo","arnes","arnés","protector","disco corte","guarda"];
+  if (motorKw.some(k => texto.includes(k))) return "ACEITE";
+  if (corteKw.some(k => texto.includes(k)))  return "TANZA";
+  return null;
 }
 
 export default function OCRScanner({ tarifas, onFinish, onClose }: Props) {
@@ -587,6 +597,7 @@ export default function OCRScanner({ tarifas, onFinish, onClose }: Props) {
       codigoPostal:       liveEtiqueta?.codigoPostal ?? null,
       productoSku:        liveEtiqueta?.productoSku ?? null,
       productoNombre:     liveEtiqueta?.productoNombre ?? null,
+      regaloSugerido:     detectarRegalo(liveEtiqueta?.productoNombre ?? null, liveEtiqueta?.productoSku ?? null),
       estado:             "ok",
     };
     setPaquetes(prev => [...prev, nuevo]);
@@ -849,6 +860,11 @@ export default function OCRScanner({ tarifas, onFinish, onClose }: Props) {
                         </p>
                         {p.envioId && (
                           <p className="text-gray-600 text-[10px] font-mono mt-0.5">ID: {p.envioId}</p>
+                        )}
+                        {p.regaloSugerido && (
+                          <p className={`text-[10px] font-bold mt-0.5 ${p.regaloSugerido === "ACEITE" ? "text-yellow-400" : "text-green-400"}`}>
+                            🎁 REGALO: {p.regaloSugerido === "ACEITE" ? "ACEITE 2T" : "TANZA"}
+                          </p>
                         )}
                       </div>
                     <div className="flex items-center gap-1 flex-shrink-0">
