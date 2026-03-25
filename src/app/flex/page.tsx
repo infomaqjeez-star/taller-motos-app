@@ -1,10 +1,8 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import BottomNav from "@/components/BottomNav";
-import FlexRafaga from "@/components/FlexRafaga";
 import OCRScanner, { PaqueteOCR } from "@/components/OCRScanner";
 import { flexDb } from "@/lib/db";
 import {
@@ -12,8 +10,8 @@ import {
   FLEX_LOCALIDADES, FLEX_TARIFAS,
 } from "@/lib/types";
 import {
-  Truck, Plus, Trash2, TrendingUp, DollarSign,
-  MapPin, Package, ChevronDown, X, BarChart2, Settings, Zap, Camera,
+  Truck, Trash2, TrendingUp, DollarSign,
+  MapPin, Package, Camera, BarChart2, Settings,
 } from "lucide-react";
 
 const fmt = (n: number) =>
@@ -34,7 +32,6 @@ function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 }
 
-// ─── Tarifas editables (con override local) ─────────────────
 function useTarifas() {
   const [tarifas, setTarifas] = useState(
     FLEX_TARIFAS.reduce((acc, t) => ({ ...acc, [t.zona]: t.precio }), {} as Record<FlexZona, number>)
@@ -44,32 +41,11 @@ function useTarifas() {
   return { tarifas, update };
 }
 
-// ─── Formulario ──────────────────────────────────────────────
-interface FormState {
-  localidad: string;
-  descripcion: string;
-  nroSeguimiento: string;
-  fecha: string;
-}
-
-function defaultForm(): FormState {
-  return {
-    localidad: "",
-    descripcion: "",
-    nroSeguimiento: "",
-    fecha: new Date().toISOString().slice(0, 10),
-  };
-}
-
 export default function FlexPage() {
   const [envios, setEnvios] = useState<FlexEnvio[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [showRafaga, setShowRafaga] = useState(false);
   const [showOCR, setShowOCR] = useState(false);
-  const [form, setForm] = useState<FormState>(defaultForm());
-  const [saving, setSaving] = useState(false);
   const { tarifas, update: updateTarifa } = useTarifas();
   const [settingEdit, setSettingEdit] = useState<Record<FlexZona, string>>({
     cercana: "4490", media: "6490", lejana: "8490",
@@ -83,42 +59,6 @@ export default function FlexPage() {
   };
 
   useEffect(() => { load(); }, []);
-
-  // Calcular valores automáticos según localidad seleccionada
-  const localidadData = useMemo(() => {
-    if (!form.localidad) return null;
-    const loc = FLEX_LOCALIDADES.find(l => l.nombre === form.localidad);
-    if (!loc) return null;
-    const precioML = tarifas[loc.zona];
-    const pagoFlete = Math.round(precioML * 0.8);
-    const ganancia  = precioML - pagoFlete;
-    return { zona: loc.zona, precioML, pagoFlete, ganancia };
-  }, [form.localidad, tarifas]);
-
-  const handleSave = async () => {
-    if (!form.localidad || !localidadData) return;
-    setSaving(true);
-    try {
-      await flexDb.create({
-        id:             generateId(),
-        fecha:          form.fecha,
-        localidad:      form.localidad,
-        zona:           localidadData.zona,
-        precioML:       localidadData.precioML,
-        pagoFlete:      localidadData.pagoFlete,
-        ganancia:       localidadData.ganancia,
-        descripcion:    form.descripcion,
-        nroSeguimiento: form.nroSeguimiento,
-        createdAt:      new Date().toISOString(),
-      });
-      await load();
-      setForm(defaultForm());
-      setShowForm(false);
-    } catch (e) {
-      alert("Error al guardar: " + e);
-    }
-    setSaving(false);
-  };
 
   const handleDelete = async (id: string) => {
     if (!confirm("¿Eliminar este envío?")) return;
@@ -148,9 +88,9 @@ export default function FlexPage() {
     }
     await load();
     if (validos.length > 0) alert(`✓ ${validos.length} envíos guardados correctamente.`);
+    else alert("No se detectaron zonas válidas en las fotos.");
   };
 
-  // Estadísticas por zona
   const stats = useMemo(() => {
     const filtered = filterZona === "todas" ? envios : envios.filter(e => e.zona === filterZona);
     const totalML       = filtered.reduce((s, e) => s + e.precioML, 0);
@@ -161,7 +101,6 @@ export default function FlexPage() {
       count:    envios.filter(e => e.zona === z).length,
       ganancia: envios.filter(e => e.zona === z).reduce((s, e) => s + e.ganancia, 0),
     }));
-    // Top localidades
     const byLoc: Record<string, { count: number; ganancia: number }> = {};
     envios.forEach(e => {
       if (!byLoc[e.localidad]) byLoc[e.localidad] = { count: 0, ganancia: 0 };
@@ -200,21 +139,9 @@ export default function FlexPage() {
             </button>
             <button
               onClick={() => setShowOCR(true)}
-              className="flex items-center gap-1.5 bg-purple-600 hover:bg-purple-500 text-white font-bold px-3 py-2.5 rounded-xl transition-colors"
+              className="flex items-center gap-1.5 bg-purple-600 hover:bg-purple-500 text-white font-bold px-4 py-2.5 rounded-xl transition-colors"
             >
-              <Camera className="w-4 h-4" /> Escanear
-            </button>
-            <button
-              onClick={() => setShowRafaga(true)}
-              className="flex items-center gap-2 bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-300 font-bold px-3 py-2.5 rounded-xl border border-yellow-500/40 transition-colors"
-            >
-              <Zap className="w-4 h-4" /> Ráfaga
-            </button>
-            <button
-              onClick={() => setShowForm(true)}
-              className="flex items-center gap-2 bg-yellow-500 hover:bg-yellow-400 text-black font-bold px-4 py-2.5 rounded-xl transition-colors"
-            >
-              <Plus className="w-4 h-4" /> Nuevo Envío
+              <Camera className="w-4 h-4" /> Escanear Etiquetas
             </button>
           </div>
         </div>
@@ -252,7 +179,6 @@ export default function FlexPage() {
                 </div>
               ))}
             </div>
-            <p className="text-gray-500 text-xs">Los cambios aplican solo en esta sesión. Para guardar permanente, ejecutá el SQL de actualización en Supabase.</p>
           </div>
         )}
 
@@ -362,7 +288,7 @@ export default function FlexPage() {
             <div className="text-center py-12 text-gray-500">
               <Package className="w-12 h-12 mx-auto mb-3 opacity-30" />
               <p className="font-semibold">Sin envíos registrados</p>
-              <p className="text-sm">Tocá &quot;Nuevo Envío&quot; para empezar</p>
+              <p className="text-sm">Usá &quot;Escanear Etiquetas&quot; para cargar envíos con la cámara</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -402,139 +328,6 @@ export default function FlexPage() {
           )}
         </div>
       </main>
-
-      {/* Modal Nuevo Envío */}
-      {showForm && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-4">
-          <div className="bg-gray-900 rounded-2xl border border-gray-700 shadow-2xl w-full max-w-md p-6 space-y-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between">
-              <h2 className="text-white font-bold text-lg flex items-center gap-2">
-                <Truck className="w-5 h-5 text-yellow-400" /> Nuevo Envío Flex
-              </h2>
-              <button onClick={() => setShowForm(false)} className="p-2 text-gray-400 hover:text-white">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Selector localidad */}
-            <div className="space-y-1.5">
-              <label className="text-sm text-gray-300 font-semibold">Localidad *</label>
-              <div className="relative">
-                <select
-                  value={form.localidad}
-                  onChange={e => setForm(f => ({ ...f, localidad: e.target.value }))}
-                  className="w-full bg-gray-800 text-white rounded-xl px-4 py-3 border border-gray-600 focus:border-yellow-400 outline-none appearance-none pr-10"
-                >
-                  <option value="">-- Seleccionar localidad --</option>
-                  <optgroup label="Cercana ($4.490)">
-                    {FLEX_LOCALIDADES.filter(l => l.zona === "cercana").map(l => (
-                      <option key={l.nombre} value={l.nombre}>{l.nombre}</option>
-                    ))}
-                  </optgroup>
-                  <optgroup label="Media ($6.490)">
-                    {FLEX_LOCALIDADES.filter(l => l.zona === "media").map(l => (
-                      <option key={l.nombre} value={l.nombre}>{l.nombre}</option>
-                    ))}
-                  </optgroup>
-                  <optgroup label="Lejana ($8.490)">
-                    {FLEX_LOCALIDADES.filter(l => l.zona === "lejana").map(l => (
-                      <option key={l.nombre} value={l.nombre}>{l.nombre}</option>
-                    ))}
-                  </optgroup>
-                </select>
-                <ChevronDown className="absolute right-3 top-3.5 w-4 h-4 text-gray-400 pointer-events-none" />
-              </div>
-            </div>
-
-            {/* Resumen automático */}
-            {localidadData && (
-              <div className="bg-gray-800/80 rounded-xl border border-yellow-500/30 p-4 space-y-2">
-                <p className="text-yellow-300 text-xs font-bold uppercase tracking-wider">Resumen automático</p>
-                <div className="grid grid-cols-3 gap-3 text-center">
-                  <div>
-                    <p className="text-xs text-gray-400">Cobro a ML</p>
-                    <p className="text-white font-black">{fmt(localidadData.precioML)}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-400">Pago Flete</p>
-                    <p className="text-blue-300 font-black">{fmt(localidadData.pagoFlete)}</p>
-                    <p className="text-gray-500 text-[10px]">80%</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-400">Ganancia</p>
-                    <p className="text-green-300 font-black">{fmt(localidadData.ganancia)}</p>
-                    <p className="text-gray-500 text-[10px]">20%</p>
-                  </div>
-                </div>
-                <div className={`text-center mt-1`}>
-                  <span className={`text-xs px-3 py-1 rounded-full border font-bold ${ZONA_COLORS[localidadData.zona]}`}>
-                    {ZONA_LABELS[localidadData.zona]} — {form.localidad}
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {/* Fecha */}
-            <div className="space-y-1.5">
-              <label className="text-sm text-gray-300 font-semibold">Fecha</label>
-              <input
-                type="date"
-                value={form.fecha}
-                onChange={e => setForm(f => ({ ...f, fecha: e.target.value }))}
-                className="w-full bg-gray-800 text-white rounded-xl px-4 py-3 border border-gray-600 focus:border-yellow-400 outline-none"
-              />
-            </div>
-
-            {/* Nro seguimiento */}
-            <div className="space-y-1.5">
-              <label className="text-sm text-gray-300 font-semibold">Nro. de Seguimiento</label>
-              <input
-                type="text"
-                placeholder="Ej: ML-123456789"
-                value={form.nroSeguimiento}
-                onChange={e => setForm(f => ({ ...f, nroSeguimiento: e.target.value }))}
-                className="w-full bg-gray-800 text-white rounded-xl px-4 py-3 border border-gray-600 focus:border-yellow-400 outline-none"
-              />
-            </div>
-
-            {/* Descripción */}
-            <div className="space-y-1.5">
-              <label className="text-sm text-gray-300 font-semibold">Descripción del paquete</label>
-              <textarea
-                rows={2}
-                placeholder="Ej: Carburador Honda CG 150"
-                value={form.descripcion}
-                onChange={e => setForm(f => ({ ...f, descripcion: e.target.value }))}
-                className="w-full bg-gray-800 text-white rounded-xl px-4 py-3 border border-gray-600 focus:border-yellow-400 outline-none resize-none"
-              />
-            </div>
-
-            <div className="flex gap-3 pt-2">
-              <button
-                onClick={() => setShowForm(false)}
-                className="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 rounded-xl transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleSave}
-                disabled={!form.localidad || saving}
-                className="flex-1 bg-yellow-500 hover:bg-yellow-400 disabled:opacity-50 text-black font-bold py-3 rounded-xl transition-colors"
-              >
-                {saving ? "Guardando..." : "Guardar Envío"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showRafaga && (
-        <FlexRafaga
-          tarifas={tarifas}
-          onClose={() => setShowRafaga(false)}
-          onSaved={() => { load(); }}
-        />
-      )}
 
       {showOCR && (
         <OCRScanner
