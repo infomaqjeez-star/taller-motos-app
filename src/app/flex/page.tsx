@@ -1,10 +1,12 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import BottomNav from "@/components/BottomNav";
 import FlexRafaga from "@/components/FlexRafaga";
 import QRScanner, { PaqueteQR } from "@/components/QRScanner";
+import OCRScanner, { PaqueteOCR } from "@/components/OCRScanner";
 import { flexDb } from "@/lib/db";
 import {
   FlexEnvio, FlexZona,
@@ -67,7 +69,9 @@ export default function FlexPage() {
   const [showSettings, setShowSettings] = useState(false);
   const [showRafaga, setShowRafaga] = useState(false);
   const [showQR, setShowQR] = useState(false);
+  const [showOCR, setShowOCR] = useState(false);
   const [qrPaquetes, setQrPaquetes] = useState<PaqueteQR[]>([]);
+  const [ocrPaquetes, setOcrPaquetes] = useState<PaqueteOCR[]>([]);
   const [savingQR, setSavingQR] = useState(false);
   const [form, setForm] = useState<FormState>(defaultForm());
   const [saving, setSaving] = useState(false);
@@ -130,6 +134,34 @@ export default function FlexPage() {
   const handleQRFinish = async (paquetes: PaqueteQR[]) => {
     setShowQR(false);
     setQrPaquetes(paquetes);
+  };
+
+  const handleOCRFinish = async (paquetes: PaqueteOCR[]) => {
+    setShowOCR(false);
+    // Guardar directamente los que tienen localidad
+    const hoy = new Date().toISOString().slice(0, 10);
+    const validos = paquetes.filter(p => p.localidad && p.estado === "ok");
+    for (const p of validos) {
+      try {
+        await flexDb.create({
+          id:             generateId(),
+          fecha:          hoy,
+          localidad:      p.localidad!,
+          zona:           p.zona ?? "lejana",
+          precioML:       p.precioML,
+          pagoFlete:      p.pagoFlete,
+          ganancia:       p.ganancia,
+          descripcion:    "",
+          nroSeguimiento: "",
+          createdAt:      new Date().toISOString(),
+        });
+      } catch (_) {}
+    }
+    // Los sin zona los pone en revisión
+    const sinZona = paquetes.filter(p => p.estado === "sin_zona");
+    if (sinZona.length > 0) setOcrPaquetes(sinZona);
+    await load();
+    if (validos.length > 0) alert(`✓ ${validos.length} paquetes guardados. ${sinZona.length > 0 ? sinZona.length + " requieren zona manual." : ""}`);
   };
 
   const guardarQRPaquetes = async () => {
@@ -204,6 +236,12 @@ export default function FlexPage() {
               title="Configurar tarifas"
             >
               <Settings className="w-5 h-5" />
+            </button>
+            <button
+              onClick={() => setShowOCR(true)}
+              className="flex items-center gap-1.5 bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 font-bold px-3 py-2.5 rounded-xl border border-purple-500/40 transition-colors"
+            >
+              <Zap className="w-4 h-4" /> OCR
             </button>
             <button
               onClick={() => setShowQR(true)}
@@ -548,6 +586,14 @@ export default function FlexPage() {
           tarifas={tarifas}
           onFinish={handleQRFinish}
           onClose={() => setShowQR(false)}
+        />
+      )}
+
+      {showOCR && (
+        <OCRScanner
+          tarifas={tarifas}
+          onFinish={handleOCRFinish}
+          onClose={() => setShowOCR(false)}
         />
       )}
 
