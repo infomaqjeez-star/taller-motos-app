@@ -445,6 +445,7 @@ function toFlex(r: Record<string, unknown>): FlexEnvio {
     codigoPostal:       (r.codigo_postal as string) ?? "",
     productoSku:        (r.producto_sku as string) ?? "",
     packId:             (r.pack_id as string) ?? "",
+    regaloSugerido:     (r.regalo_sugerido as string) ?? "",
     createdAt:          r.created_at as string,
   };
 }
@@ -478,6 +479,7 @@ export const flexDb = {
         codigo_postal:       e.codigoPostal,
         producto_sku:        e.productoSku,
         pack_id:             e.packId,
+        regalo_sugerido:     e.regaloSugerido,
         created_at:          e.createdAt,
       },
       {
