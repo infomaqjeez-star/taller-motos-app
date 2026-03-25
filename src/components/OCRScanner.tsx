@@ -21,18 +21,57 @@ const fmt = (n: number) => "$" + n.toLocaleString("es-AR");
 
 function generateId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
 
-function beep() {
+// Sonido éxito — tipo "caja registradora": tono subiendo rápido + decay
+function beepOk() {
   try {
     const ctx = new AudioContext();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain); gain.connect(ctx.destination);
-    osc.frequency.value = 1100;
-    gain.gain.setValueAtTime(0.3, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
-    osc.start(); osc.stop(ctx.currentTime + 0.15);
+    const t   = ctx.currentTime;
+
+    // Nota 1: Do agudo (1047 Hz)
+    const osc1  = ctx.createOscillator();
+    const gain1 = ctx.createGain();
+    osc1.type = "triangle";
+    osc1.frequency.value = 1047;
+    gain1.gain.setValueAtTime(0, t);
+    gain1.gain.linearRampToValueAtTime(0.35, t + 0.01);
+    gain1.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+    osc1.connect(gain1); gain1.connect(ctx.destination);
+    osc1.start(t); osc1.stop(t + 0.12);
+
+    // Nota 2: Mi más agudo (1319 Hz) — 80ms después
+    const osc2  = ctx.createOscillator();
+    const gain2 = ctx.createGain();
+    osc2.type = "triangle";
+    osc2.frequency.value = 1319;
+    gain2.gain.setValueAtTime(0, t + 0.08);
+    gain2.gain.linearRampToValueAtTime(0.4, t + 0.09);
+    gain2.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+    osc2.connect(gain2); gain2.connect(ctx.destination);
+    osc2.start(t + 0.08); osc2.stop(t + 0.25);
   } catch (_) {}
 }
+
+// Sonido error — doble beep grave
+function beepError() {
+  try {
+    const ctx = new AudioContext();
+    const t   = ctx.currentTime;
+
+    [0, 0.18].forEach(offset => {
+      const osc  = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "square";
+      osc.frequency.value = 260; // grave
+      gain.gain.setValueAtTime(0.25, t + offset);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + offset + 0.14);
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.start(t + offset); osc.stop(t + offset + 0.14);
+    });
+  } catch (_) {}
+}
+
+// Alias para compatibilidad (beep simple = ok)
+const beep = beepOk;
 
 // ─── Base de datos oficial ML Flex ───────────────────────────────────────────
 const CP_MAP: Record<string, string> = {
