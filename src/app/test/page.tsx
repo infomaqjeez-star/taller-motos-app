@@ -39,6 +39,7 @@ export default function TestPage() {
         deliveryDate: null,
         linkedParts: [],
         internalNotes: "Test",
+        photoUrls: [],
       });
       setSaveResult("✅ ORDEN GUARDADA — Revisá la tabla reparaciones en Supabase");
     } catch (e) {
