@@ -249,32 +249,3 @@ export interface FlexEnvio {
   packId: string;
   createdAt: string;
 }
-
-export type FidelFase = "bronce" | "plata" | "oro";
-
-export interface ClienteFlex {
-  id: string;
-  usuarioML: string;
-  nombre: string;
-  totalCompras: number;
-  comprasEsteMes: number;
-  fase: FidelFase;
-  ultimoProducto: string;
-  ultimaLocalidad: string;
-  fechaUltimaCompra: string;
-  createdAt: string;
-}
-
-export interface FidelAlerta {
-  usuarioML: string;
-  nombre: string;
-  totalCompras: number;
-  comprasEsteMes: number;
-  fase: FidelFase;
-  esNuevoNivel: boolean;
-  regalSugerido: string;
-  ultimoProducto: string;
-  productoNombre: string;   // nombre completo del producto detectado
-  direccion: string;
-  lineaSupabase: string;    // formato: FECHA | USUARIO | DIRECCIÓN | PRODUCTO | FASE | REGALO
-}

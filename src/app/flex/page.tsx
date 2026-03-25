@@ -4,15 +4,14 @@ import { useState, useEffect, useMemo } from "react";
 import Navbar from "@/components/Navbar";
 import BottomNav from "@/components/BottomNav";
 import OCRScanner, { PaqueteOCR } from "@/components/OCRScanner";
-import { flexDb, clientesFlexDb, faseLabel } from "@/lib/db";
+import { flexDb } from "@/lib/db";
 import {
   FlexEnvio, FlexZona,
-  FLEX_LOCALIDADES, FLEX_TARIFAS, FidelAlerta,
+  FLEX_LOCALIDADES, FLEX_TARIFAS,
 } from "@/lib/types";
 import {
   Truck, Trash2, TrendingUp, DollarSign,
   MapPin, Package, Camera, BarChart2, Settings, Calendar,
-  Star, Gift, AlertTriangle,
 } from "lucide-react";
 
 const fmt = (n: number) =>
@@ -82,7 +81,6 @@ export default function FlexPage() {
   const [loading, setLoading]         = useState(true);
   const [showSettings, setShowSettings] = useState(false);
   const [showOCR, setShowOCR]         = useState(false);
-  const [alertas, setAlertas]         = useState<FidelAlerta[]>([]);
   const { tarifas, update: updateTarifa } = useTarifas();
   const [settingEdit, setSettingEdit] = useState<Record<FlexZona, string>>({
     cercana: "4490", media: "6490", lejana: "8490",
@@ -114,7 +112,6 @@ export default function FlexPage() {
       return;
     }
 
-    const nuevasAlertas: FidelAlerta[] = [];
     let guardados = 0;
     let duplicados = 0;
     const errores: string[] = [];
@@ -140,17 +137,6 @@ export default function FlexPage() {
           createdAt:          new Date().toISOString(),
         });
         guardados++;
-        if (p.usuarioML) {
-          const alerta = await clientesFlexDb.registrarCompra(
-            p.usuarioML,
-            p.nombreDestinatario ?? "",
-            p.productoSku ?? "",
-            p.localidad!,
-            p.productoNombre ?? "",
-            p.direccion ?? "",
-          );
-          if (alerta) nuevasAlertas.push(alerta);
-        }
       } catch (err: unknown) {
         const msg = err instanceof Error
           ? err.message
@@ -165,8 +151,6 @@ export default function FlexPage() {
     await load();
     if (errores.length > 0) {
       alert(`ERROR al guardar:\n${errores[0]}`);
-    } else if (nuevasAlertas.length > 0) {
-      setAlertas(nuevasAlertas);
     } else if (validos.length > 0) {
       const resumen = duplicados > 0
         ? `✓ ${guardados} guardados — ⚠ ${duplicados} duplicados rechazados`
@@ -526,150 +510,13 @@ export default function FlexPage() {
         </div>
       </main>
 
+      {/* ══ OCR Scanner ══ */}
       {showOCR && (
         <OCRScanner
           tarifas={tarifas}
           onFinish={handleOCRFinish}
           onClose={() => setShowOCR(false)}
         />
-      )}
-
-      {/* ══ MODAL DE ALERTAS DE FIDELIZACIÓN ══ */}
-      {alertas.length > 0 && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center p-4 bg-black/70 backdrop-blur-sm">
-          <div className="w-full max-w-lg bg-gray-900 rounded-3xl border border-gray-700 shadow-2xl overflow-hidden">
-
-            {/* Header */}
-            <div className="bg-gradient-to-r from-yellow-600 to-orange-600 px-5 py-4 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Star className="w-5 h-5 text-white" />
-                <h3 className="text-white font-black text-lg">Sistema Verdent — Fidelización</h3>
-              </div>
-              <span className="bg-white/20 text-white text-xs font-bold px-2 py-1 rounded-full">
-                {alertas.length} cliente{alertas.length > 1 ? "s" : ""}
-              </span>
-            </div>
-
-            <div className="p-4 space-y-4 max-h-[78vh] overflow-y-auto">
-              {alertas.map((a, i) => {
-                const faseBg =
-                  a.fase === "oro"   ? "border-yellow-500/60 bg-yellow-900/20" :
-                  a.fase === "plata" ? "border-gray-400/60 bg-gray-700/20" :
-                                       "border-orange-700/60 bg-orange-900/10";
-                const esRegaloUrgente = a.comprasEsteMes >= 3 || a.totalCompras >= 10;
-                return (
-                  <div key={i} className={`rounded-2xl border p-4 space-y-3 ${faseBg}`}>
-
-                    {/* Identificación del cliente */}
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <p className="text-white font-black text-base">{a.nombre || a.usuarioML}</p>
-                        <p className="text-gray-400 text-xs font-mono">@{a.usuarioML}</p>
-                        {a.direccion && (
-                          <p className="text-gray-400 text-xs mt-0.5 flex items-center gap-1">
-                            <MapPin className="w-3 h-3" />{a.direccion}
-                          </p>
-                        )}
-                      </div>
-                      <div className="text-right flex-shrink-0">
-                        <p className="text-xl font-black">{faseLabel(a.fase)}</p>
-                        {a.esNuevoNivel && (
-                          <span className="text-[10px] bg-green-500 text-white px-2 py-0.5 rounded-full font-bold animate-pulse block mt-1">
-                            ¡SUBIÓ DE NIVEL!
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Producto detectado */}
-                    {(a.productoNombre || a.ultimoProducto) && (
-                      <div className="bg-gray-800/60 rounded-xl px-3 py-2 flex items-center gap-2">
-                        <Package className="w-4 h-4 text-blue-400 flex-shrink-0" />
-                        <div>
-                          <p className="text-gray-400 text-xs">Producto detectado</p>
-                          <p className="text-white text-sm font-semibold">{a.productoNombre || a.ultimoProducto}</p>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* 🚨 ALERTA REGALO — máxima prominencia */}
-                    <div className={`rounded-xl p-4 border-2 ${
-                      esRegaloUrgente
-                        ? "bg-green-900/50 border-green-500 shadow-[0_0_20px_rgba(34,197,94,0.3)]"
-                        : "bg-purple-900/40 border-purple-600/70"
-                    }`}>
-                      <div className="flex items-center gap-2 mb-2">
-                        <Gift className={`w-5 h-5 ${esRegaloUrgente ? "text-green-400" : "text-purple-400"}`} />
-                        <span className={`text-sm font-black uppercase tracking-wider ${
-                          esRegaloUrgente ? "text-green-300" : "text-purple-300"
-                        }`}>
-                          {esRegaloUrgente ? "🚨 ALERTA REGALO — INCLUIR EN LA CAJA" : "REGALO SUGERIDO"}
-                        </span>
-                      </div>
-                      <p className={`text-2xl font-black ${esRegaloUrgente ? "text-white" : "text-purple-100"}`}>
-                        {a.regalSugerido}
-                      </p>
-                      {esRegaloUrgente && (
-                        <p className="text-green-300 text-xs mt-1 font-semibold">
-                          {a.comprasEsteMes >= 3 ? `✓ ${a.comprasEsteMes} compras este mes` : ""}{" "}
-                          {a.totalCompras >= 10 ? `✓ ${a.totalCompras} compras totales` : ""}
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Contadores */}
-                    <div className="grid grid-cols-3 gap-2">
-                      <div className="bg-gray-800/60 rounded-xl p-2.5 text-center">
-                        <p className="text-gray-400 text-[10px] uppercase">Total</p>
-                        <p className="text-white font-black text-xl">{a.totalCompras}</p>
-                      </div>
-                      <div className="bg-gray-800/60 rounded-xl p-2.5 text-center">
-                        <p className="text-gray-400 text-[10px] uppercase">Este mes</p>
-                        <p className="text-white font-black text-xl">{a.comprasEsteMes}</p>
-                      </div>
-                      <div className="bg-gray-800/60 rounded-xl p-2.5 text-center">
-                        <p className="text-gray-400 text-[10px] uppercase">Próx. fase</p>
-                        <p className="text-white font-black text-xl">
-                          {a.fase === "bronce" ? `${10 - a.totalCompras}` :
-                           a.fase === "plata"  ? `${50 - a.totalCompras}` : "✓"}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Línea para Supabase/Excel — copiable */}
-                    <div className="space-y-1.5">
-                      <p className="text-gray-400 text-[10px] uppercase font-bold tracking-wider flex items-center gap-1">
-                        <BarChart2 className="w-3 h-3" /> Línea para Supabase / Excel
-                      </p>
-                      <div className="bg-gray-950 rounded-xl p-3 flex items-start gap-2">
-                        <code className="text-green-300 text-[11px] font-mono flex-1 break-all leading-relaxed">
-                          {a.lineaSupabase}
-                        </code>
-                        <button
-                          onClick={() => {
-                            navigator.clipboard.writeText(a.lineaSupabase);
-                          }}
-                          className="flex-shrink-0 bg-gray-700 hover:bg-green-700 text-gray-300 hover:text-white px-2 py-1 rounded-lg text-[10px] font-bold transition-colors"
-                        >
-                          COPIAR
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="p-4 border-t border-gray-700">
-              <button
-                onClick={() => setAlertas([])}
-                className="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-black py-3 rounded-2xl transition-colors text-lg"
-              >
-                Entendido — Continuar
-              </button>
-            </div>
-          </div>
-        </div>
       )}
 
       <BottomNav />
