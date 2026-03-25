@@ -367,12 +367,10 @@ export const agendaDb = {
   },
 
   async delete(id: string): Promise<void> {
-    // Primero eliminar historial (FK ON DELETE RESTRICT lo impide si no se borra antes)
-    const { error: errHist } = await supabase
-      .from("historial_reparaciones")
-      .delete()
-      .eq("cliente_id", id);
-    if (errHist) throw errHist;
+    // Intentar borrar historial primero (ignorar error si la tabla no existe aún)
+    try {
+      await supabase.from("historial_reparaciones").delete().eq("cliente_id", id);
+    } catch (_) { /* ignorar */ }
     const { error } = await supabase.from("agenda_clientes").delete().eq("id", id);
     if (error) throw error;
   },
