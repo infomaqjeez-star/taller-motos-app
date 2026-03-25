@@ -4,6 +4,7 @@ import { useOrders } from "@/hooks/useOrders";
 import { useInventory } from "@/hooks/useInventory";
 import StatsCharts from "@/components/StatsCharts";
 import Navbar from "@/components/Navbar";
+import BottomNav from "@/components/BottomNav";
 import { BarChart2 } from "lucide-react";
 
 export default function EstadisticasPage() {
@@ -13,7 +14,7 @@ export default function EstadisticasPage() {
   return (
     <>
       <Navbar overdueCount={overdueCount} lowStockCount={lowStockCount} />
-      <main className="max-w-5xl mx-auto px-4 py-6 space-y-6">
+      <main className="max-w-5xl mx-auto px-4 py-6 pb-24 sm:pb-6 space-y-6">
         <div className="flex items-center gap-3">
           <div className="bg-orange-500 rounded-xl p-2.5">
             <BarChart2 className="w-6 h-6 text-white" />
@@ -39,6 +40,7 @@ export default function EstadisticasPage() {
           <StatsCharts orders={orders} />
         )}
       </main>
+      <BottomNav />
     </>
   );
 }

@@ -17,6 +17,7 @@ import OrderCard from "@/components/OrderCard";
 import OrderForm from "@/components/OrderForm";
 import NotificationsPanel from "@/components/NotificationsPanel";
 import TemplateManager from "@/components/TemplateManager";
+import BottomNav from "@/components/BottomNav";
 
 function StatCard({
   label,
@@ -113,7 +114,7 @@ export default function DashboardPage() {
         onOpenNotifications={() => setShowNotifications(true)}
       />
 
-      <main className="max-w-5xl mx-auto px-4 py-6 space-y-6">
+      <main className="max-w-5xl mx-auto px-4 py-6 pb-24 sm:pb-6 space-y-6">
         {/* Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <StatCard label="Activas" value={activeOrders.length} icon={Wrench} color="bg-orange-500" />
@@ -256,6 +257,11 @@ export default function DashboardPage() {
       {showTemplates && (
         <TemplateManager onClose={() => setShowTemplates(false)} />
       )}
+
+      <BottomNav
+        notificationCount={unsentCount}
+        onOpenNotifications={() => setShowNotifications(true)}
+      />
 
       {toast && (
         <div
