@@ -73,9 +73,11 @@
 
   /* ── Print styles ── */
   @media print {
-    .no-print { display: none !important; }
+    .no-print  { display: none !important; }
+    .only-print { display: inline !important; }
     body { background: white !important; color: black !important; }
-    .print-only { display: block !important; }
+    @page { margin: 0.8cm; size: A4; }
   }
+  .only-print { display: none; }
   .print-only { display: none; }
 }
