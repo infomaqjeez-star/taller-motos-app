@@ -430,16 +430,22 @@ export const historialDb = {
 
 function toFlex(r: Record<string, unknown>): FlexEnvio {
   return {
-    id:             r.id as string,
-    fecha:          r.fecha as string,
-    localidad:      r.localidad as string,
-    zona:           r.zona as FlexEnvio["zona"],
-    precioML:       r.precio_ml as number,
-    pagoFlete:      r.pago_flete as number,
-    ganancia:       r.ganancia as number,
-    descripcion:    r.descripcion as string,
-    nroSeguimiento: r.nro_seguimiento as string,
-    createdAt:      r.created_at as string,
+    id:                 r.id as string,
+    fecha:              r.fecha as string,
+    localidad:          r.localidad as string,
+    zona:               r.zona as FlexEnvio["zona"],
+    precioML:           r.precio_ml as number,
+    pagoFlete:          r.pago_flete as number,
+    ganancia:           r.ganancia as number,
+    descripcion:        r.descripcion as string,
+    nroSeguimiento:     (r.nro_seguimiento as string) ?? "",
+    usuarioML:          (r.usuario_ml as string) ?? "",
+    nombreDestinatario: (r.nombre_destinatario as string) ?? "",
+    direccion:          (r.direccion as string) ?? "",
+    codigoPostal:       (r.codigo_postal as string) ?? "",
+    productoSku:        (r.producto_sku as string) ?? "",
+    packId:             (r.pack_id as string) ?? "",
+    createdAt:          r.created_at as string,
   };
 }
 
@@ -455,16 +461,22 @@ export const flexDb = {
 
   async create(e: FlexEnvio): Promise<void> {
     const { error } = await supabase.from("flex_envios").insert({
-      id:             e.id,
-      fecha:          e.fecha,
-      localidad:      e.localidad,
-      zona:           e.zona,
-      precio_ml:      e.precioML,
-      pago_flete:     e.pagoFlete,
-      ganancia:       e.ganancia,
-      descripcion:    e.descripcion,
-      nro_seguimiento: e.nroSeguimiento,
-      created_at:     e.createdAt,
+      id:                  e.id,
+      fecha:               e.fecha,
+      localidad:           e.localidad,
+      zona:                e.zona,
+      precio_ml:           e.precioML,
+      pago_flete:          e.pagoFlete,
+      ganancia:            e.ganancia,
+      descripcion:         e.descripcion,
+      nro_seguimiento:     e.nroSeguimiento,
+      usuario_ml:          e.usuarioML,
+      nombre_destinatario: e.nombreDestinatario,
+      direccion:           e.direccion,
+      codigo_postal:       e.codigoPostal,
+      producto_sku:        e.productoSku,
+      pack_id:             e.packId,
+      created_at:          e.createdAt,
     });
     if (error) throw error;
   },

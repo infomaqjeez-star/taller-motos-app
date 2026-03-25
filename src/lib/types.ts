@@ -240,5 +240,12 @@ export interface FlexEnvio {
   ganancia: number;
   descripcion: string;
   nroSeguimiento: string;
+  // Nuevos campos de etiqueta ML
+  usuarioML: string;
+  nombreDestinatario: string;
+  direccion: string;
+  codigoPostal: string;
+  productoSku: string;
+  packId: string;
   createdAt: string;
 }

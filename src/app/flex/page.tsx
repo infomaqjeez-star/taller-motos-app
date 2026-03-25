@@ -73,16 +73,22 @@ export default function FlexPage() {
     for (const p of validos) {
       try {
         await flexDb.create({
-          id:             generateId(),
-          fecha:          hoy,
-          localidad:      p.localidad!,
-          zona:           p.zona ?? "lejana",
-          precioML:       p.precioML,
-          pagoFlete:      p.pagoFlete,
-          ganancia:       p.ganancia,
-          descripcion:    "",
-          nroSeguimiento: p.envioId ?? "",
-          createdAt:      new Date().toISOString(),
+          id:                 generateId(),
+          fecha:              hoy,
+          localidad:          p.localidad!,
+          zona:               p.zona ?? "lejana",
+          precioML:           p.precioML,
+          pagoFlete:          p.pagoFlete,
+          ganancia:           p.ganancia,
+          descripcion:        "",
+          nroSeguimiento:     p.envioId ?? "",
+          usuarioML:          p.usuarioML ?? "",
+          nombreDestinatario: p.nombreDestinatario ?? "",
+          direccion:          p.direccion ?? "",
+          codigoPostal:       p.codigoPostal ?? "",
+          productoSku:        p.productoSku ?? "",
+          packId:             p.packId ?? "",
+          createdAt:          new Date().toISOString(),
         });
       } catch (_) {}
     }

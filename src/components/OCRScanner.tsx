@@ -213,9 +213,9 @@ function detectLocalidadFromText(text: string): string | null {
   return null;
 }
 
-// Extraer el ID de envío ML — número de 10-13 dígitos que no sea un CP (4 dígitos)
-function extractEnvioId(rawText: string): string | null {
-  // Normalizar espacios entre dígitos (OCR separa "4 6 7 1 9..." → "46719...")
+// Extrae TODOS los campos de la etiqueta ML Flex desde el texto OCR
+function extractEtiquetaData(rawText: string): EtiquetaData {
+  // Normalizar espacios entre dígitos para leer números correctamente
   let text = rawText;
   let prev = "";
   while (prev !== text) {
@@ -223,13 +223,36 @@ function extractEnvioId(rawText: string): string | null {
     text = text.replace(/(\d) (\d)/g, "$1$2");
   }
 
-  // ÚNICA REGLA: capturar el número de 11 dígitos que aparece después de "Envío:"
-  // Cubre: "Envío: 46719267146", "Envio:46719267146", "ENVIO 46719267146"
-  const m = text.match(/[Ee][Nn][Vv][Ii\u00ED][Oo]\s*:?\s*(\d{11})/);
-  if (m) return m[1];
+  // ── Envío ID: número de 11 dígitos después de "Envío:" ──
+  const envioMatch = text.match(/[Ee][Nn][Vv][Ii\u00ED][Oo]\s*:?\s*(\d{11})/);
+  const envioId = envioMatch ? envioMatch[1] : null;
 
-  // Si no encontró "Envío" + 11 dígitos → no hay ID válido
-  return null;
+  // ── Pack ID: número largo después de "Pack ID:" ──
+  const packMatch = text.match(/[Pp]ack\s*[Ii][Dd]\s*:?\s*(\d{12,20})/);
+  const packId = packMatch ? packMatch[1] : null;
+
+  // ── Usuario ML: texto entre paréntesis (MAYÚSCULAS) al final del nombre ──
+  // Ejemplo: "Adolfo Enrique Recobski (ADOLFORECO)"
+  const usuarioMatch = text.match(/\(([A-Z0-9_]{3,20})\)/);
+  const usuarioML = usuarioMatch ? usuarioMatch[1] : null;
+
+  // ── Nombre destinatario: línea que contiene "Destinatario:" ──
+  const destMatch = text.match(/[Dd]estinatario\s*:?\s*(.+?)(?:\s*\([A-Z]|\n|$)/);
+  const nombreDestinatario = destMatch ? destMatch[1].trim() : null;
+
+  // ── Dirección: línea que empieza con "Direcci" o contiene número de calle ──
+  const dirMatch = text.match(/[Dd]irecci[oó]n\s*:?\s*(.+?)(?:\n|$)/);
+  const direccion = dirMatch ? dirMatch[1].trim() : null;
+
+  // ── Código Postal: "CP:" seguido de 4 dígitos ──
+  const cpMatch = text.match(/[Cc][Pp]\s*:?\s*(\d{4})/);
+  const codigoPostal = cpMatch ? cpMatch[1] : null;
+
+  // ── SKU: después de "SKU:" ──
+  const skuMatch = text.match(/[Ss][Kk][Uu]\s*:?\s*([A-Z0-9\-]{4,30})/);
+  const productoSku = skuMatch ? skuMatch[1].trim() : null;
+
+  return { envioId, packId, usuarioML, nombreDestinatario, direccion, codigoPostal, productoSku };
 }
 
 // Extraer el ID de envío ML desde el contenido del QR
@@ -284,6 +307,16 @@ function preprocessCanvas(src: HTMLCanvasElement): HTMLCanvasElement {
   return dst;
 }
 
+export interface EtiquetaData {
+  envioId:            string | null; // "Envío: 46719267146"
+  packId:             string | null; // "Pack ID: 200012198133809"
+  usuarioML:          string | null; // "(ADOLFORECO)"
+  nombreDestinatario: string | null; // "Adolfo Enrique Recobski"
+  direccion:          string | null; // "Calle C Castro 729"
+  codigoPostal:       string | null; // "1682"
+  productoSku:        string | null; // "SKU: MAQJEEZ-00179"
+}
+
 export interface PaqueteOCR {
   id: string;
   localidad: string;
@@ -292,7 +325,13 @@ export interface PaqueteOCR {
   pagoFlete: number;
   ganancia: number;
   fotoDataUrl: string;
-  envioId: string | null;
+  envioId:            string | null;
+  packId:             string | null;
+  usuarioML:          string | null;
+  nombreDestinatario: string | null;
+  direccion:          string | null;
+  codigoPostal:       string | null;
+  productoSku:        string | null;
   estado: "ok";
 }
 
@@ -322,6 +361,7 @@ export default function OCRScanner({ tarifas, onFinish, onClose }: Props) {
   // Estado del visor en tiempo real
   const [liveLocalidad, setLiveLocalidad] = useState<string | null>(null);
   const [liveEnvioId, setLiveEnvioId]     = useState<string | null>(null);
+  const [liveEtiqueta, setLiveEtiqueta]   = useState<EtiquetaData | null>(null);
   const [liveScan, setLiveScan]           = useState<"scanning" | "found" | "notfound">("scanning");
 
   const localidadesFiltradas = busqueda.trim()
@@ -417,22 +457,25 @@ export default function OCRScanner({ tarifas, onFinish, onClose }: Props) {
       const qrId = scanQRFromCanvas(canvas);
 
       try {
-        // ── Paso 2: OCR (async) — detecta localidad y CP ──
+        // ── Paso 2: OCR (async) — extrae todos los campos de la etiqueta ──
         const processed = preprocessCanvas(canvas);
         const { data: { text } } = await worker.recognize(processed);
-        const loc = detectLocalidadFromText(text);
-        // OCR como fallback para ID si el QR no lo leyó
-        const ocrId = qrId ?? extractEnvioId(text);
+        const loc      = detectLocalidadFromText(text);
+        const etiqueta = extractEtiquetaData(text);
+        // QR tiene prioridad para el ID (más confiable que OCR)
+        const finalId  = qrId ?? etiqueta.envioId;
 
         if (!scanningRef.current) return;
 
         if (loc) {
           setLiveLocalidad(loc);
-          setLiveEnvioId(ocrId);
+          setLiveEnvioId(finalId);
+          setLiveEtiqueta({ ...etiqueta, envioId: finalId });
           setLiveScan("found");
         } else {
           setLiveLocalidad(null);
-          setLiveEnvioId(ocrId);
+          setLiveEnvioId(finalId);
+          setLiveEtiqueta(finalId ? { ...etiqueta, envioId: finalId } : null);
           setLiveScan("notfound");
         }
       } catch (_) {
@@ -485,20 +528,26 @@ export default function OCRScanner({ tarifas, onFinish, onClose }: Props) {
 
     const calc    = calcPaquete(liveLocalidad, tarifas);
     const nuevo: PaqueteOCR = {
-      id:           generateId(),
-      localidad:    liveLocalidad,
-      zona:         calc.zona as FlexZona,
-      precioML:     calc.precioML,
-      pagoFlete:    calc.pagoFlete,
-      ganancia:     calc.ganancia,
+      id:                 generateId(),
+      localidad:          liveLocalidad,
+      zona:               calc.zona as FlexZona,
+      precioML:           calc.precioML,
+      pagoFlete:          calc.pagoFlete,
+      ganancia:           calc.ganancia,
       fotoDataUrl,
-      envioId:      liveEnvioId,
-      estado:       "ok",
+      envioId:            liveEnvioId,
+      packId:             liveEtiqueta?.packId ?? null,
+      usuarioML:          liveEtiqueta?.usuarioML ?? null,
+      nombreDestinatario: liveEtiqueta?.nombreDestinatario ?? null,
+      direccion:          liveEtiqueta?.direccion ?? null,
+      codigoPostal:       liveEtiqueta?.codigoPostal ?? null,
+      productoSku:        liveEtiqueta?.productoSku ?? null,
+      estado:             "ok",
     };
     setPaquetes(prev => [...prev, nuevo]);
     beep();
     setCapturing(false);
-  }, [capturing, paquetes, liveLocalidad, liveEnvioId, existingIds, tarifas]);
+  }, [capturing, paquetes, liveLocalidad, liveEnvioId, liveEtiqueta, existingIds, tarifas]);
 
   const editarLocalidad = (idx: number, localidad: string) => {
     const calc = calcPaquete(localidad, tarifas);
