@@ -114,7 +114,7 @@ export default function DashboardPage() {
         onOpenNotifications={() => setShowNotifications(true)}
       />
 
-      <main className="max-w-5xl mx-auto px-4 py-6 pb-24 sm:pb-6 space-y-6">
+      <main className="max-w-5xl mx-auto px-4 py-6 pb-40 sm:pb-8 space-y-6">
         {/* Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <StatCard label="Activas" value={activeOrders.length} icon={Wrench} color="bg-orange-500" />
@@ -228,12 +228,13 @@ export default function DashboardPage() {
       {/* FAB — Nueva orden */}
       <button
         onClick={() => { setEditingOrder(null); setShowForm(true); }}
-        className="fixed bottom-6 right-6 btn-primary rounded-2xl shadow-2xl shadow-orange-500/40
-                   h-16 w-16 sm:w-auto sm:px-6 z-40"
+        className="fixed bottom-[88px] sm:bottom-6 right-4 sm:right-6
+                   btn-primary rounded-2xl shadow-2xl shadow-orange-500/40
+                   h-14 w-14 sm:h-auto sm:w-auto sm:px-6 z-40"
         aria-label="Nueva orden"
       >
-        <Plus className="w-7 h-7 flex-shrink-0" />
-        <span className="hidden sm:inline text-base">Nueva Orden</span>
+        <Plus className="w-6 h-6 flex-shrink-0" />
+        <span className="hidden sm:inline text-base font-bold">Nueva Orden</span>
       </button>
 
       {showForm && (

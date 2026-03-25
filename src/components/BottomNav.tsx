@@ -20,8 +20,8 @@ export default function BottomNav({ notificationCount = 0, onOpenNotifications }
   ];
 
   return (
-    <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-50 bg-gray-900 border-t border-gray-700 safe-bottom">
-      <div className="flex items-stretch h-16">
+    <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-gray-900/95 backdrop-blur-md border-t border-gray-700/80 shadow-[0_-4px_24px_rgba(0,0,0,0.4)]">
+      <div className="flex items-stretch" style={{ height: "64px", paddingBottom: "env(safe-area-inset-bottom)" }}>
         {tabs.map(({ href, label, icon: Icon }) => {
           const active = pathname === href;
           return (
