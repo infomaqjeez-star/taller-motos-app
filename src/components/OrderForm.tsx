@@ -35,6 +35,7 @@ const defaultOrder = (): Omit<WorkOrder, "id" | "entryDate"> => ({
   deliveryDate: null,
   linkedParts: [],
   internalNotes: "",
+  photoUrls: [],
 });
 
 export default function OrderForm({ initial, onSave, onClose }: OrderFormProps) {
