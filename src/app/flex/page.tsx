@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import Navbar from "@/components/Navbar";
 import BottomNav from "@/components/BottomNav";
+import FlexRafaga from "@/components/FlexRafaga";
 import { flexDb } from "@/lib/db";
 import {
   FlexEnvio, FlexZona,
@@ -10,7 +11,7 @@ import {
 } from "@/lib/types";
 import {
   Truck, Plus, Trash2, TrendingUp, DollarSign,
-  MapPin, Package, ChevronDown, X, BarChart2, Settings
+  MapPin, Package, ChevronDown, X, BarChart2, Settings, Zap,
 } from "lucide-react";
 
 const fmt = (n: number) =>
@@ -63,6 +64,7 @@ export default function FlexPage() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showRafaga, setShowRafaga] = useState(false);
   const [form, setForm] = useState<FormState>(defaultForm());
   const [saving, setSaving] = useState(false);
   const { tarifas, update: updateTarifa } = useTarifas();
@@ -168,6 +170,12 @@ export default function FlexPage() {
               title="Configurar tarifas"
             >
               <Settings className="w-5 h-5" />
+            </button>
+            <button
+              onClick={() => setShowRafaga(true)}
+              className="flex items-center gap-2 bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-300 font-bold px-3 py-2.5 rounded-xl border border-yellow-500/40 transition-colors"
+            >
+              <Zap className="w-4 h-4" /> Ráfaga
             </button>
             <button
               onClick={() => setShowForm(true)}
@@ -485,6 +493,14 @@ export default function FlexPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {showRafaga && (
+        <FlexRafaga
+          tarifas={tarifas}
+          onClose={() => setShowRafaga(false)}
+          onSaved={() => { load(); }}
+        />
       )}
 
       <BottomNav />
