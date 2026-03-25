@@ -387,7 +387,7 @@ export default function OCRScanner({ tarifas, onFinish, onClose }: Props) {
     <div className="fixed inset-0 z-[60] bg-black flex flex-col overflow-hidden">
 
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 bg-black/90 backdrop-blur-sm flex-shrink-0">
+      <div className="flex items-center justify-between px-4 py-3 bg-black/90 backdrop-blur-sm flex-shrink-0 z-10">
         <div className="flex items-center gap-2">
           <Camera className="w-5 h-5 text-yellow-400" />
           <div>
@@ -414,8 +414,8 @@ export default function OCRScanner({ tarifas, onFinish, onClose }: Props) {
         </div>
       </div>
 
-      {/* Cámara */}
-      <div className="relative flex-shrink-0" style={{ height: "55vw", maxHeight: "320px" }}>
+      {/* Cámara — ocupa todo el espacio disponible */}
+      <div className="relative flex-1 overflow-hidden">
         {camError ? (
           <div className="absolute inset-0 bg-gray-900 flex flex-col items-center justify-center text-center px-6">
             <AlertTriangle className="w-10 h-10 text-red-400 mb-3" />
@@ -423,18 +423,18 @@ export default function OCRScanner({ tarifas, onFinish, onClose }: Props) {
           </div>
         ) : (
           <>
-            <video ref={videoRef} className="w-full h-full object-cover" playsInline muted />
+            <video ref={videoRef} className="absolute inset-0 w-full h-full object-cover" playsInline muted />
             <canvas ref={canvasRef} className="hidden" />
 
-            {/* Marco de enfoque */}
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            {/* Marco de enfoque — centrado verticalmente en la zona superior */}
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ paddingBottom: "120px" }}>
               <div className="relative w-72 h-40">
                 <div className="absolute top-0 left-0 w-7 h-7 border-yellow-400" style={{ borderWidth: "3px 0 0 3px" }} />
                 <div className="absolute top-0 right-0 w-7 h-7 border-yellow-400" style={{ borderWidth: "3px 3px 0 0" }} />
                 <div className="absolute bottom-0 left-0 w-7 h-7 border-yellow-400" style={{ borderWidth: "0 0 3px 3px" }} />
                 <div className="absolute bottom-0 right-0 w-7 h-7 border-yellow-400" style={{ borderWidth: "0 3px 3px 0" }} />
-                <p className="absolute -bottom-7 inset-x-0 text-center text-yellow-300 text-xs font-semibold">
-                  Encuadrar la etiqueta completa — ciudad y CP visibles
+                <p className="absolute -bottom-7 inset-x-0 text-center text-yellow-300 text-xs font-semibold drop-shadow-lg">
+                  Encuadrar la etiqueta — ciudad y CP visibles
                 </p>
               </div>
             </div>
@@ -447,7 +447,7 @@ export default function OCRScanner({ tarifas, onFinish, onClose }: Props) {
               <p className="text-gray-300 text-[10px]">/{MAX}</p>
             </div>
 
-            {/* Indicador OCR cargando */}
+            {/* Indicador OCR */}
             {!workerReady && (
               <div className="absolute top-3 left-3 bg-blue-600/90 rounded-xl px-3 py-1.5 flex items-center gap-1.5">
                 <Loader2 className="w-3.5 h-3.5 text-white animate-spin" />
@@ -461,35 +461,45 @@ export default function OCRScanner({ tarifas, onFinish, onClose }: Props) {
               </div>
             )}
 
-            {/* Botón capturar */}
-            <button
-              onPointerDown={capturar}
-              disabled={capturing || paquetes.length >= MAX || !workerReady}
-              className="absolute bottom-4 inset-x-0 flex justify-center pointer-events-auto"
-            >
-              <div className={`w-16 h-16 rounded-full border-4 flex items-center justify-center transition-all ${
-                capturing
-                  ? "border-gray-500 bg-gray-700"
-                  : paquetes.length >= MAX
-                  ? "border-red-600 bg-red-900/50"
+            {/* ── BOTÓN CAPTURAR — fijo en la parte inferior ── */}
+            <div className="absolute bottom-0 inset-x-0 pb-6 pt-4 flex flex-col items-center gap-2"
+              style={{ background: "linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 100%)" }}>
+              <p className="text-gray-300 text-xs font-semibold">
+                {paquetes.length >= MAX
+                  ? "Límite alcanzado"
                   : !workerReady
-                  ? "border-yellow-500/50 bg-yellow-900/30"
-                  : "border-white bg-white/20 active:bg-white/40"
-              }`}>
-                {capturing || (!workerReady) ? (
-                  <Loader2 className="w-6 h-6 text-white animate-spin" />
-                ) : (
-                  <Camera className="w-7 h-7 text-white" />
-                )}
-              </div>
-            </button>
+                  ? "Cargando motor OCR..."
+                  : "Tocá para capturar"}
+              </p>
+              <button
+                onPointerDown={capturar}
+                disabled={capturing || paquetes.length >= MAX || !workerReady}
+                className="pointer-events-auto"
+              >
+                <div className={`w-20 h-20 rounded-full border-4 flex items-center justify-center transition-all shadow-2xl ${
+                  capturing
+                    ? "border-gray-500 bg-gray-700/80"
+                    : paquetes.length >= MAX
+                    ? "border-red-600 bg-red-900/60"
+                    : !workerReady
+                    ? "border-yellow-500/50 bg-yellow-900/30"
+                    : "border-white bg-white/20 active:scale-95 active:bg-white/40"
+                }`}>
+                  {capturing || !workerReady ? (
+                    <Loader2 className="w-8 h-8 text-white animate-spin" />
+                  ) : (
+                    <Camera className="w-9 h-9 text-white" />
+                  )}
+                </div>
+              </button>
+            </div>
           </>
         )}
       </div>
 
-      {/* Lista de paquetes */}
-      <div className="flex-1 overflow-y-auto bg-gray-950">
-        {paquetes.length > 0 && (
+      {/* Lista de paquetes — aparece como panel deslizante desde abajo cuando hay fotos */}
+      {paquetes.length > 0 && (
+      <div className="flex-shrink-0 bg-gray-950 overflow-y-auto" style={{ maxHeight: "45vh" }}>
           <div className="sticky top-0 bg-gray-900/95 border-b border-gray-700 px-4 py-2 flex justify-between z-10">
             <p className="text-xs text-gray-400">
               {sinZonaCount > 0 && <span className="text-red-400 font-bold">{sinZonaCount} sin zona · </span>}
@@ -601,8 +611,8 @@ export default function OCRScanner({ tarifas, onFinish, onClose }: Props) {
               );
             })}
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
