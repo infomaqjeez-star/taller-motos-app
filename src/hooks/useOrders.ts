@@ -14,6 +14,7 @@ export interface OrderFilters {
 
 export function useOrders() {
   const [orders, setOrders] = useState<WorkOrder[]>([]);
+  const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<OrderFilters>({
     motorType: "all",
     status: "all",
@@ -21,8 +22,16 @@ export function useOrders() {
     overdueOnly: false,
   });
 
-  const refresh = useCallback(() => {
-    setOrders(ordersDb.getAll());
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await ordersDb.getAll();
+      setOrders(data);
+    } catch (e) {
+      console.error("Error cargando órdenes:", e);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -30,32 +39,31 @@ export function useOrders() {
   }, [refresh]);
 
   const create = useCallback(
-    (order: WorkOrder) => {
-      ordersDb.create(order);
-      refresh();
+    async (order: WorkOrder) => {
+      await ordersDb.create(order);
+      await refresh();
     },
     [refresh]
   );
 
   const update = useCallback(
-    (id: string, updates: Partial<WorkOrder>) => {
-      ordersDb.update(id, updates);
-      refresh();
+    async (id: string, updates: Partial<WorkOrder>) => {
+      await ordersDb.update(id, updates);
+      await refresh();
     },
     [refresh]
   );
 
   const remove = useCallback(
-    (id: string) => {
-      ordersDb.delete(id);
-      refresh();
+    async (id: string) => {
+      await ordersDb.delete(id);
+      await refresh();
     },
     [refresh]
   );
 
   const filtered = orders.filter((o) => {
-    if (filters.motorType !== "all" && o.motorType !== filters.motorType)
-      return false;
+    if (filters.motorType !== "all" && o.motorType !== filters.motorType) return false;
     if (filters.status !== "all" && o.status !== filters.status) return false;
     if (filters.overdueOnly && !isOverdue90Days(o)) return false;
     if (filters.search) {
@@ -81,6 +89,7 @@ export function useOrders() {
     update,
     remove,
     overdueCount,
+    loading,
     refresh,
   };
 }
