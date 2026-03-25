@@ -5,7 +5,8 @@ import { AgendaCliente, WorkOrder, REPAIR_STATUS_LABELS, REPAIR_STATUS_COLORS } 
 import { agendaDb, ordersDb } from "@/lib/db";
 import { formatDate } from "@/lib/utils";
 import Navbar from "@/components/Navbar";
-import { Users, Search, Phone, ChevronRight, X, Clock, Wrench, Trash2, ChevronDown } from "lucide-react";
+import BottomNav from "@/components/BottomNav";
+import { Users, Search, Phone, ChevronRight, X, Clock, Wrench, Trash2 } from "lucide-react";
 
 function ClienteModal({
   cliente,
@@ -159,7 +160,7 @@ export default function AgendaPage() {
   return (
     <>
       <Navbar />
-      <main className="max-w-2xl mx-auto px-4 py-6 space-y-5">
+      <main className="max-w-2xl mx-auto px-4 py-6 pb-24 sm:pb-6 space-y-5">
         {/* Title */}
         <div className="flex items-center gap-3">
           <div className="bg-blue-600 rounded-xl p-2.5">
@@ -256,6 +257,7 @@ export default function AgendaPage() {
       {selected && (
         <ClienteModal cliente={selected} onClose={() => setSelected(null)} />
       )}
+      <BottomNav />
     </>
   );
 }
