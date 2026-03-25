@@ -277,7 +277,12 @@ function extractEtiquetaData(rawText: string): EtiquetaData {
   const skuMatch = text.match(/[Ss][Kk][Uu]\s*:?\s*([A-Z0-9\-]{4,30})/);
   const productoSku = skuMatch ? skuMatch[1].trim() : null;
 
-  return { envioId, packId, usuarioML, nombreDestinatario, direccion, codigoPostal, productoSku, productoNombre };
+  // ── Localidad texto (literal del OCR, para validación cruzada) ──
+  const localidadMatch = text.match(/[Ll]ocalidad\s*:?\s*(.+?)(?:\n|$)/) ||
+                         text.match(/[Cc]iudad\s*:?\s*(.+?)(?:\n|$)/);
+  const localidadTexto = localidadMatch ? localidadMatch[1].trim().slice(0, 40) : null;
+
+  return { envioId, packId, usuarioML, nombreDestinatario, direccion, codigoPostal, productoSku, productoNombre, localidadTexto };
 }
 
 interface QRParsed { envioId: string | null; usuarioML: string | null; }
@@ -380,7 +385,8 @@ export interface EtiquetaData {
   direccion:          string | null;
   codigoPostal:       string | null;
   productoSku:        string | null;
-  productoNombre:     string | null; // nombre completo del producto
+  productoNombre:     string | null;
+  localidadTexto:     string | null; // localidad tal como la leyó el OCR (sin mapear)
 }
 
 export interface PaqueteOCR {
@@ -399,6 +405,7 @@ export interface PaqueteOCR {
   codigoPostal:       string | null;
   productoSku:        string | null;
   productoNombre:     string | null;
+  discordancia:       string | null;  // "CP 1812 → Spegazzini, no Villa Bosch"
   estado: "ok";
 }
 
@@ -595,6 +602,21 @@ export default function OCRScanner({ tarifas, onFinish, onClose }: Props) {
     const fotoDataUrl = canvas.toDataURL("image/jpeg", 0.8);
 
     const calc    = calcPaquete(liveLocalidad, tarifas);
+
+    // ── Validación cruzada CP ↔ Localidad ──────────────────────────────────
+    const cpDetectado    = liveEtiqueta?.codigoPostal ?? null;
+    const localidadOCR   = liveEtiqueta?.localidadTexto ?? null; // nombre leído por OCR
+    const localidadPorCP = cpDetectado ? CP_MAP[cpDetectado] : null;
+    let discordancia: string | null = null;
+    if (cpDetectado && localidadOCR && localidadPorCP) {
+      // Normalizar para comparar (sin tildes, minúsculas)
+      const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      if (!norm(localidadPorCP).includes(norm(localidadOCR).slice(0, 5)) &&
+          !norm(localidadOCR).includes(norm(localidadPorCP).slice(0, 5))) {
+        discordancia = `CP ${cpDetectado} → ${localidadPorCP}, OCR leyó "${localidadOCR}"`;
+      }
+    }
+
     const nuevo: PaqueteOCR = {
       id:                 generateId(),
       localidad:          liveLocalidad,
@@ -611,6 +633,7 @@ export default function OCRScanner({ tarifas, onFinish, onClose }: Props) {
       codigoPostal:       liveEtiqueta?.codigoPostal ?? null,
       productoSku:        liveEtiqueta?.productoSku ?? null,
       productoNombre:     liveEtiqueta?.productoNombre ?? null,
+      discordancia:       discordancia,
       estado:             "ok",
     };
     setPaquetes(prev => [...prev, nuevo]);
@@ -873,6 +896,11 @@ export default function OCRScanner({ tarifas, onFinish, onClose }: Props) {
                         </p>
                         {p.envioId && (
                           <p className="text-gray-600 text-[10px] font-mono mt-0.5">ID: {p.envioId}</p>
+                        )}
+                        {p.discordancia && (
+                          <p className="text-red-400 text-[10px] font-bold mt-1 flex items-center gap-1">
+                            ⚠️ {p.discordancia}
+                          </p>
                         )}
                       </div>
                     <div className="flex items-center gap-1 flex-shrink-0">
