@@ -146,7 +146,7 @@ const CP_MAP: Record<string, string> = {
   // San Miguel
   "1663":"San Miguel","1664":"San Miguel","1665":"San Miguel",
   // José C. Paz
-  "1666":"José C. Paz","1667":"José C. Paz","1668":"José C. Paz","1669":"José C. Paz",
+  "1666":"José C. Paz","1667":"José C. Paz","1668":"José C. Paz",
   // Del Viso
   "1669": "Del Viso",
   // Nordelta / Tigre
@@ -174,7 +174,7 @@ const CP_MAP: Record<string, string> = {
   "1764":"La Matanza Norte","1765":"La Matanza Norte","1766":"La Matanza Norte","1767":"La Matanza Norte",
   "1750":"La Matanza Sur","1751":"La Matanza Sur",
   // Moreno
-  "1744":"Moreno","1745":"Moreno","1746":"Moreno","1747":"Moreno","1748":"Moreno",
+  "1744":"Moreno","1745":"Moreno","1746":"Moreno","1747":"Moreno",
   // Gral. Rodríguez
   "1748": "Gral. Rodríguez",
   // Malvinas Argentinas
