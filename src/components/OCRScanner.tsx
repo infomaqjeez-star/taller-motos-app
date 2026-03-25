@@ -36,7 +36,6 @@ function beep() {
 const CP_MAP: Record<string, string> = {
   // Ezeiza (Cercana)
   "1802": "Ezeiza", "1741": "Ezeiza", "1742": "Ezeiza", "1743": "Ezeiza",
-  "1744": "Ezeiza", "1745": "Ezeiza", "1746": "Ezeiza",
   // Esteban Echeverría (Media)
   "1842": "Esteban Echeverría", "1843": "Esteban Echeverría",
   "1844": "Esteban Echeverría", "1845": "Esteban Echeverría",
@@ -73,7 +72,7 @@ const CP_MAP: Record<string, string> = {
   // Luján (Lejana)
   "6700": "Luján",
   // Marcos Paz (Lejana)
-  "1722": "Marcos Paz",
+  "1721": "Marcos Paz", "1722": "Marcos Paz",
   // Nordelta (Lejana)
   "1670": "Nordelta",
   // Pilar (Lejana)
@@ -88,8 +87,8 @@ const CP_MAP: Record<string, string> = {
   // Garín (Lejana)
   "1619": "Garín",
   // Alte. Brown (Lejana)
-  "1840": "Alte. Brown", "1841": "Alte. Brown", "1847": "Alte. Brown",
-  "1849": "Alte. Brown", "1850": "Alte. Brown", "1851": "Alte. Brown",
+  "1840": "Alte. Brown", "1841": "Alte. Brown",
+  "1847": "Alte. Brown", "1849": "Alte. Brown", "1850": "Alte. Brown", "1851": "Alte. Brown",
   // Avellaneda (Lejana)
   "1870": "Avellaneda", "1871": "Avellaneda", "1872": "Avellaneda",
   // Berazategui (Lejana)
@@ -196,10 +195,10 @@ const CP_MAP: Record<string, string> = {
   "1613": "Malvinas Argentinas", "1614": "Malvinas Argentinas",
   "1615": "Malvinas Argentinas",
   // Merlo (Lejana)
-  "1722": "Merlo", "1723": "Merlo", "1724": "Merlo",
+  "1723": "Merlo", "1724": "Merlo", "1725": "Merlo",
   // Moreno (Lejana)
   "1744": "Moreno", "1745": "Moreno", "1746": "Moreno", "1747": "Moreno",
-  "1748": "Moreno", "1749": "Moreno", "1750": "Moreno", "1751": "Moreno",
+  "1749": "Moreno", "1750": "Moreno", "1751": "Moreno",
   // Morón (Lejana)
   "1708": "Morón", "1709": "Morón", "1710": "Morón", "1711": "Morón",
   "1712": "Morón",
