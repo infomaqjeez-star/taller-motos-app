@@ -308,7 +308,6 @@ function detectLocalidadFromText(text: string): string | null {
     "TIGRE": "Tigre",
     "PILAR": "Pilar",
     "CAMPANA": "Campana",
-    "ZARATE": "Zárate",
     "GARIN": "Garín",
     "NORDELTA": "Nordelta",
     "ESCOBAR": "Escobar",
