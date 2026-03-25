@@ -416,7 +416,7 @@ export default function OCRScanner({ tarifas, onFinish, onClose }: Props) {
         });
         if (!cancelled) {
           // Configurar para texto de impresora (PSMODE_SINGLE_BLOCK mejora rendimiento)
-          await (w as { setParameters: (p: Record<string, string>) => Promise<void> }).setParameters({
+          await (w as unknown as { setParameters: (p: Record<string, string>) => Promise<void> }).setParameters({
             tessedit_char_whitelist: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 :.-/",
           });
           workerRef.current = w;
