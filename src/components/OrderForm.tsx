@@ -58,6 +58,7 @@ export default function OrderForm({ initial, onSave, onClose }: OrderFormProps) 
           deliveryDate: initial.deliveryDate,
           linkedParts: initial.linkedParts,
           internalNotes: initial.internalNotes,
+          photoUrls: initial.photoUrls ?? [],
         }
       : defaultOrder()
   );
