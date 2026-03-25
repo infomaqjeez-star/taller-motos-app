@@ -3,8 +3,9 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { FlexZona, FLEX_LOCALIDADES } from "@/lib/types";
 import {
-  X, Camera, Search, ChevronRight, AlertTriangle,
+  X, Camera, Search, ChevronRight,
   CheckCircle2, Loader2, Save, DollarSign, TrendingUp, Package,
+  AlertTriangle,
 } from "lucide-react";
 
 const MAX = 50;
@@ -32,16 +33,11 @@ function beep() {
   } catch (_) {}
 }
 
-// ─── Mapa de códigos postales a localidades (datos oficiales ML Flex) ────────
-// CABA se detecta por rango 1000-1499 en detectCPFromText (no se lista aquí)
+// ─── Base de datos oficial ML Flex ───────────────────────────────────────────
 const CP_MAP: Record<string, string> = {
-  // ── CERCANA ($4490) ───────────────────────────────────────────────────────
   "1804": "Ezeiza",
-  // ── MEDIA ($6490) ─────────────────────────────────────────────────────────
   "1842": "Esteban Echeverría",
   "1759": "La Matanza Sur", "1761": "La Matanza Sur",
-  // ── LEJANA ($8490) ────────────────────────────────────────────────────────
-  // (CABA 1000-1499 se detecta por rango, ver función detectCPFromText)
   "1870": "Avellaneda",
   "1824": "Lanús",
   "1832": "Lomas de Zamora",
@@ -78,8 +74,7 @@ const CP_MAP: Record<string, string> = {
   "2800": "Zárate",
 };
 
-// Detectar localidad por CP numérico — busca "CP: 1888", "CP 1888", "1888" suelto, etc.
-// CABA se detecta por rango 1000-1499 sin necesidad de listarlo en CP_MAP.
+// Detectar localidad por CP — CABA por rango 1000-1499
 function detectCPFromText(text: string): string | null {
   const patterns = [
     /CP[:\s.]*(\d{4})/i,
@@ -89,12 +84,10 @@ function detectCPFromText(text: string): string | null {
   ];
   for (const pattern of patterns) {
     if (pattern.flags.includes("g")) {
-      // Para el patrón global, usar exec en bucle (compatible con ES5)
       const re = new RegExp(pattern.source, pattern.flags);
       let match = re.exec(text);
       while (match !== null) {
         const cp = parseInt(match[1], 10);
-        // CABA: rango 1000-1499
         if (cp >= 1000 && cp <= 1499) return "CABA";
         const loc = CP_MAP[match[1]];
         if (loc) return loc;
@@ -116,21 +109,15 @@ function detectCPFromText(text: string): string | null {
 function detectLocalidadFromText(text: string): string | null {
   const upper = text.toUpperCase().replace(/\n/g, " ").replace(/\s+/g, " ");
 
-  // 1. Primero intentar por CP (muy confiable)
   const byCP = detectCPFromText(upper);
   if (byCP) return byCP;
 
-  // 2. Ordenar por longitud descendente para priorizar nombres más largos
   const sorted = [...FLEX_LOCALIDADES].sort((a, b) => b.nombre.length - a.nombre.length);
   for (const loc of sorted) {
-    const name = loc.nombre.toUpperCase()
-      .replace(/\./g, "")
-      .replace(/\s+/g, "\\s+");
-    const regex = new RegExp(name);
-    if (regex.test(upper)) return loc.nombre;
+    const name = loc.nombre.toUpperCase().replace(/\./g, "").replace(/\s+/g, "\\s+");
+    if (new RegExp(name).test(upper)) return loc.nombre;
   }
 
-  // 3. Aliases y variaciones comunes en etiquetas ML
   const aliases: Record<string, string> = {
     "FLORENCIO VARELA": "Florencio Varela",
     "TRES DE FEBRERO": "Tres de Febrero",
@@ -141,8 +128,6 @@ function detectLocalidadFromText(text: string): string | null {
     "ALMIRANTE BROWN": "Alte. Brown",
     "GRAL RODRIGUEZ": "Gral. Rodríguez",
     "GENERAL RODRIGUEZ": "Gral. Rodríguez",
-    "ING MASCHWITZ": "Ing. Maschwitz",
-    "INGENIERO MASCHWITZ": "Ing. Maschwitz",
     "LA PLATA": "La Plata Centro",
     "VICENTE LOPEZ": "Vicente López",
     "LOMAS DE ZAMORA": "Lomas de Zamora",
@@ -172,8 +157,8 @@ function detectLocalidadFromText(text: string): string | null {
     "MORENO": "Moreno",
     "BERAZATEGUI": "Berazategui",
     "EZEIZA": "Ezeiza",
-    "DERQUI": "Derqui",
     "GUERNICA": "Guernica",
+    "FLORENCIO": "Florencio Varela",
   };
   for (const [alias, localidad] of Object.entries(aliases)) {
     if (upper.includes(alias)) return localidad;
@@ -188,7 +173,6 @@ function calcPaquete(localidad: string, tarifas: Record<FlexZona, number>) {
   return { zona, precioML, pagoFlete: Math.round(precioML * 0.8), ganancia: Math.round(precioML * 0.2) };
 }
 
-// Preprocesar canvas: escala de grises con contraste suave (NO binarización dura)
 function preprocessCanvas(src: HTMLCanvasElement): HTMLCanvasElement {
   const dst = document.createElement("canvas");
   dst.width = src.width; dst.height = src.height;
@@ -198,7 +182,6 @@ function preprocessCanvas(src: HTMLCanvasElement): HTMLCanvasElement {
   const d = imgData.data;
   for (let i = 0; i < d.length; i += 4) {
     const gray = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
-    // Contraste suave: estira el rango 50-220 a 0-255
     const contrasted = Math.min(255, Math.max(0, ((gray - 50) / 170) * 255));
     d[i] = d[i + 1] = d[i + 2] = contrasted;
   }
@@ -208,14 +191,13 @@ function preprocessCanvas(src: HTMLCanvasElement): HTMLCanvasElement {
 
 export interface PaqueteOCR {
   id: string;
-  localidad: string | null;
-  zona: FlexZona | null;
+  localidad: string;
+  zona: FlexZona;
   precioML: number;
   pagoFlete: number;
   ganancia: number;
   fotoDataUrl: string;
-  ocrText: string;
-  estado: "ok" | "sin_zona" | "procesando";
+  estado: "ok";
 }
 
 interface Props {
@@ -225,21 +207,33 @@ interface Props {
 }
 
 export default function OCRScanner({ tarifas, onFinish, onClose }: Props) {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
+  const videoRef    = useRef<HTMLVideoElement>(null);
+  const canvasRef   = useRef<HTMLCanvasElement>(null);
+  const streamRef   = useRef<MediaStream | null>(null);
+  const workerRef   = useRef<unknown>(null);
+  const scanningRef = useRef(false);   // flag para el loop de análisis en tiempo real
+  const lastScanRef = useRef(0);
 
-  const [paquetes, setPaquetes] = useState<PaqueteOCR[]>([]);
-  const [camError, setCamError] = useState("");
-  const [capturing, setCapturing] = useState(false);
-  const [editIdx, setEditIdx] = useState<number | null>(null);
-  const [busqueda, setBusqueda] = useState("");
+  const [paquetes, setPaquetes]       = useState<PaqueteOCR[]>([]);
+  const [camError, setCamError]       = useState("");
+  const [capturing, setCapturing]     = useState(false);
+  const [editIdx, setEditIdx]         = useState<number | null>(null);
+  const [busqueda, setBusqueda]       = useState("");
   const [workerReady, setWorkerReady] = useState(false);
-  const workerRef = useRef<unknown>(null);
+
+  // Estado del visor en tiempo real
+  const [liveLocalidad, setLiveLocalidad] = useState<string | null>(null);
+  const [liveScan, setLiveScan]           = useState<"scanning" | "found" | "notfound">("scanning");
 
   const localidadesFiltradas = busqueda.trim()
     ? FLEX_LOCALIDADES.filter(l => l.nombre.toLowerCase().includes(busqueda.toLowerCase()))
     : FLEX_LOCALIDADES;
+
+  const stopCamera = useCallback(() => {
+    scanningRef.current = false;
+    streamRef.current?.getTracks().forEach(t => t.stop());
+    streamRef.current = null;
+  }, []);
 
   const startCamera = useCallback(async () => {
     try {
@@ -253,12 +247,7 @@ export default function OCRScanner({ tarifas, onFinish, onClose }: Props) {
     }
   }, []);
 
-  const stopCamera = useCallback(() => {
-    streamRef.current?.getTracks().forEach(t => t.stop());
-    streamRef.current = null;
-  }, []);
-
-  // Inicializar Tesseract worker — inglés + español para mejor lectura de texto de impresora
+  // Inicializar Tesseract
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -266,12 +255,11 @@ export default function OCRScanner({ tarifas, onFinish, onClose }: Props) {
         const { createWorker } = await import("tesseract.js");
         const w = await createWorker("eng+spa", 1, {
           workerPath: "https://unpkg.com/tesseract.js@5.1.1/dist/worker.min.js",
-          langPath: "https://tessdata.projectnaptha.com/4.0.0_fast",
-          corePath: "https://unpkg.com/tesseract.js-core@5.1.1/tesseract-core-simd-lstm.wasm.js",
+          langPath:   "https://tessdata.projectnaptha.com/4.0.0_fast",
+          corePath:   "https://unpkg.com/tesseract.js-core@5.1.1/tesseract-core-simd-lstm.wasm.js",
           logger: () => {},
         });
         if (!cancelled) {
-          // Configurar para texto de impresora (PSMODE_SINGLE_BLOCK mejora rendimiento)
           await (w as unknown as { setParameters: (p: Record<string, string>) => Promise<void> }).setParameters({
             tessedit_char_whitelist: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 :.-/",
           });
@@ -287,101 +275,120 @@ export default function OCRScanner({ tarifas, onFinish, onClose }: Props) {
 
   useEffect(() => { startCamera(); return () => stopCamera(); }, [startCamera, stopCamera]);
 
+  // ─── Loop de análisis en tiempo real (cada 1.5s) ─────────────────────────
+  useEffect(() => {
+    if (!workerReady) return;
+    scanningRef.current = true;
+
+    const loop = async () => {
+      if (!scanningRef.current) return;
+
+      const now = Date.now();
+      if (now - lastScanRef.current < 1500) {
+        requestAnimationFrame(loop);
+        return;
+      }
+      lastScanRef.current = now;
+
+      const video  = videoRef.current;
+      const canvas = canvasRef.current;
+      const worker = workerRef.current as { recognize: (img: HTMLCanvasElement) => Promise<{ data: { text: string } }> } | null;
+
+      if (!video || !canvas || !worker || video.readyState < 2) {
+        requestAnimationFrame(loop);
+        return;
+      }
+
+      // Captura frame reducido (640px) para velocidad
+      const scale = Math.min(1, 640 / video.videoWidth);
+      canvas.width  = Math.round(video.videoWidth  * scale);
+      canvas.height = Math.round(video.videoHeight * scale);
+      const ctx = canvas.getContext("2d")!;
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      try {
+        const processed = preprocessCanvas(canvas);
+        const { data: { text } } = await worker.recognize(processed);
+        const loc = detectLocalidadFromText(text);
+
+        if (!scanningRef.current) return;
+
+        if (loc) {
+          setLiveLocalidad(loc);
+          setLiveScan("found");
+        } else {
+          setLiveLocalidad(null);
+          setLiveScan("notfound");
+        }
+      } catch (_) {
+        if (scanningRef.current) setLiveScan("scanning");
+      }
+
+      if (scanningRef.current) requestAnimationFrame(loop);
+    };
+
+    requestAnimationFrame(loop);
+    return () => { scanningRef.current = false; };
+  }, [workerReady]);
+
+  // ─── Capturar — solo guarda si hay zona válida detectada en tiempo real ───
   const capturar = useCallback(async () => {
     if (capturing || paquetes.length >= MAX) return;
-    const video = videoRef.current;
+    if (!liveLocalidad) return; // nada válido en visor → ignorar
+
+    const video  = videoRef.current;
     const canvas = canvasRef.current;
     if (!video || !canvas) return;
     setCapturing(true);
     navigator.vibrate?.(60);
 
-    canvas.width = video.videoWidth;
+    // Captura a resolución completa para guardar la foto
+    canvas.width  = video.videoWidth;
     canvas.height = video.videoHeight;
     const ctx = canvas.getContext("2d")!;
     ctx.drawImage(video, 0, 0);
     const fotoDataUrl = canvas.toDataURL("image/jpeg", 0.8);
 
-    const id = generateId();
+    const calc = calcPaquete(liveLocalidad, tarifas);
     const nuevo: PaqueteOCR = {
-      id, localidad: null, zona: null, precioML: 0, pagoFlete: 0, ganancia: 0,
-      fotoDataUrl, ocrText: "", estado: "procesando",
+      id:           generateId(),
+      localidad:    liveLocalidad,
+      zona:         calc.zona as FlexZona,
+      precioML:     calc.precioML,
+      pagoFlete:    calc.pagoFlete,
+      ganancia:     calc.ganancia,
+      fotoDataUrl,
+      estado:       "ok",
     };
     setPaquetes(prev => [...prev, nuevo]);
+    beep();
     setCapturing(false);
-
-    // OCR en background
-    (async () => {
-      let localidad: string | null = null;
-      let ocrText = "";
-
-      try {
-        if (workerRef.current) {
-          const worker = workerRef.current as {
-            recognize: (img: HTMLCanvasElement) => Promise<{ data: { text: string } }>
-          };
-
-          // INTENTO 1: Escanear la imagen completa preprocesada
-          const processed = preprocessCanvas(canvas);
-          const result1 = await worker.recognize(processed);
-          ocrText = result1.data.text;
-          localidad = detectLocalidadFromText(ocrText);
-
-          // INTENTO 2: Si no encontró, escanear la imagen original sin preprocesar
-          if (!localidad) {
-            const result2 = await worker.recognize(canvas);
-            ocrText += " " + result2.data.text;
-            localidad = detectLocalidadFromText(ocrText);
-          }
-
-          // INTENTO 3: Si aún no encontró, recorte zona media de la foto
-          if (!localidad) {
-            const cropCanvas = document.createElement("canvas");
-            cropCanvas.width = canvas.width;
-            cropCanvas.height = Math.floor(canvas.height * 0.5);
-            const cropCtx = cropCanvas.getContext("2d")!;
-            cropCtx.drawImage(
-              canvas,
-              0, Math.floor(canvas.height * 0.25),
-              canvas.width, cropCanvas.height,
-              0, 0, cropCanvas.width, cropCanvas.height
-            );
-            const result3 = await worker.recognize(preprocessCanvas(cropCanvas));
-            ocrText += " " + result3.data.text;
-            localidad = detectLocalidadFromText(ocrText);
-          }
-        }
-      } catch (_) {}
-
-      const calc = localidad ? calcPaquete(localidad, tarifas) : { zona: null, precioML: 0, pagoFlete: 0, ganancia: 0 };
-      setPaquetes(prev => prev.map(p => p.id === id ? {
-        ...p,
-        localidad,
-        zona: calc.zona as FlexZona | null,
-        precioML: calc.precioML,
-        pagoFlete: calc.pagoFlete,
-        ganancia: calc.ganancia,
-        ocrText,
-        estado: localidad ? "ok" : "sin_zona",
-      } : p));
-      if (localidad) beep();
-    })();
-  }, [capturing, paquetes.length, tarifas]);
+  }, [capturing, paquetes.length, liveLocalidad, tarifas]);
 
   const editarLocalidad = (idx: number, localidad: string) => {
     const calc = calcPaquete(localidad, tarifas);
     setPaquetes(prev => prev.map((p, i) => i === idx ? {
-      ...p, localidad, zona: calc.zona as FlexZona, precioML: calc.precioML,
-      pagoFlete: calc.pagoFlete, ganancia: calc.ganancia, estado: "ok",
+      ...p, localidad, zona: calc.zona as FlexZona,
+      precioML: calc.precioML, pagoFlete: calc.pagoFlete, ganancia: calc.ganancia,
     } : p));
     setEditIdx(null); setBusqueda("");
   };
 
-  const procesandoCount = paquetes.filter(p => p.estado === "procesando").length;
-  const sinZonaCount = paquetes.filter(p => p.estado === "sin_zona").length;
-  const okCount = paquetes.filter(p => p.estado === "ok").length;
-  const totalML = paquetes.reduce((s, p) => s + p.precioML, 0);
+  const okCount       = paquetes.length;
+  const totalML       = paquetes.reduce((s, p) => s + p.precioML, 0);
   const totalGanancia = paquetes.reduce((s, p) => s + p.ganancia, 0);
-  const totalFlete = paquetes.reduce((s, p) => s + p.pagoFlete, 0);
+  const totalFlete    = paquetes.reduce((s, p) => s + p.pagoFlete, 0);
+
+  // Color del marco según detección en tiempo real
+  const frameColor = !workerReady
+    ? "border-yellow-400"
+    : liveScan === "found"
+    ? "border-green-400"
+    : liveScan === "notfound"
+    ? "border-gray-500"
+    : "border-yellow-400";
+
+  const canCapture = workerReady && !!liveLocalidad && !capturing && paquetes.length < MAX;
 
   return (
     <div className="fixed inset-0 z-[60] bg-black flex flex-col overflow-hidden">
@@ -392,11 +399,7 @@ export default function OCRScanner({ tarifas, onFinish, onClose }: Props) {
           <Camera className="w-5 h-5 text-yellow-400" />
           <div>
             <p className="text-white font-bold text-sm">Escáner OCR</p>
-            <p className="text-gray-400 text-xs">
-              {procesandoCount > 0
-                ? `Procesando ${procesandoCount}...`
-                : `${paquetes.length}/${MAX} fotos · ${okCount} detectadas`}
-            </p>
+            <p className="text-gray-400 text-xs">{paquetes.length}/{MAX} fotos · {okCount} guardadas</p>
           </div>
         </div>
         <div className="flex gap-2">
@@ -405,7 +408,7 @@ export default function OCRScanner({ tarifas, onFinish, onClose }: Props) {
               onClick={() => { stopCamera(); onFinish(paquetes); }}
               className="bg-yellow-500 text-black font-bold px-3 py-1.5 rounded-xl text-sm flex items-center gap-1"
             >
-              <Save className="w-4 h-4" /> Guardar {okCount > 0 ? `(${okCount})` : ""}
+              <Save className="w-4 h-4" /> Guardar ({okCount})
             </button>
           )}
           <button onClick={() => { stopCamera(); onClose(); }} className="p-2 text-gray-400 hover:text-white">
@@ -426,20 +429,44 @@ export default function OCRScanner({ tarifas, onFinish, onClose }: Props) {
             <video ref={videoRef} className="absolute inset-0 w-full h-full object-cover" playsInline muted />
             <canvas ref={canvasRef} className="hidden" />
 
-            {/* Marco de enfoque — centrado verticalmente en la zona superior */}
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ paddingBottom: "120px" }}>
-              <div className="relative w-72 h-40">
-                <div className="absolute top-0 left-0 w-7 h-7 border-yellow-400" style={{ borderWidth: "3px 0 0 3px" }} />
-                <div className="absolute top-0 right-0 w-7 h-7 border-yellow-400" style={{ borderWidth: "3px 3px 0 0" }} />
-                <div className="absolute bottom-0 left-0 w-7 h-7 border-yellow-400" style={{ borderWidth: "0 0 3px 3px" }} />
-                <div className="absolute bottom-0 right-0 w-7 h-7 border-yellow-400" style={{ borderWidth: "0 3px 3px 0" }} />
-                <p className="absolute -bottom-7 inset-x-0 text-center text-yellow-300 text-xs font-semibold drop-shadow-lg">
-                  Encuadrar la etiqueta — ciudad y CP visibles
-                </p>
+            {/* Marco de enfoque — color dinámico según detección */}
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ paddingBottom: "140px" }}>
+              <div className="relative w-72 h-44">
+                {/* Esquinas del marco */}
+                <div className={`absolute top-0 left-0 w-8 h-8 border-2 transition-colors duration-300 ${frameColor}`} style={{ borderWidth: "3px 0 0 3px" }} />
+                <div className={`absolute top-0 right-0 w-8 h-8 border-2 transition-colors duration-300 ${frameColor}`} style={{ borderWidth: "3px 3px 0 0" }} />
+                <div className={`absolute bottom-0 left-0 w-8 h-8 border-2 transition-colors duration-300 ${frameColor}`} style={{ borderWidth: "0 0 3px 3px" }} />
+                <div className={`absolute bottom-0 right-0 w-8 h-8 border-2 transition-colors duration-300 ${frameColor}`} style={{ borderWidth: "0 3px 3px 0" }} />
+
+                {/* Mensaje de detección dentro del marco */}
+                <div className="absolute inset-0 flex items-center justify-center">
+                  {liveScan === "found" && liveLocalidad ? (
+                    <div className="bg-green-600/90 rounded-xl px-4 py-2 text-center">
+                      <p className="text-white font-black text-base leading-tight">{liveLocalidad}</p>
+                      <p className="text-green-200 text-xs mt-0.5">
+                        {ZONA_LABELS[FLEX_LOCALIDADES.find(l => l.nombre === liveLocalidad)?.zona ?? "lejana"]} · {fmt(calcPaquete(liveLocalidad, tarifas).precioML)}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="bg-black/60 rounded-xl px-3 py-1.5 flex items-center gap-2">
+                      {!workerReady ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 text-yellow-400 animate-spin" />
+                          <span className="text-yellow-300 text-xs font-semibold">Cargando OCR...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 text-gray-400 animate-spin" />
+                          <span className="text-gray-300 text-xs">Buscando zona válida...</span>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
-            {/* Contador */}
+            {/* Contador arriba derecha */}
             <div className={`absolute top-3 right-3 rounded-xl px-3 py-1.5 text-center ${
               paquetes.length >= MAX ? "bg-red-600" : "bg-black/70"
             }`}>
@@ -447,111 +474,72 @@ export default function OCRScanner({ tarifas, onFinish, onClose }: Props) {
               <p className="text-gray-300 text-[10px]">/{MAX}</p>
             </div>
 
-            {/* Indicador OCR */}
-            {!workerReady && (
-              <div className="absolute top-3 left-3 bg-blue-600/90 rounded-xl px-3 py-1.5 flex items-center gap-1.5">
-                <Loader2 className="w-3.5 h-3.5 text-white animate-spin" />
-                <span className="text-white text-xs font-bold">Cargando OCR...</span>
-              </div>
-            )}
-            {workerReady && procesandoCount > 0 && (
-              <div className="absolute top-3 left-3 bg-blue-600/80 rounded-xl px-3 py-1.5 flex items-center gap-1.5">
-                <Loader2 className="w-3.5 h-3.5 text-white animate-spin" />
-                <span className="text-white text-xs font-bold">OCR {procesandoCount}</span>
-              </div>
-            )}
-
-            {/* ── BOTÓN CAPTURAR — fijo en la parte inferior ── */}
-            <div className="absolute bottom-0 inset-x-0 pb-6 pt-4 flex flex-col items-center gap-2"
-              style={{ background: "linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 100%)" }}>
-              <p className="text-gray-300 text-xs font-semibold">
+            {/* ── BOTÓN CAPTURAR — fijo en parte inferior ── */}
+            <div
+              className="absolute bottom-0 inset-x-0 pb-8 pt-6 flex flex-col items-center gap-2"
+              style={{ background: "linear-gradient(to top, rgba(0,0,0,0.9) 0%, transparent 100%)" }}
+            >
+              <p className={`text-xs font-semibold transition-colors ${canCapture ? "text-green-300" : "text-gray-400"}`}>
                 {paquetes.length >= MAX
                   ? "Límite alcanzado"
                   : !workerReady
                   ? "Cargando motor OCR..."
-                  : "Tocá para capturar"}
+                  : canCapture
+                  ? `Tocá para guardar · ${liveLocalidad}`
+                  : "Buscando zona válida..."}
               </p>
+
               <button
                 onPointerDown={capturar}
-                disabled={capturing || paquetes.length >= MAX || !workerReady}
-                className="pointer-events-auto"
+                disabled={!canCapture}
+                className="pointer-events-auto focus:outline-none"
               >
-                <div className={`w-20 h-20 rounded-full border-4 flex items-center justify-center transition-all shadow-2xl ${
-                  capturing
-                    ? "border-gray-500 bg-gray-700/80"
-                    : paquetes.length >= MAX
-                    ? "border-red-600 bg-red-900/60"
-                    : !workerReady
-                    ? "border-yellow-500/50 bg-yellow-900/30"
-                    : "border-white bg-white/20 active:scale-95 active:bg-white/40"
+                <div className={`w-20 h-20 rounded-full border-4 flex items-center justify-center transition-all duration-200 shadow-2xl ${
+                  canCapture
+                    ? "border-green-400 bg-green-600/30 active:scale-90 active:bg-green-600/60"
+                    : "border-gray-600 bg-gray-800/50 opacity-50"
                 }`}>
-                  {capturing || !workerReady ? (
+                  {capturing ? (
                     <Loader2 className="w-8 h-8 text-white animate-spin" />
                   ) : (
-                    <Camera className="w-9 h-9 text-white" />
+                    <Camera className={`w-9 h-9 ${canCapture ? "text-green-300" : "text-gray-500"}`} />
                   )}
                 </div>
               </button>
+
+              {!canCapture && paquetes.length < MAX && workerReady && (
+                <p className="text-gray-600 text-[10px]">El botón se activa cuando detecte una zona</p>
+              )}
             </div>
           </>
         )}
       </div>
 
-      {/* Lista de paquetes — aparece como panel deslizante desde abajo cuando hay fotos */}
+      {/* Lista de paquetes — panel inferior, solo paquetes válidos */}
       {paquetes.length > 0 && (
-      <div className="flex-shrink-0 bg-gray-950 overflow-y-auto" style={{ maxHeight: "45vh" }}>
+        <div className="flex-shrink-0 bg-gray-950 overflow-y-auto" style={{ maxHeight: "40vh" }}>
           <div className="sticky top-0 bg-gray-900/95 border-b border-gray-700 px-4 py-2 flex justify-between z-10">
-            <p className="text-xs text-gray-400">
-              {sinZonaCount > 0 && <span className="text-red-400 font-bold">{sinZonaCount} sin zona · </span>}
-              ML: <span className="text-white font-bold">{fmt(totalML)}</span>
-            </p>
-            <p className="text-green-300 font-black text-sm">Ganancia: {fmt(totalGanancia)}</p>
-          </div>
-        )}
-
-        {paquetes.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center px-6 space-y-3">
-            <Camera className="w-12 h-12 text-yellow-400/30 mb-1" />
-            <p className="text-gray-400 text-sm font-semibold">Apuntá a la etiqueta completa</p>
-            <p className="text-gray-600 text-xs">El OCR detecta la ciudad o el código postal (CP)</p>
-            <div className="bg-gray-800/60 rounded-xl p-3 text-xs text-gray-400 space-y-1 text-left max-w-xs w-full">
-              <p className="text-yellow-400 font-bold mb-1">Consejos para mejor lectura:</p>
-              <p>• Buena luz sobre la etiqueta</p>
-              <p>• La ciudad debe verse nítida</p>
-              <p>• Incluir el CP: 1888 también sirve</p>
-              <p>• Mantener el celular quieto al sacar la foto</p>
+            <div className="flex gap-3 text-xs">
+              {[
+                { icon: <DollarSign className="w-3 h-3" />, label: "ML", value: fmt(totalML), color: "text-white" },
+                { icon: <Package className="w-3 h-3" />, label: "Flete", value: fmt(totalFlete), color: "text-blue-300" },
+                { icon: <TrendingUp className="w-3 h-3" />, label: "Gan.", value: fmt(totalGanancia), color: "text-green-300" },
+              ].map(({ icon, label, value, color }) => (
+                <div key={label} className="flex items-center gap-1">
+                  <span className="text-gray-500">{icon}</span>
+                  <span className="text-gray-400">{label}:</span>
+                  <span className={`font-bold ${color}`}>{value}</span>
+                </div>
+              ))}
             </div>
-            {!workerReady && <p className="text-yellow-400/60 text-xs">Cargando motor OCR...</p>}
+            <span className="text-xs text-gray-500">{paquetes.length} paq.</span>
           </div>
-        ) : (
+
           <div className="p-3 space-y-2">
-            {/* Resumen total */}
-            <div className="grid grid-cols-3 gap-2 mb-3">
-              <div className="bg-gray-800 rounded-xl p-2.5 text-center">
-                <DollarSign className="w-3.5 h-3.5 text-yellow-400 mx-auto mb-0.5" />
-                <p className="text-[10px] text-gray-400">Total ML</p>
-                <p className="text-white font-black text-sm">{fmt(totalML)}</p>
-              </div>
-              <div className="bg-gray-800 rounded-xl p-2.5 text-center">
-                <Package className="w-3.5 h-3.5 text-blue-400 mx-auto mb-0.5" />
-                <p className="text-[10px] text-gray-400">Flete 80%</p>
-                <p className="text-white font-black text-sm">{fmt(totalFlete)}</p>
-              </div>
-              <div className="bg-green-900/40 rounded-xl border border-green-700/50 p-2.5 text-center">
-                <TrendingUp className="w-3.5 h-3.5 text-green-400 mx-auto mb-0.5" />
-                <p className="text-[10px] text-gray-400">Ganancia</p>
-                <p className="text-green-300 font-black text-sm">{fmt(totalGanancia)}</p>
-              </div>
-            </div>
-
             {[...paquetes].reverse().map((p, revIdx) => {
               const idx = paquetes.length - 1 - revIdx;
               return (
-                <div key={p.id} className={`rounded-xl border overflow-hidden ${
-                  p.estado === "sin_zona" ? "border-red-600/50 bg-red-900/10" :
-                  p.estado === "procesando" ? "border-blue-600/30 bg-blue-900/10" :
-                  "border-gray-700 bg-gray-800/50"
-                }`}>
+                <div key={p.id} className="rounded-xl border border-gray-700 bg-gray-800/50 overflow-hidden">
                   {editIdx === idx ? (
                     <div className="p-3 space-y-2">
                       <div className="relative">
@@ -579,30 +567,16 @@ export default function OCRScanner({ tarifas, onFinish, onClose }: Props) {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-gray-500 text-xs font-bold">#{idx + 1}</span>
-                          {p.estado === "procesando" ? (
-                            <span className="text-blue-300 text-xs flex items-center gap-1">
-                              <Loader2 className="w-3 h-3 animate-spin" /> Leyendo...
-                            </span>
-                          ) : p.localidad ? (
-                            <>
-                              <CheckCircle2 className="w-3.5 h-3.5 text-green-400" />
-                              <span className="text-white text-sm font-semibold">{p.localidad}</span>
-                              {p.zona && <span className={`text-xs px-2 py-0.5 rounded-full border ${ZONA_COLORS[p.zona]}`}>{ZONA_LABELS[p.zona]}</span>}
-                            </>
-                          ) : (
-                            <span className="text-red-400 text-sm font-bold">Sin zona — tocá para asignar</span>
-                          )}
+                          <CheckCircle2 className="w-3.5 h-3.5 text-green-400" />
+                          <span className="text-white text-sm font-semibold">{p.localidad}</span>
+                          <span className={`text-xs px-2 py-0.5 rounded-full border ${ZONA_COLORS[p.zona]}`}>{ZONA_LABELS[p.zona]}</span>
                         </div>
-                        {p.localidad && (
-                          <p className="text-gray-500 text-[10px] mt-0.5">{fmt(p.precioML)} · Gan: {fmt(p.ganancia)}</p>
-                        )}
+                        <p className="text-gray-500 text-[10px] mt-0.5">
+                          ML: {fmt(p.precioML)} · Flete: {fmt(p.pagoFlete)} · Gan: <span className="text-green-300">{fmt(p.ganancia)}</span>
+                        </p>
                       </div>
                       <button onClick={() => { setEditIdx(idx); setBusqueda(""); }}
-                        className={`p-1.5 rounded-lg transition-colors flex-shrink-0 ${
-                          p.estado === "sin_zona"
-                            ? "bg-red-600 text-white animate-pulse"
-                            : "bg-gray-700 text-gray-400 hover:text-yellow-300"
-                        }`}>
+                        className="p-1.5 rounded-lg bg-gray-700 text-gray-400 hover:text-yellow-300 flex-shrink-0">
                         <ChevronRight className="w-4 h-4" />
                       </button>
                     </div>
