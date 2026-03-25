@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { WorkOrder } from "@/lib/types";
-import { ordersDb } from "@/lib/db";
+import { supabase } from "@/lib/supabase";
 import { X, Camera, Link, Trash2, Plus, Loader2 } from "lucide-react";
 
 interface Props {
@@ -32,10 +32,9 @@ export default function PhotoManager({ order, onClose, onUpdated }: Props) {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const mapped: Record<string, unknown> = { photo_urls: photos };
-      const { error } = await (await import("@/lib/supabase")).supabase
+      const { error } = await supabase
         .from("reparaciones")
-        .update(mapped)
+        .update({ photo_urls: photos })
         .eq("id", order.id);
       if (error) throw error;
       onUpdated(photos);
