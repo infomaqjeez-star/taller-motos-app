@@ -118,16 +118,22 @@ export default function FlexRafaga({ tarifas, onClose, onSaved }: Props) {
     const hoy = new Date().toISOString().slice(0, 10);
     let ok = 0;
     const batch: FlexEnvio[] = paquetes.map(p => ({
-      id:             generateId(),
-      fecha:          hoy,
-      localidad:      p.localidad ?? "Sin definir",
-      zona:           p.zona ?? "lejana",
-      precioML:       p.precioML,
-      pagoFlete:      p.pagoFlete,
-      ganancia:       p.ganancia,
-      descripcion:    "",
-      nroSeguimiento: p.nroSeguimiento,
-      createdAt:      new Date().toISOString(),
+      id:                 generateId(),
+      fecha:              hoy,
+      localidad:          p.localidad ?? "Sin definir",
+      zona:               p.zona ?? "lejana",
+      precioML:           p.precioML,
+      pagoFlete:          p.pagoFlete,
+      ganancia:           p.ganancia,
+      descripcion:        "",
+      nroSeguimiento:     p.nroSeguimiento,
+      usuarioML:          "",
+      nombreDestinatario: "",
+      direccion:          "",
+      codigoPostal:       "",
+      productoSku:        "",
+      packId:             "",
+      createdAt:          new Date().toISOString(),
     }));
 
     // Guardar en lotes de 10
