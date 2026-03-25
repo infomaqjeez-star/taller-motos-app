@@ -133,7 +133,6 @@ export default function OCRScanner({ tarifas, onFinish, onClose }: Props) {
   const [editIdx, setEditIdx] = useState<number | null>(null);
   const [busqueda, setBusqueda] = useState("");
   const [workerReady, setWorkerReady] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const workerRef = useRef<unknown>(null);
 
   const localidadesFiltradas = busqueda.trim()
