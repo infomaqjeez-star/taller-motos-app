@@ -234,6 +234,21 @@ export default function AgendaPage() {
     setSyncing(false);
   };
 
+  const [deleteTarget, setDeleteTarget] = useState<AgendaCliente | null>(null);
+  const [deleteStep, setDeleteStep] = useState<1 | 2>(1);
+  const [deleting, setDeleting] = useState(false);
+
+  const openDelete = (c: AgendaCliente) => { setDeleteTarget(c); setDeleteStep(1); };
+  const cancelDelete = () => { setDeleteTarget(null); setDeleteStep(1); };
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    if (deleteStep === 1) { setDeleteStep(2); return; }
+    setDeleting(true);
+    try { await agendaDb.delete(deleteTarget.id); await load(); cancelDelete(); }
+    catch (e) { alert("Error al eliminar: " + e); }
+    setDeleting(false);
+  };
+
   useEffect(() => { load(); }, []);
 
   const filtered = useMemo(() => {
@@ -243,12 +258,6 @@ export default function AgendaPage() {
       c.nombre.toLowerCase().includes(q) || c.telefono.includes(q)
     );
   }, [clientes, search]);
-
-  const handleDelete = async (id: string, nombre: string) => {
-    if (!confirm(`¿Eliminar a ${nombre} de la agenda?\nSus órdenes no se borran.`)) return;
-    await agendaDb.delete(id);
-    await load();
-  };
 
   return (
     <>
@@ -338,7 +347,7 @@ export default function AgendaPage() {
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <button
-                    onClick={e => { e.stopPropagation(); handleDelete(c.id, c.nombre); }}
+                    onClick={e => { e.stopPropagation(); openDelete(c); }}
                     className="p-2.5 rounded-xl text-gray-600 hover:text-red-400 hover:bg-red-900/30 transition-colors"
                     title="Eliminar de la agenda"
                   >
@@ -353,6 +362,70 @@ export default function AgendaPage() {
       </main>
 
       {selected && <ClienteModal cliente={selected} onClose={() => setSelected(null)} />}
+
+      {/* ── Modal doble confirmación para eliminar ── */}
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-gray-900 rounded-2xl border border-red-700 shadow-2xl w-full max-w-sm p-6 space-y-4">
+            {/* Icono */}
+            <div className="flex justify-center">
+              <div className={`rounded-2xl p-4 ${deleteStep === 1 ? "bg-yellow-500/20" : "bg-red-600/20"}`}>
+                <Trash2 className={`w-8 h-8 ${deleteStep === 1 ? "text-yellow-400" : "text-red-400"}`} />
+              </div>
+            </div>
+
+            {deleteStep === 1 ? (
+              <>
+                <div className="text-center space-y-1">
+                  <h3 className="text-white font-bold text-lg">¿Eliminar cliente?</h3>
+                  <p className="text-gray-300 font-semibold">{deleteTarget.nombre}</p>
+                  <p className="text-gray-400 text-sm">{deleteTarget.telefono}</p>
+                </div>
+                <div className="bg-yellow-900/30 border border-yellow-600/50 rounded-xl px-4 py-3">
+                  <p className="text-yellow-300 text-sm font-semibold">⚠ Primera advertencia</p>
+                  <p className="text-yellow-400/80 text-xs mt-1">
+                    Se eliminará el cliente de la Agenda. Su historial de reparaciones también se perderá permanentemente.
+                  </p>
+                </div>
+                <div className="flex gap-3">
+                  <button onClick={cancelDelete}
+                    className="btn-secondary flex-1 rounded-xl">
+                    Cancelar
+                  </button>
+                  <button onClick={confirmDelete}
+                    className="flex-1 btn rounded-xl bg-yellow-600 hover:bg-yellow-500 text-white font-bold py-2.5">
+                    Continuar →
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="text-center space-y-1">
+                  <h3 className="text-white font-bold text-lg">Confirmación final</h3>
+                  <p className="text-gray-300 font-semibold">{deleteTarget.nombre}</p>
+                </div>
+                <div className="bg-red-900/30 border border-red-600/50 rounded-xl px-4 py-3">
+                  <p className="text-red-300 text-sm font-semibold">🚨 Segunda advertencia — Acción irreversible</p>
+                  <p className="text-red-400/80 text-xs mt-1">
+                    Esta acción <strong className="text-red-300">no se puede deshacer</strong>. El cliente y todo su historial se eliminarán definitivamente de la base de datos de MAQJEEZ.
+                  </p>
+                </div>
+                <div className="flex gap-3">
+                  <button onClick={cancelDelete}
+                    className="btn-secondary flex-1 rounded-xl">
+                    Cancelar
+                  </button>
+                  <button onClick={confirmDelete} disabled={deleting}
+                    className="flex-1 btn rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 disabled:opacity-60">
+                    {deleting ? "Eliminando..." : "Sí, eliminar"}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       <BottomNav />
     </>
   );
