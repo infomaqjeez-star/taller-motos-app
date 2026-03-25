@@ -214,8 +214,7 @@ function detectLocalidadFromText(text: string): string | null {
 
 // Extraer el ID de envío ML — número de 10-13 dígitos que no sea un CP (4 dígitos)
 function extractEnvioId(rawText: string): string | null {
-  // Paso 1: normalizar espacios entre dígitos
-  // OCR a veces lee "4 6 7 1 9 2 6 7 1 4 6" en vez de "46719267146"
+  // Normalizar espacios entre dígitos (OCR separa "4 6 7 1 9..." → "46719...")
   let text = rawText;
   let prev = "";
   while (prev !== text) {
@@ -223,29 +222,13 @@ function extractEnvioId(rawText: string): string | null {
     text = text.replace(/(\d) (\d)/g, "$1$2");
   }
 
-  // Paso 2: buscar el campo "Envío:" (o variantes con OCR imperfecto)
-  // Formato en etiqueta ML Flex: "Envío: 46719267146"
-  const envioPatterns = [
-    /[Ee]nv[ií]o\s*:?\s*(\d{8,13})/i,   // "Envío: 46719267146" o "Envio:46719267146"
-    /[Ee]nv[ií]o\s+(\d{8,13})/i,         // "Envío 46719267146" sin dos puntos
-    /[Ee][Nn][Vv][Ii][Oo]\s*[:\-]?\s*(\d{8,13})/i, // OCR puede confundir "í" con "i"
-  ];
+  // ÚNICA REGLA: capturar el número de 11 dígitos que aparece después de "Envío:"
+  // Cubre: "Envío: 46719267146", "Envio:46719267146", "ENVIO 46719267146"
+  const m = text.match(/[Ee][Nn][Vv][Ii\u00ED][Oo]\s*:?\s*(\d{11})/);
+  if (m) return m[1];
 
-  for (const pat of envioPatterns) {
-    const m = text.match(pat);
-    if (m) return m[1];
-  }
-
-  // Paso 3 (fallback): número de exactamente 11 dígitos que NO empiece con "2000"
-  // (Pack ID empieza con 2000... y es más largo, lo excluimos)
-  const allNums = text.match(/(?<![0-9])(\d{11})(?![0-9])/g) ?? [];
-  const candidates = allNums.filter(n => !n.startsWith("2000"));
-  if (candidates.length > 0) return candidates[0];
-
-  // Paso 4 (último recurso): cualquier número de 10-13 dígitos
-  const any = text.match(/(?<![0-9])(\d{10,13})(?![0-9])/g) ?? [];
-  const filtered = any.filter(n => !n.startsWith("2000"));
-  return filtered[0] ?? null;
+  // Si no encontró "Envío" + 11 dígitos → no hay ID válido
+  return null;
 }
 
 function calcPaquete(localidad: string, tarifas: Record<FlexZona, number>) {
