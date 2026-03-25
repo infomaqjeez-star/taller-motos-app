@@ -5,7 +5,6 @@ import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import BottomNav from "@/components/BottomNav";
 import FlexRafaga from "@/components/FlexRafaga";
-import QRScanner, { PaqueteQR } from "@/components/QRScanner";
 import OCRScanner, { PaqueteOCR } from "@/components/OCRScanner";
 import { flexDb } from "@/lib/db";
 import {
@@ -14,7 +13,7 @@ import {
 } from "@/lib/types";
 import {
   Truck, Plus, Trash2, TrendingUp, DollarSign,
-  MapPin, Package, ChevronDown, X, BarChart2, Settings, Zap,
+  MapPin, Package, ChevronDown, X, BarChart2, Settings, Zap, Camera,
 } from "lucide-react";
 
 const fmt = (n: number) =>
@@ -68,11 +67,7 @@ export default function FlexPage() {
   const [showForm, setShowForm] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showRafaga, setShowRafaga] = useState(false);
-  const [showQR, setShowQR] = useState(false);
   const [showOCR, setShowOCR] = useState(false);
-  const [qrPaquetes, setQrPaquetes] = useState<PaqueteQR[]>([]);
-  const [ocrPaquetes, setOcrPaquetes] = useState<PaqueteOCR[]>([]);
-  const [savingQR, setSavingQR] = useState(false);
   const [form, setForm] = useState<FormState>(defaultForm());
   const [saving, setSaving] = useState(false);
   const { tarifas, update: updateTarifa } = useTarifas();
@@ -131,14 +126,8 @@ export default function FlexPage() {
     await load();
   };
 
-  const handleQRFinish = async (paquetes: PaqueteQR[]) => {
-    setShowQR(false);
-    setQrPaquetes(paquetes);
-  };
-
   const handleOCRFinish = async (paquetes: PaqueteOCR[]) => {
     setShowOCR(false);
-    // Guardar directamente los que tienen localidad
     const hoy = new Date().toISOString().slice(0, 10);
     const validos = paquetes.filter(p => p.localidad && p.estado === "ok");
     for (const p of validos) {
@@ -157,36 +146,8 @@ export default function FlexPage() {
         });
       } catch (_) {}
     }
-    // Los sin zona los pone en revisión
-    const sinZona = paquetes.filter(p => p.estado === "sin_zona");
-    if (sinZona.length > 0) setOcrPaquetes(sinZona);
     await load();
-    if (validos.length > 0) alert(`✓ ${validos.length} paquetes guardados. ${sinZona.length > 0 ? sinZona.length + " requieren zona manual." : ""}`);
-  };
-
-  const guardarQRPaquetes = async () => {
-    setSavingQR(true);
-    const hoy = new Date().toISOString().slice(0, 10);
-    for (const p of qrPaquetes) {
-      if (!p.localidad) continue;
-      try {
-        await flexDb.create({
-          id:             generateId(),
-          fecha:          hoy,
-          localidad:      p.localidad,
-          zona:           p.zona ?? "lejana",
-          precioML:       p.precioML,
-          pagoFlete:      p.pagoFlete,
-          ganancia:       p.ganancia,
-          descripcion:    "",
-          nroSeguimiento: p.shipmentId,
-          createdAt:      new Date().toISOString(),
-        });
-      } catch (_) {}
-    }
-    await load();
-    setQrPaquetes([]);
-    setSavingQR(false);
+    if (validos.length > 0) alert(`✓ ${validos.length} envíos guardados correctamente.`);
   };
 
   // Estadísticas por zona
@@ -239,15 +200,9 @@ export default function FlexPage() {
             </button>
             <button
               onClick={() => setShowOCR(true)}
-              className="flex items-center gap-1.5 bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 font-bold px-3 py-2.5 rounded-xl border border-purple-500/40 transition-colors"
+              className="flex items-center gap-1.5 bg-purple-600 hover:bg-purple-500 text-white font-bold px-3 py-2.5 rounded-xl transition-colors"
             >
-              <Zap className="w-4 h-4" /> OCR
-            </button>
-            <button
-              onClick={() => setShowQR(true)}
-              className="flex items-center gap-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 font-bold px-3 py-2.5 rounded-xl border border-blue-500/40 transition-colors"
-            >
-              <Zap className="w-4 h-4" /> QR
+              <Camera className="w-4 h-4" /> Escanear
             </button>
             <button
               onClick={() => setShowRafaga(true)}
@@ -581,80 +536,12 @@ export default function FlexPage() {
         />
       )}
 
-      {showQR && (
-        <QRScanner
-          tarifas={tarifas}
-          onFinish={handleQRFinish}
-          onClose={() => setShowQR(false)}
-        />
-      )}
-
       {showOCR && (
         <OCRScanner
           tarifas={tarifas}
           onFinish={handleOCRFinish}
           onClose={() => setShowOCR(false)}
         />
-      )}
-
-      {/* Revisión post-escaneo QR */}
-      {qrPaquetes.length > 0 && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-4">
-          <div className="bg-gray-900 rounded-2xl border border-gray-700 shadow-2xl w-full max-w-md max-h-[90vh] overflow-hidden flex flex-col">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-700">
-              <div>
-                <h2 className="text-white font-bold">Resumen QR</h2>
-                <p className="text-gray-400 text-xs">{qrPaquetes.length} paquetes escaneados</p>
-              </div>
-              <div className="flex gap-2">
-                <button onClick={() => setQrPaquetes([])} className="px-3 py-2 bg-gray-700 text-white rounded-xl text-sm">
-                  Descartar
-                </button>
-                <button
-                  onClick={guardarQRPaquetes}
-                  disabled={savingQR}
-                  className="px-3 py-2 bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white font-bold rounded-xl text-sm"
-                >
-                  {savingQR ? "Guardando..." : `Guardar ${qrPaquetes.filter(p => p.localidad).length}`}
-                </button>
-              </div>
-            </div>
-            <div className="overflow-y-auto p-4 space-y-2 flex-1">
-              {/* Totales */}
-              <div className="grid grid-cols-2 gap-2 mb-3">
-                <div className="bg-gray-800 rounded-xl p-3 text-center">
-                  <p className="text-xs text-gray-400">Total ML</p>
-                  <p className="text-white font-black">{fmt(qrPaquetes.reduce((s,p)=>s+p.precioML,0))}</p>
-                </div>
-                <div className="bg-green-900/40 rounded-xl border border-green-700/50 p-3 text-center">
-                  <p className="text-xs text-gray-400">Tu Ganancia</p>
-                  <p className="text-green-300 font-black">{fmt(qrPaquetes.reduce((s,p)=>s+p.ganancia,0))}</p>
-                </div>
-              </div>
-              {qrPaquetes.map((p, i) => (
-                <div key={p.tempId} className={`rounded-xl border p-3 flex items-center justify-between gap-2 ${
-                  !p.localidad ? "bg-red-900/20 border-red-600/50" : "bg-gray-800/60 border-gray-700"
-                }`}>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-gray-500 text-xs">#{i+1}</span>
-                      <span className={`text-sm font-semibold ${p.localidad ? "text-white" : "text-red-400"}`}>
-                        {p.localidad ?? "Sin zona"}
-                      </span>
-                    </div>
-                    <p className="text-gray-600 text-[10px] font-mono truncate">{p.shipmentId}</p>
-                  </div>
-                  {p.localidad && (
-                    <div className="text-right flex-shrink-0">
-                      <p className="text-white text-xs font-bold">{fmt(p.precioML)}</p>
-                      <p className="text-green-300 text-[10px]">{fmt(p.ganancia)}</p>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
       )}
 
       <BottomNav />
