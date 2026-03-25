@@ -21,8 +21,8 @@ export default function BottomNav({ notificationCount = 0, onOpenNotifications }
   ];
 
   return (
-    <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-gray-900/95 backdrop-blur-md border-t border-gray-700/80 shadow-[0_-4px_24px_rgba(0,0,0,0.4)]">
-      <div className="flex items-stretch" style={{ height: "64px", paddingBottom: "env(safe-area-inset-bottom)" }}>
+    <nav className="sm:hidden fixed top-0 left-0 right-0 z-40 bg-gray-900/95 backdrop-blur-md border-b border-gray-700/80 shadow-[0_4px_24px_rgba(0,0,0,0.4)]">
+      <div className="flex items-stretch" style={{ height: "56px", paddingTop: "env(safe-area-inset-top)" }}>
         {tabs.map(({ href, label, icon: Icon }) => {
           const active = pathname === href;
           return (
@@ -37,7 +37,7 @@ export default function BottomNav({ notificationCount = 0, onOpenNotifications }
                 {label}
               </span>
               {active && (
-                <span className="absolute bottom-0 w-8 h-0.5 bg-orange-400 rounded-full" />
+                <span className="absolute top-0 w-8 h-0.5 bg-orange-400 rounded-full" />
               )}
             </Link>
           );

@@ -262,7 +262,7 @@ export default function AgendaPage() {
   return (
     <>
       <Navbar />
-      <main className="max-w-2xl mx-auto px-4 py-6 pb-28 sm:pb-8 space-y-5">
+      <main className="max-w-2xl mx-auto px-4 py-6 pt-16 sm:pt-4 space-y-5">
 
         {/* Título */}
         <div className="flex items-center gap-3">
