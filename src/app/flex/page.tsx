@@ -149,6 +149,8 @@ export default function FlexPage() {
         const msg = err instanceof Error ? err.message : String(err);
         if (msg.includes("unique") || msg.includes("duplicate") || msg.includes("23505")) {
           duplicados++;
+        } else {
+          console.error("Error al guardar envío:", msg);
         }
       }
     }
