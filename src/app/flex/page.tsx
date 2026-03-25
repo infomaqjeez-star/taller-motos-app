@@ -193,7 +193,7 @@ export default function FlexPage() {
   return (
     <>
       <Navbar />
-      <main className="max-w-5xl mx-auto px-4 py-6 pt-16 sm:pt-4 space-y-6">
+      <main className="max-w-5xl mx-auto px-4 py-6 pb-20 sm:pb-4 space-y-6">
 
         {/* Header */}
         <div className="flex items-center justify-between">
