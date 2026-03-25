@@ -223,8 +223,8 @@ function extractEtiquetaData(rawText: string): EtiquetaData {
     text = text.replace(/(\d) (\d)/g, "$1$2");
   }
 
-  // ── Envío ID: número de 11 dígitos después de "Envío:" ──
-  const envioMatch = text.match(/[Ee][Nn][Vv][Ii\u00ED][Oo]\s*:?\s*(\d{11})/);
+  // ── Envío ID: número de 11 dígitos después de "Envío:" (con/sin tilde, mayúsculas) ──
+  const envioMatch = text.match(/[Ee][Nn][Vv][Ii\u00ED][Oo]\s*[:#]?\s*(\d{11})/);
   const envioId = envioMatch ? envioMatch[1] : null;
 
   // ── Pack ID: número largo después de "Pack ID:" ──
@@ -298,8 +298,15 @@ function extractIdFromQR(qrData: string): QRParsed {
 
   // ── Número directo de 11 dígitos (formato más común ML) ──
   if (!envioId) {
+    // ML Flex QR suele ser solo el número de envío de 11 dígitos
     const numMatch = qrData.match(/\b(\d{11})\b/);
     if (numMatch) envioId = numMatch[1];
+  }
+
+  // ── Fallback: 10 o 12 dígitos si no encontró 11 ──
+  if (!envioId) {
+    const numFallback = qrData.match(/\b(\d{10,12})\b/);
+    if (numFallback) envioId = numFallback[1];
   }
 
   // ── Buscar usuario entre paréntesis en el texto del QR ──
@@ -339,9 +346,17 @@ function preprocessCanvas(src: HTMLCanvasElement): HTMLCanvasElement {
   ctx.drawImage(src, 0, 0);
   const imgData = ctx.getImageData(0, 0, dst.width, dst.height);
   const d = imgData.data;
+  // Calcular brillo promedio para umbral adaptativo
+  let sum = 0;
+  for (let i = 0; i < d.length; i += 4) {
+    sum += 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+  }
+  const avg = sum / (d.length / 4);
+  const threshold = Math.max(80, Math.min(180, avg * 0.85));
   for (let i = 0; i < d.length; i += 4) {
     const gray = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
-    const contrasted = Math.min(255, Math.max(0, ((gray - 50) / 170) * 255));
+    // Contraste adaptativo suave: oscurece texto, aclara fondo
+    const contrasted = Math.min(255, Math.max(0, ((gray - threshold * 0.4) / (threshold * 0.6)) * 255));
     d[i] = d[i + 1] = d[i + 2] = contrasted;
   }
   ctx.putImageData(imgData, 0, 0);
@@ -453,7 +468,7 @@ export default function OCRScanner({ tarifas, onFinish, onClose }: Props) {
         });
         if (!cancelled) {
           await (w as unknown as { setParameters: (p: Record<string, string>) => Promise<void> }).setParameters({
-            tessedit_char_whitelist: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 :.-/",
+            tessedit_char_whitelist: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzÁÉÍÓÚáéíóúÑñüÜ0123456789 :.-/()",
           });
           workerRef.current = w;
           setWorkerReady(true);
@@ -484,7 +499,7 @@ export default function OCRScanner({ tarifas, onFinish, onClose }: Props) {
       if (!scanningRef.current) return;
 
       const now = Date.now();
-      if (now - lastScanRef.current < 1500) {
+      if (now - lastScanRef.current < 1000) {
         requestAnimationFrame(loop);
         return;
       }
