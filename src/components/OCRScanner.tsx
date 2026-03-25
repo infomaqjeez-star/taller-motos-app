@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import jsQR from "jsqr";
 import { FlexZona, FLEX_LOCALIDADES } from "@/lib/types";
 import { flexDb } from "@/lib/db";
 import {
@@ -231,6 +232,35 @@ function extractEnvioId(rawText: string): string | null {
   return null;
 }
 
+// Extraer el ID de envío ML desde el contenido del QR
+// ML Flex codifica: URL con shipment_id, o el número directo
+function extractIdFromQR(qrData: string): string | null {
+  // Formato URL: ...shipment_id=46719267146 o ...tracking/46719267146
+  const urlMatch = qrData.match(/[?&/](?:shipment_id=|tracking[/=])(\d{10,13})/i);
+  if (urlMatch) return urlMatch[1];
+  // Formato numérico directo: solo 11 dígitos
+  const numMatch = qrData.match(/^(\d{11})$/);
+  if (numMatch) return numMatch[1];
+  // Cualquier número de 10-13 dígitos dentro del string
+  const anyMatch = qrData.match(/\b(\d{11})\b/);
+  if (anyMatch) return anyMatch[1];
+  return null;
+}
+
+// Escanear QR del canvas usando jsQR (sincrónico, muy rápido)
+function scanQRFromCanvas(canvas: HTMLCanvasElement): string | null {
+  try {
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const result = jsQR(imageData.data, canvas.width, canvas.height, {
+      inversionAttempts: "dontInvert",
+    });
+    if (result?.data) return extractIdFromQR(result.data);
+  } catch (_) {}
+  return null;
+}
+
 function calcPaquete(localidad: string, tarifas: Record<FlexZona, number>) {
   const loc = FLEX_LOCALIDADES.find(l => l.nombre === localidad);
   const zona: FlexZona = loc?.zona ?? "lejana";
@@ -383,21 +413,26 @@ export default function OCRScanner({ tarifas, onFinish, onClose }: Props) {
       const ctx = canvas.getContext("2d")!;
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
+      // ── Paso 1: jsQR (sincrónico, ~2ms) — extrae ID del QR ──
+      const qrId = scanQRFromCanvas(canvas);
+
       try {
+        // ── Paso 2: OCR (async) — detecta localidad y CP ──
         const processed = preprocessCanvas(canvas);
         const { data: { text } } = await worker.recognize(processed);
-        const loc    = detectLocalidadFromText(text);
-        const envId  = extractEnvioId(text);
+        const loc = detectLocalidadFromText(text);
+        // OCR como fallback para ID si el QR no lo leyó
+        const ocrId = qrId ?? extractEnvioId(text);
 
         if (!scanningRef.current) return;
 
         if (loc) {
           setLiveLocalidad(loc);
-          setLiveEnvioId(envId);
+          setLiveEnvioId(ocrId);
           setLiveScan("found");
         } else {
           setLiveLocalidad(null);
-          setLiveEnvioId(null);
+          setLiveEnvioId(ocrId);
           setLiveScan("notfound");
         }
       } catch (_) {
