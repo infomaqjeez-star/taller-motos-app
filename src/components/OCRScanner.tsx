@@ -552,7 +552,7 @@ export default function OCRScanner({ tarifas, onFinish, onClose }: Props) {
 
             {/* Marco de enfoque — color dinámico según detección */}
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ paddingBottom: "130px" }}>
-              <div className="relative" style={{ width: "88vw", maxWidth: "380px", height: "52vw", maxHeight: "230px" }}>
+              <div className="relative" style={{ width: "88vw", maxWidth: "380px", height: "62vw", maxHeight: "276px" }}>
                 {/* Borde completo semitransparente de fondo */}
                 <div className={`absolute inset-0 rounded-lg border-2 transition-colors duration-300 ${frameColor}`} style={{ opacity: 0.35 }} />
 
