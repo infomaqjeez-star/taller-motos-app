@@ -3,7 +3,7 @@
 // ============================================================
 
 import { supabase } from "./supabase";
-import { WorkOrder, StockItem, PartToOrder, Pago, PlantillaWhatsApp } from "./types";
+import { WorkOrder, StockItem, PartToOrder, Pago, PlantillaWhatsApp, AgendaCliente } from "./types";
 
 // ─── Helpers de mapeo (snake_case DB ↔ camelCase app) ────────
 
@@ -297,6 +297,45 @@ export const plantillasDb = {
   },
   async delete(id: string): Promise<void> {
     const { error } = await supabase.from("plantillas_whatsapp").delete().eq("id", id);
+    if (error) throw error;
+  },
+};
+
+// ─── Agenda de Clientes ───────────────────────────────────────
+
+export const agendaDb = {
+  async getAll(): Promise<AgendaCliente[]> {
+    const { data, error } = await supabase
+      .from("agenda_clientes")
+      .select("*")
+      .order("nombre", { ascending: true });
+    if (error) throw error;
+    return (data ?? []).map((r) => ({
+      id:        r.id as string,
+      nombre:    r.nombre as string,
+      telefono:  r.telefono as string,
+      createdAt: r.created_at as string,
+    }));
+  },
+
+  async upsertByPhone(nombre: string, telefono: string): Promise<void> {
+    const phone = telefono.trim();
+    if (!phone) return;
+    const { data } = await supabase
+      .from("agenda_clientes")
+      .select("id")
+      .eq("telefono", phone)
+      .maybeSingle();
+    if (!data) {
+      await supabase.from("agenda_clientes").insert({
+        nombre: nombre.trim(),
+        telefono: phone,
+      });
+    }
+  },
+
+  async delete(id: string): Promise<void> {
+    const { error } = await supabase.from("agenda_clientes").delete().eq("id", id);
     if (error) throw error;
   },
 };

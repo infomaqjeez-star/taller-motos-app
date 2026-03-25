@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Wrench, Package, LayoutDashboard, AlertTriangle, MessageCircle, BarChart2 } from "lucide-react";
+import { Wrench, Package, LayoutDashboard, AlertTriangle, MessageCircle, BarChart2, Users } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
 
 interface NavbarProps {
@@ -39,6 +39,13 @@ export default function Navbar({
       href: "/estadisticas",
       label: "Estadísticas",
       icon: BarChart2,
+      badge: 0,
+      badgeColor: "",
+    },
+    {
+      href: "/agenda",
+      label: "Agenda",
+      icon: Users,
       badge: 0,
       badgeColor: "",
     },

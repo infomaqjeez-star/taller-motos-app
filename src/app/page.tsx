@@ -10,6 +10,7 @@ import { generateId } from "@/lib/utils";
 import { exportOrdersToExcel } from "@/lib/exportExcel";
 import { exportOrdersReportPDF } from "@/lib/exportPDF";
 import { clearSentLog } from "@/lib/notifications";
+import { agendaDb } from "@/lib/db";
 import Navbar from "@/components/Navbar";
 import FiltersBar from "@/components/FiltersBar";
 import OrderCard from "@/components/OrderCard";
@@ -76,6 +77,8 @@ export default function DashboardPage() {
       } else {
         const newOrder = { ...order, id: generateId(), entryDate: new Date().toISOString() };
         await create(newOrder);
+        // Auto-registrar cliente en agenda si no existe
+        agendaDb.upsertByPhone(newOrder.clientName, newOrder.clientPhone).catch(() => {});
         showToast("¡Orden guardada con éxito!");
       }
       setShowForm(false);

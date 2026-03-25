@@ -127,6 +127,13 @@ export const CLIENT_NOTIFICATION_LABELS: Record<ClientNotification, string> = {
   sin_respuesta: "Sin Respuesta",
 };
 
+export interface AgendaCliente {
+  id: string;
+  nombre: string;
+  telefono: string;
+  createdAt: string;
+}
+
 export const PART_ORDER_STATUS_LABELS: Record<
   PartToOrder["status"],
   string
