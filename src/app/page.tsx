@@ -218,8 +218,8 @@ export default function LandingPage() {
             style={{ background: "linear-gradient(90deg, transparent, #FFD700, transparent)" }}
           />
 
-          <div className="flex items-stretch divide-x"
-            style={{ divideColor: "rgba(184,134,11,0.25)" }}>
+          <div className="flex items-stretch"
+            style={{ borderColor: "rgba(184,134,11,0.25)" }}>
 
             {/* Insignia 1 — MercadoLider Platinum */}
             <div className="flex-1 flex flex-col items-center text-center px-4 py-5">
