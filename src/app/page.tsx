@@ -1,349 +1,216 @@
 "use client";
 
-import { useState } from "react";
+import Link from "next/link";
+import Image from "next/image";
 import {
-  Plus, Wrench, AlertTriangle, Package, CheckSquare, Clock,
-  FileSpreadsheet, FileText, CheckCircle, MessageCircle, Trophy, Medal,
+  Wrench, Package, ShoppingCart, Truck,
+  BarChart2, Users, ArrowRight, Zap, Shield, Smartphone,
 } from "lucide-react";
-import { WorkOrder } from "@/lib/types";
-import { useOrders } from "@/hooks/useOrders";
-import { useInventory } from "@/hooks/useInventory";
-import { useNotifications } from "@/hooks/useNotifications";
-import { generateId } from "@/lib/utils";
-import { exportOrdersToExcel } from "@/lib/exportExcel";
-import { exportOrdersReportPDF } from "@/lib/exportPDF";
-import { clearSentLog } from "@/lib/notifications";
-import { agendaDb, historialDb } from "@/lib/db";
-import Navbar from "@/components/Navbar";
-import FiltersBar from "@/components/FiltersBar";
-import OrderCard from "@/components/OrderCard";
-import OrderForm from "@/components/OrderForm";
-import NotificationsPanel from "@/components/NotificationsPanel";
-import TemplateManager from "@/components/TemplateManager";
-import BottomNav from "@/components/BottomNav";
 
-/* ── Tarjeta de estado con glow neón ── */
-function StatCard({
-  label,
-  value,
-  icon: Icon,
-  cardClass,
-  iconColor,
-  valueColor,
-}: {
-  label: string;
-  value: number;
-  icon: React.ElementType;
-  cardClass: string;
-  iconColor: string;
-  valueColor: string;
-}) {
+const FEATURES = [
+  {
+    href: "/taller",
+    icon: Wrench,
+    color: "#FF5722",
+    glow: "rgba(255,87,34,0.30)",
+    border: "rgba(255,87,34,0.45)",
+    title: "Taller",
+    desc: "Gestión completa de órdenes de trabajo. Registrá equipos, seguí el estado de reparaciones y alertas de retiro.",
+    tags: ["Órdenes activas", "Historial", "Alertas 90 días"],
+  },
+  {
+    href: "/inventario",
+    icon: Package,
+    color: "#FDB71A",
+    glow: "rgba(253,183,26,0.25)",
+    border: "rgba(253,183,26,0.45)",
+    title: "Inventario",
+    desc: "Control de stock de repuestos en tiempo real. Alertas de stock bajo y pedidos pendientes automáticos.",
+    tags: ["Stock bajo", "Pedidos", "Categorías"],
+  },
+  {
+    href: "/ventas",
+    icon: ShoppingCart,
+    color: "#39FF14",
+    glow: "rgba(57,255,20,0.22)",
+    border: "rgba(57,255,20,0.45)",
+    title: "Vender",
+    desc: "Registrá ventas con múltiples productos, elegí método de pago y consultá los movimientos del día.",
+    tags: ["Multi-producto", "5 métodos de pago", "Movimientos diarios"],
+  },
+  {
+    href: "/flex",
+    icon: Truck,
+    color: "#00E5FF",
+    glow: "rgba(0,229,255,0.22)",
+    border: "rgba(0,229,255,0.45)",
+    title: "Flex Logística",
+    desc: "Escáner OCR + QR para cargar envíos de Mercado Libre. Detección automática de zona y precio por CP.",
+    tags: ["OCR / QR", "Zonas automáticas", "Anti-duplicados"],
+  },
+  {
+    href: "/estadisticas",
+    icon: BarChart2,
+    color: "#A855F7",
+    glow: "rgba(168,85,247,0.22)",
+    border: "rgba(168,85,247,0.45)",
+    title: "Estadísticas",
+    desc: "Dashboard con métricas de ventas, facturación, motores más reparados y rendimiento del taller.",
+    tags: ["Gráficos", "Filtros por fecha", "Exportar Excel/PDF"],
+  },
+  {
+    href: "/agenda",
+    icon: Users,
+    color: "#F59E0B",
+    glow: "rgba(245,158,11,0.22)",
+    border: "rgba(245,158,11,0.45)",
+    title: "Agenda",
+    desc: "Ficha de clientes con historial de reparaciones y compras. Identificá a tus mejores clientes.",
+    tags: ["Historial", "Clientes frecuentes", "WhatsApp"],
+  },
+];
+
+const HIGHLIGHTS = [
+  { icon: Smartphone, text: "100% optimizada para celular" },
+  { icon: Zap,        text: "Datos en tiempo real con Supabase" },
+  { icon: Shield,     text: "Anti-duplicados y validación OCR" },
+];
+
+export default function LandingPage() {
   return (
-    <div className={cardClass}>
-      <div className="flex items-center gap-3">
-        <Icon className={`w-7 h-7 flex-shrink-0 ${iconColor}`} />
-        <div>
-          <p className={`text-3xl font-black leading-tight ${valueColor}`}>{value}</p>
-          <p className="text-xs text-gray-400 font-semibold mt-0.5">{label}</p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ── Badge de fase de fidelización ── */
-function FaseBadge({ compras }: { compras: number }) {
-  if (compras >= 50) return (
-    <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full border border-yellow-400/60 text-gold" style={{ background: "rgba(255,215,0,0.12)", textShadow: "0 0 6px rgba(255,215,0,0.7)" }}>
-      <Trophy className="w-3 h-3" /> ORO
-    </span>
-  );
-  if (compras >= 10) return (
-    <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full border border-gray-300/60 text-gray-200" style={{ background: "rgba(200,200,200,0.12)" }}>
-      <Medal className="w-3 h-3" /> PLATA
-    </span>
-  );
-  if (compras >= 3) return (
-    <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full border border-orange-400/60 text-orange-400" style={{ background: "rgba(255,87,34,0.12)" }}>
-      <Medal className="w-3 h-3" /> BRONCE
-    </span>
-  );
-  return null;
-}
-
-export default function DashboardPage() {
-  const {
-    orders,
-    filtered,
-    filters,
-    setFilters,
-    create,
-    update,
-    remove,
-    overdueCount,
-    loading,
-  } = useOrders();
-  const { lowStockCount } = useInventory();
-  const { pending, sentLog, markSent, unsentCount, refresh: refreshNotifications } =
-    useNotifications(orders);
-
-  const [showForm, setShowForm] = useState(false);
-  const [editingOrder, setEditingOrder] = useState<WorkOrder | null>(null);
-  const [showNotifications, setShowNotifications] = useState(false);
-  const [showTemplates, setShowTemplates] = useState(false);
-  const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
-
-  const showToast = (msg: string, type: "success" | "error" = "success") => {
-    setToast({ msg, type });
-    setTimeout(() => setToast(null), type === "error" ? 8000 : 3500);
-  };
-
-  const handleSave = async (order: WorkOrder) => {
-    try {
-      if (editingOrder) {
-        await update(order.id, order);
-        agendaDb.upsertByPhone(order.clientName, order.clientPhone).then(async () => {
-          const clientes = await agendaDb.getAll();
-          const cliente = clientes.find(c => c.telefono === order.clientPhone.trim());
-          if (cliente) historialDb.upsert(cliente.id, order).catch(() => {});
-        }).catch(() => {});
-        showToast("Orden actualizada con éxito");
-      } else {
-        const newOrder = { ...order, id: generateId(), entryDate: new Date().toISOString() };
-        await create(newOrder);
-        agendaDb.upsertByPhone(newOrder.clientName, newOrder.clientPhone).then(async () => {
-          const clientes = await agendaDb.getAll();
-          const cliente = clientes.find(c => c.telefono === newOrder.clientPhone.trim());
-          if (cliente) historialDb.upsert(cliente.id, newOrder).catch(() => {});
-        }).catch(() => {});
-        showToast("¡Orden guardada con éxito!");
-      }
-      setShowForm(false);
-      setEditingOrder(null);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      showToast(`Error: ${msg}`, "error");
-    }
-  };
-
-  const handleEdit = (order: WorkOrder) => {
-    setEditingOrder(order);
-    setShowForm(true);
-  };
-
-  const handleClose = () => {
-    setShowForm(false);
-    setEditingOrder(null);
-  };
-
-  const activeOrders       = orders.filter((o) => o.status !== "entregado");
-  const readyOrders        = orders.filter((o) => o.status === "listo_para_retiro");
-  const inRepairOrders     = orders.filter((o) => o.status === "en_reparacion");
-  const waitingPartsOrders = orders.filter((o) => o.status === "esperando_repuesto");
-
-  return (
-    <>
-      <Navbar
-        overdueCount={overdueCount}
-        lowStockCount={lowStockCount}
-        notificationCount={unsentCount}
-        onOpenNotifications={() => setShowNotifications(true)}
-      />
-
-      <main className="max-w-5xl mx-auto px-4 py-6 pb-24 sm:pb-6 space-y-6">
-
-        {/* ── Tarjetas de estado neón ── */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <StatCard
-            label="Activas"
-            value={activeOrders.length}
-            icon={Wrench}
-            cardClass="card-neon-orange"
-            iconColor="text-orange-neon"
-            valueColor="text-orange-neon"
-          />
-          <StatCard
-            label="En Reparación"
-            value={inRepairOrders.length}
-            icon={Clock}
-            cardClass="card-neon-cyan"
-            iconColor="text-cyan"
-            valueColor="text-cyan"
-          />
-          <StatCard
-            label="Listas para Retiro"
-            value={readyOrders.length}
-            icon={CheckSquare}
-            cardClass="card-neon-green"
-            iconColor="text-neon"
-            valueColor="text-neon"
-          />
-          <StatCard
-            label="Esp. Repuesto"
-            value={waitingPartsOrders.length}
-            icon={Package}
-            cardClass="card-neon-gold"
-            iconColor="text-gold"
-            valueColor="text-gold"
-          />
-        </div>
-
-        {/* ── Alerta 90 días ── */}
-        {overdueCount > 0 && (
-          <div className="card-alert flex items-start gap-3">
-            <AlertTriangle className="w-6 h-6 text-red-400 flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="text-red-300 font-bold text-base">
-                {overdueCount} equipo{overdueCount > 1 ? "s" : ""} con más de 90 días esperando retiro
-              </p>
-              <p className="text-red-400/70 text-sm mt-0.5">
-                Contactá al cliente para coordinar la devolución o el abandono del equipo.
-              </p>
-              <button
-                onClick={() => setFilters({ ...filters, overdueOnly: true })}
-                className="mt-2 text-sm text-red-300 underline underline-offset-2 hover:text-red-200"
-              >
-                Ver solo esas órdenes →
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* ── Filtros + Exportar + Plantillas ── */}
-        <div className="space-y-3">
-          <FiltersBar
-            filters={filters}
-            onChange={setFilters}
-            totalCount={orders.length}
-            filteredCount={filtered.length}
-          />
-          <div className="flex flex-wrap gap-2">
-            {filtered.length > 0 && (
-              <>
-                <button
-                  onClick={() => exportOrdersToExcel(filtered)}
-                  className="btn-secondary flex-1 sm:flex-none"
-                >
-                  <FileSpreadsheet className="w-5 h-5 text-green-400" />
-                  Excel
-                  <span className="text-gray-500 text-sm font-normal">({filtered.length})</span>
-                </button>
-                <button
-                  onClick={() => {
-                    const label =
-                      filters.motorType !== "all" ? `Motor ${filters.motorType}`
-                      : filters.status !== "all" ? `Estado: ${filters.status}`
-                      : filters.overdueOnly ? "Más de 90 días"
-                      : "Todas las órdenes";
-                    exportOrdersReportPDF(filtered, label);
-                  }}
-                  className="btn-secondary flex-1 sm:flex-none"
-                >
-                  <FileText className="w-5 h-5 text-red-400" />
-                  PDF
-                  <span className="text-gray-500 text-sm font-normal">({filtered.length})</span>
-                </button>
-              </>
-            )}
-            <button
-              onClick={() => setShowTemplates(true)}
-              className="btn-secondary flex-1 sm:flex-none"
-            >
-              <MessageCircle className="w-5 h-5 text-green-400" />
-              <span className="hidden sm:inline">Plantillas WA</span>
-              <span className="sm:hidden">Plantillas</span>
-            </button>
-          </div>
-        </div>
-
-        {/* ── Lista de órdenes ── */}
-        <div className="space-y-3">
-          {loading ? (
-            <div className="card flex flex-col items-center py-16 text-center">
-              <div className="w-10 h-10 border-4 border-[#FF5722] border-t-transparent rounded-full animate-spin mb-4" />
-              <p className="text-gray-400 font-semibold">Cargando órdenes...</p>
-            </div>
-          ) : filtered.length === 0 ? (
-            <div className="card flex flex-col items-center justify-center py-16 text-center gap-4">
-              <div className="w-16 h-16 rounded-full flex items-center justify-center"
-                style={{ background: "rgba(255,87,34,0.12)", border: "2px solid rgba(255,87,34,0.40)" }}>
-                <Wrench className="w-8 h-8 text-orange-neon" />
-              </div>
-              <div>
-                <p className="text-gray-300 font-bold text-lg">
-                  {orders.length === 0
-                    ? "No hay órdenes de trabajo todavía"
-                    : "No se encontraron órdenes con esos filtros"}
-                </p>
-                <p className="text-gray-600 text-sm mt-1">
-                  {orders.length === 0
-                    ? "Tocá el botón naranja para ingresar tu primer equipo"
-                    : "Probá ajustar los filtros"}
-                </p>
-              </div>
-            </div>
-          ) : (
-            filtered.map((order) => (
-              <OrderCard
-                key={order.id}
-                order={order}
-                onEdit={handleEdit}
-                onDelete={remove}
-              />
-            ))
-          )}
-        </div>
-      </main>
-
-      {/* ── FAB — Nueva orden (Naranja Maqjeez con glow) ── */}
-      <button
-        onClick={() => { setEditingOrder(null); setShowForm(true); }}
-        className="fixed bottom-[88px] sm:bottom-6 right-4 sm:right-6
-                   btn-primary rounded-2xl
-                   h-14 w-14 sm:h-auto sm:w-auto sm:px-6 z-40"
-        aria-label="Nueva orden"
-      >
-        <Plus className="w-6 h-6 flex-shrink-0" />
-        <span className="hidden sm:inline text-base font-bold">Nueva Orden</span>
-      </button>
-
-      {showForm && (
-        <OrderForm
-          initial={editingOrder ?? undefined}
-          onSave={handleSave}
-          onClose={handleClose}
-        />
-      )}
-
-      {showNotifications && (
-        <NotificationsPanel
-          pending={pending}
-          sentLog={sentLog}
-          onSend={(n, msg) => markSent(n, msg)}
-          onClearLog={() => { clearSentLog(); refreshNotifications(); }}
-          onClose={() => setShowNotifications(false)}
-        />
-      )}
-
-      {showTemplates && (
-        <TemplateManager onClose={() => setShowTemplates(false)} />
-      )}
-
-      <BottomNav
-        notificationCount={unsentCount}
-        onOpenNotifications={() => setShowNotifications(true)}
-      />
-
-      {toast && (
+    <div
+      className="min-h-screen"
+      style={{ background: "linear-gradient(160deg, #0a0a0a 0%, #121212 50%, #0f1a2e 100%)" }}
+    >
+      {/* ── Hero ── */}
+      <section className="relative flex flex-col items-center justify-center text-center px-6 pt-16 pb-12 overflow-hidden">
+        {/* Glow de fondo */}
         <div
-          className={`fixed bottom-28 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3
-            px-5 py-3.5 rounded-2xl shadow-2xl text-white font-semibold text-sm
-            ${toast.type === "success" ? "bg-green-600" : "bg-red-600"}`}
-        >
-          <CheckCircle className="w-5 h-5 flex-shrink-0" />
-          {toast.msg}
+          className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] rounded-full blur-[120px] opacity-20 pointer-events-none"
+          style={{ background: "radial-gradient(ellipse, #FDB71A 0%, transparent 70%)" }}
+        />
+
+        {/* Logo */}
+        <div className="relative z-10 mb-6">
+          <Image
+            src="/logo-maqjeez.png"
+            alt="MAQJEEZ"
+            width={200}
+            height={68}
+            className="object-contain mx-auto"
+            priority
+          />
         </div>
-      )}
-    </>
+
+        <h1 className="relative z-10 text-3xl sm:text-5xl font-black text-white leading-tight mb-3">
+          Tu taller,{" "}
+          <span style={{ color: "#FDB71A", textShadow: "0 0 30px rgba(253,183,26,0.60)" }}>
+            en un solo lugar
+          </span>
+        </h1>
+        <p className="relative z-10 text-gray-400 text-base sm:text-lg max-w-xl mb-8">
+          Sistema integral de gestión para talleres de motoherramientas. Órdenes, inventario, ventas y logística Flex — todo conectado a Supabase.
+        </p>
+
+        {/* CTA principal */}
+        <Link
+          href="/taller"
+          className="relative z-10 group inline-flex items-center gap-3 px-8 py-4 rounded-2xl font-black text-lg text-white transition-all"
+          style={{
+            background: "#FF5722",
+            boxShadow: "0 0 30px rgba(255,87,34,0.50), 0 4px 24px rgba(0,0,0,0.40)",
+          }}
+        >
+          <Wrench className="w-6 h-6" />
+          Ingresar al Taller
+          <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
+        </Link>
+
+        {/* Highlights */}
+        <div className="relative z-10 flex flex-wrap justify-center gap-4 mt-8">
+          {HIGHLIGHTS.map(({ icon: Icon, text }) => (
+            <div key={text} className="flex items-center gap-2 text-sm text-gray-500">
+              <Icon className="w-4 h-4 text-[#FDB71A]" />
+              {text}
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── Feature Cards ── */}
+      <section className="px-4 pb-16 max-w-4xl mx-auto">
+        <h2 className="text-center text-xl font-bold text-gray-400 mb-6 uppercase tracking-widest text-sm">
+          Módulos del sistema
+        </h2>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {FEATURES.map(({ href, icon: Icon, color, glow, border, title, desc, tags }) => (
+            <Link
+              key={href}
+              href={href}
+              className="group relative flex flex-col p-5 rounded-2xl transition-all duration-200 hover:-translate-y-1"
+              style={{
+                background: "rgba(31,31,31,0.85)",
+                backdropFilter: "blur(12px)",
+                border: `1px solid ${border}`,
+                boxShadow: `0 0 20px ${glow}`,
+              }}
+            >
+              {/* Glow hover */}
+              <div
+                className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
+                style={{ background: `radial-gradient(ellipse at top left, ${glow} 0%, transparent 60%)` }}
+              />
+
+              <div className="relative z-10">
+                {/* Ícono */}
+                <div
+                  className="w-12 h-12 rounded-xl flex items-center justify-center mb-4"
+                  style={{ background: color + "20", border: `1px solid ${border}` }}
+                >
+                  <Icon className="w-6 h-6" style={{ color }} />
+                </div>
+
+                {/* Título */}
+                <h3 className="text-lg font-black text-white mb-2">{title}</h3>
+
+                {/* Descripción */}
+                <p className="text-sm text-gray-400 leading-relaxed mb-4">{desc}</p>
+
+                {/* Tags */}
+                <div className="flex flex-wrap gap-1.5">
+                  {tags.map(tag => (
+                    <span
+                      key={tag}
+                      className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                      style={{
+                        background: color + "15",
+                        border: `1px solid ${color}40`,
+                        color,
+                      }}
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+
+                {/* Flecha */}
+                <div className="flex items-center gap-1 mt-4 text-xs font-semibold" style={{ color }}>
+                  Abrir módulo
+                  <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
+                </div>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      {/* ── Footer ── */}
+      <footer className="border-t border-white/5 py-6 text-center">
+        <p className="text-gray-700 text-xs">
+          MAQJEEZ Repuestos · Sistema de Gestión v2.0 · 2026
+        </p>
+      </footer>
+    </div>
   );
 }

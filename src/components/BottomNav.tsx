@@ -13,7 +13,7 @@ export default function BottomNav({ notificationCount = 0, onOpenNotifications }
   const pathname = usePathname();
 
   const tabs = [
-    { href: "/", label: "Taller", icon: LayoutDashboard },
+    { href: "/taller", label: "Taller", icon: LayoutDashboard },
     { href: "/inventario", label: "Inventario", icon: Package },
     { href: "/ventas", label: "Vender", icon: ShoppingCart },
     { href: "/flex", label: "Flex", icon: Truck },
