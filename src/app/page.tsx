@@ -155,8 +155,8 @@ export default function LandingPage() {
           <Image
             src="/appjeez-logo.jpg"
             alt="AppJeez"
-            width={160}
-            height={160}
+            width={260}
+            height={260}
             className="object-contain mx-auto rounded-2xl"
             priority
           />
