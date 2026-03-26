@@ -21,7 +21,7 @@ export default function BottomNav({ notificationCount = 0, onOpenNotifications }
   ];
 
   return (
-    <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-gray-200 shadow-[0_-4px_24px_rgba(0,0,0,0.08)]">
+    <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-gray-900/95 backdrop-blur-md border-t border-gray-700/80 shadow-[0_-4px_24px_rgba(0,0,0,0.4)]">
       <div className="flex items-stretch" style={{ height: "60px", paddingBottom: "env(safe-area-inset-bottom)" }}>
         {tabs.map(({ href, label, icon: Icon }) => {
           const active = pathname === href;
@@ -29,15 +29,15 @@ export default function BottomNav({ notificationCount = 0, onOpenNotifications }
             <Link
               key={href}
               href={href}
-              className={`flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors relative
-                ${active ? "text-[#1E3A8A]" : "text-gray-400 active:text-gray-600"}`}
+              className={`flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors
+                ${active ? "text-orange-400" : "text-gray-500 active:text-gray-300"}`}
             >
               <Icon className={`w-5 h-5 ${active ? "stroke-[2.5]" : ""}`} />
-              <span className={`text-[10px] font-semibold`}>
+              <span className={`text-[10px] font-semibold ${active ? "text-orange-400" : "text-gray-500"}`}>
                 {label}
               </span>
               {active && (
-                <span className="absolute bottom-0 w-10 h-[3px] bg-[#1E3A8A] rounded-full" />
+                <span className="absolute bottom-0 w-8 h-0.5 bg-orange-400 rounded-full" />
               )}
             </Link>
           );
