@@ -36,7 +36,7 @@ function StatCard({
         <Icon className="w-6 h-6 text-white" />
       </div>
       <div>
-        <p className="text-2xl font-black text-gray-900 leading-tight">{value}</p>
+        <p className="text-2xl font-black text-white leading-tight">{value}</p>
         <p className="text-xs text-gray-500 font-medium">{label}</p>
       </div>
     </div>
@@ -239,7 +239,7 @@ export default function DashboardPage() {
       <button
         onClick={() => { setEditingOrder(null); setShowForm(true); }}
         className="fixed bottom-[88px] sm:bottom-6 right-4 sm:right-6
-                   btn-primary rounded-2xl shadow-2xl shadow-blue-900/30
+                   btn-primary rounded-2xl shadow-2xl shadow-orange-500/40
                    h-14 w-14 sm:h-auto sm:w-auto sm:px-6 z-40"
         aria-label="Nueva orden"
       >
