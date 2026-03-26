@@ -357,10 +357,10 @@ function AppJeezInner() {
         <div className="px-4 pb-4">
           <Link
             href="/"
-            className="flex items-center gap-2 text-xs px-3 py-2 rounded-xl"
-            style={{ color: "#6B7280", background: "rgba(255,255,255,0.03)" }}
+            className="flex items-center justify-center gap-2 text-sm font-bold px-3 py-2.5 rounded-xl w-full transition-opacity hover:opacity-80"
+            style={{ background: "#FFE60018", color: "#FFE600", border: "1px solid #FFE60033" }}
           >
-            ← Volver al inicio
+            🏠 Inicio Maqjeez
           </Link>
         </div>
       </aside>
@@ -387,6 +387,16 @@ function AppJeezInner() {
                 </Link>
               ))}
             </nav>
+            <div className="px-4 pb-5">
+              <Link
+                href="/"
+                onClick={() => setSidebarOpen(false)}
+                className="flex items-center justify-center gap-2 text-sm font-bold px-3 py-2.5 rounded-xl w-full"
+                style={{ background: "#FFE60018", color: "#FFE600", border: "1px solid #FFE60033" }}
+              >
+                🏠 Inicio Maqjeez
+              </Link>
+            </div>
           </aside>
         </div>
       )}
