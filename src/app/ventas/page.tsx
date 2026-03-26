@@ -273,8 +273,11 @@ export default function VentasPage() {
       setNotas("");
       showToast(`Venta guardada: ${fmt(venta.total)}`);
       loadVentasHoy();
-    } catch (e) {
-      showToast("Error al guardar: " + String(e), false);
+    } catch (e: unknown) {
+      const pg = e as { message?: string; details?: string; hint?: string; code?: string };
+      const msg = pg?.message ?? pg?.details ?? JSON.stringify(e) ?? "Error desconocido";
+      showToast("Error: " + msg, false);
+      console.error("ventasDb.create error:", e);
     } finally {
       setSaving(false);
     }
