@@ -3,7 +3,7 @@
 // ============================================================
 
 import { supabase } from "./supabase";
-import { WorkOrder, StockItem, PartToOrder, Pago, PlantillaWhatsApp, AgendaCliente, HistorialReparacion, FlexEnvio } from "./types";
+import { WorkOrder, StockItem, PartToOrder, Pago, PlantillaWhatsApp, AgendaCliente, HistorialReparacion, FlexEnvio, VentaRepuesto, VentaItem, VentasStats, VentasPorDia, TopProducto } from "./types";
 
 // ─── Helpers de mapeo (snake_case DB ↔ camelCase app) ────────
 
@@ -505,5 +505,132 @@ export const flexDb = {
       .update({ precio: nuevoPrecio })
       .eq("zona", zona);
     if (error) throw error;
+  },
+};
+
+// ─── Ventas de Repuestos ──────────────────────────────────────
+
+function toVenta(r: Record<string, unknown>, items: VentaItem[]): VentaRepuesto {
+  return {
+    id:         r.id as string,
+    vendedor:   r.vendedor as string,
+    metodoPago: r.metodo_pago as VentaRepuesto["metodoPago"],
+    total:      r.total as number,
+    status:     r.status as VentaRepuesto["status"],
+    notas:      (r.notas as string) ?? "",
+    createdAt:  r.created_at as string,
+    items,
+  };
+}
+
+function toVentaItem(r: Record<string, unknown>): VentaItem {
+  return {
+    id:         r.id as string,
+    ventaId:    r.venta_id as string,
+    producto:   r.producto as string,
+    sku:        (r.sku as string) ?? "",
+    cantidad:   r.cantidad as number,
+    precioUnit: r.precio_unit as number,
+    subtotal:   r.subtotal as number,
+  };
+}
+
+export const ventasDb = {
+  async getAll(desde?: string, hasta?: string): Promise<VentaRepuesto[]> {
+    let q = supabase
+      .from("ventas_repuestos")
+      .select("*, ventas_items(*)")
+      .order("created_at", { ascending: false });
+    if (desde) q = q.gte("created_at", desde);
+    if (hasta) q = q.lte("created_at", hasta + "T23:59:59");
+    const { data, error } = await q;
+    if (error) throw error;
+    return (data ?? []).map((r) => {
+      const raw = r as Record<string, unknown>;
+      const items = ((raw.ventas_items as Record<string, unknown>[]) ?? []).map(toVentaItem);
+      return toVenta(raw, items);
+    });
+  },
+
+  async getToday(): Promise<VentaRepuesto[]> {
+    const hoy = new Date().toISOString().slice(0, 10);
+    return ventasDb.getAll(hoy, hoy);
+  },
+
+  async create(v: VentaRepuesto): Promise<void> {
+    const { error: ve } = await supabase.from("ventas_repuestos").insert({
+      id:          v.id,
+      vendedor:    v.vendedor,
+      metodo_pago: v.metodoPago,
+      total:       v.total,
+      status:      v.status,
+      notas:       v.notas,
+      created_at:  v.createdAt,
+    });
+    if (ve) throw ve;
+
+    if (v.items.length > 0) {
+      const { error: ie } = await supabase.from("ventas_items").insert(
+        v.items.map(i => ({
+          id:          i.id,
+          venta_id:    v.id,
+          producto:    i.producto,
+          sku:         i.sku,
+          cantidad:    i.cantidad,
+          precio_unit: i.precioUnit,
+        }))
+      );
+      if (ie) throw ie;
+    }
+  },
+
+  async cancelar(id: string): Promise<void> {
+    const { error } = await supabase
+      .from("ventas_repuestos")
+      .update({ status: "cancelada" })
+      .eq("id", id);
+    if (error) throw error;
+  },
+
+  async getStats(desde: string, hasta: string): Promise<VentasStats> {
+    const { data, error } = await supabase.rpc("get_ventas_stats", {
+      fecha_desde: desde,
+      fecha_hasta: hasta,
+    });
+    if (error) throw error;
+    const row = (data as Record<string, unknown>[])?.[0] ?? {};
+    return {
+      totalFacturado: Number(row.total_facturado ?? 0),
+      cantVentas:     Number(row.cant_ventas ?? 0),
+      metodoTop:      (row.metodo_top as string) ?? null,
+      productoTop:    (row.producto_top as string) ?? null,
+    };
+  },
+
+  async getVentasPorDia(desde: string, hasta: string): Promise<VentasPorDia[]> {
+    const { data, error } = await supabase.rpc("get_ventas_por_dia", {
+      fecha_desde: desde,
+      fecha_hasta: hasta,
+    });
+    if (error) throw error;
+    return ((data as Record<string, unknown>[]) ?? []).map(r => ({
+      dia:   r.dia as string,
+      total: Number(r.total),
+      cant:  Number(r.cant),
+    }));
+  },
+
+  async getTopProductos(desde: string, hasta: string): Promise<TopProducto[]> {
+    const { data, error } = await supabase.rpc("get_top_productos", {
+      fecha_desde: desde,
+      fecha_hasta: hasta,
+      top_n: 5,
+    });
+    if (error) throw error;
+    return ((data as Record<string, unknown>[]) ?? []).map(r => ({
+      producto: r.producto as string,
+      cantidad: Number(r.cantidad),
+      total:    Number(r.total),
+    }));
   },
 };

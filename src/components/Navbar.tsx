@@ -5,7 +5,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   Package, LayoutDashboard, AlertTriangle,
-  MessageCircle, BarChart2, Users, Truck,
+  MessageCircle, BarChart2, Users, Truck, ShoppingCart,
 } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
 
@@ -27,6 +27,7 @@ export default function Navbar({
   const links = [
     { href: "/",             label: "Dashboard",    icon: LayoutDashboard, badge: overdueCount,  badgeColor: "bg-red-500" },
     { href: "/inventario",   label: "Inventario",   icon: Package,         badge: lowStockCount, badgeColor: "bg-red-500" },
+    { href: "/ventas",       label: "Ventas",       icon: ShoppingCart,    badge: 0,             badgeColor: "" },
     { href: "/estadisticas", label: "Estadísticas", icon: BarChart2,       badge: 0,             badgeColor: "" },
     { href: "/agenda",       label: "Agenda",       icon: Users,           badge: 0,             badgeColor: "" },
     { href: "/flex",         label: "Flex",         icon: Truck,           badge: 0,             badgeColor: "" },

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Package, BarChart2, Users, Truck } from "lucide-react";
+import { LayoutDashboard, Package, BarChart2, Users, Truck, ShoppingCart } from "lucide-react";
 
 interface Props {
   notificationCount?: number;
@@ -15,9 +15,9 @@ export default function BottomNav({ notificationCount = 0, onOpenNotifications }
   const tabs = [
     { href: "/", label: "Órdenes", icon: LayoutDashboard },
     { href: "/inventario", label: "Inventario", icon: Package },
-    { href: "/estadisticas", label: "Stats", icon: BarChart2 },
-    { href: "/agenda", label: "Agenda", icon: Users },
+    { href: "/ventas", label: "Ventas", icon: ShoppingCart },
     { href: "/flex", label: "Flex", icon: Truck },
+    { href: "/estadisticas", label: "Stats", icon: BarChart2 },
   ];
 
   return (

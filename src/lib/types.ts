@@ -230,6 +230,69 @@ export const FLEX_LOCALIDADES: { nombre: string; zona: FlexZona }[] = [
   { nombre: "Zárate",                zona: "lejana" },
 ];
 
+// ============================================================
+// VENTAS DE REPUESTOS
+// ============================================================
+
+export type MetodoPago = "efectivo" | "transferencia" | "debito" | "credito" | "mercado_pago";
+export type VentaStatus = "activa" | "cancelada";
+
+export const METODO_PAGO_LABELS: Record<MetodoPago, string> = {
+  efectivo:      "Efectivo",
+  transferencia: "Transferencia",
+  debito:        "Débito",
+  credito:       "Crédito",
+  mercado_pago:  "Mercado Pago",
+};
+
+export const METODO_PAGO_ICONS: Record<MetodoPago, string> = {
+  efectivo:      "💵",
+  transferencia: "🏦",
+  debito:        "💳",
+  credito:       "💳",
+  mercado_pago:  "🛒",
+};
+
+export interface VentaItem {
+  id: string;
+  ventaId: string;
+  producto: string;
+  sku: string;
+  cantidad: number;
+  precioUnit: number;
+  subtotal: number;
+}
+
+export interface VentaRepuesto {
+  id: string;
+  vendedor: string;
+  metodoPago: MetodoPago;
+  total: number;
+  status: VentaStatus;
+  notas: string;
+  createdAt: string;
+  items: VentaItem[];
+}
+
+export interface VentasStats {
+  totalFacturado: number;
+  cantVentas: number;
+  metodoTop: string | null;
+  productoTop: string | null;
+}
+
+export interface VentasPorDia {
+  dia: string;
+  total: number;
+  cant: number;
+}
+
+export interface TopProducto {
+  producto: string;
+  cantidad: number;
+  total: number;
+}
+
 export interface FlexEnvio {
   id: string;
   fecha: string;
