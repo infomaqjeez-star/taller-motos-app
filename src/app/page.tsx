@@ -77,6 +77,50 @@ const HIGHLIGHTS = [
   { icon: Shield,     text: "Anti-duplicados y validación OCR" },
 ];
 
+/* ── Medallón con laureles SVG ── */
+function MedalBadge({ id, children }: { id: string; children: React.ReactNode }) {
+  const gradId = `gl${id}`;
+  const leaves = [0,14,28,42,56,70,84];
+  return (
+    <div className="relative w-24 h-24 flex items-center justify-center">
+      <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full" fill="none">
+        {leaves.map((a, i) => (
+          <ellipse key={`L${i}`}
+            cx={50 - 32 * Math.cos((195 + a) * Math.PI / 180)}
+            cy={50 - 32 * Math.sin((195 + a) * Math.PI / 180)}
+            rx="6" ry="3.2"
+            transform={`rotate(${195 + a + 90} ${50 - 32 * Math.cos((195 + a) * Math.PI / 180)} ${50 - 32 * Math.sin((195 + a) * Math.PI / 180)})`}
+            fill={`url(#${gradId})`}
+          />
+        ))}
+        {leaves.map((a, i) => (
+          <ellipse key={`R${i}`}
+            cx={50 + 32 * Math.cos((195 + a) * Math.PI / 180)}
+            cy={50 - 32 * Math.sin((195 + a) * Math.PI / 180)}
+            rx="6" ry="3.2"
+            transform={`rotate(${-(195 + a) + 90} ${50 + 32 * Math.cos((195 + a) * Math.PI / 180)} ${50 - 32 * Math.sin((195 + a) * Math.PI / 180)})`}
+            fill={`url(#${gradId})`}
+          />
+        ))}
+        <defs>
+          <linearGradient id={gradId} x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="#FFD700"/>
+            <stop offset="100%" stopColor="#7a5800"/>
+          </linearGradient>
+        </defs>
+      </svg>
+      <div className="relative z-10 w-16 h-16 rounded-full flex items-center justify-center"
+        style={{
+          background: "radial-gradient(circle at 35% 35%, #c8960c 0%, #7a5800 60%, #3d2c00 100%)",
+          border: "2.5px solid #FFD700",
+          boxShadow: "0 0 14px rgba(255,215,0,0.50), inset 0 2px 3px rgba(255,255,255,0.12)",
+        }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 export default function LandingPage() {
   return (
     <div
@@ -130,7 +174,6 @@ export default function LandingPage() {
         {/* ── Panel de Autoridad / Social Proof ── */}
         <div className="relative z-10 mt-8 w-full max-w-2xl rounded-2xl overflow-hidden"
           style={{
-            background: "#0d0d0d",
             border: "1px solid rgba(184,134,11,0.40)",
             boxShadow: "0 0 40px rgba(255,215,0,0.10)",
           }}>
@@ -140,7 +183,6 @@ export default function LandingPage() {
             width={1200}
             height={300}
             className="w-full h-auto"
-            style={{ mixBlendMode: "lighten", background: "#0d0d0d" }}
             priority
           />
         </div>
