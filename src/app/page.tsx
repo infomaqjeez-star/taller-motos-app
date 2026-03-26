@@ -153,23 +153,25 @@ export default function LandingPage() {
         {/* Logo */}
         <div className="relative z-10 mb-6">
           <Image
-            src="/logo-maqjeez.png"
-            alt="MAQJEEZ"
-            width={200}
-            height={68}
-            className="object-contain mx-auto"
+            src="/appjeez-logo.jpg"
+            alt="AppJeez"
+            width={160}
+            height={160}
+            className="object-contain mx-auto rounded-2xl"
             priority
           />
         </div>
 
         <h1 className="relative z-10 text-3xl sm:text-5xl font-black text-white leading-tight mb-3">
-          Tu taller,{" "}
-          <span style={{ color: "#FDB71A", textShadow: "0 0 30px rgba(253,183,26,0.60)" }}>
-            en un solo lugar
+          <span style={{ color: "#FFE600", textShadow: "0 0 30px rgba(255,220,0,0.60)" }}>
+            AppJeez
           </span>
         </h1>
-        <p className="relative z-10 text-gray-400 text-base sm:text-lg max-w-xl mb-8">
-          Sistema integral de gestión para talleres de motoherramientas. Órdenes, inventario, ventas y logística Flex — todo conectado a Supabase.
+        <p className="relative z-10 font-bold text-base sm:text-lg mb-2" style={{ color: "#C9A84C" }}>
+          Gestión de Cuentas y Ventas Masivas
+        </p>
+        <p className="relative z-10 text-gray-400 text-sm sm:text-base max-w-lg mb-8">
+          Conectá todas tus cuentas de Mercado Libre en un solo panel. Mensajería unificada, publicaciones, órdenes del día, envíos y reputación — todo en tiempo real.
         </p>
 
         {/* ── CTA dinámico ── */}
@@ -180,7 +182,6 @@ export default function LandingPage() {
               className="group w-full inline-flex items-center justify-center gap-3 px-8 py-4 rounded-2xl font-black text-lg transition-all hover:scale-105"
               style={{ background: "#FFE600", boxShadow: "0 0 30px rgba(255,230,0,0.45)", color: "#121212" }}
             >
-              <Image src="/logo-maqjeez.png" alt="ML" width={24} height={24} className="object-contain" />
               Mercado Libre — Ingresar al Panel
               <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
             </Link>
@@ -190,7 +191,6 @@ export default function LandingPage() {
               className="group w-full inline-flex items-center justify-center gap-3 px-8 py-4 rounded-2xl font-black text-lg transition-all hover:scale-105"
               style={{ background: "#FFE600", boxShadow: "0 0 30px rgba(255,230,0,0.40)", color: "#003087" }}
             >
-              <Image src="/logo-maqjeez.png" alt="ML" width={24} height={24} className="object-contain" />
               Conectar Mercado Libre
               <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
             </Link>
