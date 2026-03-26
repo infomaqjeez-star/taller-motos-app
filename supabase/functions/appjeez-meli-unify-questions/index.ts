@@ -18,15 +18,31 @@ async function decrypt(encBase64: string, passphrase: string): Promise<string> {
 const cors = {
   "Access-Control-Allow-Origin":  "*",
   "Access-Control-Allow-Methods": "GET, POST",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-debug",
 };
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: cors });
 
-  const ENC_KEY     = Deno.env.get("APPJEEZ_MELI_ENCRYPTION_KEY")!;
-  const SUPA_URL    = Deno.env.get("SUPABASE_URL")!;
-  const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const isDebug = req.headers.get("x-debug") === "true";
+  const log: string[] = [];
+
+  const ENC_KEY     = Deno.env.get("APPJEEZ_MELI_ENCRYPTION_KEY") ?? "";
+  const SUPA_URL    = Deno.env.get("SUPABASE_URL") ?? "";
+  const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+
+  if (!ENC_KEY || !SUPA_URL || !SERVICE_KEY) {
+    const missing = [];
+    if (!ENC_KEY)     missing.push("APPJEEZ_MELI_ENCRYPTION_KEY");
+    if (!SUPA_URL)    missing.push("SUPABASE_URL");
+    if (!SERVICE_KEY) missing.push("SUPABASE_SERVICE_ROLE_KEY");
+    return new Response(JSON.stringify({ error: "Missing env vars", missing }), {
+      status: 500,
+      headers: { ...cors, "Content-Type": "application/json" },
+    });
+  }
+
+  log.push("env_ok");
 
   const supabase = createClient(SUPA_URL, SERVICE_KEY);
 
@@ -35,39 +51,65 @@ Deno.serve(async (req: Request) => {
     .select("id, meli_user_id, nickname, access_token_enc")
     .eq("status", "active");
 
-  if (accErr || !accounts?.length) {
-    return new Response(JSON.stringify([]), {
+  if (accErr) {
+    return new Response(JSON.stringify({ error: "DB error", detail: accErr.message }), {
+      status: 500,
+      headers: { ...cors, "Content-Type": "application/json" },
+    });
+  }
+
+  log.push(`accounts_found:${accounts?.length ?? 0}`);
+
+  if (!accounts?.length) {
+    const resp = isDebug
+      ? { debug: log, questions: [], note: "No active accounts in meli_accounts" }
+      : [];
+    return new Response(JSON.stringify(resp), {
       headers: { ...cors, "Content-Type": "application/json" },
     });
   }
 
   const allQuestions: object[] = [];
   const itemTitleCache: Record<string, string> = {};
+  const accountLogs: object[] = [];
 
   for (const acc of accounts) {
+    const accLog: Record<string, unknown> = { nickname: acc.nickname };
     try {
       const token = await decrypt(acc.access_token_enc, ENC_KEY);
+      accLog.token_ok = true;
+      accLog.token_prefix = token.slice(0, 10) + "...";
 
-      const qRes = await fetch(
-        "https://api.mercadolibre.com/my/received_questions/search?status=UNANSWERED&limit=50",
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      // Try both endpoints for maximum compatibility
+      const endpoints = [
+        `https://api.mercadolibre.com/my/received_questions/search?status=UNANSWERED&limit=50`,
+        `https://api.mercadolibre.com/questions/search?seller_id=${acc.meli_user_id}&status=UNANSWERED&limit=50`,
+      ];
 
-      if (!qRes.ok) continue;
+      let questions: {
+        id: number; item_id: string;
+        text: string; status: string; date_created: string;
+        from: { id: number; nickname?: string };
+        answer?: { text: string; date_created: string };
+      }[] = [];
 
-      const qData = await qRes.json() as {
-        questions: {
-          id: number; item_id: string;
-          text: string; status: string; date_created: string;
-          from: { id: number; nickname?: string };
-          answer?: { text: string; date_created: string };
-        }[];
-      };
+      for (const url of endpoints) {
+        const qRes = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+        accLog[`endpoint_${endpoints.indexOf(url)}_status`] = qRes.status;
 
-      const questions = qData.questions ?? [];
+        if (qRes.ok) {
+          const qData = await qRes.json() as { questions?: typeof questions };
+          questions = qData.questions ?? [];
+          accLog.questions_from_endpoint = endpoints.indexOf(url);
+          accLog.questions_count = questions.length;
+          break;
+        } else {
+          const errText = await qRes.text();
+          accLog[`endpoint_${endpoints.indexOf(url)}_error`] = errText.slice(0, 200);
+        }
+      }
 
       for (const q of questions) {
-        // Cache de títulos
         if (!itemTitleCache[q.item_id]) {
           try {
             const iRes = await fetch(
@@ -98,7 +140,6 @@ Deno.serve(async (req: Request) => {
 
         allQuestions.push(record);
 
-        // Guardar en caché (sin bloquear)
         supabase.from("meli_unified_questions").upsert({
           meli_question_id: q.id,
           meli_account_id:  acc.id,
@@ -114,12 +155,17 @@ Deno.serve(async (req: Request) => {
         }, { onConflict: "meli_question_id" }).then(() => {});
       }
     } catch (err) {
-      console.error(`Error for ${acc.nickname}:`, err);
+      accLog.error = String(err);
+      accLog.token_ok = false;
     }
+    accountLogs.push(accLog);
   }
 
-  // Devuelve las preguntas directamente — sin depender de la DB
-  return new Response(JSON.stringify(allQuestions), {
+  const response = isDebug
+    ? { debug: log, account_logs: accountLogs, questions: allQuestions, total: allQuestions.length }
+    : allQuestions;
+
+  return new Response(JSON.stringify(response), {
     headers: { ...cors, "Content-Type": "application/json" },
   });
 });
