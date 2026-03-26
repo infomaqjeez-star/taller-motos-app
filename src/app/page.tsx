@@ -5,8 +5,10 @@ import Image from "next/image";
 import {
   Wrench, Package, ShoppingCart, Truck,
   BarChart2, Users, ArrowRight, Zap, Shield, Smartphone,
+  Star,
 } from "lucide-react";
 
+/* ── Feature modules ── */
 const FEATURES = [
   {
     href: "/taller",
@@ -76,6 +78,80 @@ const HIGHLIGHTS = [
   { icon: Shield,     text: "Anti-duplicados y validación OCR" },
 ];
 
+/* ── Laurel SVG (decorativo) ── */
+function Laurel({ side }: { side: "left" | "right" }) {
+  const d = side === "left"
+    ? "M12 2 C8 6 4 10 4 16 C4 20 6 23 8 25 M10 4 C7 8 5 12 5 17 M8 7 C5 11 4 15 4 20"
+    : "M12 2 C16 6 20 10 20 16 C20 20 18 23 16 25 M14 4 C17 8 19 12 19 17 M16 7 C19 11 20 15 20 20";
+  return (
+    <svg viewBox="0 0 24 28" className="w-8 h-10 opacity-70" fill="none">
+      <path d={d} stroke="url(#gold)" strokeWidth="1.5" strokeLinecap="round" />
+      <defs>
+        <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#FFD700" />
+          <stop offset="100%" stopColor="#B8860B" />
+        </linearGradient>
+      </defs>
+    </svg>
+  );
+}
+
+/* ── Insignia de autoridad ── */
+function AuthBadge({
+  emoji,
+  title,
+  subtitle,
+  extra,
+  stars,
+}: {
+  emoji?: string;
+  title: string;
+  subtitle: string;
+  extra?: string;
+  stars?: boolean;
+}) {
+  return (
+    <div className="flex-1 flex flex-col items-center text-center px-4 py-3 min-w-[140px]">
+      {/* Corona / Medalla / Estrellas */}
+      <div className="mb-2">
+        {stars ? (
+          <div className="flex gap-0.5 justify-center">
+            {[...Array(5)].map((_, i) => (
+              <Star
+                key={i}
+                className="w-5 h-5 fill-current"
+                style={{ color: "#FFD700", filter: "drop-shadow(0 0 4px rgba(255,215,0,0.80))" }}
+              />
+            ))}
+          </div>
+        ) : (
+          <span className="text-3xl">{emoji}</span>
+        )}
+      </div>
+
+      {/* Círculo dorado */}
+      <div
+        className="w-16 h-16 rounded-full flex items-center justify-center mb-2"
+        style={{
+          background: "radial-gradient(circle, #2a2000 0%, #1a1400 100%)",
+          border: "2px solid #B8860B",
+          boxShadow: "0 0 14px rgba(255,215,0,0.35), inset 0 0 10px rgba(255,215,0,0.10)",
+        }}
+      >
+        <p
+          className="text-lg font-black leading-none"
+          style={{ color: "#FFD700", textShadow: "0 0 8px rgba(255,215,0,0.70)" }}
+        >
+          {title}
+        </p>
+      </div>
+
+      <p className="text-xs font-bold text-yellow-300 leading-snug">{subtitle}</p>
+      {extra && <p className="text-[10px] text-yellow-600 mt-0.5">{extra}</p>}
+    </div>
+  );
+}
+
 export default function LandingPage() {
   return (
     <div
@@ -83,8 +159,8 @@ export default function LandingPage() {
       style={{ background: "linear-gradient(160deg, #0a0a0a 0%, #121212 50%, #0f1a2e 100%)" }}
     >
       {/* ── Hero ── */}
-      <section className="relative flex flex-col items-center justify-center text-center px-6 pt-16 pb-12 overflow-hidden">
-        {/* Glow de fondo */}
+      <section className="relative flex flex-col items-center justify-center text-center px-6 pt-16 pb-10 overflow-hidden">
+        {/* Glow fondo */}
         <div
           className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] rounded-full blur-[120px] opacity-20 pointer-events-none"
           style={{ background: "radial-gradient(ellipse, #FDB71A 0%, transparent 70%)" }}
@@ -115,7 +191,7 @@ export default function LandingPage() {
         {/* CTA principal */}
         <Link
           href="/taller"
-          className="relative z-10 group inline-flex items-center gap-3 px-8 py-4 rounded-2xl font-black text-lg text-white transition-all"
+          className="relative z-10 group inline-flex items-center gap-3 px-8 py-4 rounded-2xl font-black text-lg text-white transition-all hover:scale-105"
           style={{
             background: "#FF5722",
             boxShadow: "0 0 30px rgba(255,87,34,0.50), 0 4px 24px rgba(0,0,0,0.40)",
@@ -126,8 +202,123 @@ export default function LandingPage() {
           <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
         </Link>
 
+        {/* ── Panel de Autoridad / Social Proof ── */}
+        <div
+          className="relative z-10 mt-8 w-full max-w-2xl rounded-2xl overflow-hidden"
+          style={{
+            background: "rgba(255,215,0,0.04)",
+            backdropFilter: "blur(16px)",
+            border: "1px solid rgba(184,134,11,0.35)",
+            boxShadow: "0 0 40px rgba(255,215,0,0.08), inset 0 1px 0 rgba(255,215,0,0.12)",
+          }}
+        >
+          {/* Franja dorada superior */}
+          <div
+            className="h-0.5 w-full"
+            style={{ background: "linear-gradient(90deg, transparent, #FFD700, transparent)" }}
+          />
+
+          <div className="flex items-stretch divide-x"
+            style={{ divideColor: "rgba(184,134,11,0.25)" }}>
+
+            {/* Insignia 1 — MercadoLider Platinum */}
+            <div className="flex-1 flex flex-col items-center text-center px-4 py-5">
+              <div className="flex items-center gap-1 mb-2">
+                <Laurel side="left" />
+                <span className="text-2xl">👑</span>
+                <Laurel side="right" />
+              </div>
+              <div
+                className="w-16 h-16 rounded-full flex flex-col items-center justify-center mb-2"
+                style={{
+                  background: "radial-gradient(circle, #2a2000 0%, #1a1400 100%)",
+                  border: "2px solid #B8860B",
+                  boxShadow: "0 0 14px rgba(255,215,0,0.35)",
+                }}
+              >
+                <p className="text-[9px] font-bold text-yellow-400 leading-tight text-center px-1">
+                  mercado<br />libre
+                </p>
+              </div>
+              <p className="text-xs font-black text-yellow-300">MercadoLíder</p>
+              <p
+                className="text-sm font-black mt-0.5"
+                style={{ color: "#FFD700", textShadow: "0 0 8px rgba(255,215,0,0.60)" }}
+              >
+                PLATINUM
+              </p>
+            </div>
+
+            {/* Divisor */}
+            <div style={{ width: "1px", background: "rgba(184,134,11,0.25)" }} />
+
+            {/* Insignia 2 — 30 Años */}
+            <div className="flex-1 flex flex-col items-center text-center px-4 py-5">
+              <div className="flex items-center gap-1 mb-2">
+                <Laurel side="left" />
+                <span className="text-2xl">🏆</span>
+                <Laurel side="right" />
+              </div>
+              <div
+                className="w-16 h-16 rounded-full flex flex-col items-center justify-center mb-2"
+                style={{
+                  background: "radial-gradient(circle, #2a2000 0%, #1a1400 100%)",
+                  border: "2px solid #B8860B",
+                  boxShadow: "0 0 14px rgba(255,215,0,0.35)",
+                }}
+              >
+                <p
+                  className="text-2xl font-black leading-none"
+                  style={{ color: "#FFD700", textShadow: "0 0 8px rgba(255,215,0,0.70)" }}
+                >30</p>
+                <p className="text-[9px] text-yellow-500 font-bold">Años</p>
+              </div>
+              <p className="text-xs font-black text-yellow-300">de Experiencia</p>
+              <p className="text-[10px] text-yellow-600 mt-0.5">técnica y profesional</p>
+            </div>
+
+            {/* Divisor */}
+            <div style={{ width: "1px", background: "rgba(184,134,11,0.25)" }} />
+
+            {/* Insignia 3 — 100% Positivas */}
+            <div className="flex-1 flex flex-col items-center text-center px-4 py-5">
+              <div className="flex gap-0.5 justify-center mb-2">
+                {[...Array(5)].map((_, i) => (
+                  <Star
+                    key={i}
+                    className="w-4 h-4 fill-current"
+                    style={{ color: "#FFD700", filter: "drop-shadow(0 0 3px rgba(255,215,0,0.80))" }}
+                  />
+                ))}
+              </div>
+              <div
+                className="w-16 h-16 rounded-full flex flex-col items-center justify-center mb-2"
+                style={{
+                  background: "radial-gradient(circle, #2a2000 0%, #1a1400 100%)",
+                  border: "2px solid #B8860B",
+                  boxShadow: "0 0 14px rgba(255,215,0,0.35)",
+                }}
+              >
+                <p
+                  className="text-lg font-black leading-none"
+                  style={{ color: "#FFD700", textShadow: "0 0 8px rgba(255,215,0,0.70)" }}
+                >100%</p>
+              </div>
+              <p className="text-xs font-black text-yellow-300">Calificaciones</p>
+              <p className="text-xs font-black text-yellow-300">Positivas</p>
+              <p className="text-[10px] text-yellow-600 mt-0.5">Reseñas verificadas</p>
+            </div>
+          </div>
+
+          {/* Franja dorada inferior */}
+          <div
+            className="h-0.5 w-full"
+            style={{ background: "linear-gradient(90deg, transparent, #FFD700, transparent)" }}
+          />
+        </div>
+
         {/* Highlights */}
-        <div className="relative z-10 flex flex-wrap justify-center gap-4 mt-8">
+        <div className="relative z-10 flex flex-wrap justify-center gap-4 mt-6">
           {HIGHLIGHTS.map(({ icon: Icon, text }) => (
             <div key={text} className="flex items-center gap-2 text-sm text-gray-500">
               <Icon className="w-4 h-4 text-[#FDB71A]" />
@@ -138,8 +329,8 @@ export default function LandingPage() {
       </section>
 
       {/* ── Feature Cards ── */}
-      <section className="px-4 pb-16 max-w-4xl mx-auto">
-        <h2 className="text-center text-xl font-bold text-gray-400 mb-6 uppercase tracking-widest text-sm">
+      <section className="px-4 pb-12 max-w-4xl mx-auto">
+        <h2 className="text-center text-xs font-bold text-gray-600 mb-6 uppercase tracking-widest">
           Módulos del sistema
         </h2>
 
@@ -156,14 +347,12 @@ export default function LandingPage() {
                 boxShadow: `0 0 20px ${glow}`,
               }}
             >
-              {/* Glow hover */}
               <div
                 className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
                 style={{ background: `radial-gradient(ellipse at top left, ${glow} 0%, transparent 60%)` }}
               />
 
               <div className="relative z-10">
-                {/* Ícono */}
                 <div
                   className="w-12 h-12 rounded-xl flex items-center justify-center mb-4"
                   style={{ background: color + "20", border: `1px solid ${border}` }}
@@ -171,30 +360,21 @@ export default function LandingPage() {
                   <Icon className="w-6 h-6" style={{ color }} />
                 </div>
 
-                {/* Título */}
                 <h3 className="text-lg font-black text-white mb-2">{title}</h3>
-
-                {/* Descripción */}
                 <p className="text-sm text-gray-400 leading-relaxed mb-4">{desc}</p>
 
-                {/* Tags */}
                 <div className="flex flex-wrap gap-1.5">
                   {tags.map(tag => (
                     <span
                       key={tag}
                       className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-                      style={{
-                        background: color + "15",
-                        border: `1px solid ${color}40`,
-                        color,
-                      }}
+                      style={{ background: color + "15", border: `1px solid ${color}40`, color }}
                     >
                       {tag}
                     </span>
                   ))}
                 </div>
 
-                {/* Flecha */}
                 <div className="flex items-center gap-1 mt-4 text-xs font-semibold" style={{ color }}>
                   Abrir módulo
                   <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
@@ -205,10 +385,151 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ── Nosotros / Verdent Story ── */}
+      <section className="px-4 pb-16 max-w-4xl mx-auto">
+        <div
+          className="rounded-2xl overflow-hidden"
+          style={{
+            background: "rgba(31,31,31,0.70)",
+            backdropFilter: "blur(12px)",
+            border: "1px solid rgba(255,255,255,0.07)",
+          }}
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-2">
+            {/* Columna izquierda — imagen artística */}
+            <div
+              className="relative min-h-[240px] sm:min-h-[320px] overflow-hidden"
+              style={{
+                background: "linear-gradient(135deg, #1a1200 0%, #0f1a2e 100%)",
+              }}
+            >
+              {/* Cuaderno antiguo simulado */}
+              <div className="absolute inset-0 flex items-center justify-center p-8">
+                <div className="relative w-full max-w-xs">
+                  {/* Cuaderno */}
+                  <div
+                    className="absolute left-0 top-4 w-[55%] h-[180px] rounded-lg p-4"
+                    style={{
+                      background: "linear-gradient(145deg, #c8b08a 0%, #a0855a 100%)",
+                      boxShadow: "4px 4px 20px rgba(0,0,0,0.60)",
+                      transform: "rotate(-4deg)",
+                    }}
+                  >
+                    <div className="border-b border-amber-700/40 pb-1 mb-2">
+                      <p className="text-[8px] font-bold text-amber-900 uppercase tracking-wider">Taller Maqjeez</p>
+                    </div>
+                    {[...Array(7)].map((_, i) => (
+                      <div key={i} className="h-px bg-amber-700/30 mb-2.5" />
+                    ))}
+                    <div className="flex gap-2 mt-3 opacity-60">
+                      <div className="w-8 h-8 rounded border border-amber-800/50 flex items-center justify-center">
+                        <Wrench className="w-4 h-4 text-amber-800" />
+                      </div>
+                      <div className="w-8 h-8 rounded border border-amber-800/50 flex items-center justify-center">
+                        <Package className="w-4 h-4 text-amber-800" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Pantalla de código */}
+                  <div
+                    className="absolute right-0 top-0 w-[55%] h-[180px] rounded-lg p-3"
+                    style={{
+                      background: "#0d1117",
+                      border: "1px solid rgba(0,229,255,0.30)",
+                      boxShadow: "0 0 20px rgba(0,229,255,0.15), 4px 4px 20px rgba(0,0,0,0.60)",
+                      transform: "rotate(3deg)",
+                    }}
+                  >
+                    <div className="flex gap-1 mb-2">
+                      <div className="w-2 h-2 rounded-full bg-red-500" />
+                      <div className="w-2 h-2 rounded-full bg-yellow-500" />
+                      <div className="w-2 h-2 rounded-full bg-green-500" />
+                    </div>
+                    {[
+                      { color: "#00E5FF", text: "const taller = " },
+                      { color: "#39FF14", text: "  new Maqjeez();" },
+                      { color: "#A855F7", text: "await supabase" },
+                      { color: "#FDB71A", text: "  .from('ordenes')" },
+                      { color: "#00E5FF", text: "  .select('*');" },
+                    ].map((line, i) => (
+                      <p key={i} className="text-[8px] font-mono" style={{ color: line.color }}>
+                        {line.text}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Año overlay */}
+              <div className="absolute bottom-4 left-4">
+                <span
+                  className="text-4xl font-black opacity-10"
+                  style={{ color: "#FFD700" }}
+                >1995</span>
+              </div>
+              <div className="absolute bottom-4 right-4">
+                <span
+                  className="text-4xl font-black opacity-10"
+                  style={{ color: "#00E5FF" }}
+                >2026</span>
+              </div>
+            </div>
+
+            {/* Columna derecha — texto */}
+            <div className="p-8 flex flex-col justify-center">
+              <div className="flex items-center gap-2 mb-3">
+                <div
+                  className="w-1 h-12 rounded-full"
+                  style={{ background: "linear-gradient(to bottom, #FFD700, #FF5722)" }}
+                />
+                <div>
+                  <p className="text-xs text-yellow-500 font-bold uppercase tracking-widest">Nuestra Historia</p>
+                  <h3 className="text-xl font-black text-white leading-tight">
+                    De los cuadernos de hace<br />
+                    <span style={{ color: "#FFD700" }}>30 años</span> a la IA y Supabase
+                  </h3>
+                </div>
+              </div>
+
+              <p className="text-gray-400 text-sm leading-relaxed mb-4">
+                Maqjeez nació en el mostrador del taller, de la necesidad de eficiencia. Más de tres décadas atendiendo desmalezadoras, motosierras y motoherramientas de todo tipo nos dieron una visión única del negocio.
+              </p>
+              <p className="text-gray-500 text-sm leading-relaxed mb-6">
+                Hoy, somos un equipo de expertos mecánicos impulsados por <span className="text-[#00E5FF] font-semibold">Verdent IA</span>, combinando el conocimiento del taller con tecnología de punta para que cada orden, cada venta y cada envío Flex sea perfecto.
+              </p>
+
+              <div className="flex flex-wrap gap-3">
+                {[
+                  { label: "+30", sub: "años de taller" },
+                  { label: "5★",  sub: "calificaciones ML" },
+                  { label: "IA",  sub: "Verdent powered" },
+                ].map(({ label, sub }) => (
+                  <div
+                    key={sub}
+                    className="flex flex-col items-center px-4 py-2 rounded-xl"
+                    style={{
+                      background: "rgba(255,215,0,0.07)",
+                      border: "1px solid rgba(184,134,11,0.30)",
+                    }}
+                  >
+                    <p
+                      className="text-xl font-black"
+                      style={{ color: "#FFD700", textShadow: "0 0 8px rgba(255,215,0,0.40)" }}
+                    >{label}</p>
+                    <p className="text-[10px] text-yellow-700 font-semibold">{sub}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ── Footer ── */}
       <footer className="border-t border-white/5 py-6 text-center">
         <p className="text-gray-700 text-xs">
-          MAQJEEZ Repuestos · Sistema de Gestión v2.0 · 2026
+          MAQJEEZ Repuestos · Sistema de Gestión v2.0 · 2026 · Powered by Verdent IA
         </p>
       </footer>
     </div>
