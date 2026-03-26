@@ -78,80 +78,6 @@ const HIGHLIGHTS = [
   { icon: Shield,     text: "Anti-duplicados y validación OCR" },
 ];
 
-/* ── Laurel SVG (decorativo) ── */
-function Laurel({ side }: { side: "left" | "right" }) {
-  const d = side === "left"
-    ? "M12 2 C8 6 4 10 4 16 C4 20 6 23 8 25 M10 4 C7 8 5 12 5 17 M8 7 C5 11 4 15 4 20"
-    : "M12 2 C16 6 20 10 20 16 C20 20 18 23 16 25 M14 4 C17 8 19 12 19 17 M16 7 C19 11 20 15 20 20";
-  return (
-    <svg viewBox="0 0 24 28" className="w-8 h-10 opacity-70" fill="none">
-      <path d={d} stroke="url(#gold)" strokeWidth="1.5" strokeLinecap="round" />
-      <defs>
-        <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#FFD700" />
-          <stop offset="100%" stopColor="#B8860B" />
-        </linearGradient>
-      </defs>
-    </svg>
-  );
-}
-
-/* ── Insignia de autoridad ── */
-function AuthBadge({
-  emoji,
-  title,
-  subtitle,
-  extra,
-  stars,
-}: {
-  emoji?: string;
-  title: string;
-  subtitle: string;
-  extra?: string;
-  stars?: boolean;
-}) {
-  return (
-    <div className="flex-1 flex flex-col items-center text-center px-4 py-3 min-w-[140px]">
-      {/* Corona / Medalla / Estrellas */}
-      <div className="mb-2">
-        {stars ? (
-          <div className="flex gap-0.5 justify-center">
-            {[...Array(5)].map((_, i) => (
-              <Star
-                key={i}
-                className="w-5 h-5 fill-current"
-                style={{ color: "#FFD700", filter: "drop-shadow(0 0 4px rgba(255,215,0,0.80))" }}
-              />
-            ))}
-          </div>
-        ) : (
-          <span className="text-3xl">{emoji}</span>
-        )}
-      </div>
-
-      {/* Círculo dorado */}
-      <div
-        className="w-16 h-16 rounded-full flex items-center justify-center mb-2"
-        style={{
-          background: "radial-gradient(circle, #2a2000 0%, #1a1400 100%)",
-          border: "2px solid #B8860B",
-          boxShadow: "0 0 14px rgba(255,215,0,0.35), inset 0 0 10px rgba(255,215,0,0.10)",
-        }}
-      >
-        <p
-          className="text-lg font-black leading-none"
-          style={{ color: "#FFD700", textShadow: "0 0 8px rgba(255,215,0,0.70)" }}
-        >
-          {title}
-        </p>
-      </div>
-
-      <p className="text-xs font-bold text-yellow-300 leading-snug">{subtitle}</p>
-      {extra && <p className="text-[10px] text-yellow-600 mt-0.5">{extra}</p>}
-    </div>
-  );
-}
-
 export default function LandingPage() {
   return (
     <div
@@ -204,117 +130,177 @@ export default function LandingPage() {
 
         {/* ── Panel de Autoridad / Social Proof ── */}
         <div
-          className="relative z-10 mt-8 w-full max-w-2xl rounded-2xl overflow-hidden"
+          className="relative z-10 mt-8 w-full max-w-2xl rounded-2xl px-6 py-6"
           style={{
-            background: "rgba(255,215,0,0.04)",
-            backdropFilter: "blur(16px)",
-            border: "1px solid rgba(184,134,11,0.35)",
-            boxShadow: "0 0 40px rgba(255,215,0,0.08), inset 0 1px 0 rgba(255,215,0,0.12)",
+            background: "linear-gradient(180deg, #1a1200 0%, #0d0900 100%)",
+            border: "1px solid rgba(184,134,11,0.40)",
+            boxShadow: "0 0 40px rgba(255,215,0,0.10)",
           }}
         >
-          {/* Franja dorada superior */}
-          <div
-            className="h-0.5 w-full"
-            style={{ background: "linear-gradient(90deg, transparent, #FFD700, transparent)" }}
-          />
+          <div className="flex items-start justify-around gap-4 flex-wrap sm:flex-nowrap">
 
-          <div className="flex items-stretch"
-            style={{ borderColor: "rgba(184,134,11,0.25)" }}>
-
-            {/* Insignia 1 — MercadoLider Platinum */}
-            <div className="flex-1 flex flex-col items-center text-center px-4 py-5">
-              <div className="flex items-center gap-1 mb-2">
-                <Laurel side="left" />
-                <span className="text-2xl">👑</span>
-                <Laurel side="right" />
+            {/* ── Insignia 1: MercadoLíder Platinum ── */}
+            <div className="flex flex-col items-center text-center gap-2 flex-1 min-w-[130px]">
+              <div className="relative w-28 h-28 flex items-center justify-center">
+                {/* Laurel SVG */}
+                <svg viewBox="0 0 120 120" className="absolute inset-0 w-full h-full" fill="none">
+                  {/* Rama izquierda */}
+                  {[0,15,30,45,60,75].map((angle, i) => (
+                    <ellipse key={`l${i}`}
+                      cx={60 - 38 * Math.cos((210 + angle) * Math.PI / 180)}
+                      cy={60 - 38 * Math.sin((210 + angle) * Math.PI / 180)}
+                      rx="7" ry="4"
+                      transform={`rotate(${210 + angle + 90} ${60 - 38 * Math.cos((210 + angle) * Math.PI / 180)} ${60 - 38 * Math.sin((210 + angle) * Math.PI / 180)})`}
+                      fill="url(#gl)"
+                    />
+                  ))}
+                  {/* Rama derecha */}
+                  {[0,15,30,45,60,75].map((angle, i) => (
+                    <ellipse key={`r${i}`}
+                      cx={60 + 38 * Math.cos((210 + angle) * Math.PI / 180)}
+                      cy={60 - 38 * Math.sin((210 + angle) * Math.PI / 180)}
+                      rx="7" ry="4"
+                      transform={`rotate(${-(210 + angle) + 90} ${60 + 38 * Math.cos((210 + angle) * Math.PI / 180)} ${60 - 38 * Math.sin((210 + angle) * Math.PI / 180)})`}
+                      fill="url(#gl)"
+                    />
+                  ))}
+                  <defs>
+                    <linearGradient id="gl" x1="0" y1="0" x2="1" y2="1">
+                      <stop offset="0%" stopColor="#FFD700" />
+                      <stop offset="100%" stopColor="#8B6914" />
+                    </linearGradient>
+                  </defs>
+                </svg>
+                {/* Medallón */}
+                <div className="relative z-10 w-20 h-20 rounded-full flex flex-col items-center justify-center"
+                  style={{
+                    background: "radial-gradient(circle at 35% 35%, #c8960c 0%, #7a5800 60%, #3d2c00 100%)",
+                    border: "3px solid #FFD700",
+                    boxShadow: "0 0 16px rgba(255,215,0,0.50), inset 0 2px 4px rgba(255,255,255,0.15)",
+                  }}>
+                  {/* Logo ML simplificado */}
+                  <div className="w-10 h-10 rounded-full bg-[#FFE600] flex items-center justify-center mb-0.5"
+                    style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.40)" }}>
+                    <span className="text-[#003087] font-black text-[8px] leading-tight text-center">mercado<br/>libre</span>
+                  </div>
+                </div>
               </div>
-              <div
-                className="w-16 h-16 rounded-full flex flex-col items-center justify-center mb-2"
+              {/* Banner Platinum */}
+              <div className="px-5 py-1 rounded"
                 style={{
-                  background: "radial-gradient(circle, #2a2000 0%, #1a1400 100%)",
-                  border: "2px solid #B8860B",
-                  boxShadow: "0 0 14px rgba(255,215,0,0.35)",
-                }}
-              >
-                <p className="text-[9px] font-bold text-yellow-400 leading-tight text-center px-1">
-                  mercado<br />libre
-                </p>
+                  background: "linear-gradient(90deg, #7a7a7a 0%, #d4d4d4 40%, #ffffff 50%, #d4d4d4 60%, #7a7a7a 100%)",
+                  boxShadow: "0 2px 6px rgba(0,0,0,0.50)",
+                }}>
+                <span className="text-xs font-black text-gray-800 tracking-widest uppercase">Platinum</span>
               </div>
-              <p className="text-xs font-black text-yellow-300">MercadoLíder</p>
-              <p
-                className="text-sm font-black mt-0.5"
-                style={{ color: "#FFD700", textShadow: "0 0 8px rgba(255,215,0,0.60)" }}
-              >
-                PLATINUM
-              </p>
+              <p className="text-[11px] text-yellow-400 font-bold">MercadoLíder</p>
+              <p className="text-[10px] text-yellow-700">Gold Seller</p>
             </div>
 
             {/* Divisor */}
-            <div style={{ width: "1px", background: "rgba(184,134,11,0.25)" }} />
+            <div className="hidden sm:block w-px self-stretch"
+              style={{ background: "linear-gradient(to bottom, transparent, #B8860B, transparent)" }} />
 
-            {/* Insignia 2 — 30 Años */}
-            <div className="flex-1 flex flex-col items-center text-center px-4 py-5">
-              <div className="flex items-center gap-1 mb-2">
-                <Laurel side="left" />
-                <span className="text-2xl">🏆</span>
-                <Laurel side="right" />
+            {/* ── Insignia 2: 30 Años ── */}
+            <div className="flex flex-col items-center text-center gap-2 flex-1 min-w-[130px]">
+              <div className="relative w-28 h-28 flex items-center justify-center">
+                <svg viewBox="0 0 120 120" className="absolute inset-0 w-full h-full" fill="none">
+                  {[0,15,30,45,60,75].map((angle, i) => (
+                    <ellipse key={`l${i}`}
+                      cx={60 - 38 * Math.cos((210 + angle) * Math.PI / 180)}
+                      cy={60 - 38 * Math.sin((210 + angle) * Math.PI / 180)}
+                      rx="7" ry="4"
+                      transform={`rotate(${210 + angle + 90} ${60 - 38 * Math.cos((210 + angle) * Math.PI / 180)} ${60 - 38 * Math.sin((210 + angle) * Math.PI / 180)})`}
+                      fill="url(#gl2)"
+                    />
+                  ))}
+                  {[0,15,30,45,60,75].map((angle, i) => (
+                    <ellipse key={`r${i}`}
+                      cx={60 + 38 * Math.cos((210 + angle) * Math.PI / 180)}
+                      cy={60 - 38 * Math.sin((210 + angle) * Math.PI / 180)}
+                      rx="7" ry="4"
+                      transform={`rotate(${-(210 + angle) + 90} ${60 + 38 * Math.cos((210 + angle) * Math.PI / 180)} ${60 - 38 * Math.sin((210 + angle) * Math.PI / 180)})`}
+                      fill="url(#gl2)"
+                    />
+                  ))}
+                  <defs>
+                    <linearGradient id="gl2" x1="0" y1="0" x2="1" y2="1">
+                      <stop offset="0%" stopColor="#FFD700" />
+                      <stop offset="100%" stopColor="#8B6914" />
+                    </linearGradient>
+                  </defs>
+                </svg>
+                <div className="relative z-10 w-20 h-20 rounded-full flex flex-col items-center justify-center"
+                  style={{
+                    background: "radial-gradient(circle at 35% 35%, #c8960c 0%, #7a5800 60%, #3d2c00 100%)",
+                    border: "3px solid #FFD700",
+                    boxShadow: "0 0 16px rgba(255,215,0,0.50), inset 0 2px 4px rgba(255,255,255,0.15)",
+                  }}>
+                  <p className="text-3xl font-black leading-none"
+                    style={{ color: "#FFD700", textShadow: "0 0 10px rgba(255,215,0,0.80)" }}>30</p>
+                  <p className="text-[10px] font-bold text-yellow-300 tracking-wider">Años</p>
+                </div>
               </div>
-              <div
-                className="w-16 h-16 rounded-full flex flex-col items-center justify-center mb-2"
-                style={{
-                  background: "radial-gradient(circle, #2a2000 0%, #1a1400 100%)",
-                  border: "2px solid #B8860B",
-                  boxShadow: "0 0 14px rgba(255,215,0,0.35)",
-                }}
-              >
-                <p
-                  className="text-2xl font-black leading-none"
-                  style={{ color: "#FFD700", textShadow: "0 0 8px rgba(255,215,0,0.70)" }}
-                >30</p>
-                <p className="text-[9px] text-yellow-500 font-bold">Años</p>
-              </div>
-              <p className="text-xs font-black text-yellow-300">de Experiencia</p>
-              <p className="text-[10px] text-yellow-600 mt-0.5">técnica y profesional</p>
+              <p className="text-[11px] text-yellow-400 font-bold">de Experiencia técnica</p>
+              <p className="text-[10px] text-yellow-700">y profesionalismo</p>
             </div>
 
             {/* Divisor */}
-            <div style={{ width: "1px", background: "rgba(184,134,11,0.25)" }} />
+            <div className="hidden sm:block w-px self-stretch"
+              style={{ background: "linear-gradient(to bottom, transparent, #B8860B, transparent)" }} />
 
-            {/* Insignia 3 — 100% Positivas */}
-            <div className="flex-1 flex flex-col items-center text-center px-4 py-5">
-              <div className="flex gap-0.5 justify-center mb-2">
-                {[...Array(5)].map((_, i) => (
-                  <Star
-                    key={i}
-                    className="w-4 h-4 fill-current"
-                    style={{ color: "#FFD700", filter: "drop-shadow(0 0 3px rgba(255,215,0,0.80))" }}
-                  />
-                ))}
+            {/* ── Insignia 3: 100% Positivas ── */}
+            <div className="flex flex-col items-center text-center gap-2 flex-1 min-w-[130px]">
+              {/* 5 estrellas sobre el medallón */}
+              <div className="relative w-28 h-28 flex items-center justify-center">
+                {/* Estrellas encima */}
+                <div className="absolute -top-1 flex gap-0.5 z-20">
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} className="w-5 h-5 fill-current"
+                      style={{ color: "#FFD700", filter: "drop-shadow(0 0 4px rgba(255,215,0,0.90))" }} />
+                  ))}
+                </div>
+                <svg viewBox="0 0 120 120" className="absolute inset-0 w-full h-full" fill="none">
+                  {[0,15,30,45,60,75].map((angle, i) => (
+                    <ellipse key={`l${i}`}
+                      cx={60 - 38 * Math.cos((210 + angle) * Math.PI / 180)}
+                      cy={60 - 38 * Math.sin((210 + angle) * Math.PI / 180)}
+                      rx="7" ry="4"
+                      transform={`rotate(${210 + angle + 90} ${60 - 38 * Math.cos((210 + angle) * Math.PI / 180)} ${60 - 38 * Math.sin((210 + angle) * Math.PI / 180)})`}
+                      fill="url(#gl3)"
+                    />
+                  ))}
+                  {[0,15,30,45,60,75].map((angle, i) => (
+                    <ellipse key={`r${i}`}
+                      cx={60 + 38 * Math.cos((210 + angle) * Math.PI / 180)}
+                      cy={60 - 38 * Math.sin((210 + angle) * Math.PI / 180)}
+                      rx="7" ry="4"
+                      transform={`rotate(${-(210 + angle) + 90} ${60 + 38 * Math.cos((210 + angle) * Math.PI / 180)} ${60 - 38 * Math.sin((210 + angle) * Math.PI / 180)})`}
+                      fill="url(#gl3)"
+                    />
+                  ))}
+                  <defs>
+                    <linearGradient id="gl3" x1="0" y1="0" x2="1" y2="1">
+                      <stop offset="0%" stopColor="#FFD700" />
+                      <stop offset="100%" stopColor="#8B6914" />
+                    </linearGradient>
+                  </defs>
+                </svg>
+                <div className="relative z-10 w-20 h-20 rounded-full flex flex-col items-center justify-center"
+                  style={{
+                    background: "radial-gradient(circle at 35% 35%, #c8960c 0%, #7a5800 60%, #3d2c00 100%)",
+                    border: "3px solid #FFD700",
+                    boxShadow: "0 0 16px rgba(255,215,0,0.50), inset 0 2px 4px rgba(255,255,255,0.15)",
+                  }}>
+                  <p className="text-xl font-black leading-none"
+                    style={{ color: "#FFD700", textShadow: "0 0 10px rgba(255,215,0,0.80)" }}>100%</p>
+                </div>
               </div>
-              <div
-                className="w-16 h-16 rounded-full flex flex-col items-center justify-center mb-2"
-                style={{
-                  background: "radial-gradient(circle, #2a2000 0%, #1a1400 100%)",
-                  border: "2px solid #B8860B",
-                  boxShadow: "0 0 14px rgba(255,215,0,0.35)",
-                }}
-              >
-                <p
-                  className="text-lg font-black leading-none"
-                  style={{ color: "#FFD700", textShadow: "0 0 8px rgba(255,215,0,0.70)" }}
-                >100%</p>
-              </div>
-              <p className="text-xs font-black text-yellow-300">Calificaciones</p>
-              <p className="text-xs font-black text-yellow-300">Positivas</p>
-              <p className="text-[10px] text-yellow-600 mt-0.5">Reseñas verificadas</p>
+              <p className="text-[11px] text-yellow-400 font-bold">Calificaciones Positivas</p>
+              <p className="text-[10px] text-yellow-700">Reseñas Verificadas<br/>de Clientes</p>
             </div>
+
           </div>
-
-          {/* Franja dorada inferior */}
-          <div
-            className="h-0.5 w-full"
-            style={{ background: "linear-gradient(90deg, transparent, #FFD700, transparent)" }}
-          />
         </div>
 
         {/* Highlights */}
