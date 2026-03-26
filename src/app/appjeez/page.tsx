@@ -262,7 +262,7 @@ function AccountPanel({ data, defaultOpen }: { data: AccountDash; defaultOpen?: 
             </p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {[
-                { label: "Ver preguntas",    color: "#FF5722", href: `https://www.mercadolibre.com.ar/preguntas/respondidas`, icon: <MessageCircle className="w-4 h-4" /> },
+                { label: "Ver preguntas",    color: "#FF5722", href: `/appjeez/mensajes`, icon: <MessageCircle className="w-4 h-4" /> },
                 { label: "Ver ventas",       color: "#39FF14", href: `https://ventas.mercadolibre.com.ar/list`, icon: <ShoppingCart className="w-4 h-4" /> },
                 { label: "Ver envíos",       color: "#00E5FF", href: `https://envios.mercadolibre.com.ar/list`, icon: <Truck className="w-4 h-4" /> },
                 { label: "Ver publicaciones",color: "#FFE600", href: `/appjeez/${data.meli_user_id}/items`, icon: <Package className="w-4 h-4" /> },
@@ -317,12 +317,13 @@ function AppJeezInner() {
   const totalAmount = accounts.reduce((s, a) => s + (a.today_sales_amount ?? 0), 0);
 
   const navItems = [
-    { label: "Dashboard",       icon: <BarChart2 className="w-4 h-4" />,     href: "/appjeez",           active: true },
-    { label: "Publicaciones",   icon: <Package className="w-4 h-4" />,       href: "/appjeez/items",     active: false },
-    { label: "Ventas",          icon: <ShoppingCart className="w-4 h-4" />,  href: "/ventas",            active: false },
-    { label: "Envíos",          icon: <Truck className="w-4 h-4" />,         href: "/flex",              active: false },
-    { label: "Cuentas MeLi",    icon: <Store className="w-4 h-4" />,         href: "/configuracion/meli",active: false },
-    { label: "Taller",          icon: <Settings className="w-4 h-4" />,      href: "/taller",            active: false },
+    { label: "Dashboard",       icon: <BarChart2 className="w-4 h-4" />,       href: "/appjeez",              active: true  },
+    { label: "Mensajería",      icon: <MessageCircle className="w-4 h-4" />,   href: "/appjeez/mensajes",     active: false },
+    { label: "Publicaciones",   icon: <Package className="w-4 h-4" />,         href: "/appjeez/items",        active: false },
+    { label: "Ventas",          icon: <ShoppingCart className="w-4 h-4" />,    href: "/ventas",               active: false },
+    { label: "Envíos",          icon: <Truck className="w-4 h-4" />,           href: "/flex",                 active: false },
+    { label: "Cuentas MeLi",    icon: <Store className="w-4 h-4" />,           href: "/configuracion/meli",   active: false },
+    { label: "Taller",          icon: <Settings className="w-4 h-4" />,        href: "/taller",               active: false },
   ];
 
   return (
