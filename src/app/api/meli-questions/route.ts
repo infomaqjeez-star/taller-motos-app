@@ -25,7 +25,14 @@ async function decrypt(encBase64: string, passphrase: string): Promise<string> {
   return new TextDecoder().decode(plain);
 }
 
-export async function GET() {
+export async function GET(req: Request) {
+  const debug = new URL(req.url).searchParams.get("debug") === "1";
+
+  const logs: string[] = [];
+  logs.push(`enc_key_set:${!!ENC_KEY}`);
+  logs.push(`service_key_set:${!!SERVICE_KEY}`);
+  logs.push(`supa_url:${SUPA_URL}`);
+
   try {
     const supabase = createClient(SUPA_URL, SERVICE_KEY);
 
@@ -34,41 +41,46 @@ export async function GET() {
       .select("id, meli_user_id, nickname, access_token_enc")
       .eq("status", "active");
 
+    logs.push(`accounts_count:${accounts?.length ?? 0}`);
+    if (error) logs.push(`db_error:${error.message}`);
+
     if (error || !accounts?.length) {
-      return NextResponse.json([]);
+      return NextResponse.json(debug ? { logs, questions: [] } : []);
     }
 
     const allQuestions: object[] = [];
     const itemCache: Record<string, string> = {};
+    const accLogs: object[] = [];
 
     for (const acc of accounts) {
+      const alog: Record<string, unknown> = { nickname: acc.nickname, meli_user_id: acc.meli_user_id };
       try {
         const token = await decrypt(acc.access_token_enc, ENC_KEY);
+        alog.token_ok = true;
 
-        // Endpoint correcto para preguntas recibidas en MeLi Argentina
         const url = `https://api.mercadolibre.com/questions/search?seller_id=${acc.meli_user_id}&status=UNANSWERED&limit=50`;
-        const qRes = await fetch(url, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const qRes = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+        alog.meli_status = qRes.status;
 
         if (!qRes.ok) {
-          console.error(`MeLi questions error for ${acc.nickname}: HTTP ${qRes.status}`);
+          const body = await qRes.text();
+          alog.meli_error = body.slice(0, 300);
+          accLogs.push(alog);
           continue;
         }
 
         const qData = await qRes.json() as {
           questions?: {
-            id: number;
-            item_id: string;
-            text: string;
-            status: string;
-            date_created: string;
-            from: { id: number; nickname?: string };
+            id: number; item_id: string; text: string; status: string;
+            date_created: string; from: { id: number; nickname?: string };
             answer?: { text: string; date_created: string };
           }[];
+          total?: number;
         };
 
+        alog.total_meli = qData.total ?? 0;
         const questions = qData.questions ?? [];
+        alog.questions_count = questions.length;
 
         for (const q of questions) {
           if (!itemCache[q.item_id]) {
@@ -80,9 +92,7 @@ export async function GET() {
               itemCache[q.item_id] = iRes.ok
                 ? ((await iRes.json()) as { title?: string }).title ?? q.item_id
                 : q.item_id;
-            } catch {
-              itemCache[q.item_id] = q.item_id;
-            }
+            } catch { itemCache[q.item_id] = q.item_id; }
           }
 
           allQuestions.push({
@@ -102,12 +112,18 @@ export async function GET() {
           });
         }
       } catch (err) {
-        console.error(`Error processing ${acc.nickname}:`, err);
+        alog.token_ok = false;
+        alog.error = String(err).slice(0, 200);
       }
+      accLogs.push(alog);
     }
 
+    if (debug) return NextResponse.json({ logs, accLogs, total: allQuestions.length, questions: allQuestions });
     return NextResponse.json(allQuestions);
+
   } catch (e) {
-    return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+    const msg = (e as Error).message;
+    if (debug) return NextResponse.json({ logs, fatal: msg }, { status: 500 });
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
