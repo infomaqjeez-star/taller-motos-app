@@ -164,7 +164,7 @@ function VentaCard({ venta, onCancelar }: { venta: VentaRepuesto; onCancelar: (i
             </div>
           ))}
           {venta.notas && (
-            <p className="text-xs text-gray-500 italic mt-1">"{venta.notas}"</p>
+            <p className="text-xs text-gray-500 italic mt-1">&ldquo;{venta.notas}&rdquo;</p>
           )}
           {!cancelada && (
             <button
