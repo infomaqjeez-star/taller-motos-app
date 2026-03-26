@@ -252,45 +252,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── Panel de módulos (solo si MeLi conectado) ── */}
-      {meliStatus === "connected" && (
-        <section className="px-4 pb-4 max-w-4xl mx-auto">
-          <div className="rounded-2xl border border-green-500/20 overflow-hidden"
-            style={{ background: "rgba(57,255,20,0.04)" }}>
-            <div className="flex items-center gap-3 px-5 py-4 border-b border-green-500/10">
-              <CheckCircle className="w-5 h-5 text-green-400" />
-              <div>
-                <p className="text-sm font-black text-green-400">Panel Activo — @{meliNickname}</p>
-                <p className="text-xs text-gray-500">Seleccioná un módulo para comenzar</p>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-4">
-              {[
-                { href: "/vender",    icon: ShoppingCart, label: "Vender",    color: "#FF5722", desc: "Nueva venta de repuestos" },
-                { href: "/flex",      icon: Truck,        label: "Flex",      color: "#00E5FF", desc: "Logística Mercado Envíos" },
-                { href: "/taller",    icon: Wrench,       label: "Taller",    color: "#FDB71A", desc: "Órdenes de reparación" },
-                { href: "/inventario",icon: Package,      label: "Inventario",color: "#39FF14", desc: "Stock de repuestos" },
-                { href: "/dashboard", icon: BarChart2,    label: "Dashboard", color: "#A855F7", desc: "Estadísticas y métricas" },
-                { href: "/configuracion/meli", icon: Settings, label: "MeLi Config", color: "#FFE600", desc: "Cuentas conectadas" },
-              ].map(({ href, icon: Icon, label, color, desc }) => (
-                <Link key={href} href={href}
-                  className="flex flex-col gap-2 p-4 rounded-xl border border-white/5 hover:border-white/15 transition-all hover:-translate-y-0.5"
-                  style={{ background: "#1a1a1a" }}>
-                  <div className="w-9 h-9 rounded-xl flex items-center justify-center"
-                    style={{ background: color + "20" }}>
-                    <Icon className="w-5 h-5" style={{ color }} />
-                  </div>
-                  <div>
-                    <p className="text-sm font-black text-white">{label}</p>
-                    <p className="text-xs text-gray-500 leading-tight">{desc}</p>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-gray-600 self-end mt-auto" />
-                </Link>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
 
       {/* ── Feature Cards ── */}
       <section className="px-4 pb-12 max-w-4xl mx-auto">
