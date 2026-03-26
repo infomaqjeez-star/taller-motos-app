@@ -318,14 +318,11 @@ function AppJeezInner() {
   const totalAmount = accounts.reduce((s, a) => s + (a.today_sales_amount ?? 0), 0);
 
   const navItems = [
-    { label: "Dashboard",       icon: <BarChart2 className="w-4 h-4" />,       href: "/appjeez",              active: true  },
-    { label: "Mensajería",      icon: <MessageCircle className="w-4 h-4" />,   href: "/appjeez/mensajes",     active: false },
+    { label: "Dashboard",       icon: <BarChart2 className="w-4 h-4" />,       href: "/appjeez",               active: true  },
+    { label: "Mensajería",      icon: <MessageCircle className="w-4 h-4" />,   href: "/appjeez/mensajes",      active: false },
     { label: "Publicaciones",   icon: <Package className="w-4 h-4" />,         href: "/appjeez/publicaciones", active: false },
     { label: "Órdenes",         icon: <ShoppingCart className="w-4 h-4" />,    href: "/appjeez/ordenes",       active: false },
-    { label: "Ventas",          icon: <ShoppingCart className="w-4 h-4" />,    href: "/ventas",               active: false },
-    { label: "Envíos",          icon: <Truck className="w-4 h-4" />,           href: "/flex",                 active: false },
-    { label: "Cuentas MeLi",    icon: <Store className="w-4 h-4" />,           href: "/configuracion/meli",   active: false },
-    { label: "Taller",          icon: <Settings className="w-4 h-4" />,        href: "/taller",               active: false },
+    { label: "Cuentas MeLi",    icon: <Store className="w-4 h-4" />,           href: "/configuracion/meli",    active: false },
   ];
 
   return (
