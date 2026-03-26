@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -46,8 +47,8 @@ function expiresIn(iso: string) {
   return `${Math.floor(h / 24)} días`;
 }
 
-// ── Componente principal ───────────────────────────────────────
-export default function ConfigMeliPage() {
+// ── Componente interno (usa useSearchParams) ───────────────────
+function ConfigMeliContent() {
   const params = useSearchParams();
   const status  = params.get("status");
   const userId  = params.get("user_id");
@@ -276,5 +277,18 @@ export default function ConfigMeliPage() {
         </div>
       )}
     </div>
+  );
+}
+
+// ── Página exportada con Suspense boundary ─────────────────────
+export default function ConfigMeliPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center" style={{ background: "#121212" }}>
+        <p className="text-gray-500 text-sm">Cargando...</p>
+      </div>
+    }>
+      <ConfigMeliContent />
+    </Suspense>
   );
 }
