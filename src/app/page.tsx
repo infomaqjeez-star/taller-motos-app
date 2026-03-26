@@ -194,12 +194,12 @@ export default function LandingPage() {
           {/* CTA principal */}
           {meliStatus === "connected" ? (
             <Link
-              href="/taller"
+              href="/appjeez"
               className="group w-full inline-flex items-center justify-center gap-3 px-8 py-4 rounded-2xl font-black text-lg transition-all hover:scale-105"
               style={{ background: "#FF5722", boxShadow: "0 0 30px rgba(255,87,34,0.50)", color: "#fff" }}
             >
               <Wrench className="w-6 h-6" />
-              Ingresar al Panel
+              Ingresar al Panel AppJeez
               <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
             </Link>
           ) : meliStatus === "disconnected" ? (
