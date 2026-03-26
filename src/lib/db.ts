@@ -584,6 +584,34 @@ export const ventasDb = {
     }
   },
 
+  async update(v: VentaRepuesto): Promise<void> {
+    const { error: ve } = await supabase
+      .from("ventas_repuestos")
+      .update({
+        vendedor:    v.vendedor,
+        metodo_pago: v.metodoPago,
+        total:       v.total,
+        notas:       v.notas,
+      })
+      .eq("id", v.id);
+    if (ve) throw ve;
+
+    await supabase.from("ventas_items").delete().eq("venta_id", v.id);
+    if (v.items.length > 0) {
+      const { error: ie } = await supabase.from("ventas_items").insert(
+        v.items.map(i => ({
+          id:          i.id,
+          venta_id:    v.id,
+          producto:    i.producto,
+          sku:         i.sku,
+          cantidad:    i.cantidad,
+          precio_unit: i.precioUnit,
+        }))
+      );
+      if (ie) throw ie;
+    }
+  },
+
   async cancelar(id: string): Promise<void> {
     const { error } = await supabase
       .from("ventas_repuestos")

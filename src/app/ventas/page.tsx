@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import {
   Plus, Trash2, ShoppingCart, BarChart2, List,
   TrendingUp, Package, CreditCard, ChevronDown,
-  CheckCircle, XCircle, AlertTriangle, Calendar,
+  CheckCircle, XCircle, AlertTriangle, Calendar, Pencil, Save, X,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import BottomNav from "@/components/BottomNav";
@@ -111,7 +111,15 @@ function ItemRow({
 
 // ─── Componente: Tarjeta de venta del día ─────────────────────
 
-function VentaCard({ venta, onCancelar }: { venta: VentaRepuesto; onCancelar: (id: string) => void }) {
+function VentaCard({
+  venta,
+  onCancelar,
+  onEditar,
+}: {
+  venta: VentaRepuesto;
+  onCancelar: (id: string) => void;
+  onEditar: (v: VentaRepuesto) => void;
+}) {
   const [open, setOpen] = useState(false);
   const hora = new Date(venta.createdAt).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
   const cancelada = venta.status === "cancelada";
@@ -167,19 +175,147 @@ function VentaCard({ venta, onCancelar }: { venta: VentaRepuesto; onCancelar: (i
             <p className="text-xs text-gray-500 italic mt-1">&ldquo;{venta.notas}&rdquo;</p>
           )}
           {!cancelada && (
-            <button
-              onClick={() => {
-                if (confirm("¿Anular esta venta? Esta acción no se puede deshacer.")) {
-                  onCancelar(venta.id);
-                }
-              }}
-              className="mt-2 flex items-center gap-2 text-xs text-red-400 hover:text-red-300 font-semibold"
-            >
-              <XCircle className="w-4 h-4" /> Anular Venta
-            </button>
+            <div className="mt-2 flex items-center gap-4">
+              <button
+                onClick={() => onEditar(venta)}
+                className="flex items-center gap-2 text-xs text-blue-400 hover:text-blue-300 font-semibold"
+              >
+                <Pencil className="w-4 h-4" /> Editar Venta
+              </button>
+              <button
+                onClick={() => {
+                  if (confirm("¿Anular esta venta? Esta acción no se puede deshacer.")) {
+                    onCancelar(venta.id);
+                  }
+                }}
+                className="flex items-center gap-2 text-xs text-red-400 hover:text-red-300 font-semibold"
+              >
+                <XCircle className="w-4 h-4" /> Anular Venta
+              </button>
+            </div>
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+// ─── Modal de Edición de Venta ────────────────────────────────
+
+function EditVentaModal({
+  venta,
+  onClose,
+  onSave,
+}: {
+  venta: VentaRepuesto;
+  onClose: () => void;
+  onSave: (v: VentaRepuesto) => Promise<void>;
+}) {
+  const [items, setItems] = useState<VentaItem[]>(
+    venta.items.map(i => ({ ...i, subtotal: i.cantidad * i.precioUnit }))
+  );
+  const [metodoPago, setMetodoPago] = useState<MetodoPago>(venta.metodoPago);
+  const [vendedor, setVendedor] = useState(venta.vendedor);
+  const [notas, setNotas] = useState(venta.notas ?? "");
+  const [saving, setSaving] = useState(false);
+
+  const itemsCalc = items.map(i => ({ ...i, subtotal: i.cantidad * i.precioUnit }));
+  const total = itemsCalc.reduce((s, i) => s + i.subtotal, 0);
+
+  const handleChange = (id: string, field: keyof VentaItem, value: string | number) => {
+    setItems(prev => prev.map(i => i.id === id ? { ...i, [field]: value } : i));
+  };
+  const handleAdd = () => setItems(prev => [...prev, { id: generateId(), ventaId: venta.id, producto: "", sku: "", cantidad: 1, precioUnit: 0, subtotal: 0 }]);
+  const handleRemove = (id: string) => { if (items.length > 1) setItems(prev => prev.filter(i => i.id !== id)); };
+
+  const handleSave = async () => {
+    const valid = itemsCalc.filter(i => i.producto.trim() && i.precioUnit > 0);
+    if (valid.length === 0) return;
+    setSaving(true);
+    await onSave({ ...venta, items: valid, metodoPago, vendedor, notas, total });
+    setSaving(false);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+      style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(6px)" }}>
+      <div className="w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl overflow-hidden"
+        style={{ background: "#1a1a1a", border: "1px solid rgba(255,255,255,0.10)", maxHeight: "90vh", overflowY: "auto" }}>
+
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b border-white/10 sticky top-0"
+          style={{ background: "#1a1a1a" }}>
+          <h2 className="text-base font-black text-white flex items-center gap-2">
+            <Pencil className="w-4 h-4 text-blue-400" /> Editar Venta
+          </h2>
+          <button onClick={onClose} className="p-2 rounded-lg hover:bg-white/10 text-gray-400">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="p-4 space-y-4">
+          {/* Vendedor */}
+          <div>
+            <label className="label">Vendedor</label>
+            <input className="input" value={vendedor} onChange={e => setVendedor(e.target.value)} />
+          </div>
+
+          {/* Método de pago */}
+          <div>
+            <label className="label">Método de Pago</label>
+            <div className="grid grid-cols-3 gap-2">
+              {(Object.keys(METODO_PAGO_LABELS) as MetodoPago[]).map(m => (
+                <button
+                  key={m}
+                  onClick={() => setMetodoPago(m)}
+                  className={`py-2 px-3 rounded-xl text-xs font-bold border transition-all ${metodoPago === m ? "border-current" : "border-white/10 text-gray-500"}`}
+                  style={metodoPago === m ? { color: METODO_COLORS[m], background: METODO_COLORS[m] + "20", borderColor: METODO_COLORS[m] } : {}}
+                >
+                  {METODO_PAGO_ICONS[m]} {METODO_PAGO_LABELS[m]}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Items */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="label mb-0">Productos</label>
+              <button onClick={handleAdd} className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1">
+                <Plus className="w-3 h-3" /> Agregar
+              </button>
+            </div>
+            <div className="space-y-2">
+              {itemsCalc.map(item => (
+                <ItemRow key={item.id} item={item} onChange={handleChange} onRemove={handleRemove} />
+              ))}
+            </div>
+          </div>
+
+          {/* Notas */}
+          <div>
+            <label className="label">Notas</label>
+            <textarea className="input resize-none" rows={2} value={notas} onChange={e => setNotas(e.target.value)} />
+          </div>
+
+          {/* Total */}
+          <div className="flex items-center justify-between pt-2 border-t border-white/10">
+            <span className="text-gray-400 text-sm font-semibold">Total</span>
+            <span className="text-2xl font-black text-[#39FF14]"
+              style={{ textShadow: "0 0 10px rgba(57,255,20,0.5)" }}>{fmt(total)}</span>
+          </div>
+
+          {/* Botón guardar */}
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="w-full py-3 rounded-xl font-black text-sm flex items-center justify-center gap-2 transition-all"
+            style={{ background: "#2563EB", boxShadow: "0 0 20px rgba(37,99,235,0.40)" }}
+          >
+            {saving ? "Guardando..." : <><Save className="w-4 h-4" /> Guardar Cambios</>}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -223,6 +359,7 @@ export default function VentasPage() {
   // ── Movimientos del día
   const [ventasHoy, setVentasHoy] = useState<VentaRepuesto[]>([]);
   const [loadingHoy, setLoadingHoy] = useState(false);
+  const [editVenta, setEditVenta] = useState<VentaRepuesto | null>(null);
 
   // ── Estadísticas
   const [rango, setRango] = useState<RangoStats>("hoy");
@@ -293,6 +430,18 @@ export default function VentasPage() {
   const handleCancelar = async (id: string) => {
     await ventasDb.cancelar(id);
     loadVentasHoy();
+  };
+
+  const handleEditarVenta = async (v: VentaRepuesto) => {
+    try {
+      await ventasDb.update(v);
+      setEditVenta(null);
+      showToast("Venta actualizada");
+      loadVentasHoy();
+    } catch (e: unknown) {
+      const pg = e as { message?: string };
+      showToast("Error: " + (pg?.message ?? "No se pudo guardar"), false);
+    }
   };
 
   // Rango de stats
@@ -508,7 +657,7 @@ export default function VentasPage() {
               </div>
             ) : (
               ventasHoy.map(v => (
-                <VentaCard key={v.id} venta={v} onCancelar={handleCancelar} />
+                <VentaCard key={v.id} venta={v} onCancelar={handleCancelar} onEditar={setEditVenta} />
               ))
             )}
           </div>
@@ -664,6 +813,14 @@ export default function VentasPage() {
       </main>
 
       <BottomNav />
+
+      {editVenta && (
+        <EditVentaModal
+          venta={editVenta}
+          onClose={() => setEditVenta(null)}
+          onSave={handleEditarVenta}
+        />
+      )}
 
       {toast && (
         <div className={`fixed bottom-28 sm:bottom-8 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3
