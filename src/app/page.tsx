@@ -1,7 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Wrench, AlertTriangle, Package, CheckSquare, Clock, FileSpreadsheet, FileText, CheckCircle, MessageCircle } from "lucide-react";
+import {
+  Plus, Wrench, AlertTriangle, Package, CheckSquare, Clock,
+  FileSpreadsheet, FileText, CheckCircle, MessageCircle, Trophy, Medal,
+} from "lucide-react";
 import { WorkOrder } from "@/lib/types";
 import { useOrders } from "@/hooks/useOrders";
 import { useInventory } from "@/hooks/useInventory";
@@ -19,28 +22,53 @@ import NotificationsPanel from "@/components/NotificationsPanel";
 import TemplateManager from "@/components/TemplateManager";
 import BottomNav from "@/components/BottomNav";
 
+/* ── Tarjeta de estado con glow neón ── */
 function StatCard({
   label,
   value,
   icon: Icon,
-  color,
+  cardClass,
+  iconColor,
+  valueColor,
 }: {
   label: string;
   value: number;
   icon: React.ElementType;
-  color: string;
+  cardClass: string;
+  iconColor: string;
+  valueColor: string;
 }) {
   return (
-    <div className="card flex items-center gap-4">
-      <div className={`${color} rounded-xl p-3`}>
-        <Icon className="w-6 h-6 text-white" />
-      </div>
-      <div>
-        <p className="text-2xl font-black text-gray-900 leading-tight">{value}</p>
-        <p className="text-xs text-gray-500 font-medium">{label}</p>
+    <div className={cardClass}>
+      <div className="flex items-center gap-3">
+        <Icon className={`w-7 h-7 flex-shrink-0 ${iconColor}`} />
+        <div>
+          <p className={`text-3xl font-black leading-tight ${valueColor}`}>{value}</p>
+          <p className="text-xs text-gray-400 font-semibold mt-0.5">{label}</p>
+        </div>
       </div>
     </div>
   );
+}
+
+/* ── Badge de fase de fidelización ── */
+function FaseBadge({ compras }: { compras: number }) {
+  if (compras >= 50) return (
+    <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full border border-yellow-400/60 text-gold" style={{ background: "rgba(255,215,0,0.12)", textShadow: "0 0 6px rgba(255,215,0,0.7)" }}>
+      <Trophy className="w-3 h-3" /> ORO
+    </span>
+  );
+  if (compras >= 10) return (
+    <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full border border-gray-300/60 text-gray-200" style={{ background: "rgba(200,200,200,0.12)" }}>
+      <Medal className="w-3 h-3" /> PLATA
+    </span>
+  );
+  if (compras >= 3) return (
+    <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full border border-orange-400/60 text-orange-400" style={{ background: "rgba(255,87,34,0.12)" }}>
+      <Medal className="w-3 h-3" /> BRONCE
+    </span>
+  );
+  return null;
 }
 
 export default function DashboardPage() {
@@ -74,7 +102,6 @@ export default function DashboardPage() {
     try {
       if (editingOrder) {
         await update(order.id, order);
-        // Sincronizar agenda y actualizar copia en historial
         agendaDb.upsertByPhone(order.clientName, order.clientPhone).then(async () => {
           const clientes = await agendaDb.getAll();
           const cliente = clientes.find(c => c.telefono === order.clientPhone.trim());
@@ -84,7 +111,6 @@ export default function DashboardPage() {
       } else {
         const newOrder = { ...order, id: generateId(), entryDate: new Date().toISOString() };
         await create(newOrder);
-        // Registrar en agenda y guardar copia permanente en historial
         agendaDb.upsertByPhone(newOrder.clientName, newOrder.clientPhone).then(async () => {
           const clientes = await agendaDb.getAll();
           const cliente = clientes.find(c => c.telefono === newOrder.clientPhone.trim());
@@ -110,9 +136,9 @@ export default function DashboardPage() {
     setEditingOrder(null);
   };
 
-  const activeOrders = orders.filter((o) => o.status !== "entregado");
-  const readyOrders = orders.filter((o) => o.status === "listo_para_retiro");
-  const inRepairOrders = orders.filter((o) => o.status === "en_reparacion");
+  const activeOrders       = orders.filter((o) => o.status !== "entregado");
+  const readyOrders        = orders.filter((o) => o.status === "listo_para_retiro");
+  const inRepairOrders     = orders.filter((o) => o.status === "en_reparacion");
   const waitingPartsOrders = orders.filter((o) => o.status === "esperando_repuesto");
 
   return (
@@ -124,16 +150,45 @@ export default function DashboardPage() {
         onOpenNotifications={() => setShowNotifications(true)}
       />
 
-      <main className="max-w-5xl mx-auto px-4 py-6 pb-20 sm:pb-4 space-y-6">
-        {/* Stats */}
+      <main className="max-w-5xl mx-auto px-4 py-6 pb-24 sm:pb-6 space-y-6">
+
+        {/* ── Tarjetas de estado neón ── */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <StatCard label="Activas" value={activeOrders.length} icon={Wrench} color="bg-orange-500" />
-          <StatCard label="En Reparación" value={inRepairOrders.length} icon={Clock} color="bg-blue-600" />
-          <StatCard label="Listas para Retiro" value={readyOrders.length} icon={CheckSquare} color="bg-green-600" />
-          <StatCard label="Esp. Repuesto" value={waitingPartsOrders.length} icon={Package} color="bg-yellow-600" />
+          <StatCard
+            label="Activas"
+            value={activeOrders.length}
+            icon={Wrench}
+            cardClass="card-neon-orange"
+            iconColor="text-orange-neon"
+            valueColor="text-orange-neon"
+          />
+          <StatCard
+            label="En Reparación"
+            value={inRepairOrders.length}
+            icon={Clock}
+            cardClass="card-neon-cyan"
+            iconColor="text-cyan"
+            valueColor="text-cyan"
+          />
+          <StatCard
+            label="Listas para Retiro"
+            value={readyOrders.length}
+            icon={CheckSquare}
+            cardClass="card-neon-green"
+            iconColor="text-neon"
+            valueColor="text-neon"
+          />
+          <StatCard
+            label="Esp. Repuesto"
+            value={waitingPartsOrders.length}
+            icon={Package}
+            cardClass="card-neon-gold"
+            iconColor="text-gold"
+            valueColor="text-gold"
+          />
         </div>
 
-        {/* Alerta 90 días */}
+        {/* ── Alerta 90 días ── */}
         {overdueCount > 0 && (
           <div className="card-alert flex items-start gap-3">
             <AlertTriangle className="w-6 h-6 text-red-400 flex-shrink-0 mt-0.5" />
@@ -154,7 +209,7 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Barra de filtros + Exportar + Plantillas */}
+        {/* ── Filtros + Exportar + Plantillas ── */}
         <div className="space-y-3">
           <FiltersBar
             filters={filters}
@@ -201,26 +256,31 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Lista de órdenes */}
+        {/* ── Lista de órdenes ── */}
         <div className="space-y-3">
           {loading ? (
             <div className="card flex flex-col items-center py-16 text-center">
-              <div className="w-10 h-10 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mb-4" />
+              <div className="w-10 h-10 border-4 border-[#FF5722] border-t-transparent rounded-full animate-spin mb-4" />
               <p className="text-gray-400 font-semibold">Cargando órdenes...</p>
             </div>
           ) : filtered.length === 0 ? (
-            <div className="card flex flex-col items-center justify-center py-16 text-center">
-              <Wrench className="w-12 h-12 text-gray-700 mb-4" />
-              <p className="text-gray-400 font-semibold text-lg">
-                {orders.length === 0
-                  ? "No hay órdenes de trabajo todavía"
-                  : "No se encontraron órdenes con esos filtros"}
-              </p>
-              <p className="text-gray-600 text-sm mt-1">
-                {orders.length === 0
-                  ? "Tocá el botón naranja para ingresar tu primer equipo"
-                  : "Probá ajustar los filtros"}
-              </p>
+            <div className="card flex flex-col items-center justify-center py-16 text-center gap-4">
+              <div className="w-16 h-16 rounded-full flex items-center justify-center"
+                style={{ background: "rgba(255,87,34,0.12)", border: "2px solid rgba(255,87,34,0.40)" }}>
+                <Wrench className="w-8 h-8 text-orange-neon" />
+              </div>
+              <div>
+                <p className="text-gray-300 font-bold text-lg">
+                  {orders.length === 0
+                    ? "No hay órdenes de trabajo todavía"
+                    : "No se encontraron órdenes con esos filtros"}
+                </p>
+                <p className="text-gray-600 text-sm mt-1">
+                  {orders.length === 0
+                    ? "Tocá el botón naranja para ingresar tu primer equipo"
+                    : "Probá ajustar los filtros"}
+                </p>
+              </div>
             </div>
           ) : (
             filtered.map((order) => (
@@ -235,11 +295,11 @@ export default function DashboardPage() {
         </div>
       </main>
 
-      {/* FAB — Nueva orden */}
+      {/* ── FAB — Nueva orden (Naranja Maqjeez con glow) ── */}
       <button
         onClick={() => { setEditingOrder(null); setShowForm(true); }}
         className="fixed bottom-[88px] sm:bottom-6 right-4 sm:right-6
-                   btn-primary rounded-2xl shadow-2xl shadow-blue-900/30
+                   btn-primary rounded-2xl
                    h-14 w-14 sm:h-auto sm:w-auto sm:px-6 z-40"
         aria-label="Nueva orden"
       >
@@ -278,7 +338,6 @@ export default function DashboardPage() {
         <div
           className={`fixed bottom-28 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3
             px-5 py-3.5 rounded-2xl shadow-2xl text-white font-semibold text-sm
-            transition-all animate-bounce-once
             ${toast.type === "success" ? "bg-green-600" : "bg-red-600"}`}
         >
           <CheckCircle className="w-5 h-5 flex-shrink-0" />
