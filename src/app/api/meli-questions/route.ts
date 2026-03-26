@@ -49,7 +49,7 @@ export async function GET(req: Request) {
     }
 
     const allQuestions: object[] = [];
-    const itemCache: Record<string, string> = {};
+    const itemCache: Record<string, { title: string; thumbnail: string }> = {};
     const accLogs: object[] = [];
 
     for (const acc of accounts) {
@@ -86,13 +86,16 @@ export async function GET(req: Request) {
           if (!itemCache[q.item_id]) {
             try {
               const iRes = await fetch(
-                `https://api.mercadolibre.com/items/${q.item_id}?attributes=id,title`,
+                `https://api.mercadolibre.com/items/${q.item_id}?attributes=id,title,thumbnail`,
                 { headers: { Authorization: `Bearer ${token}` } }
               );
-              itemCache[q.item_id] = iRes.ok
-                ? ((await iRes.json()) as { title?: string }).title ?? q.item_id
-                : q.item_id;
-            } catch { itemCache[q.item_id] = q.item_id; }
+              if (iRes.ok) {
+                const iData = await iRes.json() as { title?: string; thumbnail?: string };
+                itemCache[q.item_id] = { title: iData.title ?? q.item_id, thumbnail: iData.thumbnail ?? "" };
+              } else {
+                itemCache[q.item_id] = { title: q.item_id, thumbnail: "" };
+              }
+            } catch { itemCache[q.item_id] = { title: q.item_id, thumbnail: "" }; }
           }
 
           allQuestions.push({
@@ -100,7 +103,8 @@ export async function GET(req: Request) {
             meli_question_id: q.id,
             meli_account_id:  acc.id,
             item_id:          q.item_id,
-            item_title:       itemCache[q.item_id],
+            item_title:       itemCache[q.item_id].title,
+            item_thumbnail:   itemCache[q.item_id].thumbnail,
             buyer_id:         q.from?.id ?? null,
             buyer_nickname:   q.from?.nickname ?? null,
             question_text:    q.text,

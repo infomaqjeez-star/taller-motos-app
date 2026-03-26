@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, Suspense } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowLeft, RefreshCw, MessageCircle, Send, Clock,
@@ -39,6 +40,7 @@ interface Question {
   meli_account_id: string;
   item_id: string;
   item_title: string;
+  item_thumbnail: string;
   buyer_id: number;
   buyer_nickname: string;
   question_text: string;
@@ -200,20 +202,37 @@ function QuestionCard({ q, onAnswered }: { q: Question; onAnswered: (id: number)
     <div className="rounded-2xl overflow-hidden"
       style={{ background: "#1F1F1F", border: "1px solid rgba(255,255,255,0.07)" }}>
       <button onClick={() => setOpen(o => !o)} className="w-full text-left p-4">
-        <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start gap-3">
+          {/* Foto del producto */}
+          <div className="w-14 h-14 rounded-xl overflow-hidden flex-shrink-0"
+            style={{ background: "#2a2a2a", border: "1px solid rgba(255,255,255,0.08)" }}>
+            {q.item_thumbnail ? (
+              <Image
+                src={q.item_thumbnail}
+                alt={q.item_title}
+                width={56}
+                height={56}
+                className="w-full h-full object-cover"
+                unoptimized
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                <Package className="w-6 h-6 text-gray-600" />
+              </div>
+            )}
+          </div>
+
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1 flex-wrap">
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
                 style={{ background: "#FFE60018", color: "#FFE600" }}>
                 @{account}
               </span>
-              <span className="text-[10px] text-gray-500 flex items-center gap-1 truncate">
-                <Package className="w-3 h-3 flex-shrink-0" />
-                <span className="truncate">{q.item_title || q.item_id}</span>
-              </span>
             </div>
+            <p className="text-[11px] text-gray-500 truncate mb-1">{q.item_title || q.item_id}</p>
             <p className="text-sm text-white font-medium leading-snug line-clamp-2">{q.question_text}</p>
           </div>
+
           <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
             <span className="text-[10px]" style={{ color: "#6B7280" }}>{timeAgo(q.date_created)}</span>
             {open ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
