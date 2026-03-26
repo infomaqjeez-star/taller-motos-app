@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -287,7 +287,7 @@ function AccountPanel({ data, defaultOpen }: { data: AccountDash; defaultOpen?: 
   );
 }
 
-export default function AppJeezPage() {
+function AppJeezInner() {
   const params    = useSearchParams();
   const connected = params.get("connected") === "true";
 
@@ -533,5 +533,23 @@ export default function AppJeezPage() {
         </main>
       </div>
     </div>
+  );
+}
+
+export default function AppJeezPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center" style={{ background: "#121212" }}>
+        <div className="text-center">
+          <div
+            className="w-10 h-10 rounded-full border-2 animate-spin mx-auto mb-3"
+            style={{ borderColor: "#FFE600", borderTopColor: "transparent" }}
+          />
+          <p className="text-sm" style={{ color: "#6B7280" }}>Cargando panel...</p>
+        </div>
+      </div>
+    }>
+      <AppJeezInner />
+    </Suspense>
   );
 }
