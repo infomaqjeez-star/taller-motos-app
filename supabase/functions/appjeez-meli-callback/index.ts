@@ -42,7 +42,7 @@ Deno.serve(async (req: Request) => {
   const SERVICE_KEY  = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
   const redirectOk    = (userId: number) =>
-    Response.redirect(`${FRONTEND_URL}/configuracion/meli?status=success&user_id=${userId}`, 302);
+    Response.redirect(`${FRONTEND_URL}/appjeez?connected=true&user_id=${userId}`, 302);
   const redirectError = (msg: string) =>
     Response.redirect(`${FRONTEND_URL}/configuracion/meli?status=error&message=${msg}`, 302);
 
