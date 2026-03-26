@@ -118,8 +118,17 @@ export async function GET(req: Request) {
       accLogs.push(alog);
     }
 
-    if (debug) return NextResponse.json({ logs, accLogs, total: allQuestions.length, questions: allQuestions });
-    return NextResponse.json(allQuestions);
+    // Deduplicar por meli_question_id (por si una pregunta aparece en múltiples cuentas)
+    const seen = new Set<number>();
+    const unique = allQuestions.filter(q => {
+      const id = (q as { meli_question_id: number }).meli_question_id;
+      if (seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    });
+
+    if (debug) return NextResponse.json({ logs, accLogs, total: unique.length, questions: unique });
+    return NextResponse.json(unique);
 
   } catch (e) {
     const msg = (e as Error).message;
