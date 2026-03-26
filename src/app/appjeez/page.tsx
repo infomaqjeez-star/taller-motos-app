@@ -1,198 +1,285 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
-  ArrowLeft,
-  RefreshCw,
-  ExternalLink,
-  Package,
-  TrendingUp,
-  AlertCircle,
-  CheckCircle2,
-  Clock,
-  ChevronDown,
-  ChevronUp,
-  Search,
-  Store,
+  MessageCircle, MessageSquare, Truck, Tag, TrendingUp,
+  Star, AlertTriangle, CheckCircle2, RefreshCw, Settings,
+  ChevronDown, ChevronUp, ShoppingCart, DollarSign,
+  Package, Clock, XCircle, BarChart2, ExternalLink,
+  Bell, Store, Menu, X,
 } from "lucide-react";
 
-interface MeliItem {
-  id: string;
-  title: string;
-  price: number;
-  available_quantity: number;
-  sold_quantity: number;
-  status: string;
-  thumbnail: string;
-  permalink: string;
-  currency_id: string;
+interface Reputation {
+  level_id: string | null;
+  power_seller_status: string | null;
+  transactions: number;
+  positive: number;
+  negative: number;
+  neutral: number;
+  delayed_handling_time: number;
+  claims: number;
+  cancellations: number;
+  immediate_payment: boolean;
 }
 
-interface AccountData {
+interface AccountDash {
   account: string;
   meli_user_id: string;
-  items: MeliItem[];
+  unanswered_questions: number;
+  pending_messages: number;
+  ready_to_ship: number;
+  total_items: number;
+  today_orders: number;
+  today_sales_amount: number;
+  reputation: Reputation;
   error?: string;
 }
 
-function fmt(n: number, currency = "ARS") {
-  return new Intl.NumberFormat("es-AR", { style: "currency", currency, maximumFractionDigits: 0 }).format(n);
+function fmt(n: number) {
+  return new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(n);
 }
 
-function StatusBadge({ status }: { status: string }) {
-  const map: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
-    active:   { label: "Activa",   color: "#39FF14", icon: <CheckCircle2 className="w-3 h-3" /> },
-    paused:   { label: "Pausada",  color: "#FF9800", icon: <Clock className="w-3 h-3" /> },
-    closed:   { label: "Cerrada",  color: "#ef4444", icon: <AlertCircle className="w-3 h-3" /> },
-    inactive: { label: "Inactiva", color: "#6B7280", icon: <AlertCircle className="w-3 h-3" /> },
-  };
-  const s = map[status] ?? { label: status, color: "#6B7280", icon: null };
+function pct(n: number) { return `${(n * 100).toFixed(1)}%`; }
+
+const LEVEL_COLORS: Record<string, string> = {
+  "1_red":       "#ef4444",
+  "2_orange":    "#FF5722",
+  "3_yellow":    "#FFE600",
+  "4_light_green": "#7CFC00",
+  "5_green":     "#39FF14",
+};
+const LEVEL_LABELS: Record<string, string> = {
+  "1_red":       "Rojo",
+  "2_orange":    "Naranja",
+  "3_yellow":    "Amarillo",
+  "4_light_green": "Verde claro",
+  "5_green":     "Verde",
+};
+
+function RepoBadge({ level }: { level: string | null }) {
+  if (!level) return <span className="text-xs text-gray-500">Sin datos</span>;
+  const color = LEVEL_COLORS[level] ?? "#6B7280";
+  const label = LEVEL_LABELS[level] ?? level;
   return (
     <span
-      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold"
-      style={{ background: s.color + "22", color: s.color, border: `1px solid ${s.color}44` }}
+      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold"
+      style={{ background: color + "22", color, border: `1px solid ${color}44` }}
     >
-      {s.icon} {s.label}
+      <Star className="w-3 h-3" /> {label}
     </span>
   );
 }
 
-function AccountSection({ data }: { data: AccountData }) {
-  const [open, setOpen] = useState(true);
-  const [search, setSearch] = useState("");
-
-  const filtered = data.items.filter(i =>
-    i.title.toLowerCase().includes(search.toLowerCase()) || i.id.includes(search)
+function MetricCard({
+  icon, label, value, color, sublabel, urgent,
+}: {
+  icon: React.ReactNode; label: string; value: number | string;
+  color: string; sublabel?: string; urgent?: boolean;
+}) {
+  return (
+    <div
+      className="rounded-2xl p-4 flex flex-col gap-2 relative overflow-hidden"
+      style={{
+        background: urgent && Number(value) > 0 ? color + "18" : "#1F1F1F",
+        border: `1px solid ${urgent && Number(value) > 0 ? color + "55" : "rgba(255,255,255,0.07)"}`,
+      }}
+    >
+      {urgent && Number(value) > 0 && (
+        <span
+          className="absolute top-2 right-2 w-2 h-2 rounded-full animate-pulse"
+          style={{ background: color }}
+        />
+      )}
+      <div className="flex items-center gap-2" style={{ color }}>
+        {icon}
+        <span className="text-xs font-semibold text-gray-400">{label}</span>
+      </div>
+      <p className="text-3xl font-black" style={{ color: Number(value) > 0 && urgent ? color : "#fff" }}>
+        {value}
+      </p>
+      {sublabel && <p className="text-[10px]" style={{ color: "#6B7280" }}>{sublabel}</p>}
+    </div>
   );
+}
 
-  const totalStock = data.items.reduce((s, i) => s + i.available_quantity, 0);
-  const totalSold  = data.items.reduce((s, i) => s + i.sold_quantity, 0);
-  const active     = data.items.filter(i => i.status === "active").length;
+function RepuCard({ rep }: { rep: Reputation }) {
+  const good = rep.level_id === "5_green" || rep.level_id === "4_light_green";
+  return (
+    <div className="rounded-2xl p-4" style={{ background: "#1F1F1F", border: "1px solid rgba(255,255,255,0.07)" }}>
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-sm font-bold text-white flex items-center gap-2">
+          <Star className="w-4 h-4" style={{ color: "#FFE600" }} /> Reputación
+        </h3>
+        <RepoBadge level={rep.level_id} />
+      </div>
+
+      {/* Barra de colores MeLi */}
+      <div className="flex h-2 rounded-full overflow-hidden mb-3">
+        {["1_red","2_orange","3_yellow","4_light_green","5_green"].map(lvl => (
+          <div
+            key={lvl}
+            className="flex-1 transition-all"
+            style={{
+              background: LEVEL_COLORS[lvl],
+              opacity: rep.level_id === lvl ? 1 : 0.25,
+            }}
+          />
+        ))}
+      </div>
+
+      <div className="grid grid-cols-3 gap-2 text-center">
+        {[
+          { label: "Envíos con demora", val: pct(rep.delayed_handling_time), max: "Máx 18%", color: rep.delayed_handling_time > 0.18 ? "#ef4444" : "#39FF14" },
+          { label: "Reclamos", val: pct(rep.claims), max: "Máx 2%", color: rep.claims > 0.02 ? "#ef4444" : "#39FF14" },
+          { label: "Cancelaciones", val: pct(rep.cancellations), max: "Máx 2%", color: rep.cancellations > 0.02 ? "#ef4444" : "#39FF14" },
+        ].map(m => (
+          <div key={m.label} className="rounded-xl p-2" style={{ background: "#121212" }}>
+            <p className="text-lg font-black" style={{ color: m.color }}>{m.val}</p>
+            <p className="text-[9px] leading-tight" style={{ color: "#6B7280" }}>{m.label}</p>
+            <p className="text-[9px]" style={{ color: "#374151" }}>{m.max}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-3 flex gap-3 text-xs justify-center">
+        <span style={{ color: "#39FF14" }}>✓ {rep.positive} positivas</span>
+        <span style={{ color: "#6B7280" }}>○ {rep.neutral} neutras</span>
+        <span style={{ color: "#ef4444" }}>✕ {rep.negative} negativas</span>
+      </div>
+    </div>
+  );
+}
+
+function ActivityCard({ orders, amount }: { orders: number; amount: number }) {
+  return (
+    <div className="rounded-2xl p-4" style={{ background: "#1F1F1F", border: "1px solid rgba(255,255,255,0.07)" }}>
+      <h3 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
+        <BarChart2 className="w-4 h-4" style={{ color: "#00E5FF" }} /> Actividad del día
+      </h3>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="rounded-xl p-3 text-center" style={{ background: "#121212" }}>
+          <ShoppingCart className="w-5 h-5 mx-auto mb-1" style={{ color: "#00E5FF" }} />
+          <p className="text-2xl font-black text-white">{orders}</p>
+          <p className="text-[10px]" style={{ color: "#6B7280" }}>Ventas</p>
+        </div>
+        <div className="rounded-xl p-3 text-center" style={{ background: "#121212" }}>
+          <DollarSign className="w-5 h-5 mx-auto mb-1" style={{ color: "#39FF14" }} />
+          <p className="text-lg font-black" style={{ color: "#39FF14" }}>{fmt(amount)}</p>
+          <p className="text-[10px]" style={{ color: "#6B7280" }}>Facturación</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AccountPanel({ data, defaultOpen }: { data: AccountDash; defaultOpen?: boolean }) {
+  const [open, setOpen] = useState(defaultOpen ?? true);
+  const urgentTotal = (data.unanswered_questions ?? 0) + (data.ready_to_ship ?? 0) + (data.pending_messages ?? 0);
 
   return (
     <div
       className="rounded-2xl overflow-hidden mb-4"
-      style={{ background: "#1F1F1F", border: "1px solid rgba(255,255,255,0.08)" }}
+      style={{ background: "#181818", border: "1px solid rgba(255,255,255,0.08)" }}
     >
-      {/* Account header */}
+      {/* Account Header */}
       <button
         onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center justify-between px-5 py-4 text-left"
-        style={{ background: "linear-gradient(135deg, #1F1F1F 0%, #2a2a2a 100%)" }}
+        className="w-full px-5 py-4 flex items-center justify-between text-left"
+        style={{ background: "linear-gradient(90deg,#1F1F1F,#1a1a1a)" }}
       >
         <div className="flex items-center gap-3">
           <div
-            className="w-10 h-10 rounded-full flex items-center justify-center text-black font-black text-sm"
-            style={{ background: "linear-gradient(135deg, #FFE600 0%, #FF9800 100%)" }}
+            className="w-11 h-11 rounded-2xl flex items-center justify-center font-black text-xl text-black"
+            style={{ background: "linear-gradient(135deg,#FFE600,#FF9800)" }}
           >
             <Store className="w-5 h-5" />
           </div>
-          <div>
-            <p className="font-bold text-white text-base">@{data.account}</p>
-            <p className="text-xs" style={{ color: "#6B7280" }}>ID: {data.meli_user_id}</p>
+          <div className="text-left">
+            <div className="flex items-center gap-2">
+              <p className="font-black text-white text-base">@{data.account}</p>
+              {data.reputation?.power_seller_status && (
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ background: "#FFE60022", color: "#FFE600" }}>
+                  {data.reputation.power_seller_status.toUpperCase()}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-3 mt-0.5">
+              <RepoBadge level={data.reputation?.level_id ?? null} />
+              <span className="text-xs" style={{ color: "#6B7280" }}>{data.total_items ?? 0} publicaciones</span>
+            </div>
           </div>
         </div>
-        <div className="flex items-center gap-4">
-          <div className="hidden sm:flex gap-4 text-xs">
-            <span style={{ color: "#39FF14" }}>{active} activas</span>
-            <span style={{ color: "#00E5FF" }}>{totalSold} vendidos</span>
-            <span style={{ color: "#FFE600" }}>{totalStock} stock</span>
-          </div>
-          {open ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
+        <div className="flex items-center gap-3">
+          {urgentTotal > 0 && (
+            <span
+              className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-black text-black animate-pulse"
+              style={{ background: "#FF5722" }}
+            >
+              {urgentTotal}
+            </span>
+          )}
+          {open ? <ChevronUp className="w-5 h-5 text-gray-500" /> : <ChevronDown className="w-5 h-5 text-gray-500" />}
         </div>
       </button>
 
       {open && (
-        <div className="px-4 pb-4">
+        <div className="p-4 space-y-4">
           {data.error && (
-            <div className="mt-3 p-3 rounded-xl text-sm" style={{ background: "#ef444422", color: "#ef4444" }}>
-              Error al cargar publicaciones: {data.error}
+            <div className="p-3 rounded-xl text-sm" style={{ background: "#ef444422", color: "#ef4444" }}>
+              Error al cargar: {data.error}
             </div>
           )}
 
-          {/* Stats strip (mobile) */}
-          <div className="flex gap-3 mt-3 mb-3 sm:hidden">
-            {[
-              { label: "Activas", val: active, color: "#39FF14" },
-              { label: "Vendidos", val: totalSold, color: "#00E5FF" },
-              { label: "Stock", val: totalStock, color: "#FFE600" },
-            ].map(s => (
-              <div key={s.label} className="flex-1 rounded-xl p-2 text-center" style={{ background: "#121212" }}>
-                <p className="text-lg font-black" style={{ color: s.color }}>{s.val}</p>
-                <p className="text-[10px]" style={{ color: "#6B7280" }}>{s.label}</p>
-              </div>
-            ))}
+          {/* Indicadores urgentes */}
+          <div>
+            <p className="text-xs font-bold mb-2 uppercase tracking-wider" style={{ color: "#6B7280" }}>
+              Indicadores — Panel de Control
+            </p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <MetricCard icon={<MessageCircle className="w-4 h-4" />} label="Preguntas sin responder"
+                value={data.unanswered_questions ?? 0} color="#FF5722" urgent />
+              <MetricCard icon={<MessageSquare className="w-4 h-4" />} label="Mensajes pendientes"
+                value={data.pending_messages ?? 0} color="#FF9800" urgent />
+              <MetricCard icon={<Truck className="w-4 h-4" />} label="Envíos pendientes"
+                value={data.ready_to_ship ?? 0} color="#00E5FF" urgent />
+              <MetricCard icon={<Package className="w-4 h-4" />} label="Publicaciones activas"
+                value={data.total_items ?? 0} color="#39FF14" />
+            </div>
           </div>
 
-          {/* Search */}
-          {data.items.length > 0 && (
-            <div className="relative mb-3">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-              <input
-                type="text"
-                placeholder="Buscar publicación..."
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 rounded-xl text-sm text-white placeholder-gray-500 outline-none"
-                style={{ background: "#121212", border: "1px solid rgba(255,255,255,0.08)" }}
-              />
-            </div>
-          )}
+          {/* Reputación + Actividad */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <RepuCard rep={data.reputation ?? { level_id: null, power_seller_status: null, transactions: 0, positive: 0, negative: 0, neutral: 0, delayed_handling_time: 0, claims: 0, cancellations: 0, immediate_payment: false }} />
+            <ActivityCard orders={data.today_orders ?? 0} amount={data.today_sales_amount ?? 0} />
+          </div>
 
-          {/* Items grid */}
-          {filtered.length === 0 && !data.error && (
-            <p className="text-center py-6 text-sm" style={{ color: "#6B7280" }}>
-              {data.items.length === 0 ? "No hay publicaciones en esta cuenta." : "Sin resultados para esa búsqueda."}
+          {/* Acciones rápidas */}
+          <div>
+            <p className="text-xs font-bold mb-2 uppercase tracking-wider" style={{ color: "#6B7280" }}>
+              Acciones rápidas
             </p>
-          )}
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {filtered.map(item => (
-              <div
-                key={item.id}
-                className="rounded-xl overflow-hidden flex flex-col"
-                style={{ background: "#121212", border: "1px solid rgba(255,255,255,0.06)" }}
-              >
-                {item.thumbnail && (
-                  <img
-                    src={item.thumbnail.replace("http://", "https://")}
-                    alt={item.title}
-                    className="w-full h-32 object-contain"
-                    style={{ background: "#1a1a1a" }}
-                  />
-                )}
-                <div className="p-3 flex flex-col gap-2 flex-1">
-                  <p className="text-xs font-semibold text-white line-clamp-2 leading-tight">{item.title}</p>
-                  <div className="flex items-center justify-between">
-                    <span className="font-black text-base" style={{ color: "#FFE600" }}>
-                      {fmt(item.price, item.currency_id)}
-                    </span>
-                    <StatusBadge status={item.status} />
-                  </div>
-                  <div className="flex gap-3 text-[11px]">
-                    <span style={{ color: "#6B7280" }}>
-                      <Package className="w-3 h-3 inline mr-0.5" />
-                      Stock: <b className="text-white">{item.available_quantity}</b>
-                    </span>
-                    <span style={{ color: "#6B7280" }}>
-                      <TrendingUp className="w-3 h-3 inline mr-0.5" />
-                      Vend: <b style={{ color: "#39FF14" }}>{item.sold_quantity}</b>
-                    </span>
-                  </div>
-                  <a
-                    href={item.permalink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-auto flex items-center justify-center gap-1 py-1.5 rounded-lg text-xs font-bold transition-opacity hover:opacity-80"
-                    style={{ background: "#FFE60022", color: "#FFE600", border: "1px solid #FFE60044" }}
-                  >
-                    Ver en MeLi <ExternalLink className="w-3 h-3" />
-                  </a>
-                </div>
-              </div>
-            ))}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {[
+                { label: "Ver preguntas",    color: "#FF5722", href: `https://www.mercadolibre.com.ar/preguntas/respondidas`, icon: <MessageCircle className="w-4 h-4" /> },
+                { label: "Ver ventas",       color: "#39FF14", href: `https://ventas.mercadolibre.com.ar/list`, icon: <ShoppingCart className="w-4 h-4" /> },
+                { label: "Ver envíos",       color: "#00E5FF", href: `https://envios.mercadolibre.com.ar/list`, icon: <Truck className="w-4 h-4" /> },
+                { label: "Ver publicaciones",color: "#FFE600", href: `/appjeez/${data.meli_user_id}/items`, icon: <Package className="w-4 h-4" /> },
+              ].map(a => (
+                <a
+                  key={a.label}
+                  href={a.href}
+                  target={a.href.startsWith("http") ? "_blank" : undefined}
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-opacity hover:opacity-80"
+                  style={{ background: a.color + "18", color: a.color, border: `1px solid ${a.color}33` }}
+                >
+                  {a.icon} {a.label}
+                  {a.href.startsWith("http") && <ExternalLink className="w-3 h-3" />}
+                </a>
+              ))}
+            </div>
           </div>
         </div>
       )}
@@ -202,185 +289,249 @@ function AccountSection({ data }: { data: AccountData }) {
 
 export default function AppJeezPage() {
   const params    = useSearchParams();
-  const router    = useRouter();
   const connected = params.get("connected") === "true";
 
-  const [accounts, setAccounts] = useState<AccountData[]>([]);
+  const [accounts, setAccounts] = useState<AccountDash[]>([]);
   const [loading, setLoading]   = useState(true);
   const [error, setError]       = useState<string | null>(null);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+    setLoading(true); setError(null);
     try {
-      const res = await fetch("/api/meli-publications");
+      const res = await fetch("/api/meli-dashboard");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json() as AccountData[];
-      setAccounts(data);
+      setAccounts(await res.json());
       setLastUpdate(new Date());
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setLoading(false);
-    }
+    } catch (e) { setError((e as Error).message); }
+    finally { setLoading(false); }
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
-  const totalItems = accounts.reduce((s, a) => s + a.items.length, 0);
-  const totalSold  = accounts.reduce((s, a) => s + a.items.reduce((x, i) => x + i.sold_quantity, 0), 0);
-  const totalStock = accounts.reduce((s, a) => s + a.items.reduce((x, i) => x + i.available_quantity, 0), 0);
+  const totalUrgent = accounts.reduce(
+    (s, a) => s + (a.unanswered_questions ?? 0) + (a.ready_to_ship ?? 0) + (a.pending_messages ?? 0), 0
+  );
+  const totalSales = accounts.reduce((s, a) => s + (a.today_orders ?? 0), 0);
+  const totalAmount = accounts.reduce((s, a) => s + (a.today_sales_amount ?? 0), 0);
+
+  const navItems = [
+    { label: "Dashboard",       icon: <BarChart2 className="w-4 h-4" />,     href: "/appjeez",           active: true },
+    { label: "Publicaciones",   icon: <Package className="w-4 h-4" />,       href: "/appjeez/items",     active: false },
+    { label: "Ventas",          icon: <ShoppingCart className="w-4 h-4" />,  href: "/ventas",            active: false },
+    { label: "Envíos",          icon: <Truck className="w-4 h-4" />,         href: "/flex",              active: false },
+    { label: "Cuentas MeLi",    icon: <Store className="w-4 h-4" />,         href: "/configuracion/meli",active: false },
+    { label: "Taller",          icon: <Settings className="w-4 h-4" />,      href: "/taller",            active: false },
+  ];
 
   return (
-    <main className="min-h-screen pb-20" style={{ background: "#121212" }}>
-      {/* Header */}
-      <div
-        className="sticky top-0 z-30 px-4 py-3 flex items-center justify-between"
-        style={{
-          background: "rgba(18,18,18,0.96)",
-          backdropFilter: "blur(16px)",
-          borderBottom: "1px solid rgba(255,255,255,0.07)",
-        }}
+    <div className="min-h-screen flex" style={{ background: "#121212" }}>
+      {/* Sidebar desktop */}
+      <aside
+        className="hidden sm:flex flex-col w-56 flex-shrink-0 border-r"
+        style={{ background: "#181818", borderColor: "rgba(255,255,255,0.06)" }}
       >
-        <div className="flex items-center gap-3">
-          <Link href="/" className="p-1.5 rounded-lg" style={{ background: "rgba(255,255,255,0.05)" }}>
-            <ArrowLeft className="w-5 h-5 text-gray-400" />
-          </Link>
-          <div>
-            <h1 className="font-black text-white text-lg leading-tight">AppJeez Panel</h1>
-            <p className="text-xs" style={{ color: "#6B7280" }}>
-              {lastUpdate ? `Actualizado ${lastUpdate.toLocaleTimeString("es-AR")}` : "Cargando..."}
-            </p>
-          </div>
+        {/* Logo */}
+        <div className="px-5 py-5 border-b" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+          <p className="font-black text-xl" style={{ color: "#FFE600" }}>AppJeez</p>
+          <p className="text-[11px] mt-0.5" style={{ color: "#6B7280" }}>Panel Mercado Libre</p>
         </div>
-        <button
-          onClick={load}
-          disabled={loading}
-          className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold transition-opacity hover:opacity-80 disabled:opacity-40"
-          style={{ background: "#1F1F1F", color: "#00E5FF", border: "1px solid rgba(0,229,255,0.3)" }}
-        >
-          <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-          {loading ? "..." : "Actualizar"}
-        </button>
-      </div>
 
-      <div className="max-w-5xl mx-auto px-4 pt-4">
-        {/* Welcome banner if just connected */}
-        {connected && (
-          <div
-            className="rounded-2xl p-4 mb-4 flex items-center gap-3"
-            style={{ background: "#39FF1422", border: "1px solid #39FF1444" }}
+        <nav className="flex-1 px-3 py-4 space-y-1">
+          {navItems.map(n => (
+            <Link
+              key={n.href}
+              href={n.href}
+              className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors"
+              style={n.active
+                ? { background: "#FFE60018", color: "#FFE600" }
+                : { color: "#6B7280" }}
+            >
+              {n.icon} {n.label}
+            </Link>
+          ))}
+        </nav>
+
+        <div className="px-4 pb-4">
+          <Link
+            href="/"
+            className="flex items-center gap-2 text-xs px-3 py-2 rounded-xl"
+            style={{ color: "#6B7280", background: "rgba(255,255,255,0.03)" }}
           >
-            <CheckCircle2 className="w-6 h-6 flex-shrink-0" style={{ color: "#39FF14" }} />
+            ← Volver al inicio
+          </Link>
+        </div>
+      </aside>
+
+      {/* Mobile sidebar overlay */}
+      {sidebarOpen && (
+        <div className="sm:hidden fixed inset-0 z-50 flex">
+          <div className="absolute inset-0 bg-black/60" onClick={() => setSidebarOpen(false)} />
+          <aside className="relative w-64 flex flex-col" style={{ background: "#181818" }}>
+            <div className="px-5 py-5 flex items-center justify-between border-b" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+              <p className="font-black text-xl" style={{ color: "#FFE600" }}>AppJeez</p>
+              <button onClick={() => setSidebarOpen(false)}><X className="w-5 h-5 text-gray-400" /></button>
+            </div>
+            <nav className="flex-1 px-3 py-4 space-y-1">
+              {navItems.map(n => (
+                <Link
+                  key={n.href}
+                  href={n.href}
+                  onClick={() => setSidebarOpen(false)}
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold"
+                  style={n.active ? { background: "#FFE60018", color: "#FFE600" } : { color: "#6B7280" }}
+                >
+                  {n.icon} {n.label}
+                </Link>
+              ))}
+            </nav>
+          </aside>
+        </div>
+      )}
+
+      {/* Main content */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Top bar */}
+        <header
+          className="sticky top-0 z-30 px-4 py-3 flex items-center justify-between border-b"
+          style={{
+            background: "rgba(24,24,24,0.97)",
+            backdropFilter: "blur(16px)",
+            borderColor: "rgba(255,255,255,0.06)",
+          }}
+        >
+          <div className="flex items-center gap-3">
+            <button
+              className="sm:hidden p-1.5 rounded-lg"
+              style={{ background: "rgba(255,255,255,0.05)" }}
+              onClick={() => setSidebarOpen(true)}
+            >
+              <Menu className="w-5 h-5 text-gray-400" />
+            </button>
             <div>
-              <p className="font-bold text-white text-sm">Cuenta conectada exitosamente</p>
-              <p className="text-xs" style={{ color: "#39FF14" }}>Mercado Libre vinculado. Ya podes ver tus publicaciones.</p>
+              <h1 className="font-black text-white text-base sm:text-lg">Dashboard</h1>
+              <p className="text-[10px]" style={{ color: "#6B7280" }}>
+                {lastUpdate ? `Actualizado ${lastUpdate.toLocaleTimeString("es-AR")}` : "Cargando..."}
+              </p>
             </div>
           </div>
-        )}
 
-        {/* Global stats */}
-        {!loading && accounts.length > 0 && (
-          <div className="grid grid-cols-3 gap-3 mb-4">
-            {[
-              { label: "Publicaciones", val: totalItems, color: "#00E5FF" },
-              { label: "Total vendidos", val: totalSold,  color: "#39FF14" },
-              { label: "Stock total",    val: totalStock, color: "#FFE600" },
-            ].map(s => (
+          <div className="flex items-center gap-2">
+            {totalUrgent > 0 && (
               <div
-                key={s.label}
-                className="rounded-2xl p-3 text-center"
-                style={{ background: "#1F1F1F", border: "1px solid rgba(255,255,255,0.07)" }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold"
+                style={{ background: "#FF572222", color: "#FF5722", border: "1px solid #FF572244" }}
               >
-                <p className="text-2xl font-black" style={{ color: s.color }}>{s.val}</p>
-                <p className="text-[11px] mt-0.5" style={{ color: "#6B7280" }}>{s.label}</p>
+                <Bell className="w-3.5 h-3.5" />
+                {totalUrgent} pendientes
               </div>
-            ))}
-          </div>
-        )}
-
-        {/* Error state */}
-        {error && (
-          <div className="rounded-2xl p-5 text-center mb-4" style={{ background: "#ef444422", border: "1px solid #ef444444" }}>
-            <AlertCircle className="w-8 h-8 mx-auto mb-2" style={{ color: "#ef4444" }} />
-            <p className="text-white font-semibold">Error al cargar publicaciones</p>
-            <p className="text-sm mt-1" style={{ color: "#ef4444" }}>{error}</p>
+            )}
             <button
               onClick={load}
-              className="mt-3 px-4 py-2 rounded-xl text-sm font-bold"
-              style={{ background: "#ef4444", color: "#fff" }}
+              disabled={loading}
+              className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold disabled:opacity-40"
+              style={{ background: "#1F1F1F", color: "#00E5FF", border: "1px solid rgba(0,229,255,0.3)" }}
             >
-              Reintentar
+              <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+              <span className="hidden sm:inline">{loading ? "Actualizando..." : "Actualizar"}</span>
             </button>
           </div>
-        )}
+        </header>
 
-        {/* Loading skeleton */}
-        {loading && (
-          <div className="space-y-3">
-            {[1, 2].map(i => (
-              <div key={i} className="rounded-2xl p-5 animate-pulse" style={{ background: "#1F1F1F" }}>
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 rounded-full" style={{ background: "#2a2a2a" }} />
-                  <div className="flex-1">
-                    <div className="h-4 rounded w-32 mb-1" style={{ background: "#2a2a2a" }} />
-                    <div className="h-3 rounded w-20" style={{ background: "#2a2a2a" }} />
+        <main className="flex-1 p-4 pb-24 sm:pb-6 max-w-5xl w-full mx-auto">
+          {/* Welcome */}
+          {connected && (
+            <div
+              className="rounded-2xl p-4 mb-4 flex items-center gap-3"
+              style={{ background: "#39FF1418", border: "1px solid #39FF1440" }}
+            >
+              <CheckCircle2 className="w-6 h-6 flex-shrink-0" style={{ color: "#39FF14" }} />
+              <div>
+                <p className="font-bold text-white text-sm">Cuenta conectada exitosamente</p>
+                <p className="text-xs" style={{ color: "#39FF14" }}>
+                  Mercado Libre vinculado. Tus indicadores se actualizarán automáticamente.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Global summary */}
+          {!loading && accounts.length > 0 && (
+            <div className="grid grid-cols-3 gap-3 mb-5">
+              {[
+                { label: "Cuentas activas",   val: accounts.length, color: "#FFE600" },
+                { label: "Ventas hoy",        val: totalSales,      color: "#39FF14" },
+                { label: "Facturado hoy",     val: fmt(totalAmount), color: "#00E5FF" },
+              ].map(s => (
+                <div
+                  key={s.label}
+                  className="rounded-2xl p-3 sm:p-4 text-center"
+                  style={{ background: "#1F1F1F", border: "1px solid rgba(255,255,255,0.07)" }}
+                >
+                  <p className="text-xl sm:text-2xl font-black" style={{ color: s.color }}>{s.val}</p>
+                  <p className="text-[10px] sm:text-xs mt-0.5" style={{ color: "#6B7280" }}>{s.label}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Error */}
+          {error && (
+            <div className="rounded-2xl p-5 text-center mb-4" style={{ background: "#ef444418", border: "1px solid #ef444440" }}>
+              <XCircle className="w-8 h-8 mx-auto mb-2" style={{ color: "#ef4444" }} />
+              <p className="text-white font-semibold">Error al cargar</p>
+              <p className="text-sm mt-1 mb-3" style={{ color: "#ef4444" }}>{error}</p>
+              <button onClick={load} className="px-4 py-2 rounded-xl text-sm font-bold bg-red-500 text-white">
+                Reintentar
+              </button>
+            </div>
+          )}
+
+          {/* Loading */}
+          {loading && (
+            <div className="space-y-3">
+              {[1, 2].map(i => (
+                <div key={i} className="rounded-2xl p-5 animate-pulse" style={{ background: "#1F1F1F" }}>
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-11 h-11 rounded-2xl" style={{ background: "#2a2a2a" }} />
+                    <div className="flex-1">
+                      <div className="h-4 rounded w-36 mb-1.5" style={{ background: "#2a2a2a" }} />
+                      <div className="h-3 rounded w-24" style={{ background: "#2a2a2a" }} />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-4 gap-3">
+                    {[1,2,3,4].map(j => <div key={j} className="h-24 rounded-2xl" style={{ background: "#2a2a2a" }} />)}
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  {[1, 2, 3, 4].map(j => (
-                    <div key={j} className="h-32 rounded-xl" style={{ background: "#2a2a2a" }} />
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          )}
 
-        {/* No accounts */}
-        {!loading && !error && accounts.length === 0 && (
-          <div className="rounded-2xl p-10 text-center" style={{ background: "#1F1F1F" }}>
-            <Store className="w-12 h-12 mx-auto mb-3" style={{ color: "#6B7280" }} />
-            <p className="text-white font-bold text-lg">Sin cuentas conectadas</p>
-            <p className="text-sm mt-1 mb-4" style={{ color: "#6B7280" }}>
-              Conecta una cuenta de Mercado Libre para ver tus publicaciones aquí.
-            </p>
-            <Link
-              href="/configuracion/meli"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm"
-              style={{ background: "#FFE600", color: "#121212" }}
-            >
-              Conectar Mercado Libre
-            </Link>
-          </div>
-        )}
+          {/* No accounts */}
+          {!loading && !error && accounts.length === 0 && (
+            <div className="rounded-2xl p-10 text-center" style={{ background: "#1F1F1F" }}>
+              <Store className="w-12 h-12 mx-auto mb-3" style={{ color: "#6B7280" }} />
+              <p className="text-white font-bold text-lg">Sin cuentas conectadas</p>
+              <p className="text-sm mt-1 mb-4" style={{ color: "#6B7280" }}>
+                Conecta una cuenta de Mercado Libre para ver tus indicadores.
+              </p>
+              <Link
+                href="/configuracion/meli"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm text-black"
+                style={{ background: "#FFE600" }}
+              >
+                Conectar Mercado Libre
+              </Link>
+            </div>
+          )}
 
-        {/* Accounts list */}
-        {!loading && accounts.map(acc => (
-          <AccountSection key={acc.meli_user_id} data={acc} />
-        ))}
-
-        {/* Actions */}
-        {!loading && accounts.length > 0 && (
-          <div className="mt-2 mb-6 flex flex-col sm:flex-row gap-3">
-            <Link
-              href="/configuracion/meli"
-              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm"
-              style={{ background: "#1F1F1F", color: "#FFE600", border: "1px solid rgba(255,230,0,0.3)" }}
-            >
-              <Store className="w-4 h-4" /> Administrar cuentas
-            </Link>
-            <Link
-              href="/"
-              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm"
-              style={{ background: "#1F1F1F", color: "#6B7280", border: "1px solid rgba(255,255,255,0.08)" }}
-            >
-              <ArrowLeft className="w-4 h-4" /> Volver al inicio
-            </Link>
-          </div>
-        )}
+          {/* Accounts */}
+          {!loading && accounts.map((acc, i) => (
+            <AccountPanel key={acc.meli_user_id} data={acc} defaultOpen={i === 0} />
+          ))}
+        </main>
       </div>
-    </main>
+    </div>
   );
 }
