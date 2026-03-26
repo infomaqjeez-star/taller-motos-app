@@ -130,7 +130,7 @@ export default function LandingPage() {
         {/* ── Panel de Autoridad / Social Proof ── */}
         <div className="relative z-10 mt-8 w-full max-w-2xl rounded-2xl overflow-hidden"
           style={{
-            background: "linear-gradient(180deg, #1a1200 0%, #0d0900 100%)",
+            background: "#0d0d0d",
             border: "1px solid rgba(184,134,11,0.40)",
             boxShadow: "0 0 40px rgba(255,215,0,0.10)",
           }}>
@@ -139,7 +139,8 @@ export default function LandingPage() {
             alt="MercadoLíder Platinum · 30 Años de Experiencia · 100% Calificaciones Positivas"
             width={1200}
             height={300}
-            className="w-full h-auto object-cover"
+            className="w-full h-auto"
+            style={{ mixBlendMode: "lighten", background: "#0d0d0d" }}
             priority
           />
         </div>
