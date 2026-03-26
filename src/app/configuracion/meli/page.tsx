@@ -8,7 +8,6 @@ import {
   CheckCircle, XCircle, RefreshCw, ExternalLink,
   ShieldCheck, Zap, ArrowLeft, User, Clock,
 } from "lucide-react";
-import { supabase } from "@/lib/supabase";
 
 // ── Tipos ──────────────────────────────────────────────────────
 interface MeliAccount {
@@ -66,11 +65,11 @@ function ConfigMeliContent() {
   // ── Cargar cuentas conectadas ──────────────────────────────
   const loadAccounts = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("meli_accounts")
-      .select("id, meli_user_id, nickname, expires_at, status, created_at")
-      .order("created_at", { ascending: false });
-    if (!error && data) setAccounts(data as MeliAccount[]);
+    try {
+      const res = await fetch("/api/meli-accounts");
+      const data = await res.json();
+      if (Array.isArray(data)) setAccounts(data as MeliAccount[]);
+    } catch { /* silencioso */ }
     setLoading(false);
   };
 
@@ -84,11 +83,12 @@ function ConfigMeliContent() {
   // ── Revocar cuenta ─────────────────────────────────────────
   const handleRevoke = async (id: string, nickname: string) => {
     if (!confirm(`¿Desconectar la cuenta @${nickname}? Deberás volver a autorizar.`)) return;
-    const { error } = await supabase
-      .from("meli_accounts")
-      .update({ status: "revoked" })
-      .eq("id", id);
-    if (error) { showToast("Error al revocar", false); return; }
+    const res = await fetch("/api/meli-accounts", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, status: "revoked" }),
+    });
+    if (!res.ok) { showToast("Error al revocar", false); return; }
     showToast(`@${nickname} desconectada`);
     loadAccounts();
   };
