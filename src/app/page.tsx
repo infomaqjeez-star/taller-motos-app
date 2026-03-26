@@ -1,10 +1,12 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
   Wrench, Package, ShoppingCart, Truck,
   BarChart2, Users, ArrowRight, Zap, Shield, Smartphone,
+  CheckCircle, AlertCircle, Settings, ChevronRight,
 } from "lucide-react";
 
 /* ── Feature modules ── */
@@ -122,6 +124,19 @@ function MedalBadge({ id, children }: { id: string; children: React.ReactNode })
 }
 
 export default function LandingPage() {
+  const [meliStatus, setMeliStatus] = useState<"loading"|"connected"|"disconnected">("loading");
+  const [meliNickname, setMeliNickname] = useState("");
+
+  useEffect(() => {
+    fetch("/api/meli-accounts")
+      .then(r => r.json())
+      .then(data => {
+        const active = Array.isArray(data) && data.find((a: {status: string; nickname: string}) => a.status === "active");
+        if (active) { setMeliStatus("connected"); setMeliNickname(active.nickname); }
+        else setMeliStatus("disconnected");
+      })
+      .catch(() => setMeliStatus("disconnected"));
+  }, []);
   return (
     <div
       className="min-h-screen"
@@ -157,19 +172,58 @@ export default function LandingPage() {
           Sistema integral de gestión para talleres de motoherramientas. Órdenes, inventario, ventas y logística Flex — todo conectado a Supabase.
         </p>
 
-        {/* CTA principal */}
-        <Link
-          href="/taller"
-          className="relative z-10 group inline-flex items-center gap-3 px-8 py-4 rounded-2xl font-black text-lg text-white transition-all hover:scale-105"
-          style={{
-            background: "#FF5722",
-            boxShadow: "0 0 30px rgba(255,87,34,0.50), 0 4px 24px rgba(0,0,0,0.40)",
-          }}
-        >
-          <Wrench className="w-6 h-6" />
-          Ingresar al Taller
-          <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
-        </Link>
+        {/* ── Estado de conexión MeLi + CTA dinámico ── */}
+        <div className="relative z-10 flex flex-col items-center gap-3 w-full max-w-sm">
+
+          {/* Badge estado MeLi */}
+          <div className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold border transition-all ${
+            meliStatus === "connected"
+              ? "border-green-500/40 text-green-400 bg-green-500/10"
+              : meliStatus === "disconnected"
+              ? "border-red-500/30 text-red-400 bg-red-500/08"
+              : "border-white/10 text-gray-500 bg-white/5"
+          }`}>
+            {meliStatus === "loading" && <span className="w-2 h-2 rounded-full bg-gray-500 animate-pulse" />}
+            {meliStatus === "connected" && <CheckCircle className="w-4 h-4" />}
+            {meliStatus === "disconnected" && <AlertCircle className="w-4 h-4" />}
+            {meliStatus === "loading"      && "Verificando conexión MeLi..."}
+            {meliStatus === "connected"    && `MeLi conectado · @${meliNickname}`}
+            {meliStatus === "disconnected" && "MeLi no conectado"}
+          </div>
+
+          {/* CTA principal */}
+          {meliStatus === "connected" ? (
+            <Link
+              href="/taller"
+              className="group w-full inline-flex items-center justify-center gap-3 px-8 py-4 rounded-2xl font-black text-lg transition-all hover:scale-105"
+              style={{ background: "#FF5722", boxShadow: "0 0 30px rgba(255,87,34,0.50)", color: "#fff" }}
+            >
+              <Wrench className="w-6 h-6" />
+              Ingresar al Panel
+              <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
+            </Link>
+          ) : meliStatus === "disconnected" ? (
+            <Link
+              href="/configuracion/meli"
+              className="group w-full inline-flex items-center justify-center gap-3 px-8 py-4 rounded-2xl font-black text-lg transition-all hover:scale-105"
+              style={{ background: "#FFE600", boxShadow: "0 0 30px rgba(255,230,0,0.40)", color: "#003087" }}
+            >
+              <Image src="/logo-maqjeez.png" alt="ML" width={24} height={24} className="object-contain" />
+              Conectar Mercado Libre
+              <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
+            </Link>
+          ) : (
+            <div className="w-full h-14 rounded-2xl bg-white/5 animate-pulse" />
+          )}
+
+          {/* Link secundario */}
+          {meliStatus === "connected" && (
+            <Link href="/configuracion/meli"
+              className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-400">
+              <Settings className="w-3.5 h-3.5" /> Gestionar cuentas MeLi
+            </Link>
+          )}
+        </div>
 
         {/* ── Panel de Autoridad / Social Proof ── */}
         <div className="relative z-10 mt-8 w-full max-w-2xl rounded-2xl overflow-hidden"
@@ -197,6 +251,46 @@ export default function LandingPage() {
           ))}
         </div>
       </section>
+
+      {/* ── Panel de módulos (solo si MeLi conectado) ── */}
+      {meliStatus === "connected" && (
+        <section className="px-4 pb-4 max-w-4xl mx-auto">
+          <div className="rounded-2xl border border-green-500/20 overflow-hidden"
+            style={{ background: "rgba(57,255,20,0.04)" }}>
+            <div className="flex items-center gap-3 px-5 py-4 border-b border-green-500/10">
+              <CheckCircle className="w-5 h-5 text-green-400" />
+              <div>
+                <p className="text-sm font-black text-green-400">Panel Activo — @{meliNickname}</p>
+                <p className="text-xs text-gray-500">Seleccioná un módulo para comenzar</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-4">
+              {[
+                { href: "/vender",    icon: ShoppingCart, label: "Vender",    color: "#FF5722", desc: "Nueva venta de repuestos" },
+                { href: "/flex",      icon: Truck,        label: "Flex",      color: "#00E5FF", desc: "Logística Mercado Envíos" },
+                { href: "/taller",    icon: Wrench,       label: "Taller",    color: "#FDB71A", desc: "Órdenes de reparación" },
+                { href: "/inventario",icon: Package,      label: "Inventario",color: "#39FF14", desc: "Stock de repuestos" },
+                { href: "/dashboard", icon: BarChart2,    label: "Dashboard", color: "#A855F7", desc: "Estadísticas y métricas" },
+                { href: "/configuracion/meli", icon: Settings, label: "MeLi Config", color: "#FFE600", desc: "Cuentas conectadas" },
+              ].map(({ href, icon: Icon, label, color, desc }) => (
+                <Link key={href} href={href}
+                  className="flex flex-col gap-2 p-4 rounded-xl border border-white/5 hover:border-white/15 transition-all hover:-translate-y-0.5"
+                  style={{ background: "#1a1a1a" }}>
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center"
+                    style={{ background: color + "20" }}>
+                    <Icon className="w-5 h-5" style={{ color }} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-black text-white">{label}</p>
+                    <p className="text-xs text-gray-500 leading-tight">{desc}</p>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-gray-600 self-end mt-auto" />
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ── Feature Cards ── */}
       <section className="px-4 pb-12 max-w-4xl mx-auto">
