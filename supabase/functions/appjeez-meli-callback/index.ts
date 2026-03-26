@@ -58,7 +58,7 @@ Deno.serve(async (req: Request) => {
     status: 400, headers: { "Content-Type": "application/json" },
   });
 
-  const redirectUri = `${url.protocol}//${url.host}${url.pathname}`;
+  const redirectUri = "https://ajhmajaclimccrkehsyy.supabase.co/functions/v1/appjeez-meli-callback";
 
   // ── 2. Intercambio de código por tokens (server-side) ─────
   let tokenData: {
