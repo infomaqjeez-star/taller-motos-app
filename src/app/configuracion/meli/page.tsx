@@ -25,7 +25,7 @@ const MELI_AUTH_URL =
   "https://auth.mercadolibre.com.ar/authorization" +
   `?response_type=code` +
   `&client_id=${process.env.NEXT_PUBLIC_MELI_APP_ID ?? ""}` +
-  `&redirect_uri=https://ajhmajaclimccrkehsy.supabase.co/functions/v1/appjeez-meli-callback`;
+  `&redirect_uri=https://ajhmajaclimccrkehsyy.supabase.co/functions/v1/appjeez-meli-callback`;
 
 // ── Helpers ────────────────────────────────────────────────────
 function timeAgo(iso: string) {
@@ -263,7 +263,7 @@ function ConfigMeliContent() {
             <li>• Los tokens se encriptan con AES-256-GCM antes de guardarse</li>
             <li>• Las claves secretas nunca tocan el frontend</li>
             <li>• La renovación es automática (cada 50 min)</li>
-            <li>• Callback URL: ajhmajaclimccrkehsy.supabase.co</li>
+            <li>• Callback URL: ajhmajaclimccrkehsyy.supabase.co</li>
           </ul>
         </div>
 
