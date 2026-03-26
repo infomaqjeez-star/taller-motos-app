@@ -11,26 +11,6 @@ import {
 /* ── Feature modules ── */
 const FEATURES = [
   {
-    href: "/taller",
-    icon: Wrench,
-    color: "#FF5722",
-    glow: "rgba(255,87,34,0.30)",
-    border: "rgba(255,87,34,0.45)",
-    title: "Taller",
-    desc: "Gestión completa de órdenes de trabajo. Registrá equipos, seguí el estado de reparaciones y alertas de retiro.",
-    tags: ["Órdenes activas", "Historial", "Alertas 90 días"],
-  },
-  {
-    href: "/inventario",
-    icon: Package,
-    color: "#FDB71A",
-    glow: "rgba(253,183,26,0.25)",
-    border: "rgba(253,183,26,0.45)",
-    title: "Inventario",
-    desc: "Control de stock de repuestos en tiempo real. Alertas de stock bajo y pedidos pendientes automáticos.",
-    tags: ["Stock bajo", "Pedidos", "Categorías"],
-  },
-  {
     href: "/ventas",
     icon: ShoppingCart,
     color: "#39FF14",
@@ -49,6 +29,26 @@ const FEATURES = [
     title: "Flex Logística",
     desc: "Escáner OCR + QR para cargar envíos de Mercado Libre. Detección automática de zona y precio por CP.",
     tags: ["OCR / QR", "Zonas automáticas", "Anti-duplicados"],
+  },
+  {
+    href: "/taller",
+    icon: Wrench,
+    color: "#FF5722",
+    glow: "rgba(255,87,34,0.30)",
+    border: "rgba(255,87,34,0.45)",
+    title: "Taller",
+    desc: "Gestión completa de órdenes de trabajo. Registrá equipos, seguí el estado de reparaciones y alertas de retiro.",
+    tags: ["Órdenes activas", "Historial", "Alertas 90 días"],
+  },
+  {
+    href: "/inventario",
+    icon: Package,
+    color: "#FDB71A",
+    glow: "rgba(253,183,26,0.25)",
+    border: "rgba(253,183,26,0.45)",
+    title: "Inventario",
+    desc: "Control de stock de repuestos en tiempo real. Alertas de stock bajo y pedidos pendientes automáticos.",
+    tags: ["Stock bajo", "Pedidos", "Categorías"],
   },
   {
     href: "/estadisticas",
