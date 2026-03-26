@@ -1,6 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-// ── Crypto helpers (igual que appjeez-meli-callback) ─────────
 async function deriveKey(passphrase: string): Promise<CryptoKey> {
   const enc = new TextEncoder();
   const km  = await crypto.subtle.importKey("raw", enc.encode(passphrase), "PBKDF2", false, ["deriveKey"]);
@@ -16,14 +15,14 @@ async function decrypt(encBase64: string, passphrase: string): Promise<string> {
   return new TextDecoder().decode(plain);
 }
 
-const corsHeaders = {
+const cors = {
   "Access-Control-Allow-Origin":  "*",
   "Access-Control-Allow-Methods": "GET, POST",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
 Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  if (req.method === "OPTIONS") return new Response(null, { headers: cors });
 
   const ENC_KEY     = Deno.env.get("APPJEEZ_MELI_ENCRYPTION_KEY")!;
   const SUPA_URL    = Deno.env.get("SUPABASE_URL")!;
@@ -31,90 +30,96 @@ Deno.serve(async (req: Request) => {
 
   const supabase = createClient(SUPA_URL, SERVICE_KEY);
 
-  // 1. Obtener todas las cuentas activas
   const { data: accounts, error: accErr } = await supabase
     .from("meli_accounts")
     .select("id, meli_user_id, nickname, access_token_enc")
     .eq("status", "active");
 
-  if (accErr || !accounts) {
-    return new Response(JSON.stringify({ error: accErr?.message ?? "No accounts" }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+  if (accErr || !accounts?.length) {
+    return new Response(JSON.stringify([]), {
+      headers: { ...cors, "Content-Type": "application/json" },
     });
   }
 
-  let totalUnanswered = 0;
-  let totalProcessed  = 0;
-  const errors: string[] = [];
-
-  // Cache de títulos de items para no repetir llamadas
+  const allQuestions: object[] = [];
   const itemTitleCache: Record<string, string> = {};
 
   for (const acc of accounts) {
     try {
       const token = await decrypt(acc.access_token_enc, ENC_KEY);
 
-      // 2. Obtener preguntas sin responder de esta cuenta
       const qRes = await fetch(
-        "https://api.mercadolibre.com/questions/search?status=UNANSWERED&limit=50",
+        "https://api.mercadolibre.com/my/received_questions/search?status=UNANSWERED&limit=50",
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      if (!qRes.ok) { errors.push(`${acc.nickname}: questions API ${qRes.status}`); continue; }
+
+      if (!qRes.ok) continue;
 
       const qData = await qRes.json() as {
         questions: {
-          id: number; item_id: string; seller_id: number;
+          id: number; item_id: string;
           text: string; status: string; date_created: string;
-          from: { id: number; answered_questions: number };
+          from: { id: number; nickname?: string };
           answer?: { text: string; date_created: string };
         }[];
       };
 
       const questions = qData.questions ?? [];
-      totalUnanswered += questions.length;
 
       for (const q of questions) {
-        // 3. Obtener título del item (con caché)
+        // Cache de títulos
         if (!itemTitleCache[q.item_id]) {
           try {
             const iRes = await fetch(
               `https://api.mercadolibre.com/items/${q.item_id}?attributes=id,title`,
               { headers: { Authorization: `Bearer ${token}` } }
             );
-            if (iRes.ok) {
-              const iData = await iRes.json() as { title?: string };
-              itemTitleCache[q.item_id] = iData.title ?? q.item_id;
-            } else {
-              itemTitleCache[q.item_id] = q.item_id;
-            }
+            itemTitleCache[q.item_id] = iRes.ok
+              ? ((await iRes.json()) as { title?: string }).title ?? q.item_id
+              : q.item_id;
           } catch { itemTitleCache[q.item_id] = q.item_id; }
         }
 
-        // 4. Upsert en tabla caché
-        const { error: upsertErr } = await supabase
-          .from("meli_unified_questions")
-          .upsert({
-            meli_question_id: q.id,
-            meli_account_id:  acc.id,
-            item_id:          q.item_id,
-            item_title:       itemTitleCache[q.item_id],
-            buyer_id:         q.from?.id ?? null,
-            question_text:    q.text,
-            status:           q.status,
-            date_created:     q.date_created,
-            answer_text:      q.answer?.text ?? null,
-            answer_date:      q.answer?.date_created ?? null,
-          }, { onConflict: "meli_question_id" });
+        const record = {
+          id:               crypto.randomUUID(),
+          meli_question_id: q.id,
+          meli_account_id:  acc.id,
+          item_id:          q.item_id,
+          item_title:       itemTitleCache[q.item_id],
+          buyer_id:         q.from?.id ?? null,
+          buyer_nickname:   q.from?.nickname ?? null,
+          question_text:    q.text,
+          status:           q.status,
+          date_created:     q.date_created,
+          answer_text:      q.answer?.text ?? null,
+          answer_date:      q.answer?.date_created ?? null,
+          meli_accounts:    { nickname: acc.nickname },
+        };
 
-        if (!upsertErr) totalProcessed++;
+        allQuestions.push(record);
+
+        // Guardar en caché (sin bloquear)
+        supabase.from("meli_unified_questions").upsert({
+          meli_question_id: q.id,
+          meli_account_id:  acc.id,
+          item_id:          q.item_id,
+          item_title:       itemTitleCache[q.item_id],
+          buyer_id:         q.from?.id ?? null,
+          buyer_nickname:   q.from?.nickname ?? null,
+          question_text:    q.text,
+          status:           q.status,
+          date_created:     q.date_created,
+          answer_text:      q.answer?.text ?? null,
+          answer_date:      q.answer?.date_created ?? null,
+        }, { onConflict: "meli_question_id" }).then(() => {});
       }
     } catch (err) {
-      errors.push(`${acc.nickname}: ${err instanceof Error ? err.message : String(err)}`);
+      console.error(`Error for ${acc.nickname}:`, err);
     }
   }
 
-  return new Response(
-    JSON.stringify({ status: "ok", unanswered_count: totalUnanswered, processed: totalProcessed, errors }),
-    { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-  );
+  // Devuelve las preguntas directamente — sin depender de la DB
+  return new Response(JSON.stringify(allQuestions), {
+    headers: { ...cors, "Content-Type": "application/json" },
+  });
 });
