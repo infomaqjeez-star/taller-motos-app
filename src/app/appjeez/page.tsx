@@ -14,10 +14,11 @@ import {
 interface Reputation {
   level_id: string | null;
   power_seller_status: string | null;
-  transactions: number;
-  positive: number;
-  negative: number;
-  neutral: number;
+  transactions_total: number;
+  transactions_completed: number;
+  ratings_positive: number;
+  ratings_negative: number;
+  ratings_neutral: number;
   delayed_handling_time: number;
   claims: number;
   cancellations: number;
@@ -144,9 +145,9 @@ function RepuCard({ rep }: { rep: Reputation }) {
       </div>
 
       <div className="mt-3 flex gap-3 text-xs justify-center">
-        <span style={{ color: "#39FF14" }}>✓ {rep.positive} positivas</span>
-        <span style={{ color: "#6B7280" }}>○ {rep.neutral} neutras</span>
-        <span style={{ color: "#ef4444" }}>✕ {rep.negative} negativas</span>
+        <span style={{ color: "#39FF14" }}>✓ {pct(rep.ratings_positive)} positivas</span>
+        <span style={{ color: "#6B7280" }}>○ {pct(rep.ratings_neutral)} neutras</span>
+        <span style={{ color: "#ef4444" }}>✕ {pct(rep.ratings_negative)} negativas</span>
       </div>
     </div>
   );
@@ -251,7 +252,7 @@ function AccountPanel({ data, defaultOpen }: { data: AccountDash; defaultOpen?: 
 
           {/* Reputación + Actividad */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <RepuCard rep={data.reputation ?? { level_id: null, power_seller_status: null, transactions: 0, positive: 0, negative: 0, neutral: 0, delayed_handling_time: 0, claims: 0, cancellations: 0, immediate_payment: false }} />
+            <RepuCard rep={data.reputation ?? { level_id: null, power_seller_status: null, transactions_total: 0, transactions_completed: 0, ratings_positive: 0, ratings_negative: 0, ratings_neutral: 0, delayed_handling_time: 0, claims: 0, cancellations: 0, immediate_payment: false }} />
             <ActivityCard orders={data.today_orders ?? 0} amount={data.today_sales_amount ?? 0} />
           </div>
 
@@ -263,9 +264,9 @@ function AccountPanel({ data, defaultOpen }: { data: AccountDash; defaultOpen?: 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {[
                 { label: "Ver preguntas",    color: "#FF5722", href: `/appjeez/mensajes`, icon: <MessageCircle className="w-4 h-4" /> },
-                { label: "Ver ventas",       color: "#39FF14", href: `https://ventas.mercadolibre.com.ar/list`, icon: <ShoppingCart className="w-4 h-4" /> },
-                { label: "Ver envíos",       color: "#00E5FF", href: `https://envios.mercadolibre.com.ar/list`, icon: <Truck className="w-4 h-4" /> },
-                { label: "Ver publicaciones",color: "#FFE600", href: `/appjeez/${data.meli_user_id}/items`, icon: <Package className="w-4 h-4" /> },
+                { label: "Ver ventas",       color: "#39FF14", href: `/appjeez/ordenes`,       icon: <ShoppingCart className="w-4 h-4" /> },
+                { label: "Ver envíos",       color: "#00E5FF", href: `/appjeez/ordenes`,       icon: <Truck className="w-4 h-4" /> },
+                { label: "Ver publicaciones",color: "#FFE600", href: `/appjeez/publicaciones`, icon: <Package className="w-4 h-4" /> },
               ].map(a => (
                 <a
                   key={a.label}
@@ -319,7 +320,8 @@ function AppJeezInner() {
   const navItems = [
     { label: "Dashboard",       icon: <BarChart2 className="w-4 h-4" />,       href: "/appjeez",              active: true  },
     { label: "Mensajería",      icon: <MessageCircle className="w-4 h-4" />,   href: "/appjeez/mensajes",     active: false },
-    { label: "Publicaciones",   icon: <Package className="w-4 h-4" />,         href: "/appjeez/items",        active: false },
+    { label: "Publicaciones",   icon: <Package className="w-4 h-4" />,         href: "/appjeez/publicaciones", active: false },
+    { label: "Órdenes",         icon: <ShoppingCart className="w-4 h-4" />,    href: "/appjeez/ordenes",       active: false },
     { label: "Ventas",          icon: <ShoppingCart className="w-4 h-4" />,    href: "/ventas",               active: false },
     { label: "Envíos",          icon: <Truck className="w-4 h-4" />,           href: "/flex",                 active: false },
     { label: "Cuentas MeLi",    icon: <Store className="w-4 h-4" />,           href: "/configuracion/meli",   active: false },
