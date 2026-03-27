@@ -42,6 +42,14 @@ function PreciosInner() {
   const [loading, setLoading]         = useState(false);
   const [data, setData]               = useState<PriceResponse | null>(null);
   const [error, setError]             = useState<string | null>(null);
+  const [accounts, setAccounts]       = useState<Array<{ id: string; nickname: string }>>([]);
+  const [selectedAcc, setSelectedAcc] = useState("all");
+
+  useState(() => {
+    fetch("/api/meli-accounts").then(r => r.json()).then(d => {
+      if (Array.isArray(d)) setAccounts(d.filter((a: { status: string }) => a.status === "active"));
+    }).catch(() => {});
+  });
 
   const run = async (dryRun: boolean) => {
     if (!keyword.trim() || !targetPrice) return;
@@ -49,14 +57,17 @@ function PreciosInner() {
     setError(null);
     setData(null);
     try {
+      const payload: Record<string, unknown> = {
+        keyword: keyword.trim(),
+        target_price: Number(targetPrice),
+        dry_run: dryRun,
+      };
+      if (selectedAcc !== "all") payload.account_ids = [selectedAcc];
+
       const res = await fetch("/api/meli-price-update", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          keyword: keyword.trim(),
-          target_price: Number(targetPrice),
-          dry_run: dryRun,
-        }),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const d = await res.json();
@@ -110,6 +121,20 @@ function PreciosInner() {
                 style={{ background: "#121212", border: "1px solid rgba(255,255,255,0.1)" }}
               />
             </div>
+          </div>
+
+          <div>
+            <label className="text-xs font-bold text-gray-400 mb-1.5 block">Cuenta</label>
+            <select
+              value={selectedAcc} onChange={e => setSelectedAcc(e.target.value)}
+              className="w-full px-3 py-2.5 rounded-xl text-sm text-white outline-none appearance-none"
+              style={{ background: "#121212", border: "1px solid rgba(255,255,255,0.1)" }}
+            >
+              <option value="all">Todas las cuentas</option>
+              {accounts.map(a => (
+                <option key={a.id} value={a.id}>{a.nickname}</option>
+              ))}
+            </select>
           </div>
 
           <div className="rounded-xl p-3 flex items-start gap-2" style={{ background: "#FFE60010", border: "1px solid #FFE60025" }}>
