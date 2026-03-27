@@ -25,6 +25,7 @@ interface ShipmentInfo {
   seller_sku: string | null;
   status: string;
   status_label: string | null;
+  substatus: string | null;
   urgency: UrgencyType;
   delivery_date: string | null;
   dispatch_date: string | null;
@@ -140,9 +141,24 @@ function ShipmentRow({ s, selected, onToggle }: {
 
       {/* Fila inferior: estado + imagen + producto + precio + cantidad + SKU */}
       <div className="px-3 py-2">
-        {/* Estado del envío */}
+        {/* Estado del envío + substatus */}
         <div className="mb-1.5">
-          <p className="text-[11px] font-black text-white">{s.status_label ?? s.status}</p>
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="text-[11px] font-black text-white">{s.status_label ?? s.status}</p>
+            {s.substatus && s.substatus !== "null" && (
+              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded"
+                style={{
+                  background: s.substatus === "printed" || s.substatus === "label_printed"
+                    ? "#39FF1420" : "#ffffff10",
+                  color: s.substatus === "printed" || s.substatus === "label_printed"
+                    ? "#39FF14" : "#9CA3AF",
+                  border: `1px solid ${s.substatus === "printed" || s.substatus === "label_printed" ? "#39FF1440" : "#ffffff15"}`,
+                }}>
+                {s.substatus === "printed" || s.substatus === "label_printed"
+                  ? "✓ Impresa en MeLi" : s.substatus.replace(/_/g, " ")}
+              </span>
+            )}
+          </div>
           {s.dispatch_date && (
             <p className="text-[10px] font-semibold" style={{ color: "#FF9800" }}>
               Despachar antes del {new Date(s.dispatch_date).toLocaleDateString("es-AR", { weekday:"long", day:"numeric", month:"long" })}

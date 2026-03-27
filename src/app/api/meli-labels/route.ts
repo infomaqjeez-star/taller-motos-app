@@ -23,6 +23,7 @@ interface ShipmentInfo {
   seller_sku: string | null;
   status: string;
   status_label: string | null;
+  substatus: string | null;
   urgency: UrgencyType;
   delivery_date: string | null;
   dispatch_date: string | null;
@@ -53,20 +54,23 @@ function statusLabel(status: string, type: LogisticType): string {
   return map[status] ?? status;
 }
 
-function classifyType(logisticType: string, tags: string[]): LogisticType {
+function classifyType(logisticType: string, tags: string[], substatus?: string): LogisticType {
   const lt = (logisticType ?? "").toLowerCase();
   const tagStr = (tags ?? []).join(",").toLowerCase();
-  // Full (fulfillment) — aislado
+  const ss = (substatus ?? "").toLowerCase();
+  // Full (fulfillment) — aislado, nunca se imprime por el vendedor
   if (lt === "fulfillment" || lt.includes("fulfillment")) return "full";
-  // Turbo / same day
+  // Turbo / same-day: self_service con entrega en horas
   if (
     tagStr.includes("turbo") ||
     tagStr.includes("same_day") ||
     tagStr.includes("express") ||
+    ss.includes("turbo") ||
     lt === "turbo"
   ) return "turbo";
-  // Flex
-  if (lt === "self_service" || lt.includes("flex")) return "flex";
+  // Flex: self_service estándar (próximo día hábil)
+  if (lt === "self_service" || lt.includes("flex") || tagStr.includes("flex")) return "flex";
+  // Correo: cross_docking, drop_off, me2, default
   return "correo";
 }
 
@@ -168,6 +172,7 @@ export async function GET(req: Request) {
             seller_sku:     firstItem?.item?.seller_sku ?? null,
             status:         rawStatus,
             status_label:   statusLabel(rawStatus, type),
+            substatus:      (ship.substatus as string | undefined) ?? null,
             urgency:        classifyUrgency(deliveryDate),
             delivery_date:  deliveryDate,
             dispatch_date:  null,
@@ -202,13 +207,30 @@ export async function GET(req: Request) {
               // Tipo correcto desde el shipment (más preciso que la orden)
               const lt = (detail.logistic_type as string | undefined) ?? "";
               const tags = (detail.tags as string[] | undefined) ?? [];
-              s.type = classifyType(lt, tags);
+              const substatus = (detail.substatus as string | undefined) ?? "";
+              s.substatus = substatus || null;
+              s.type = classifyType(lt, tags, substatus);
 
               // Actualizar status desde el shipment
               const shipStatus = (detail.status as string | undefined);
               if (shipStatus) {
                 s.status = shipStatus;
                 s.status_label = statusLabel(shipStatus, s.type);
+              }
+
+              // Si MeLi ya marca la etiqueta como impresa, sincronizar nuestra DB
+              if (substatus === "printed" || substatus === "label_printed") {
+                try {
+                  const { createClient } = await import("@supabase/supabase-js");
+                  const sb = createClient(
+                    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+                    process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+                  );
+                  await sb.from("meli_printed_labels").upsert(
+                    { shipment_id: s.shipment_id, printed_at: new Date().toISOString(), account: s.account, type: s.type, buyer: s.buyer, title: s.title },
+                    { onConflict: "shipment_id" }
+                  );
+                } catch { /* no bloquear si falla */ }
               }
 
               // Fecha de entrega — probar múltiples campos que usa MeLi
