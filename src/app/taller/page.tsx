@@ -5,7 +5,7 @@ import {
   Plus, Wrench, AlertTriangle, Package, CheckSquare, Clock,
   FileSpreadsheet, FileText, CheckCircle, MessageCircle, Trophy, Medal,
 } from "lucide-react";
-import { WorkOrder } from "@/lib/types";
+import { WorkOrder, MOTOR_TYPE_LABELS } from "@/lib/types";
 import { useOrders } from "@/hooks/useOrders";
 import { useInventory } from "@/hooks/useInventory";
 import { useNotifications } from "@/hooks/useNotifications";
@@ -231,7 +231,7 @@ export default function DashboardPage() {
                 <button
                   onClick={() => {
                     const label =
-                      filters.motorType !== "all" ? `Motor ${filters.motorType}`
+                      filters.motorType !== "all" ? (MOTOR_TYPE_LABELS[filters.motorType] ?? filters.motorType)
                       : filters.status !== "all" ? `Estado: ${filters.status}`
                       : filters.overdueOnly ? "Más de 90 días"
                       : "Todas las órdenes";

@@ -5,6 +5,7 @@ import {
   REPAIR_STATUS_LABELS,
   REPAIR_STATUS_COLORS,
   CLIENT_NOTIFICATION_LABELS,
+  MOTOR_TYPE_LABELS,
 } from "@/lib/types";
 import {
   formatDate,
@@ -95,13 +96,13 @@ export default function OrderCard({ order, onEdit, onDelete }: OrderCardProps) {
           {/* ── Fila 1: Badges ── */}
           <div className="flex flex-wrap items-center gap-1.5">
             <span
-              className={`text-xs font-black px-2 py-0.5 rounded-lg border
-                ${currentOrder.motorType === "2T"
-                  ? "bg-blue-500/20 text-blue-300 border-blue-500/40"
-                  : "bg-orange-500/20 text-orange-300 border-orange-500/40"
-                }`}
+              className="text-xs font-black px-2 py-0.5 rounded-lg border bg-orange-500/20 text-orange-300 border-orange-500/40"
             >
-              {currentOrder.motorType}
+              {MOTOR_TYPE_LABELS[currentOrder.motorType as keyof typeof MOTOR_TYPE_LABELS]
+                ?? currentOrder.motorType}
+              {currentOrder.motorType === "otros" && (currentOrder as WorkOrder & { machineTypeOther?: string }).machineTypeOther
+                ? `: ${(currentOrder as WorkOrder & { machineTypeOther?: string }).machineTypeOther}`
+                : ""}
             </span>
             <span className={`badge ${REPAIR_STATUS_COLORS[currentOrder.status]}`}>
               {REPAIR_STATUS_LABELS[currentOrder.status]}

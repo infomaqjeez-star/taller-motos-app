@@ -23,7 +23,7 @@ interface OrderFormProps {
 const defaultOrder = (): Omit<WorkOrder, "id" | "entryDate"> => ({
   clientName: "",
   clientPhone: "",
-  motorType: "4T",
+  motorType: "desmalezadora",
   brand: "",
   model: "",
   reportedIssues: "",
@@ -179,26 +179,37 @@ export default function OrderForm({ initial, onSave, onClose }: OrderFormProps) 
               <Wrench className="w-4 h-4" />
               Datos del Equipo
             </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 gap-3">
               <div>
-                <label className="label">Tipo de Motor *</label>
-                <div className="flex rounded-xl overflow-hidden border border-gray-600 h-[52px]">
-                  {(["2T", "4T"] as MotorType[]).map((t) => (
+                <label className="label">Tipo de M&aacute;quina *</label>
+                <div className="flex flex-wrap gap-2">
+                  {(["desmalezadora", "motosierra", "grupo_electrogeno", "otros"] as MotorType[]).map((t) => (
                     <button
                       key={t}
                       type="button"
                       onClick={() => set("motorType", t)}
-                      className={`flex-1 text-base font-bold transition-colors
+                      className={`px-3 py-2 rounded-xl text-xs font-bold border transition-colors
                         ${form.motorType === t
-                          ? "bg-orange-500 text-white"
-                          : "bg-gray-800 text-gray-400 hover:bg-gray-700"
+                          ? "bg-orange-500 border-orange-500 text-white"
+                          : "bg-gray-800 border-gray-700 text-gray-400 hover:text-white"
                         }`}
                     >
-                      {t}
+                      {MOTOR_TYPE_LABELS[t]}
                     </button>
                   ))}
                 </div>
+                {form.motorType === "otros" && (
+                  <input
+                    type="text"
+                    placeholder="Especific&aacute; el tipo de equipo..."
+                    value={(form as WorkOrder & { machineTypeOther?: string }).machineTypeOther ?? ""}
+                    onChange={e => set("machineTypeOther" as keyof typeof form, e.target.value as never)}
+                    className="input mt-2"
+                  />
+                )}
               </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
               <div>
                 <label className="label">Marca *</label>
                 <input
