@@ -11,10 +11,12 @@ interface FiltersBarProps {
   filteredCount: number;
 }
 
-const MOTOR_OPTIONS: { value: MotorType | "all"; label: string }[] = [
-  { value: "all", label: "Todos" },
-  { value: "2T", label: "2T" },
-  { value: "4T", label: "4T" },
+const MOTOR_OPTIONS: { value: MotorType | "all"; label: string; emoji: string }[] = [
+  { value: "all",               label: "Todos",            emoji: "⚙️" },
+  { value: "desmalezadora",     label: "Desmalezadora",    emoji: "🌿" },
+  { value: "motosierra",        label: "Motosierra",       emoji: "🪚" },
+  { value: "grupo_electrogeno", label: "Grupo Elec.",      emoji: "⚡" },
+  { value: "otros",             label: "Otros",            emoji: "🔧" },
 ];
 
 const STATUS_OPTIONS: { value: RepairStatus | "all"; label: string }[] = [
@@ -61,18 +63,19 @@ export default function FiltersBar({ filters, onChange, totalCount, filteredCoun
 
       {/* Filtros en fila */}
       <div className="flex flex-wrap gap-2 items-center">
-        {/* Tipo de motor */}
-        <div className="flex rounded-xl overflow-hidden border border-gray-700 flex-shrink-0">
-          {MOTOR_OPTIONS.map(({ value, label }) => (
+        {/* Tipo de máquina */}
+        <div className="flex flex-wrap gap-1.5 flex-shrink-0">
+          {MOTOR_OPTIONS.map(({ value, label, emoji }) => (
             <button
               key={value}
               onClick={() => onChange({ ...filters, motorType: value as MotorType | "all" })}
-              className={`px-4 py-2.5 text-sm font-bold transition-colors
+              className={`px-3 py-2 text-xs font-bold rounded-xl transition-colors flex items-center gap-1.5
                 ${filters.motorType === value
                   ? "bg-orange-500 text-white"
-                  : "bg-gray-800 text-gray-400 hover:text-gray-200 hover:bg-gray-700"
+                  : "bg-gray-800 text-gray-400 hover:text-gray-200 hover:bg-gray-700 border border-gray-700"
                 }`}
             >
+              <span>{emoji}</span>
               {label}
             </button>
           ))}
