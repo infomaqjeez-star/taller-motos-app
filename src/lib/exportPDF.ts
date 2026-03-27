@@ -4,6 +4,7 @@ import {
   WorkOrder,
   REPAIR_STATUS_LABELS,
   CLIENT_NOTIFICATION_LABELS,
+  MOTOR_TYPE_LABELS,
 } from "./types";
 import { formatDate, formatCurrency, isOverdue90Days, daysWaitingForPickup } from "./utils";
 
@@ -291,3 +292,4 @@ export function exportOrderDetailPDF(o: WorkOrder) {
   drawFooter(doc);
   doc.save(`Orden_${o.clientName.replace(/\s+/g, "_")}_${o.id}.pdf`);
 }
+
