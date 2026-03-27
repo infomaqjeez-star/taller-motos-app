@@ -69,20 +69,24 @@ async function meliGetWithRetry(path: string, token: string, signal?: AbortSigna
   return null;
 }
 
-async function fetchIdsByStatus(userId: string, token: string, status: string, signal?: AbortSignal): Promise<string[]> {
+// Búsqueda directa por keyword+status — igual que el panel del vendedor
+async function fetchIdsByKeywordAndStatus(
+  userId: string, token: string, keyword: string, status: string, signal?: AbortSignal
+): Promise<string[]> {
   const ids: string[] = [];
   let offset = 0;
   const limit = 100;
+  const q = encodeURIComponent(keyword);
   const first = await meliGetWithRetry(
-    `/users/${userId}/items/search?status=${status}&limit=${limit}&offset=0`, token, signal
+    `/users/${userId}/items/search?q=${q}&status=${status}&limit=${limit}&offset=0`, token, signal
   ) as { results?: string[]; paging?: { total?: number } } | null;
   if (!first?.results?.length) return ids;
   ids.push(...first.results);
   const total = first.paging?.total ?? first.results.length;
-  while (offset + limit < total && offset < 10000 && !signal?.aborted) {
+  while (offset + limit < total && offset < 5000 && !signal?.aborted) {
     offset += limit;
     const page = await meliGetWithRetry(
-      `/users/${userId}/items/search?status=${status}&limit=${limit}&offset=${offset}`, token, signal
+      `/users/${userId}/items/search?q=${q}&status=${status}&limit=${limit}&offset=${offset}`, token, signal
     ) as { results?: string[] } | null;
     if (!page?.results?.length) break;
     ids.push(...page.results);
@@ -91,18 +95,17 @@ async function fetchIdsByStatus(userId: string, token: string, status: string, s
   return ids;
 }
 
-async function getAllItemIds(userId: string, token: string, signal?: AbortSignal): Promise<string[]> {
-  // Busca en TODOS los estados para no perder ninguna publicación
-  const statuses = ["active", "paused", "under_review", "not_yet_active"];
-  const arrays = await Promise.all(statuses.map(s => fetchIdsByStatus(userId, token, s, signal)));
+// Obtiene todos los IDs que coinciden con el keyword en cualquier estado
+async function getMatchingIds(userId: string, token: string, keyword: string, signal?: AbortSignal): Promise<string[]> {
+  const statuses = ["active", "paused", "under_review"];
+  const arrays = await Promise.all(
+    statuses.map(s => fetchIdsByKeywordAndStatus(userId, token, keyword, s, signal))
+  );
   const seen = new Set<string>();
-  const all: string[] = [];
   for (const arr of arrays) {
-    for (const id of arr) {
-      if (!seen.has(id)) { seen.add(id); all.push(id); }
-    }
+    for (const id of arr) seen.add(id);
   }
-  return all;
+  return Array.from(seen);
 }
 
 interface ItemDetail {
@@ -197,16 +200,11 @@ export async function POST(req: Request) {
 
         await send({ type: "account_start", account: acc.nickname });
 
-        const [activeIds] = await Promise.all([
-          getAllItemIds(String(acc.meli_user_id), token, signal),
-        ]);
-        const allIds = activeIds;
+        // Usa el buscador de MeLi directamente con la keyword (igual que el panel del vendedor)
+        const allIds = await getMatchingIds(String(acc.meli_user_id), token, keyword, signal);
         totalScanned += allIds.length;
 
-        const idsToCheck = allIds.filter(id => {
-          if (cacheMap.get(id) === false) { cacheHits++; return false; }
-          return true;
-        });
+        const idsToCheck = allIds;  // Ya son solo los que coinciden con la keyword
 
         const total = idsToCheck.length;
         await send({ type: "account_total", account: acc.nickname, total, totalScanned });
