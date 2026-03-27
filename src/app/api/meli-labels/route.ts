@@ -31,14 +31,21 @@ interface ShipmentInfo {
   item_id: string | null;
 }
 
+function isDatePast(dateStr: string | null): boolean {
+  if (!dateStr) return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return new Date(dateStr) < today;
+}
+
 function classifyUrgency(deliveryDate: string | null): UrgencyType {
   if (!deliveryDate) return "upcoming";
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const delivery = new Date(deliveryDate);
-  delivery.setHours(0, 0, 0, 0);
-  if (delivery.getTime() < today.getTime()) return "delayed";
-  if (delivery.getTime() === today.getTime()) return "today";
+  const d = new Date(deliveryDate);
+  d.setHours(0, 0, 0, 0);
+  if (d.getTime() < today.getTime()) return "delayed";
+  if (d.getTime() === today.getTime()) return "today";
   return "upcoming";
 }
 
@@ -55,29 +62,80 @@ function statusLabel(status: string, type: LogisticType): string {
 }
 
 function classifyType(logisticType: string, tags: string[], substatus?: string, mode?: string): LogisticType {
-  const lt  = (logisticType ?? "").toLowerCase();
+  const lt     = (logisticType ?? "").toLowerCase();
   const tagStr = (tags ?? []).join(",").toLowerCase();
-  const ss  = (substatus ?? "").toLowerCase();
-  const md  = (mode ?? "").toLowerCase();
+  const ss     = (substatus ?? "").toLowerCase();
+  const md     = (mode ?? "").toLowerCase();
 
-  // Full — cualquier indicio de fulfillment
   if (
     lt === "fulfillment" || lt.includes("fulfillment") ||
     tagStr.includes("fulfillment") ||
     md === "fulfillment" || md.includes("fulfillment")
   ) return "full";
 
-  // Turbo / same-day
   if (
     tagStr.includes("turbo") || tagStr.includes("same_day") ||
     tagStr.includes("express") || ss.includes("turbo") || lt === "turbo"
   ) return "turbo";
 
-  // Flex
   if (lt === "self_service" || lt.includes("flex") || tagStr.includes("flex")) return "flex";
 
-  // Correo (cross_docking, drop_off, me2, etc.)
   return "correo";
+}
+
+function parseOrder(
+  order: Record<string, unknown>,
+  acc: { nickname: string; meli_user_id: number | string },
+  forceFull: boolean
+): ShipmentInfo | null {
+  const ship = order.shipping as Record<string, unknown> | undefined;
+  if (!ship?.id) return null;
+  const sid = ship.id as number;
+
+  const logistic  = (ship.logistic_type as string | undefined) ?? "";
+  const tags      = (ship.tags as string[] | undefined) ?? [];
+  const mode      = (ship.mode as string | undefined) ?? "";
+  const orderTags = (order.tags as string[] | undefined) ?? [];
+  const allTags   = [...tags, ...orderTags];
+
+  const items = (order.order_items as Array<{
+    item?: { id?: string; title?: string; seller_sku?: string };
+    quantity?: number;
+    unit_price?: number;
+  }> | undefined) ?? [];
+  const buyer = order.buyer as Record<string, unknown> | undefined;
+  const firstItem = items[0];
+
+  let deliveryDate: string | null = null;
+  const shippingOpt    = ship.shipping_option as Record<string, unknown> | undefined;
+  const deliveryLimit  = shippingOpt?.estimated_delivery_limit as Record<string, unknown> | undefined;
+  if (deliveryLimit?.date) deliveryDate = deliveryLimit.date as string;
+
+  const rawStatus = (ship.status as string | undefined) ?? "ready_to_ship";
+  const type = forceFull ? "full" : classifyType(logistic, allTags, undefined, mode);
+
+  return {
+    shipment_id:    sid,
+    order_id:       (order.id as number | undefined) ?? null,
+    order_date:     (order.date_created as string | undefined) ?? null,
+    account:        String(acc.nickname),
+    meli_user_id:   String(acc.meli_user_id),
+    type,
+    buyer:          `${(buyer?.first_name as string | undefined) ?? ""} ${(buyer?.last_name as string | undefined) ?? ""}`.trim(),
+    buyer_nickname: (buyer?.nickname as string | undefined) ?? null,
+    title:          firstItem?.item?.title ?? "Producto",
+    quantity:       firstItem?.quantity ?? 1,
+    unit_price:     firstItem?.unit_price ?? null,
+    seller_sku:     firstItem?.item?.seller_sku ?? null,
+    status:         rawStatus,
+    status_label:   statusLabel(rawStatus, type),
+    substatus:      (ship.substatus as string | undefined) ?? null,
+    urgency:        classifyUrgency(deliveryDate),
+    delivery_date:  deliveryDate,
+    dispatch_date:  null,
+    thumbnail:      null,
+    item_id:        firstItem?.item?.id ?? null,
+  };
 }
 
 export async function GET(req: Request) {
@@ -86,9 +144,9 @@ export async function GET(req: Request) {
   const format = searchParams.get("format") ?? "pdf";
   const supabase = getSupabase();
 
-  // Historial con filtro opcional de período
+  // ── Historial de impresas ──────────────────────────────────────────────────
   if (action === "history") {
-    const period = searchParams.get("period") ?? "all"; // "today" | "week" | "all"
+    const period = searchParams.get("period") ?? "today";
     let query = supabase
       .from("meli_printed_labels")
       .select("*")
@@ -96,14 +154,15 @@ export async function GET(req: Request) {
       .limit(200);
 
     if (period === "today") {
-      const todayStart = new Date();
-      todayStart.setHours(0, 0, 0, 0);
-      query = query.gte("printed_at", todayStart.toISOString()) as typeof query;
+      const s = new Date(); s.setHours(0, 0, 0, 0);
+      query = query.gte("printed_at", s.toISOString()) as typeof query;
+    } else if (period === "yesterday") {
+      const s = new Date(); s.setDate(s.getDate() - 1); s.setHours(0, 0, 0, 0);
+      const e = new Date(); e.setHours(0, 0, 0, 0);
+      query = query.gte("printed_at", s.toISOString()).lt("printed_at", e.toISOString()) as typeof query;
     } else if (period === "week") {
-      const weekStart = new Date();
-      weekStart.setDate(weekStart.getDate() - 7);
-      weekStart.setHours(0, 0, 0, 0);
-      query = query.gte("printed_at", weekStart.toISOString()) as typeof query;
+      const s = new Date(); s.setDate(s.getDate() - 7); s.setHours(0, 0, 0, 0);
+      query = query.gte("printed_at", s.toISOString()) as typeof query;
     }
 
     const { data } = await query;
@@ -112,12 +171,13 @@ export async function GET(req: Request) {
 
   try {
     const accounts = await getActiveAccounts();
-    if (!accounts.length) return NextResponse.json({ shipments: [], summary: {} });
+    if (!accounts.length) return NextResponse.json({ shipments: [], full: [], delayed_unshipped: [], delayed_in_transit: [], summary: {} });
 
     const { data: printed } = await supabase.from("meli_printed_labels").select("shipment_id");
     const printedSet = new Set((printed ?? []).map((p: { shipment_id: number }) => p.shipment_id));
 
-    const allShipments: ShipmentInfo[] = [];
+    const allShipments:        ShipmentInfo[] = [];
+    const allInTransit:        ShipmentInfo[] = [];
     const tokenCache = new Map<string, string>();
 
     await Promise.all(accounts.map(async (acc) => {
@@ -126,83 +186,56 @@ export async function GET(req: Request) {
         if (!token) return;
         tokenCache.set(String(acc.meli_user_id), token);
 
-        const [dataReady, dataHandling, dataFull] = await Promise.all([
+        const [dataReady, dataHandling, dataFull, dataShipped] = await Promise.all([
           meliGet(`/orders/search?seller=${acc.meli_user_id}&order.status=paid&sort=date_desc&limit=50&shipping.status=ready_to_ship`, token),
           meliGet(`/orders/search?seller=${acc.meli_user_id}&order.status=paid&sort=date_desc&limit=50&shipping.status=handling`, token),
           meliGet(`/orders/search?seller=${acc.meli_user_id}&order.status=paid&sort=date_desc&limit=50&shipping.logistic_type=fulfillment`, token),
+          meliGet(`/orders/search?seller=${acc.meli_user_id}&order.status=paid&sort=date_desc&limit=50&shipping.status=shipped`, token),
         ]);
 
-        const orders = [
-          ...((dataReady?.results ?? []) as Array<Record<string, unknown>>),
-          ...((dataHandling?.results ?? []) as Array<Record<string, unknown>>),
-          ...((dataFull?.results ?? []) as Array<Record<string, unknown>>),
-        ];
-        const readyIds   = new Set(((dataReady?.results   ?? []) as Array<Record<string,unknown>>).map(o => (o.shipping as Record<string,unknown>)?.id as number));
-        const handlingIds = new Set(((dataHandling?.results ?? []) as Array<Record<string,unknown>>).map(o => (o.shipping as Record<string,unknown>)?.id as number));
-        const fullIds    = new Set(((dataFull?.results    ?? []) as Array<Record<string,unknown>>).map(o => (o.shipping as Record<string,unknown>)?.id as number));
-        const seen = new Set<number>();
+        const readyResults    = ((dataReady?.results    ?? []) as Array<Record<string, unknown>>);
+        const handlingResults = ((dataHandling?.results ?? []) as Array<Record<string, unknown>>);
+        const fullResults     = ((dataFull?.results     ?? []) as Array<Record<string, unknown>>);
+        const shippedResults  = ((dataShipped?.results  ?? []) as Array<Record<string, unknown>>);
 
-        for (const order of orders) {
+        const readyIds   = new Set(readyResults.map(o    => (o.shipping as Record<string,unknown>)?.id as number));
+        const handlingIds = new Set(handlingResults.map(o => (o.shipping as Record<string,unknown>)?.id as number));
+        const fullIds    = new Set(fullResults.map(o     => (o.shipping as Record<string,unknown>)?.id as number));
+
+        const pendingOrders = [...readyResults, ...handlingResults, ...fullResults];
+        const seenPending   = new Set<number>();
+
+        for (const order of pendingOrders) {
           const ship = order.shipping as Record<string, unknown> | undefined;
           if (!ship?.id) continue;
           const sid = ship.id as number;
-          if (seen.has(sid) || printedSet.has(sid)) continue;
-          seen.add(sid);
+          if (seenPending.has(sid) || printedSet.has(sid)) continue;
+          seenPending.add(sid);
 
-          const logistic = (ship.logistic_type as string | undefined) ?? "";
-          const tags     = (ship.tags as string[] | undefined) ?? [];
-          const mode     = (ship.mode as string | undefined) ?? "";
-          const orderTags = (order.tags as string[] | undefined) ?? [];
-          const allTags   = [...tags, ...orderTags];
-
-          // Si vino de la query dedicada de fulfillment → siempre Full
           const forceFull = fullIds.has(sid) && !readyIds.has(sid) && !handlingIds.has(sid);
-
-          const items = (order.order_items as Array<{
-            item?: { id?: string; title?: string; seller_sku?: string };
-            quantity?: number;
-            unit_price?: number;
-          }> | undefined) ?? [];
-          const buyer = order.buyer as Record<string, unknown> | undefined;
-          const firstItem = items[0];
-
-          let deliveryDate: string | null = null;
-          const shippingOpt = ship.shipping_option as Record<string, unknown> | undefined;
-          const deliveryLimit = shippingOpt?.estimated_delivery_limit as Record<string, unknown> | undefined;
-          if (deliveryLimit?.date) deliveryDate = deliveryLimit.date as string;
-
-          const rawStatus = (ship.status as string | undefined) ?? "ready_to_ship";
-          const type = forceFull ? "full" : classifyType(logistic, allTags, undefined, mode);
-
-          allShipments.push({
-            shipment_id: sid,
-            order_id:     (order.id as number | undefined) ?? null,
-            order_date:   (order.date_created as string | undefined) ?? null,
-            account:      acc.nickname,
-            meli_user_id: String(acc.meli_user_id),
-            type,
-            buyer:          `${(buyer?.first_name as string | undefined) ?? ""} ${(buyer?.last_name as string | undefined) ?? ""}`.trim(),
-            buyer_nickname: (buyer?.nickname as string | undefined) ?? null,
-            title:          firstItem?.item?.title ?? "Producto",
-            quantity:       firstItem?.quantity ?? 1,
-            unit_price:     firstItem?.unit_price ?? null,
-            seller_sku:     firstItem?.item?.seller_sku ?? null,
-            status:         rawStatus,
-            status_label:   statusLabel(rawStatus, type),
-            substatus:      (ship.substatus as string | undefined) ?? null,
-            urgency:        classifyUrgency(deliveryDate),
-            delivery_date:  deliveryDate,
-            dispatch_date:  null,
-            thumbnail:      null,
-            item_id:        firstItem?.item?.id ?? null,
-          });
+          const info = parseOrder(order, acc, forceFull);
+          if (info) allShipments.push(info);
         }
+
+        // Envíos ya despachados (para detectar demorados en tránsito)
+        const seenShipped = new Set<number>();
+        for (const order of shippedResults) {
+          const ship = order.shipping as Record<string, unknown> | undefined;
+          if (!ship?.id) continue;
+          const sid = ship.id as number;
+          if (seenShipped.has(sid)) continue;
+          seenShipped.add(sid);
+          const info = parseOrder(order, acc, false);
+          if (info) allInTransit.push(info);
+        }
+
       } catch { /* skip account */ }
     }));
 
-    // Enriquecer con detalle de shipment para tipo y fecha exactos
+    // ── Enrichment con /shipments/{id} ─────────────────────────────────────
+    const allToEnrich = [...allShipments, ...allInTransit];
     const byAccountMap = new Map<string, { token: string; ids: number[] }>();
-    for (const s of allShipments) {
+    for (const s of allToEnrich) {
       if (!byAccountMap.has(s.meli_user_id)) {
         const t = tokenCache.get(s.meli_user_id);
         if (!t) continue;
@@ -218,25 +251,26 @@ export async function GET(req: Request) {
             try {
               const detail = await meliGet(`/shipments/${sid}`, token) as Record<string, unknown> | null;
               if (!detail) return;
-              const s = allShipments.find(x => x.shipment_id === sid);
+              const s = allToEnrich.find(x => x.shipment_id === sid);
               if (!s) return;
 
-              // Tipo correcto desde el shipment (más preciso que la orden)
-              const lt       = (detail.logistic_type as string | undefined) ?? "";
-              const tags     = (detail.tags as string[] | undefined) ?? [];
+              const lt        = (detail.logistic_type as string | undefined) ?? "";
+              const tags      = (detail.tags as string[] | undefined) ?? [];
               const substatus = (detail.substatus as string | undefined) ?? "";
-              const mode     = (detail.mode as string | undefined) ?? "";
+              const mode      = (detail.mode as string | undefined) ?? "";
               s.substatus = substatus || null;
-              s.type = classifyType(lt, tags, substatus, mode);
+              // Solo actualizar tipo si no fue forzado como full en la query
+              if (s.type !== "full") {
+                s.type = classifyType(lt, tags, substatus, mode);
+              }
 
-              // Actualizar status desde el shipment
               const shipStatus = (detail.status as string | undefined);
               if (shipStatus) {
                 s.status = shipStatus;
                 s.status_label = statusLabel(shipStatus, s.type);
               }
 
-              // Si MeLi ya marca la etiqueta como impresa, sincronizar nuestra DB
+              // Auto-sync: si MeLi ya marcó impresa
               if (substatus === "printed" || substatus === "label_printed") {
                 try {
                   const { createClient } = await import("@supabase/supabase-js");
@@ -248,10 +282,10 @@ export async function GET(req: Request) {
                     { shipment_id: s.shipment_id, printed_at: new Date().toISOString(), account: s.account, type: s.type, buyer: s.buyer, title: s.title },
                     { onConflict: "shipment_id" }
                   );
-                } catch { /* no bloquear si falla */ }
+                } catch { /* ignore */ }
               }
 
-              // Fecha de entrega — probar múltiples campos que usa MeLi
+              // Fechas
               const tryDate = (obj: unknown): string | null => {
                 if (!obj || typeof obj !== "object") return null;
                 const o = obj as Record<string, unknown>;
@@ -262,15 +296,13 @@ export async function GET(req: Request) {
                 tryDate(detail.estimated_delivery_limit) ??
                 tryDate((detail.shipping_option as Record<string, unknown> | undefined)?.estimated_delivery_limit) ??
                 tryDate((detail.shipping_option as Record<string, unknown> | undefined)?.estimated_delivery_final) ??
-                tryDate(detail.estimated_delivery_final) ??
-                (detail.date_first_printed as string | undefined) ?? null;
+                tryDate(detail.estimated_delivery_final) ?? null;
 
               if (deliveryDate) {
                 s.delivery_date = deliveryDate;
                 s.urgency = classifyUrgency(deliveryDate);
               }
 
-              // Fecha límite de despacho por parte del vendedor
               const dispatchLimit =
                 (detail.shipping_option as Record<string, unknown> | undefined)?.estimated_handling_limit ??
                 detail.estimated_handling_limit;
@@ -283,88 +315,85 @@ export async function GET(req: Request) {
       })
     );
 
-    // Ordenar: urgencia primero (demorado > hoy > próximo), luego tipo
-    const urgencyOrder: Record<UrgencyType, number> = { delayed: 0, today: 1, upcoming: 2 };
-    const typeOrder: Record<LogisticType, number> = { correo: 0, turbo: 1, flex: 2, full: 3 };
-    allShipments.sort((a, b) => {
-      const ud = urgencyOrder[a.urgency] - urgencyOrder[b.urgency];
-      return ud !== 0 ? ud : typeOrder[a.type] - typeOrder[b.type];
-    });
-
-    // Batch fetch de thumbnails — agrupa item_ids por cuenta y usa el token correcto
-    const thumbnailMap = new Map<string, string>();
-    // Agrupar item_ids por meli_user_id para usar el token correcto de cada cuenta
+    // ── Thumbnails ────────────────────────────────────────────────────────────
+    const thumbnailMap  = new Map<string, string>();
     const itemsByAccount = new Map<string, { token: string; itemIds: string[] }>();
-    for (const s of allShipments) {
+    for (const s of allToEnrich) {
       if (!s.item_id) continue;
-      const userId = s.meli_user_id;
-      const token = tokenCache.get(userId);
-      if (!token) continue;
-      if (!itemsByAccount.has(userId)) {
-        itemsByAccount.set(userId, { token, itemIds: [] });
-      }
-      const entry = itemsByAccount.get(userId)!;
-      if (!entry.itemIds.includes(s.item_id)) {
-        entry.itemIds.push(s.item_id);
-      }
+      const t = tokenCache.get(s.meli_user_id);
+      if (!t) continue;
+      if (!itemsByAccount.has(s.meli_user_id)) itemsByAccount.set(s.meli_user_id, { token: t, itemIds: [] });
+      const entry = itemsByAccount.get(s.meli_user_id)!;
+      if (!entry.itemIds.includes(s.item_id)) entry.itemIds.push(s.item_id);
     }
-    // Fetch thumbnails por cuenta con su propio token
     await Promise.all(
       Array.from(itemsByAccount.values()).map(async ({ token, itemIds }) => {
         for (let i = 0; i < itemIds.length; i += 20) {
           const batch = itemIds.slice(i, i + 20);
           try {
-            const res = await meliGet(
-              `/items?ids=${batch.join(",")}&attributes=id,thumbnail,secure_thumbnail`,
-              token
-            ) as Array<{ code: number; body?: { id: string; thumbnail?: string; secure_thumbnail?: string } }> | null;
+            const res = await meliGet(`/items?ids=${batch.join(",")}&attributes=id,thumbnail,secure_thumbnail`, token) as
+              Array<{ code: number; body?: { id: string; thumbnail?: string; secure_thumbnail?: string } }> | null;
             if (Array.isArray(res)) {
-              for (const entry of res) {
-                if (entry.code === 200 && entry.body?.id) {
-                  const img = entry.body.secure_thumbnail || entry.body.thumbnail;
-                  if (img) thumbnailMap.set(entry.body.id, img);
+              for (const e of res) {
+                if (e.code === 200 && e.body?.id) {
+                  const img = e.body.secure_thumbnail || e.body.thumbnail;
+                  if (img) thumbnailMap.set(e.body.id, img);
                 }
               }
             }
-          } catch { /* skip thumbnails for this batch */ }
+          } catch { /* skip */ }
           if (i + 20 < itemIds.length) await new Promise(r => setTimeout(r, 150));
         }
       })
     );
-    // Asignar thumbnails a los envíos
-    for (const s of allShipments) {
-      if (s.item_id && thumbnailMap.has(s.item_id)) {
-        s.thumbnail = thumbnailMap.get(s.item_id)!;
-      }
+    for (const s of allToEnrich) {
+      if (s.item_id && thumbnailMap.has(s.item_id)) s.thumbnail = thumbnailMap.get(s.item_id)!;
     }
 
-    if (action === "list") {
-      // Pendientes = no impresos, no full
-      const pending = allShipments.filter(s => s.type !== "full");
-      // Full separado
-      const full    = allShipments.filter(s => s.type === "full");
+    // ── Separación final ──────────────────────────────────────────────────────
+    const urgencyOrder: Record<UrgencyType, number>   = { delayed: 0, today: 1, upcoming: 2 };
+    const typeOrder:    Record<LogisticType, number>   = { correo: 0, turbo: 1, flex: 2, full: 3 };
+    allShipments.sort((a, b) => {
+      const ud = urgencyOrder[a.urgency] - urgencyOrder[b.urgency];
+      return ud !== 0 ? ud : typeOrder[a.type] - typeOrder[b.type];
+    });
 
+    // Pending = no full, no impresos
+    const pending   = allShipments.filter(s => s.type !== "full");
+    const fullItems = allShipments.filter(s => s.type === "full");
+
+    // Demorados sin despachar: pending con dispatch_date pasada
+    const delayed_unshipped = pending.filter(s =>
+      isDatePast(s.dispatch_date) || s.urgency === "delayed"
+    );
+
+    // Demorados en tránsito: ya despachados, delivery_date pasada
+    const delayed_in_transit = allInTransit.filter(s =>
+      s.type !== "full" && isDatePast(s.delivery_date)
+    );
+
+    if (action === "list") {
       return NextResponse.json({
-        shipments: pending,
-        full,
+        shipments:          pending,
+        full:               fullItems,
+        delayed_unshipped,
+        delayed_in_transit,
         summary: {
-          total:    pending.length,
-          correo:   pending.filter(s => s.type === "correo").length,
-          turbo:    pending.filter(s => s.type === "turbo").length,
-          flex:     pending.filter(s => s.type === "flex").length,
-          full:     full.length,
-          delayed:  pending.filter(s => s.urgency === "delayed").length,
-          today:    pending.filter(s => s.urgency === "today").length,
-          upcoming: pending.filter(s => s.urgency === "upcoming").length,
+          correo:            pending.filter(s => s.type === "correo").length,
+          flex:              pending.filter(s => s.type === "flex").length,
+          turbo:             pending.filter(s => s.type === "turbo").length,
+          full:              fullItems.length,
+          delayed_unshipped: delayed_unshipped.length,
+          delayed_in_transit: delayed_in_transit.length,
         },
       });
     }
 
-    // action === "download"
+    // ── Download ───────────────────────────────────────────────────────────────
     const selectedIds = searchParams.get("ids");
     const targetShipments = selectedIds
-      ? allShipments.filter(s => selectedIds.split(",").includes(String(s.shipment_id)))
-      : allShipments.filter(s => s.type !== "full");
+      ? allShipments.filter(s => s.type !== "full" && selectedIds.split(",").includes(String(s.shipment_id)))
+      : pending;
 
     if (!targetShipments.length) {
       return NextResponse.json({ error: "No hay envíos seleccionados" }, { status: 400 });
@@ -373,9 +402,9 @@ export async function GET(req: Request) {
     const byAccount = new Map<string, { token: string; ids: number[] }>();
     for (const s of targetShipments) {
       if (!byAccount.has(s.meli_user_id)) {
-        const cachedToken = tokenCache.get(s.meli_user_id);
-        if (!cachedToken) continue;
-        byAccount.set(s.meli_user_id, { token: cachedToken, ids: [] });
+        const t = tokenCache.get(s.meli_user_id);
+        if (!t) continue;
+        byAccount.set(s.meli_user_id, { token: t, ids: [] });
       }
       byAccount.get(s.meli_user_id)!.ids.push(s.shipment_id);
     }
@@ -385,7 +414,7 @@ export async function GET(req: Request) {
 
     for (const accData of Array.from(byAccount.values())) {
       for (let i = 0; i < accData.ids.length; i += 50) {
-        const batch = accData.ids.slice(i, i + 50);
+        const batch    = accData.ids.slice(i, i + 50);
         const idsParam = batch.join(",");
         const pdf = await meliGetRaw(
           `/shipment_labels?shipment_ids=${idsParam}&response_type=${response}&savePdf=Y`,
@@ -431,11 +460,11 @@ export async function POST(req: Request) {
       const detail = shipments?.find(s => s.shipment_id === id);
       return {
         shipment_id: id,
-        account:    detail?.account ?? null,
-        type:       detail?.type ?? null,
-        buyer:      detail?.buyer ?? null,
-        title:      detail?.title ?? null,
-        printed_at: new Date().toISOString(),
+        account:     detail?.account ?? null,
+        type:        detail?.type ?? null,
+        buyer:       detail?.buyer ?? null,
+        title:       detail?.title ?? null,
+        printed_at:  new Date().toISOString(),
       };
     });
     await supabase.from("meli_printed_labels").upsert(rows, { onConflict: "shipment_id" });
