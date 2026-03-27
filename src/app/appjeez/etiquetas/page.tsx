@@ -98,7 +98,7 @@ function TypeBadge({ type }: { type: LogisticType }) {
 function ShipmentCard({ s, selected, onToggle, showCheckbox = true }: {
   s: ShipmentInfo; selected?: boolean; onToggle?: (id: number) => void; showCheckbox?: boolean;
 }) {
-  const urg = URGENCY_CFG[s.urgency];
+  const urg = URGENCY_CFG[s.urgency] ?? URGENCY_CFG["upcoming"];
   const borderColor =
     s.urgency === "delayed"  ? "#ef4444" :
     s.urgency === "today"    ? "#FF9800" :
