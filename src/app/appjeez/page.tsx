@@ -345,6 +345,7 @@ function AppJeezInner() {
     { label: "Dashboard",       icon: <BarChart2 className="w-4 h-4" />,       href: "/appjeez",               active: true  },
     { label: "Mensajería",      icon: <MessageCircle className="w-4 h-4" />,   href: "/appjeez/mensajes",      active: false },
     { label: "Envíos",          icon: <Truck className="w-4 h-4" />,           href: "/appjeez/envios",        active: false },
+    { label: "Etiquetas",       icon: <Tag className="w-4 h-4" />,             href: "/appjeez/etiquetas",     active: false },
     { label: "Publicaciones",   icon: <Package className="w-4 h-4" />,         href: "/appjeez/publicaciones", active: false },
     { label: "Sincronizar",     icon: <Copy className="w-4 h-4" />,            href: "/appjeez/sincronizar",   active: false },
     { label: "Órdenes",         icon: <ShoppingCart className="w-4 h-4" />,    href: "/appjeez/ordenes",       active: false },
