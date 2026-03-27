@@ -154,7 +154,7 @@ export async function GET(req: Request) {
     const pdfChunks: ArrayBuffer[] = [];
     const response = format === "zpl" ? "zpl2" : "pdf";
 
-    for (const [, accData] of byAccount) {
+    for (const accData of Array.from(byAccount.values())) {
       // MeLi acepta hasta 50 shipment_ids por request
       for (let i = 0; i < accData.ids.length; i += 50) {
         const batch = accData.ids.slice(i, i + 50);
