@@ -64,6 +64,8 @@ export function useOrders() {
 
   const filtered = orders.filter((o) => {
     if (filters.motorType !== "all" && o.motorType !== filters.motorType) return false;
+    // Ocultar entregados por defecto; solo mostrar si el filtro lo selecciona explícitamente
+    if (filters.status === "all" && o.status === "entregado") return false;
     if (filters.status !== "all" && o.status !== filters.status) return false;
     if (filters.overdueOnly && !isOverdue90Days(o)) return false;
     if (filters.search) {
