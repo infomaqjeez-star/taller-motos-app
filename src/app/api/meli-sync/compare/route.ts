@@ -34,16 +34,33 @@ async function meliGet(path: string, token: string) {
   } catch { return null; }
 }
 
+async function getAllItemIds(userId: string, token: string, status: string): Promise<string[]> {
+  const ids: string[] = [];
+  let offset = 0;
+  const limit = 100;
+  const maxItems = 2000;
+  while (offset < maxItems) {
+    const data = await meliGet(
+      `/users/${userId}/items/search?status=${status}&limit=${limit}&offset=${offset}`,
+      token
+    );
+    const results = (data?.results ?? []) as string[];
+    if (!results.length) break;
+    ids.push(...results);
+    const total = (data?.paging?.total as number | undefined) ?? results.length;
+    offset += limit;
+    if (offset >= total) break;
+    await new Promise(r => setTimeout(r, 150));
+  }
+  return ids;
+}
+
 async function getAccountItems(userId: string, token: string) {
-  // Obtener todos los IDs (activos + pausados)
-  const [activeData, pausedData] = await Promise.all([
-    meliGet(`/users/${userId}/items/search?status=active&limit=100`, token),
-    meliGet(`/users/${userId}/items/search?status=paused&limit=100`, token),
+  const [activeIds, pausedIds] = await Promise.all([
+    getAllItemIds(userId, token, "active"),
+    getAllItemIds(userId, token, "paused"),
   ]);
-  const ids = [
-    ...((activeData?.results ?? []) as string[]),
-    ...((pausedData?.results ?? []) as string[]),
-  ];
+  const ids = [...activeIds, ...pausedIds];
   if (!ids.length) return [];
 
   // Cargar detalles en lotes de 20

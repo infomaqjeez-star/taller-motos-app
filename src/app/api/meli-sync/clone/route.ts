@@ -85,15 +85,26 @@ export async function POST(req: Request) {
       decrypt(dest.access_token_enc, ENC_KEY),
     ]);
 
-    // Títulos existentes en destino para anti-duplicado
-    const [activeData, pausedData] = await Promise.all([
-      meliGet(`/users/${dest.meli_user_id}/items/search?status=active&limit=100`, destToken),
-      meliGet(`/users/${dest.meli_user_id}/items/search?status=paused&limit=100`, destToken),
+    // Títulos existentes en destino para anti-duplicado (paginado hasta 2000)
+    async function getAllIds(userId: string, token: string, status: string): Promise<string[]> {
+      const ids: string[] = [];
+      let offset = 0;
+      while (offset < 2000) {
+        const d = await meliGet(`/users/${userId}/items/search?status=${status}&limit=100&offset=${offset}`, token);
+        const r = (d?.results ?? []) as string[];
+        if (!r.length) break;
+        ids.push(...r);
+        const total = (d?.paging?.total as number | undefined) ?? r.length;
+        offset += 100;
+        if (offset >= total) break;
+      }
+      return ids;
+    }
+    const [dActive, dPaused] = await Promise.all([
+      getAllIds(String(dest.meli_user_id), destToken, "active"),
+      getAllIds(String(dest.meli_user_id), destToken, "paused"),
     ]);
-    const destIds = [
-      ...((activeData?.results ?? []) as string[]),
-      ...((pausedData?.results ?? []) as string[]),
-    ];
+    const destIds = [...dActive, ...dPaused];
     const destTitlesNorm = new Set<string>();
     for (let i = 0; i < destIds.length; i += 20) {
       const chunk = destIds.slice(i, i + 20);
