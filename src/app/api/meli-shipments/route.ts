@@ -42,6 +42,27 @@ function classifyLogistic(type: string | null | undefined): "flex" | "full" | "c
   return "correo";
 }
 
+function urgency(limitDate: string | null): "overdue" | "urgent" | "soon" | "ok" {
+  if (!limitDate) return "ok";
+  const diffH = (new Date(limitDate).getTime() - Date.now()) / 3600000;
+  if (diffH < 0)   return "overdue";
+  if (diffH < 2)   return "urgent";
+  if (diffH < 6)   return "soon";
+  return "ok";
+}
+
+interface MeliShipment {
+  id: number;
+  logistic_type?: string;
+  substatus?: string;
+  tracking_number?: string;
+  date_created?: string;
+  order_id?: number;
+  shipping_limit?: string;
+  estimated_handling_limit?: string;
+  status?: string;
+}
+
 export async function GET() {
   try {
     const supabase = createClient(SUPA_URL, SERVICE_KEY);
@@ -51,54 +72,67 @@ export async function GET() {
       .eq("status", "active")
       .order("nickname", { ascending: true });
 
-    if (error || !accounts?.length) return NextResponse.json({ flex: [], correo: [], full_count: 0 });
+    if (error || !accounts?.length) return NextResponse.json({ ready: [], upcoming: [], full_count: 0 });
 
-    const flex:   object[] = [];
-    const correo: object[] = [];
+    const ready:    object[] = [];
+    const upcoming: object[] = [];
     let   fullCount = 0;
 
     await Promise.all(accounts.map(async (acc) => {
       try {
         const token = await decrypt(acc.access_token_enc, ENC_KEY);
 
-        // Envíos listos para despachar
-        const [readyShip, fullOrders] = await Promise.all([
+        const [readyShip, handlingShip, fullOrders] = await Promise.all([
           meliGet(`/shipments/search?seller_id=${acc.meli_user_id}&status=ready_to_ship&limit=50`, token),
+          meliGet(`/shipments/search?seller_id=${acc.meli_user_id}&status=handling&limit=50`, token),
           meliGet(`/orders/search?seller=${acc.meli_user_id}&order.status=paid&shipping.logistic_type=fulfillment&limit=1`, token),
         ]);
 
         fullCount += fullOrders?.paging?.total ?? 0;
 
-        const shipments: {
-          id: number;
-          logistic_type?: string;
-          substatus?: string;
-          tracking_number?: string;
-          date_created?: string;
-          order_id?: number;
-        }[] = readyShip?.results ?? [];
-
-        for (const s of shipments) {
-          const type = classifyLogistic(s.logistic_type);
-          const item = {
+        const toItem = (s: MeliShipment, listType: "ready" | "upcoming") => {
+          const logType = classifyLogistic(s.logistic_type);
+          const limit   = s.shipping_limit ?? s.estimated_handling_limit ?? null;
+          return {
             shipment_id:     s.id,
-            order_id:        s.order_id,
+            order_id:        s.order_id ?? null,
             account:         acc.nickname,
             logistic_type:   s.logistic_type ?? "unknown",
-            type,
+            type:            logType,
             substatus:       s.substatus ?? null,
             tracking_number: s.tracking_number ?? null,
             date_created:    s.date_created ?? null,
-            label_url:       `https://api.mercadolibre.com/shipments/${s.id}/labels?response_type=zpl2&caller.id=${acc.meli_user_id}`,
+            shipping_limit:  limit,
+            urgency:         urgency(limit),
+            list_type:       listType,
+            label_url:       `https://www.mercadolibre.com.ar/envios/details/${s.id}`,
           };
-          if (type === "flex")   flex.push(item);
-          else if (type === "full") { /* Full lo maneja MeLi */ }
-          else                   correo.push(item);
+        };
+
+        for (const s of (readyShip?.results ?? []) as MeliShipment[]) {
+          if (classifyLogistic(s.logistic_type) !== "full") {
+            ready.push(toItem(s, "ready"));
+          }
         }
-      } catch { /* skip account */ }
+        for (const s of (handlingShip?.results ?? []) as MeliShipment[]) {
+          if (classifyLogistic(s.logistic_type) !== "full") {
+            upcoming.push(toItem(s, "upcoming"));
+          }
+        }
+      } catch { /* skip */ }
     }));
 
-    return NextResponse.json({ flex, correo, full_count: fullCount });
+    // Ordenar por urgencia: overdue → urgent → soon → ok
+    const urgencyOrder = { overdue: 0, urgent: 1, soon: 2, ok: 3 };
+    const sortFn = (a: object, b: object) => {
+      const au = urgencyOrder[(a as { urgency: keyof typeof urgencyOrder }).urgency] ?? 3;
+      const bu = urgencyOrder[(b as { urgency: keyof typeof urgencyOrder }).urgency] ?? 3;
+      return au - bu;
+    };
+    ready.sort(sortFn);
+    upcoming.sort(sortFn);
+
+    return NextResponse.json({ ready, upcoming, full_count: fullCount });
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
