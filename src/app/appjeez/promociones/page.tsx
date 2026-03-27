@@ -100,7 +100,11 @@ export default function PromocionesPage() {
   useEffect(() => {
     fetch("/api/meli-accounts")
       .then(r => r.json())
-      .then(d => setAccounts(d.accounts ?? []))
+      .then(d => {
+        // El endpoint retorna array directo o { accounts: [] }
+        const list = Array.isArray(d) ? d : (d.accounts ?? []);
+        setAccounts(list);
+      })
       .catch(() => {});
   }, []);
 
@@ -185,21 +189,39 @@ export default function PromocionesPage() {
           style={{ background: "#1A1A1A", border: "1px solid rgba(255,255,255,0.07)" }}>
           <p className="text-sm font-black text-white">Configuración</p>
 
-          {/* Cuenta */}
+          {/* Selector de cuenta — chips visuales */}
           <div>
-            <label className="text-xs font-bold mb-1.5 block" style={{ color: "#6B7280" }}>
-              Cuenta a escanear
+            <label className="text-xs font-bold mb-2 block" style={{ color: "#6B7280" }}>
+              Cuentas a escanear
             </label>
-            <select
-              value={selectedAcc}
-              onChange={e => setSelectedAcc(e.target.value)}
-              className="w-full px-3 py-2.5 rounded-xl text-sm text-white outline-none"
-              style={{ background: "#121212", border: "1px solid rgba(255,255,255,0.1)" }}>
-              <option value="all">Todas las cuentas</option>
+            <div className="flex flex-wrap gap-2">
+              {/* Chip "Todas" */}
+              <button
+                onClick={() => setSelectedAcc("all")}
+                className="px-3 py-1.5 rounded-xl text-xs font-black transition-all border"
+                style={selectedAcc === "all"
+                  ? { background: "#FFE600", color: "#121212", borderColor: "#FFE600" }
+                  : { background: "transparent", color: "#9CA3AF", borderColor: "rgba(255,255,255,0.15)" }}>
+                ★ Todas
+              </button>
+              {/* Chip por cada cuenta */}
               {accounts.map(a => (
-                <option key={a.meli_user_id} value={a.meli_user_id}>{a.nickname}</option>
+                <button
+                  key={a.meli_user_id}
+                  onClick={() => setSelectedAcc(String(a.meli_user_id))}
+                  className="px-3 py-1.5 rounded-xl text-xs font-black transition-all border"
+                  style={selectedAcc === String(a.meli_user_id)
+                    ? { background: "#39FF14", color: "#121212", borderColor: "#39FF14" }
+                    : { background: "transparent", color: "#9CA3AF", borderColor: "rgba(255,255,255,0.15)" }}>
+                  {a.nickname}
+                </button>
               ))}
-            </select>
+            </div>
+            {accounts.length === 0 && (
+              <p className="text-[10px] mt-1.5" style={{ color: "#4B5563" }}>
+                Cargando cuentas...
+              </p>
+            )}
           </div>
 
           {/* Máximo % */}
