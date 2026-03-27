@@ -210,10 +210,12 @@ export async function POST(req: Request) {
           results.push({ item_id: itemId, title, status: "cloned", new_id: newId });
         } else {
           const d = postRes.data as Record<string, unknown>;
-          // Extraer mensaje de error detallado de MeLi
           const causes = (d?.cause as Array<{ code?: number; description?: string }> | undefined) ?? [];
-          const causeMsg = causes.map(c => c.description ?? String(c.code ?? "")).filter(Boolean).join("; ");
-          const reason = causeMsg || (d?.message as string | undefined) || (d?.error as string | undefined) || `HTTP ${postRes.status}`;
+          const causeMsg = causes.map(c => `[${c.code}] ${c.description}`).filter(c => c !== "[undefined] undefined").join(" | ");
+          const reason = causeMsg
+            || (d?.message as string | undefined)
+            || (d?.error as string | undefined)
+            || `HTTP ${postRes.status}: ${JSON.stringify(d).slice(0, 300)}`;
           results.push({ item_id: itemId, title, status: "error", reason });
         }
 
