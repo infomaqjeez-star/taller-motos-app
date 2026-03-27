@@ -8,7 +8,7 @@ import {
   Star, AlertTriangle, CheckCircle2, RefreshCw, Settings,
   ChevronDown, ChevronUp, ShoppingCart, DollarSign,
   Package, Clock, XCircle, BarChart2, ExternalLink,
-  Bell, Store, Menu, X, Copy,
+  Bell, Store, Menu, X, Copy, Pencil, Check,
 } from "lucide-react";
 
 interface Reputation {
@@ -207,7 +207,35 @@ function AccountPanel({ data, defaultOpen }: { data: AccountDash; defaultOpen?: 
                   {data.roman_index}
                 </span>
               )}
-              <p className="font-black text-white text-base">@{data.account}</p>
+              <p className="font-black text-white text-base flex items-center gap-1.5">
+                {editingNick === data.meli_user_id ? (
+                  <>
+                    <input
+                      value={editNickVal}
+                      onChange={e => setEditNickVal(e.target.value)}
+                      onKeyDown={e => e.key === "Enter" && handleRenameAccount(data.meli_user_id, editNickVal)}
+                      className="font-black text-white text-base bg-transparent border-b border-yellow-400 outline-none w-32"
+                      autoFocus
+                    />
+                    <button onClick={() => handleRenameAccount(data.meli_user_id, editNickVal)} className="p-0.5 rounded hover:bg-white/10">
+                      <Check className="w-4 h-4 text-green-400" />
+                    </button>
+                    <button onClick={() => setEditingNick(null)} className="p-0.5 rounded hover:bg-white/10">
+                      <XCircle className="w-3.5 h-3.5 text-gray-500" />
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    @{data.account}
+                    <button
+                      onClick={() => { setEditingNick(data.meli_user_id); setEditNickVal(data.account); }}
+                      className="p-0.5 rounded hover:bg-white/10"
+                    >
+                      <Pencil className="w-3 h-3 text-gray-500" />
+                    </button>
+                  </>
+                )}
+              </p>
               {data.reputation?.power_seller_status && (
                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ background: "#FFE60022", color: "#FFE600" }}>
                   {data.reputation.power_seller_status.toUpperCase()}
@@ -314,6 +342,8 @@ function AppJeezInner() {
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [totalQuestionsAlert, setTotalQuestionsAlert] = useState(0);
+  const [editingNick, setEditingNick] = useState<string | null>(null);
+  const [editNickVal, setEditNickVal] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true); setError(null);
@@ -334,6 +364,25 @@ function AppJeezInner() {
     const interval = setInterval(load, 60_000);
     return () => clearInterval(interval);
   }, [load]);
+
+  const handleRenameAccount = async (meliUserId: string, newName: string) => {
+    if (!newName.trim()) return;
+    const acc = accounts.find(a => a.meli_user_id === meliUserId);
+    if (!acc) return;
+    try {
+      const listRes = await fetch("/api/meli-accounts");
+      const list = await listRes.json() as Array<{ id: string; meli_user_id: string }>;
+      const match = list.find(a => String(a.meli_user_id) === meliUserId);
+      if (!match) return;
+      await fetch("/api/meli-accounts", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: match.id, nickname: newName.trim() }),
+      });
+      setEditingNick(null);
+      load();
+    } catch { /* silent */ }
+  };
 
   const totalUrgent = accounts.reduce(
     (s, a) => s + (a.unanswered_questions ?? 0) + (a.ready_to_ship ?? 0) + (a.pending_messages ?? 0), 0
