@@ -369,6 +369,28 @@ export default function OrderForm({ initial, onSave, onClose }: OrderFormProps) 
                 />
               </div>
             </div>
+
+            {/* Seña / Pago parcial */}
+            <div className="rounded-xl p-3 mt-2" style={{ background: "rgba(255,230,0,0.06)", border: "1px solid rgba(255,230,0,0.2)" }}>
+              <label className="label flex items-center gap-1.5 text-yellow-400 font-black">
+                💰 Seña / Pago Parcial ($)
+              </label>
+              <input
+                type="number"
+                className="input"
+                placeholder="0 — dejar vacío si no hubo seña"
+                min={0}
+                value={form.deposit ?? ""}
+                onChange={(e) =>
+                  set("deposit", e.target.value ? Number(e.target.value) : undefined)
+                }
+              />
+              {form.deposit != null && form.budget != null && form.deposit > 0 && (
+                <p className="text-xs mt-1.5 font-semibold" style={{ color: "#FFE600" }}>
+                  Saldo restante: ${(form.budget - form.deposit).toLocaleString("es-AR")}
+                </p>
+              )}
+            </div>
           </section>
 
           {/* Seguimiento */}

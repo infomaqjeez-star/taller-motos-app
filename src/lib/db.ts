@@ -29,6 +29,8 @@ function toOrder(r: Record<string, unknown>): WorkOrder {
     photoUrls:          (r.photo_urls as string[]) ?? [],
     extraMachines:      (r.extra_machines as WorkOrder["extraMachines"]) ?? [],
     machineTypeOther:   r.machine_type_other as string | undefined,
+    deposit:            r.deposit as number | undefined,
+    totalPaid:          r.total_paid as number | undefined,
   };
 }
 
@@ -54,6 +56,8 @@ function fromOrder(o: WorkOrder) {
     photo_urls:          o.photoUrls ?? [],
     extra_machines:      o.extraMachines ?? [],
     machine_type_other:  o.machineTypeOther ?? null,
+    deposit:             o.deposit ?? null,
+    total_paid:          o.totalPaid ?? null,
   };
 }
 
@@ -137,7 +141,7 @@ export const ordersDb = {
       .insert(payload);
     if (error) {
       console.error("[DB] Error Supabase:", error.message, error.details, error.hint);
-      throw error;
+      throw new Error(error.message ?? error.details ?? JSON.stringify(error));
     }
   },
 
@@ -161,6 +165,8 @@ export const ordersDb = {
     if (updates.photoUrls          !== undefined) mapped.photo_urls          = updates.photoUrls;
     if (updates.extraMachines      !== undefined) mapped.extra_machines      = updates.extraMachines;
     if (updates.machineTypeOther   !== undefined) mapped.machine_type_other  = updates.machineTypeOther;
+    if (updates.deposit            !== undefined) mapped.deposit             = updates.deposit;
+    if (updates.totalPaid          !== undefined) mapped.total_paid          = updates.totalPaid;
     const { error } = await supabase.from("reparaciones").update(mapped).eq("id", id);
     if (error) throw error;
   },

@@ -60,6 +60,7 @@ export interface WorkOrder {
   extraMachines?: ExtraMachine[];
   // Pagos
   totalPaid?: number;
+  deposit?: number;       // seña / pago parcial al ingresar
 }
 
 export interface Pago {
