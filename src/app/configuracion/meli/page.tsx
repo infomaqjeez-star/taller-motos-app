@@ -94,6 +94,18 @@ function ConfigMeliContent() {
     loadAccounts();
   };
 
+  const handleDelete = async (id: string, nickname: string) => {
+    if (!confirm(`¿ELIMINAR permanentemente la cuenta @${nickname}? No se puede deshacer.`)) return;
+    const res = await fetch("/api/meli-accounts", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
+    if (!res.ok) { showToast("Error al eliminar", false); return; }
+    showToast(`@${nickname} eliminada`);
+    loadAccounts();
+  };
+
   return (
     <div className="min-h-screen pb-24" style={{ background: "#121212" }}>
 
@@ -240,20 +252,31 @@ function ConfigMeliContent() {
                     </div>
 
                     {/* Acciones */}
-                    {active && (
+                    <div className="flex items-center gap-3 flex-wrap">
+                      {/* Reconectar: si el token expiró (sin importar status) */}
+                      {(new Date(acc.expires_at).getTime() < Date.now() || expired || acc.status === "revoked") && (
+                        <a href={MELI_AUTH_URL}
+                          className="text-xs text-yellow-400 hover:text-yellow-300 font-semibold flex items-center gap-1">
+                          <RefreshCw className="w-3.5 h-3.5" /> Reconectar
+                        </a>
+                      )}
+                      {/* Desconectar: solo si está activa */}
+                      {active && (
+                        <button
+                          onClick={() => handleRevoke(acc.id, acc.nickname)}
+                          className="text-xs text-orange-400 hover:text-orange-300 font-semibold flex items-center gap-1"
+                        >
+                          <XCircle className="w-3.5 h-3.5" /> Desconectar
+                        </button>
+                      )}
+                      {/* Eliminar: siempre disponible */}
                       <button
-                        onClick={() => handleRevoke(acc.id, acc.nickname)}
-                        className="text-xs text-red-400 hover:text-red-300 font-semibold flex items-center gap-1"
+                        onClick={() => handleDelete(acc.id, acc.nickname)}
+                        className="text-xs text-red-500 hover:text-red-400 font-semibold flex items-center gap-1"
                       >
-                        <XCircle className="w-3.5 h-3.5" /> Desconectar cuenta
+                        <XCircle className="w-3.5 h-3.5" /> Eliminar
                       </button>
-                    )}
-                    {(expired || acc.status === "revoked") && (
-                      <a href={MELI_AUTH_URL}
-                        className="text-xs text-yellow-400 hover:text-yellow-300 font-semibold flex items-center gap-1">
-                        <RefreshCw className="w-3.5 h-3.5" /> Reconectar
-                      </a>
-                    )}
+                    </div>
                   </div>
                 );
               })}
