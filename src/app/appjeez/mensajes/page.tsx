@@ -386,7 +386,7 @@ function MensajesInner() {
         }
       }
 
-      if (newQuestions > 0 && sync) {
+      if (newQuestions > 0) {
         setNewCount(newQuestions);
         playAlert();
         setToast(`${newQuestions} pregunta${newQuestions > 1 ? "s" : ""} nueva${newQuestions > 1 ? "s" : ""} de ${newAccounts.join(", ")}`);
