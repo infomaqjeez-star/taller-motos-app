@@ -10,6 +10,7 @@ type LogisticType = "flex" | "turbo" | "correo" | "full";
 
 interface ShipmentInfo {
   shipment_id: number;
+  order_id: number | null;
   account: string;
   meli_user_id: string;
   type: LogisticType;
@@ -128,6 +129,7 @@ export async function GET(req: Request) {
 
           allShipments.push({
             shipment_id: sid,
+            order_id: (order.id as number | undefined) ?? null,
             account: acc.nickname,
             meli_user_id: String(acc.meli_user_id),
             type,

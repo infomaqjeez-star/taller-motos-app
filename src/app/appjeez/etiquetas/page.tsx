@@ -12,6 +12,7 @@ type MainTab = "despachar" | "proximos" | "impresas" | "full";
 
 interface ShipmentInfo {
   shipment_id: number;
+  order_id: number | null;
   account: string;
   meli_user_id: string;
   type: LogisticType;
@@ -109,7 +110,12 @@ function ShipmentRow({ s, selected, onToggle }: {
         </div>
         <p className="text-xs text-white font-medium line-clamp-1">{s.title}</p>
         <p className="text-[10px]" style={{ color: "#6B7280" }}>
-          {s.buyer} · #{s.shipment_id}
+          {s.buyer}
+          {s.order_id && (
+            <span className="ml-1 font-bold" style={{ color: "#FFE600" }}>
+              · Venta #{s.order_id}
+            </span>
+          )}
           {s.delivery_date && ` · ${new Date(s.delivery_date).toLocaleDateString("es-AR")}`}
         </p>
       </div>
