@@ -6,7 +6,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   CheckCircle, XCircle, RefreshCw, ExternalLink,
-  ShieldCheck, Zap, ArrowLeft, User, Clock,
+  ShieldCheck, Zap, ArrowLeft, User, Clock, Pencil, Check,
 } from "lucide-react";
 
 // v2 - usa API route con service_role
@@ -57,6 +57,8 @@ function ConfigMeliContent() {
   const [accounts, setAccounts]   = useState<MeliAccount[]>([]);
   const [loading, setLoading]     = useState(true);
   const [toast, setToast]         = useState<{ msg: string; ok: boolean } | null>(null);
+  const [editing, setEditing]     = useState<string | null>(null);
+  const [editName, setEditName]   = useState("");
 
   const showToast = (msg: string, ok = true) => {
     setToast({ msg, ok });
@@ -103,6 +105,19 @@ function ConfigMeliContent() {
     });
     if (!res.ok) { showToast("Error al eliminar", false); return; }
     showToast(`@${nickname} eliminada`);
+    loadAccounts();
+  };
+
+  const handleRename = async (id: string) => {
+    if (!editName.trim()) return;
+    const res = await fetch("/api/meli-accounts", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, nickname: editName.trim() }),
+    });
+    if (!res.ok) { showToast("Error al renombrar", false); return; }
+    showToast(`Renombrada a ${editName.trim()}`);
+    setEditing(null);
     loadAccounts();
   };
 
@@ -226,9 +241,33 @@ function ConfigMeliContent() {
                         <span className="text-[#003087] font-black text-[7px]">ML</span>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-black text-white truncate">
-                          @{acc.nickname || acc.meli_user_id}
-                        </p>
+                        {editing === acc.id ? (
+                          <div className="flex items-center gap-1.5">
+                            <input
+                              value={editName}
+                              onChange={e => setEditName(e.target.value)}
+                              onKeyDown={e => e.key === "Enter" && handleRename(acc.id)}
+                              className="text-sm font-black text-white bg-transparent border-b border-yellow-400 outline-none w-full"
+                              autoFocus
+                            />
+                            <button onClick={() => handleRename(acc.id)} className="p-1 rounded hover:bg-white/10">
+                              <Check className="w-4 h-4 text-green-400" />
+                            </button>
+                            <button onClick={() => setEditing(null)} className="p-1 rounded hover:bg-white/10">
+                              <XCircle className="w-3.5 h-3.5 text-gray-500" />
+                            </button>
+                          </div>
+                        ) : (
+                          <p className="text-sm font-black text-white truncate flex items-center gap-1.5">
+                            @{acc.nickname || acc.meli_user_id}
+                            <button
+                              onClick={() => { setEditing(acc.id); setEditName(acc.nickname || ""); }}
+                              className="p-0.5 rounded hover:bg-white/10"
+                            >
+                              <Pencil className="w-3 h-3 text-gray-500" />
+                            </button>
+                          </p>
+                        )}
                         <p className="text-xs text-gray-500">ID: {acc.meli_user_id}</p>
                       </div>
                       <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
