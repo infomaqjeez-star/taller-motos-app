@@ -344,33 +344,52 @@ function MensajesInner() {
   const [alertsEnabled, setAlertsEnabled] = useState(false);
   const [newCount, setNewCount]   = useState(0);
   const [toast, setToast]         = useState<string | null>(null);
-  const alertedIdsRef = useRef<Set<number>>(new Set());
-  const audioRef      = useRef<HTMLAudioElement | null>(null);
-  const workerRef     = useRef<Worker | null>(null);
+  const alertedIdsRef   = useRef<Set<number>>(new Set());
+  const initialLoadDone = useRef(false);
+  const audioRef        = useRef<HTMLAudioElement | null>(null);
+  const workerRef       = useRef<Worker | null>(null);
+  const alertsEnabledRef = useRef(false);
+  const loadRef          = useRef<((sync?: boolean) => Promise<void>) | null>(null);
 
   useEffect(() => {
     audioRef.current = new Audio("data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdHuMk42Bfn6Dj5yWjIB7fIOQm5eSh3t2fImWmpOJf3t8iJabl46DfXuFk5qXj4R9fIOSmZWNhH19hZOZl4+EfX2Ek5mXj4R9fYWTmZePhH19hJOZl4+EfX2Fk5mXj4R9fYSTmZePhH19hZOZl4+EfX2Ek5mVjYR+fYWTmJWOhH59hZOYlY6Efn2Fk5iVjoR+fYWTl5SNhH59hZOXlI2Efn6Fk5eUjYR+foWTl5SNhH5+hZOXlI2Efn6Fk5eUjYR+foWTl5SNhH5+hZOXlI2Efn6Fk5aUjYR+foaTlpSNhH5+hpOWlI2Efn6Gk5aUjYR+foaTlpSNhH5+hpOWlI2Efn6Gk5aUjYR+foaTlpSNhH5+hpOWlI2Efn6GkpaUjYR+foaSg3xtZnF+i5OPh4F9gIuWlY6DfHyEkpmXjoN8fISSmZeOg3x8hJKZl46DfHyEkpmXjoN8fISSmZeOg3x8hJKZlo2Dfn6Gk5aUjYR+fg==");
     audioRef.current.volume = 0.7;
+    // Pedir permiso de notificaciones del navegador al iniciar
+    if (typeof Notification !== "undefined" && Notification.permission === "default") {
+      Notification.requestPermission().catch(() => {});
+    }
   }, []);
 
+  // Mantener ref sincronizada con el estado para evitar closures viejas
+  useEffect(() => { alertsEnabledRef.current = alertsEnabled; }, [alertsEnabled]);
+
   const playAlert = useCallback(() => {
-    if (!alertsEnabled || !audioRef.current) return;
-    audioRef.current.currentTime = 0;
-    audioRef.current.play().catch(() => {});
-  }, [alertsEnabled]);
+    // Usar ref para siempre leer el valor actual, no el del closure
+    if (!alertsEnabledRef.current) return;
+    if (audioRef.current) {
+      audioRef.current.currentTime = 0;
+      audioRef.current.play().catch(() => {});
+    }
+    // Notificación del sistema como respaldo (funciona en segundo plano)
+    if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+      new Notification("MaqJeez — Nueva pregunta", {
+        body: "Hay preguntas nuevas sin responder en MercadoLibre",
+        icon: "/icon-192.png",
+      });
+    }
+  }, []);
 
   const enableAlerts = () => {
     if (audioRef.current) {
       audioRef.current.play().then(() => {
         audioRef.current!.pause();
         audioRef.current!.currentTime = 0;
-        setAlertsEnabled(true);
-      }).catch(() => {
-        setAlertsEnabled(true);
-      });
-    } else {
-      setAlertsEnabled(true);
+      }).catch(() => {});
     }
+    if (typeof Notification !== "undefined" && Notification.permission !== "denied") {
+      Notification.requestPermission().catch(() => {});
+    }
+    setAlertsEnabled(true);
   };
 
   const testSound = () => {
@@ -395,6 +414,15 @@ function MensajesInner() {
         return true;
       });
 
+      // En la primera carga solo registramos los IDs sin alertar
+      if (!initialLoadDone.current) {
+        unique.forEach(q => alertedIdsRef.current.add(q.meli_question_id));
+        initialLoadDone.current = true;
+        setQuestions(unique);
+        setLastSync(new Date());
+        return;
+      }
+
       let newQuestions = 0;
       const newAccounts: string[] = [];
       for (const q of unique) {
@@ -407,7 +435,7 @@ function MensajesInner() {
       }
 
       if (newQuestions > 0) {
-        setNewCount(newQuestions);
+        setNewCount(prev => prev + newQuestions);
         playAlert();
         setToast(`${newQuestions} pregunta${newQuestions > 1 ? "s" : ""} nueva${newQuestions > 1 ? "s" : ""} de ${newAccounts.join(", ")}`);
         setTimeout(() => setToast(null), 5000);
@@ -422,6 +450,9 @@ function MensajesInner() {
     }
   }, [playAlert]);
 
+  // Mantener ref de load siempre actualizada para el Worker
+  useEffect(() => { loadRef.current = load; }, [load]);
+
   useEffect(() => {
     load();
 
@@ -429,18 +460,19 @@ function MensajesInner() {
     if (typeof Worker !== "undefined") {
       const worker = new Worker("/question-worker.js");
       workerRef.current = worker;
-      worker.onmessage = () => load(true);
+      // Usar loadRef para evitar closure vieja
+      worker.onmessage = () => loadRef.current?.(true);
       worker.postMessage("start");
       return () => {
         worker.postMessage("stop");
         worker.terminate();
       };
     } else {
-      // Fallback para entornos sin Worker
-      const interval = setInterval(() => load(true), 300_000);
+      const interval = setInterval(() => loadRef.current?.(true), 300_000);
       return () => clearInterval(interval);
     }
-  }, [load]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleAnswered = (id: number) => {
     setQuestions(qs => qs.filter(q => q.meli_question_id !== id));
