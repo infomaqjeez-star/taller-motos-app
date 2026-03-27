@@ -177,7 +177,12 @@ function ActivityCard({ orders, amount }: { orders: number; amount: number }) {
   );
 }
 
-function AccountPanel({ data, defaultOpen }: { data: AccountDash; defaultOpen?: boolean }) {
+function AccountPanel({ data, defaultOpen, editingNick, editNickVal, setEditingNick, setEditNickVal, handleRenameAccount }: {
+  data: AccountDash; defaultOpen?: boolean;
+  editingNick: string | null; editNickVal: string;
+  setEditingNick: (v: string | null) => void; setEditNickVal: (v: string) => void;
+  handleRenameAccount: (meliUserId: string, newName: string) => void;
+}) {
   const [open, setOpen] = useState(defaultOpen ?? true);
   const urgentTotal = (data.unanswered_questions ?? 0) + (data.ready_to_ship ?? 0) + (data.pending_messages ?? 0);
 
@@ -626,7 +631,10 @@ function AppJeezInner() {
 
           {/* Accounts */}
           {!loading && accounts.map((acc, i) => (
-            <AccountPanel key={acc.meli_user_id} data={acc} defaultOpen={i === 0} />
+            <AccountPanel key={acc.meli_user_id} data={acc} defaultOpen={i === 0}
+              editingNick={editingNick} editNickVal={editNickVal}
+              setEditingNick={setEditingNick} setEditNickVal={setEditNickVal}
+              handleRenameAccount={handleRenameAccount} />
           ))}
         </main>
       </div>
