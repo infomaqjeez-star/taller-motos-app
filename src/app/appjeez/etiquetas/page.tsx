@@ -220,7 +220,7 @@ function EtiquetasInner() {
                 </div>
               </div>
 
-              <div className="max-h-72 overflow-y-auto divide-y" style={{ divideColor: "rgba(255,255,255,0.04)" }}>
+              <div className="max-h-72 overflow-y-auto divide-y" style={{ borderColor: "rgba(255,255,255,0.04)" }}>
                 {filtered.map(s => (
                   <div key={s.shipment_id}
                     onClick={() => toggleItem(s.shipment_id)}
