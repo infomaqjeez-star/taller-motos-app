@@ -1,10 +1,11 @@
 "use client";
-import { useEffect, useState, useCallback, Suspense } from "react";
+import { useEffect, useState, useCallback, useRef, Suspense } from "react";
 import Link from "next/link";
 import {
   ArrowLeft, RefreshCw, Copy, CheckCircle2, AlertCircle,
   AlertTriangle, ChevronDown, ChevronUp, Zap, Package,
-  SkipForward, XCircle, Store, Search,
+  SkipForward, XCircle, Store, Search, Bell, BellOff,
+  Square, Play, RotateCcw,
 } from "lucide-react";
 
 function fmt(n: number) {
@@ -43,6 +44,14 @@ interface CloneSummary {
   summary: { total: number; cloned: number; skipped_duplicate: number; errors: number };
 }
 interface Account { id: string; nickname: string; meli_user_id: string; }
+interface ErrorEntry {
+  item_id:      string;
+  title:        string;
+  reason_code:  string;
+  reason_human: string;
+  suggestion:   string;
+}
+interface SyncSummary { cloned: number; skipped: number; errors: number; }
 
 function ItemRow({
   item, selected, onToggle,
@@ -77,56 +86,194 @@ function ItemRow({
 }
 
 function SyncInner() {
-  const [accounts,  setAccounts]  = useState<Account[]>([]);
-  const [originId,  setOriginId]  = useState("");
-  const [destId,    setDestId]    = useState("");
-  const [comparing, setComparing] = useState(false);
+  const [accounts,    setAccounts]    = useState<Account[]>([]);
+  const [originId,    setOriginId]    = useState("");
+  const [destId,      setDestId]      = useState("");
+  const [comparing,   setComparing]   = useState(false);
   const [compareData, setCompareData] = useState<CompareData | null>(null);
   const [compareError, setCompareError] = useState<string | null>(null);
-  const [selected,  setSelected]  = useState<Set<string>>(new Set());
-  const [cloning,   setCloning]   = useState(false);
+  const [selected,    setSelected]    = useState<Set<string>>(new Set());
+  const [cloning,     setCloning]     = useState(false);
   const [cloneResult, setCloneResult] = useState<CloneSummary | null>(null);
-  const [cloneTab,  setCloneTab]  = useState<"results"|"skipped"|"errors">("results");
-  const [search,    setSearch]    = useState("");
+  const [cloneTab,    setCloneTab]    = useState<"results"|"skipped"|"errors">("results");
+  const [search,      setSearch]      = useState("");
 
-  // Cargar cuentas activas
+  // ---- Auto-sync SSE state ----
+  const [autoSyncing,  setAutoSyncing]  = useState(false);
+  const [stopping,     setStopping]     = useState(false);
+  const [autoLog,      setAutoLog]      = useState<string[]>([]);
+  const [syncMode,     setSyncMode]     = useState<"all" | "new_only">("all");
+  const [jobId,        setJobId]        = useState<string | null>(null);
+  const [autoSummary,  setAutoSummary]  = useState<SyncSummary | null>(null);
+  const [errorReport,  setErrorReport]  = useState<ErrorEntry[]>([]);
+  const [resumeJobId,  setResumeJobId]  = useState<string | null>(null);
+  const [progress,     setProgress]     = useState<SyncSummary | null>(null);
+  const [notifPerm,    setNotifPerm]    = useState<NotificationPermission>("default");
+  const [openErrors,   setOpenErrors]   = useState(false);
+  const readerRef = useRef<ReadableStreamDefaultReader<Uint8Array> | null>(null);
+  const logEndRef = useRef<HTMLDivElement | null>(null);
+
+  // Load accounts and check for paused job
   useEffect(() => {
     fetch("/api/meli-accounts")
       .then(r => r.json())
       .then(d => { if (Array.isArray(d)) setAccounts(d); })
       .catch(() => {});
+
+    fetch("/api/meli-sync/auto-sync/resume")
+      .then(r => r.json())
+      .then(d => { if (d?.job?.id) setResumeJobId(d.job.id); })
+      .catch(() => {});
+
+    if (typeof Notification !== "undefined") setNotifPerm(Notification.permission);
   }, []);
 
+  // Auto-scroll log to bottom
+  useEffect(() => {
+    logEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [autoLog]);
+
+  const addLog = (msg: string) => setAutoLog(prev => [...prev.slice(-199), msg]);
+
+  // ---- Start SSE sync ----
+  const startSync = useCallback(async (resumeId?: string) => {
+    setAutoSyncing(true);
+    setStopping(false);
+    setAutoLog([]);
+    setAutoSummary(null);
+    setErrorReport([]);
+    setProgress(null);
+
+    const payload: Record<string, string> = { mode: syncMode };
+    if (resumeId) payload.resume_job_id = resumeId;
+    if (originId && destId) { payload.origin_id = originId; payload.dest_id = destId; }
+
+    try {
+      const res = await fetch("/api/meli-sync/auto-sync", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify(payload),
+      });
+
+      if (!res.ok || !res.body) {
+        addLog(`Error al iniciar: HTTP ${res.status}`);
+        setAutoSyncing(false);
+        return;
+      }
+
+      const reader = res.body.getReader();
+      readerRef.current = reader;
+      const dec = new TextDecoder();
+      let buffer = "";
+
+      const processLine = (line: string) => {
+        if (line.startsWith("event: ")) return; // handled via next data line
+      };
+
+      let currentEvent = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += dec.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+
+        for (const line of lines) {
+          if (line.startsWith("event: ")) {
+            currentEvent = line.slice(7).trim();
+          } else if (line.startsWith("data: ")) {
+            try {
+              const payload = JSON.parse(line.slice(6));
+              handleSSEEvent(currentEvent, payload);
+            } catch { processLine(line); }
+            currentEvent = "";
+          }
+        }
+      }
+    } catch (e) {
+      addLog(`Conexión interrumpida: ${(e as Error).message}`);
+    } finally {
+      setAutoSyncing(false);
+      setStopping(false);
+      readerRef.current = null;
+    }
+  }, [syncMode, originId, destId]);
+
+  const handleSSEEvent = (event: string, data: Record<string, unknown>) => {
+    switch (event) {
+      case "jobId":
+        setJobId(data.job_id as string);
+        break;
+      case "log":
+        addLog(data.msg as string);
+        break;
+      case "progress":
+        setProgress(data as unknown as SyncSummary);
+        break;
+      case "done": {
+        const s = data.summary as SyncSummary;
+        setAutoSummary(s);
+        setErrorReport((data.errors as ErrorEntry[]) ?? []);
+        setResumeJobId(null);
+        setJobId(null);
+        // Browser notification if tab is hidden
+        if (typeof Notification !== "undefined" && Notification.permission === "granted" && document.hidden) {
+          new Notification("Sincronización finalizada — Appjeez", {
+            body: `${s.cloned} clonadas · ${s.skipped} omitidas · ${s.errors} errores`,
+            icon: "/icon-192.png",
+          });
+        }
+        break;
+      }
+      case "stopped": {
+        const s = data.summary as SyncSummary;
+        setAutoSummary(s);
+        setResumeJobId(data.job_id as string);
+        addLog("⏸ Proceso detenido. Podés retomarlo desde donde quedó.");
+        break;
+      }
+      case "error":
+        addLog(`❌ Error: ${data.message}`);
+        break;
+    }
+  };
+
+  // ---- Stop ----
+  const stopSync = useCallback(async () => {
+    if (!jobId) return;
+    setStopping(true);
+    addLog("Enviando señal de detención...");
+    await fetch("/api/meli-sync/auto-sync/stop", {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({ job_id: jobId }),
+    }).catch(() => {});
+  }, [jobId]);
+
+  // ---- Notifications ----
+  const requestNotifPermission = async () => {
+    if (typeof Notification === "undefined") return;
+    const perm = await Notification.requestPermission();
+    setNotifPerm(perm);
+  };
+
+  // ---- Manual compare/clone (existing) ----
   const handleCompare = useCallback(async () => {
     if (!originId || !destId || originId === destId) return;
-    setComparing(true);
-    setCompareData(null);
-    setCompareError(null);
-    setSelected(new Set());
-    setCloneResult(null);
+    setComparing(true); setCompareData(null); setCompareError(null);
+    setSelected(new Set()); setCloneResult(null);
     try {
       const res = await fetch(`/api/meli-sync/compare?origin_id=${originId}&dest_id=${destId}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       setCompareData(await res.json());
-    } catch (e) {
-      setCompareError((e as Error).message);
-    } finally {
-      setComparing(false);
-    }
+    } catch (e) { setCompareError((e as Error).message); }
+    finally { setComparing(false); }
   }, [originId, destId]);
 
   const toggleItem = (id: string) => {
-    setSelected(prev => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
+    setSelected(prev => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next; });
   };
-
-  const selectAll = () => {
-    const ids = filtered.map(i => i.id);
-    setSelected(new Set(ids));
-  };
+  const selectAll   = () => setSelected(new Set(filtered.map(i => i.id)));
   const deselectAll = () => setSelected(new Set());
 
   const filtered = (compareData?.can_clone ?? []).filter(i =>
@@ -135,105 +282,19 @@ function SyncInner() {
 
   const handleClone = useCallback(async (itemIds: string[]) => {
     if (!itemIds.length || !originId || !destId) return;
-    setCloning(true);
-    setCloneResult(null);
+    setCloning(true); setCloneResult(null);
     try {
       const res = await fetch("/api/meli-sync/clone", {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ origin_id: originId, dest_id: destId, item_ids: itemIds }),
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ origin_id: originId, dest_id: destId, item_ids: itemIds }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       setCloneResult(await res.json());
-    } catch (e) {
-      setCompareError((e as Error).message);
-    } finally {
-      setCloning(false);
-    }
+    } catch (e) { setCompareError((e as Error).message); }
+    finally { setCloning(false); }
   }, [originId, destId]);
 
   const [openAlready, setOpenAlready] = useState(false);
-  const [autoSyncing, setAutoSyncing] = useState(false);
-  const [autoLog, setAutoLog] = useState<string[]>([]);
-
-  const handleAutoSync = useCallback(async () => {
-    if (accounts.length < 2) return;
-    setAutoSyncing(true);
-    setAutoLog([]);
-    setCloneResult(null);
-    setCompareData(null);
-
-    const log = (msg: string) => setAutoLog(prev => [...prev, msg]);
-    log("Iniciando sincronización automática...");
-
-    try {
-      // Paso 1: Determinar cuenta con más publicaciones (origen)
-      log("Analizando cuentas...");
-      const countPromises = accounts.map(async (acc) => {
-        const res = await fetch(`/api/meli-sync/compare?origin_id=${acc.id}&dest_id=${acc.id}`).catch(() => null);
-        const d = res && res.ok ? await res.json().catch(() => null) : null;
-        return { id: acc.id, nickname: acc.nickname, total: d?.origin?.total ?? 0 };
-      });
-      const counts = await Promise.all(countPromises);
-      counts.sort((a, b) => b.total - a.total);
-      const mainAcc = counts[0];
-      log(`Cuenta principal: ${mainAcc.nickname} (${mainAcc.total} publicaciones)`);
-
-      let totalCloned = 0;
-      let totalSkipped = 0;
-      let totalErrors = 0;
-
-      // Paso 2: Para cada otra cuenta, comparar y clonar lo que falta
-      for (const destAcc of counts.slice(1)) {
-        log(`--- ${mainAcc.nickname} → ${destAcc.nickname} ---`);
-        log(`Comparando publicaciones...`);
-
-        const cmpRes = await fetch(`/api/meli-sync/compare?origin_id=${mainAcc.id}&dest_id=${destAcc.id}`);
-        if (!cmpRes.ok) { log(`Error al comparar: HTTP ${cmpRes.status}`); continue; }
-        const cmpData = await cmpRes.json();
-
-        const canClone = (cmpData?.can_clone ?? []) as Array<{ id: string }>;
-        const alreadyExist = cmpData?.summary?.already_exists ?? 0;
-        log(`${canClone.length} para clonar, ${alreadyExist} ya existen`);
-
-        if (!canClone.length) {
-          log(`Ya sincronizada`);
-          totalSkipped += alreadyExist;
-          continue;
-        }
-
-        // Clonar en lotes de 50
-        for (let i = 0; i < canClone.length; i += 50) {
-          const batch = canClone.slice(i, i + 50).map(item => item.id);
-          log(`Clonando lote ${Math.floor(i / 50) + 1}/${Math.ceil(canClone.length / 50)} (${batch.length} items)...`);
-
-          const cloneRes = await fetch("/api/meli-sync/clone", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ origin_id: mainAcc.id, dest_id: destAcc.id, item_ids: batch }),
-          });
-
-          if (cloneRes.ok) {
-            const r = await cloneRes.json();
-            totalCloned  += r.summary?.cloned ?? 0;
-            totalSkipped += r.summary?.skipped_duplicate ?? 0;
-            totalErrors  += r.summary?.errors ?? 0;
-            log(`✓ ${r.summary?.cloned ?? 0} clonadas, ${r.summary?.skipped_duplicate ?? 0} omitidas, ${r.summary?.errors ?? 0} errores`);
-          } else {
-            log(`Error en lote: HTTP ${cloneRes.status}`);
-            totalErrors += batch.length;
-          }
-        }
-      }
-
-      log(`=== RESUMEN FINAL ===`);
-      log(`Clonadas: ${totalCloned} | Omitidas: ${totalSkipped} | Errores: ${totalErrors}`);
-    } catch (e) {
-      log(`Error fatal: ${(e as Error).message}`);
-    } finally {
-      setAutoSyncing(false);
-    }
-  }, [accounts]);
 
   return (
     <main className="min-h-screen pb-24" style={{ background: "#121212" }}>
@@ -251,13 +312,171 @@ function SyncInner() {
             <p className="text-[10px]" style={{ color: "#6B7280" }}>Clona publicaciones entre tus cuentas MeLi</p>
           </div>
         </div>
+        {/* Notification toggle */}
+        <button
+          onClick={requestNotifPermission}
+          className="p-2 rounded-lg"
+          style={{ background: notifPerm === "granted" ? "#22c55e18" : "rgba(255,255,255,0.05)" }}
+          title={notifPerm === "granted" ? "Notificaciones activas" : "Activar notificaciones"}>
+          {notifPerm === "granted"
+            ? <Bell className="w-4 h-4" style={{ color: "#22c55e" }} />
+            : <BellOff className="w-4 h-4 text-gray-500" />}
+        </button>
       </div>
 
       <div className="max-w-2xl mx-auto px-4 pt-5 space-y-4">
 
-        {/* Selector de cuentas */}
+        {/* ===================== SYNC AUTOMÁTICO ===================== */}
         <div className="rounded-2xl p-5 space-y-4" style={{ background: "#1F1F1F", border: "1px solid rgba(255,255,255,0.07)" }}>
-          <p className="text-sm font-black text-white">Seleccionar Cuentas</p>
+          <div className="flex items-center gap-3">
+            <Zap className="w-5 h-5" style={{ color: "#39FF14" }} />
+            <div className="flex-1">
+              <p className="text-sm font-black text-white">Sincronización Automática</p>
+              <p className="text-[10px]" style={{ color: "#6B7280" }}>
+                Detecta la cuenta con más publicaciones y clona a todas las demás
+              </p>
+            </div>
+          </div>
+
+          {/* Modo selector */}
+          <div>
+            <label className="text-xs font-bold mb-1.5 block" style={{ color: "#6B7280" }}>MODO</label>
+            <select
+              value={syncMode}
+              onChange={e => setSyncMode(e.target.value as "all" | "new_only")}
+              disabled={autoSyncing}
+              className="w-full rounded-xl px-3 py-2.5 text-sm font-semibold text-white"
+              style={{ background: "#121212", border: "1px solid rgba(255,255,255,0.1)" }}>
+              <option value="all">Sincronización completa</option>
+              <option value="new_only">Solo publicaciones nuevas (más rápido)</option>
+            </select>
+          </div>
+
+          {/* Botón Start/Stop dinámico */}
+          {!autoSyncing ? (
+            <div className="space-y-2">
+              <button
+                onClick={() => startSync()}
+                disabled={accounts.length < 2}
+                className="w-full py-3 rounded-xl font-black text-sm transition-all disabled:opacity-40 flex items-center justify-center gap-2"
+                style={{ background: "#39FF14", color: "#121212" }}>
+                <Play className="w-4 h-4" />
+                Sincronizar Todas las Cuentas ({accounts.length})
+              </button>
+
+              {/* Botón Retomar (si hay job pausado) */}
+              {resumeJobId && (
+                <button
+                  onClick={() => startSync(resumeJobId)}
+                  className="w-full py-3 rounded-xl font-black text-sm transition-all flex items-center justify-center gap-2"
+                  style={{ background: "#FFE600", color: "#121212" }}>
+                  <RotateCcw className="w-4 h-4" />
+                  Retomar donde quedó
+                </button>
+              )}
+            </div>
+          ) : (
+            <button
+              onClick={stopSync}
+              disabled={stopping}
+              className="w-full py-3 rounded-xl font-black text-sm transition-all flex items-center justify-center gap-2"
+              style={{ background: stopping ? "#4B5563" : "#ef4444", color: "white" }}>
+              {stopping
+                ? <><RefreshCw className="w-4 h-4 animate-spin" /> Deteniendo...</>
+                : <><Square className="w-4 h-4" /> DETENER PROCESO</>}
+            </button>
+          )}
+
+          {/* Progreso en tiempo real */}
+          {autoSyncing && progress && (
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { label: "Clonadas",  val: progress.cloned,  color: "#39FF14" },
+                { label: "Omitidas",  val: progress.skipped, color: "#FF9800" },
+                { label: "Errores",   val: progress.errors,  color: "#ef4444" },
+              ].map(s => (
+                <div key={s.label} className="rounded-xl p-3 text-center" style={{ background: "#121212", border: `1px solid ${s.color}22` }}>
+                  <p className="text-xl font-black" style={{ color: s.color }}>{s.val}</p>
+                  <p className="text-[10px] font-bold" style={{ color: "#6B7280" }}>{s.label}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Log console */}
+          {autoLog.length > 0 && (
+            <div className="rounded-xl p-3 max-h-60 overflow-y-auto space-y-1" style={{ background: "#0a0a0a", border: "1px solid rgba(255,255,255,0.05)" }}>
+              {autoLog.map((line, i) => (
+                <p key={i} className="text-[11px] font-mono" style={{
+                  color: line.startsWith("===")   ? "#FFE600"
+                       : line.startsWith("❌")    ? "#ef4444"
+                       : line.startsWith("⚠️")   ? "#FF9800"
+                       : line.startsWith("✓")     ? "#39FF14"
+                       : line.startsWith("⏸")    ? "#60a5fa"
+                       : line.includes("clonadas") ? "#39FF14"
+                       : "#9CA3AF",
+                }}>{line}</p>
+              ))}
+              <div ref={logEndRef} />
+            </div>
+          )}
+
+          {/* Resumen final */}
+          {autoSummary && !autoSyncing && (
+            <div className="rounded-xl p-4" style={{ background: "#121212", border: "1px solid #39FF1433" }}>
+              <p className="text-xs font-black text-white mb-3">Resultado final</p>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { label: "Clonadas",  val: autoSummary.cloned,  color: "#39FF14" },
+                  { label: "Omitidas",  val: autoSummary.skipped, color: "#FF9800" },
+                  { label: "Errores",   val: autoSummary.errors,  color: "#ef4444" },
+                ].map(s => (
+                  <div key={s.label} className="text-center">
+                    <p className="text-2xl font-black" style={{ color: s.color }}>{s.val}</p>
+                    <p className="text-[10px]" style={{ color: "#6B7280" }}>{s.label}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ===================== TABLA DE ERRORES ===================== */}
+        {errorReport.length > 0 && (
+          <div className="rounded-2xl overflow-hidden" style={{ background: "#1F1F1F", border: "1px solid #ef444422" }}>
+            <button
+              onClick={() => setOpenErrors(o => !o)}
+              className="w-full flex items-center justify-between px-4 py-3">
+              <div className="flex items-center gap-2">
+                <XCircle className="w-4 h-4" style={{ color: "#ef4444" }} />
+                <span className="text-sm font-bold text-white">
+                  {errorReport.length} errores de clonación
+                </span>
+              </div>
+              {openErrors ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
+            </button>
+            {openErrors && (
+              <div className="px-4 pb-4 space-y-3 max-h-96 overflow-y-auto">
+                {errorReport.map((err, i) => (
+                  <div key={i} className="rounded-xl p-3" style={{ background: "#121212", border: "1px solid rgba(255,255,255,0.05)" }}>
+                    <p className="text-xs text-white font-semibold line-clamp-1 mb-1">{err.title || err.item_id}</p>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                        style={{ background: "#ef444420", color: "#ef4444" }}>
+                        {err.reason_human}
+                      </span>
+                    </div>
+                    <p className="text-[10px]" style={{ color: "#9CA3AF" }}>{err.suggestion}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ===================== SELECTOR DE CUENTAS (manual) ===================== */}
+        <div className="rounded-2xl p-5 space-y-4" style={{ background: "#1F1F1F", border: "1px solid rgba(255,255,255,0.07)" }}>
+          <p className="text-sm font-black text-white">Comparar Manualmente</p>
 
           <div className="space-y-3">
             <div>
@@ -307,40 +526,6 @@ function SyncInner() {
           </button>
         </div>
 
-        {/* Botón Sync Automático */}
-        <div className="rounded-2xl p-5 space-y-3" style={{ background: "#1F1F1F", border: "1px solid rgba(255,255,255,0.07)" }}>
-          <div className="flex items-center gap-3">
-            <Zap className="w-5 h-5" style={{ color: "#39FF14" }} />
-            <div>
-              <p className="text-sm font-black text-white">Sincronización Automática</p>
-              <p className="text-[10px]" style={{ color: "#6B7280" }}>
-                Detecta la cuenta con más publicaciones y clona a todas las demás
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={handleAutoSync}
-            disabled={autoSyncing || accounts.length < 2}
-            className="w-full py-3 rounded-xl font-black text-sm transition-all disabled:opacity-40 flex items-center justify-center gap-2"
-            style={{ background: "#39FF14", color: "#121212" }}>
-            {autoSyncing
-              ? <><RefreshCw className="w-4 h-4 animate-spin" /> Sincronizando todas las cuentas...</>
-              : <><Zap className="w-4 h-4" /> Sincronizar Todas las Cuentas ({accounts.length})</>}
-          </button>
-          {autoLog.length > 0 && (
-            <div className="rounded-xl p-3 max-h-60 overflow-y-auto space-y-1" style={{ background: "#121212" }}>
-              {autoLog.map((line, i) => (
-                <p key={i} className="text-[11px] font-mono" style={{
-                  color: line.startsWith("===") ? "#FFE600"
-                    : line.startsWith("Error") ? "#ef4444"
-                    : line.includes("clonadas") ? "#39FF14"
-                    : "#9CA3AF"
-                }}>{line}</p>
-              ))}
-            </div>
-          )}
-        </div>
-
         {/* Error */}
         {compareError && (
           <div className="rounded-2xl p-4 flex items-center gap-3" style={{ background: "#ef444418", border: "1px solid #ef444440" }}>
@@ -352,7 +537,6 @@ function SyncInner() {
         {/* Resultado del análisis */}
         {compareData && !cloneResult && (
           <>
-            {/* Resumen */}
             <div className="grid grid-cols-2 gap-3">
               <div className="rounded-2xl p-4 text-center" style={{ background: "#39FF1410", border: "1px solid #39FF1430" }}>
                 <p className="text-3xl font-black" style={{ color: "#39FF14" }}>{compareData.summary.can_clone}</p>
@@ -366,7 +550,6 @@ function SyncInner() {
               </div>
             </div>
 
-            {/* Info cuentas */}
             <div className="flex gap-3">
               {[compareData.origin, compareData.dest].map((acc, i) => (
                 <div key={acc.id} className="flex-1 rounded-xl p-3 flex items-center gap-2"
@@ -380,22 +563,16 @@ function SyncInner() {
               ))}
             </div>
 
-            {/* Lista para clonar */}
             {compareData.can_clone.length > 0 && (
               <div className="rounded-2xl overflow-hidden" style={{ background: "#1F1F1F", border: "1px solid rgba(255,255,255,0.07)" }}>
                 <div className="px-4 py-3 flex items-center justify-between border-b" style={{ borderColor: "rgba(255,255,255,0.07)" }}>
                   <p className="text-sm font-black text-white">Publicaciones a clonar</p>
                   <div className="flex gap-2">
-                    <button onClick={selectAll} className="text-xs font-bold px-2 py-1 rounded-lg" style={{ background: "#FFE60018", color: "#FFE600" }}>
-                      Todas
-                    </button>
-                    <button onClick={deselectAll} className="text-xs font-bold px-2 py-1 rounded-lg" style={{ background: "#1a1a1a", color: "#6B7280" }}>
-                      Ninguna
-                    </button>
+                    <button onClick={selectAll} className="text-xs font-bold px-2 py-1 rounded-lg" style={{ background: "#FFE60018", color: "#FFE600" }}>Todas</button>
+                    <button onClick={deselectAll} className="text-xs font-bold px-2 py-1 rounded-lg" style={{ background: "#1a1a1a", color: "#6B7280" }}>Ninguna</button>
                   </div>
                 </div>
 
-                {/* Buscador */}
                 <div className="px-4 py-2 border-b" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
                   <div className="relative">
                     <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{ color: "#6B7280" }} />
@@ -411,19 +588,13 @@ function SyncInner() {
 
                 <div className="p-3 space-y-2 max-h-72 overflow-y-auto">
                   {filtered.map(item => (
-                    <ItemRow
-                      key={item.id}
-                      item={item}
-                      selected={selected.has(item.id)}
-                      onToggle={() => toggleItem(item.id)}
-                    />
+                    <ItemRow key={item.id} item={item} selected={selected.has(item.id)} onToggle={() => toggleItem(item.id)} />
                   ))}
                   {filtered.length === 0 && (
                     <p className="text-center py-4 text-xs" style={{ color: "#6B7280" }}>Sin resultados para &quot;{search}&quot;</p>
                   )}
                 </div>
 
-                {/* Acciones */}
                 <div className="p-4 border-t space-y-2" style={{ borderColor: "rgba(255,255,255,0.07)" }}>
                   <button
                     onClick={() => handleClone(Array.from(selected))}
@@ -455,7 +626,6 @@ function SyncInner() {
               </div>
             )}
 
-            {/* Ya existen (colapsable) */}
             {compareData.already_exists.length > 0 && (
               <div className="rounded-2xl overflow-hidden" style={{ background: "#1F1F1F", border: "1px solid #FF980022" }}>
                 <button onClick={() => setOpenAlready(o => !o)}
@@ -484,15 +654,14 @@ function SyncInner() {
           </>
         )}
 
-        {/* Resultado de clonación */}
+        {/* Resultado de clonación manual */}
         {cloneResult && (
           <div className="space-y-4">
-            {/* Resumen resultado */}
             <div className="grid grid-cols-3 gap-2">
               {[
-                { label: "Clonadas",    val: cloneResult.summary.cloned,             color: "#39FF14" },
-                { label: "Omitidas",    val: cloneResult.summary.skipped_duplicate,  color: "#FF9800" },
-                { label: "Con error",   val: cloneResult.summary.errors,             color: "#ef4444" },
+                { label: "Clonadas",   val: cloneResult.summary.cloned,            color: "#39FF14" },
+                { label: "Omitidas",   val: cloneResult.summary.skipped_duplicate, color: "#FF9800" },
+                { label: "Con error",  val: cloneResult.summary.errors,            color: "#ef4444" },
               ].map(s => (
                 <div key={s.label} className="rounded-2xl p-4 text-center" style={{ background: "#1F1F1F", border: `1px solid ${s.color}22` }}>
                   <p className="text-3xl font-black" style={{ color: s.color }}>{s.val}</p>
@@ -515,11 +684,7 @@ function SyncInner() {
               </div>
               <div className="p-3 space-y-2 max-h-72 overflow-y-auto">
                 {cloneResult.results
-                  .filter(r =>
-                    cloneTab === "results" ? r.status === "cloned"
-                    : cloneTab === "skipped" ? r.status === "skipped_duplicate"
-                    : r.status === "error"
-                  )
+                  .filter(r => cloneTab === "results" ? r.status === "cloned" : cloneTab === "skipped" ? r.status === "skipped_duplicate" : r.status === "error")
                   .map((r, i) => (
                     <div key={i} className="flex items-start gap-2 py-2 border-b" style={{ borderColor: "rgba(255,255,255,0.04)" }}>
                       {r.status === "cloned"
