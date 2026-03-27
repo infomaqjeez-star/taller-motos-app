@@ -104,12 +104,16 @@ function ShipmentRow({
 }
 
 function TypeBlock({
-  label, icon, color, items, selected, onToggle,
+  label, icon, color, items, selected, onToggle, onPrint, downloading,
 }: {
   label: string; icon: React.ReactNode; color: string;
   items: ShipmentInfo[]; selected: Set<number>; onToggle: (id: number) => void;
+  onPrint: (format: "pdf" | "zpl", ids: number[]) => void;
+  downloading: boolean;
 }) {
   if (!items.length) return null;
+  const blockIds = items.map(s => s.shipment_id);
+  const selectedInBlock = blockIds.filter(id => selected.has(id));
   return (
     <div className="rounded-2xl overflow-hidden"
       style={{ background: "#1F1F1F", border: `1px solid ${color}22` }}>
@@ -128,6 +132,25 @@ function TypeBlock({
             selected={selected.has(s.shipment_id)}
             onToggle={onToggle} />
         ))}
+      </div>
+      {/* Botones de impresión propios del bloque */}
+      <div className="px-3 pb-3 flex gap-2">
+        <button
+          onClick={() => onPrint("pdf", selectedInBlock)}
+          disabled={selectedInBlock.length === 0 || downloading}
+          className="flex-1 py-2 rounded-xl font-black text-xs flex items-center justify-center gap-1.5 transition-all disabled:opacity-40"
+          style={{ background: color, color: "#121212" }}>
+          {downloading
+            ? <><RefreshCw className="w-3 h-3 animate-spin" /> Generando...</>
+            : <><Printer className="w-3 h-3" /> PDF ({selectedInBlock.length})</>}
+        </button>
+        <button
+          onClick={() => onPrint("zpl", selectedInBlock)}
+          disabled={selectedInBlock.length === 0 || downloading}
+          className="flex-1 py-2 rounded-xl font-black text-xs flex items-center justify-center gap-1.5 transition-all disabled:opacity-40"
+          style={{ background: "transparent", color, border: `1px solid ${color}44` }}>
+          <Download className="w-3 h-3" /> ZPL
+        </button>
       </div>
     </div>
   );
@@ -204,12 +227,12 @@ function EtiquetasInner() {
   const getBlock = (items: ShipmentInfo[], type: LogisticType) =>
     items.filter(s => s.type === type);
 
-  const handleDownload = useCallback(async (format: "pdf" | "zpl") => {
-    if (!selected.size) return;
+  const handleDownload = useCallback(async (format: "pdf" | "zpl", ids?: number[]) => {
+    const targetIds = ids ?? Array.from(selected);
+    if (!targetIds.length) return;
     setDownloading(true);
     try {
-      const ids = Array.from(selected);
-      const idsStr = ids.join(",");
+      const idsStr = targetIds.join(",");
       const res = await fetch(`/api/meli-labels?action=download&format=${format}&ids=${idsStr}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const blob = await res.blob();
@@ -226,12 +249,12 @@ function EtiquetasInner() {
       }
       URL.revokeObjectURL(url);
 
-      const printedShipments = (data?.shipments ?? []).filter(s => ids.includes(s.shipment_id));
+      const printedShipments = (data?.shipments ?? []).filter(s => targetIds.includes(s.shipment_id));
       await fetch("/api/meli-labels", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          shipment_ids: ids,
+          shipment_ids: targetIds,
           shipments: printedShipments.map(s => ({
             shipment_id: s.shipment_id,
             account: s.account,
@@ -371,6 +394,7 @@ function EtiquetasInner() {
                   label="CORREO" color="#FF9800" icon={<Truck className="w-4 h-4" />}
                   items={getBlock(activeItems, "correo")}
                   selected={selected} onToggle={toggleItem}
+                  onPrint={handleDownload} downloading={downloading}
                 />
 
                 {/* Bloque TURBO */}
@@ -378,6 +402,7 @@ function EtiquetasInner() {
                   label="TURBO" color="#A855F7" icon={<Zap className="w-4 h-4" />}
                   items={getBlock(activeItems, "turbo")}
                   selected={selected} onToggle={toggleItem}
+                  onPrint={handleDownload} downloading={downloading}
                 />
 
                 {/* Bloque FLEX */}
@@ -385,6 +410,7 @@ function EtiquetasInner() {
                   label="FLEX" color="#00E5FF" icon={<Truck className="w-4 h-4" />}
                   items={getBlock(activeItems, "flex")}
                   selected={selected} onToggle={toggleItem}
+                  onPrint={handleDownload} downloading={downloading}
                 />
 
                 {activeItems.length === 0 && (
@@ -394,29 +420,10 @@ function EtiquetasInner() {
                   </div>
                 )}
 
-                {/* Botones de descarga */}
                 {activeItems.length > 0 && (
-                  <div className="space-y-2">
-                    <button
-                      onClick={() => handleDownload("pdf")}
-                      disabled={selected.size === 0 || downloading}
-                      className="w-full py-3.5 rounded-xl font-black text-sm transition-all disabled:opacity-40 flex items-center justify-center gap-2"
-                      style={{ background: "#FFE600", color: "#121212" }}>
-                      {downloading
-                        ? <><RefreshCw className="w-4 h-4 animate-spin" /> Generando...</>
-                        : <><Printer className="w-4 h-4" /> Imprimir PDF ({selected.size} etiquetas)</>}
-                    </button>
-                    <button
-                      onClick={() => handleDownload("zpl")}
-                      disabled={selected.size === 0 || downloading}
-                      className="w-full py-3 rounded-xl font-black text-sm transition-all disabled:opacity-40 flex items-center justify-center gap-2"
-                      style={{ background: "#1F1F1F", color: "#FFE600", border: "1px solid #FFE60033" }}>
-                      <Download className="w-4 h-4" /> Descargar ZPL (térmica)
-                    </button>
-                    <p className="text-[10px] text-center" style={{ color: "#6B7280" }}>
-                      Al imprimir, los envíos se mueven a Historial automáticamente
-                    </p>
-                  </div>
+                  <p className="text-[10px] text-center pb-2" style={{ color: "#6B7280" }}>
+                    Al imprimir, los envíos se mueven a Historial automáticamente
+                  </p>
                 )}
               </>
             )}
