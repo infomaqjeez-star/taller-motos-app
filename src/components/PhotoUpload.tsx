@@ -52,11 +52,15 @@ export default function PhotoUpload({ urls, onChange, maxPhotos = 5 }: Props) {
         const { error } = await supabase.storage
           .from("fotos-maquinas")
           .upload(path, compressed, { contentType: "image/jpeg", upsert: false });
-        if (error) throw error;
+        if (error) {
+          console.error("[PhotoUpload] Error Supabase Storage:", error.message, error);
+          throw new Error(error.message);
+        }
         const { data } = supabase.storage.from("fotos-maquinas").getPublicUrl(path);
         newUrls.push(data.publicUrl);
       } catch (e) {
-        alert(`Error al subir foto ${i + 1}: ${e}`);
+        const msg = e instanceof Error ? e.message : String(e);
+        alert(`Error al subir foto ${i + 1}: ${msg}\n\nAsegurate de que el bucket "fotos-maquinas" existe y es público en Supabase Storage.`);
       }
     }
 
