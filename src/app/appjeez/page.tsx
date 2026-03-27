@@ -8,7 +8,7 @@ import {
   Star, AlertTriangle, CheckCircle2, RefreshCw, Settings,
   ChevronDown, ChevronUp, ShoppingCart, DollarSign,
   Package, Clock, XCircle, BarChart2, ExternalLink,
-  Bell, Store, Menu, X, Copy, Pencil, Check,
+  Bell, Store, Menu, X, Copy, Pencil, Check, Zap,
 } from "lucide-react";
 
 interface Reputation {
@@ -403,7 +403,8 @@ function AppJeezInner() {
     { label: "Publicaciones",   icon: <Package className="w-4 h-4" />,         href: "/appjeez/publicaciones", active: false },
     { label: "Sincronizar",     icon: <Copy className="w-4 h-4" />,            href: "/appjeez/sincronizar",   active: false },
     { label: "Precios",         icon: <DollarSign className="w-4 h-4" />,     href: "/appjeez/precios",       active: false },
-    { label: "Órdenes",         icon: <ShoppingCart className="w-4 h-4" />,    href: "/appjeez/ordenes",       active: false },
+    { label: "Promociones",     icon: <Zap className="w-4 h-4" />,            href: "/appjeez/promociones",   active: false },
+    { label: "Órdenes",         icon: <ShoppingCart className="w-4 h-4" />,   href: "/appjeez/ordenes",       active: false },
     { label: "Cuentas MeLi",    icon: <Store className="w-4 h-4" />,           href: "/configuracion/meli",    active: false },
   ];
 
