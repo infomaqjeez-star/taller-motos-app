@@ -126,15 +126,20 @@ export async function GET(req: Request) {
         if (!token) return;
         tokenCache.set(String(acc.meli_user_id), token);
 
-        const [dataReady, dataHandling] = await Promise.all([
+        const [dataReady, dataHandling, dataFull] = await Promise.all([
           meliGet(`/orders/search?seller=${acc.meli_user_id}&order.status=paid&sort=date_desc&limit=50&shipping.status=ready_to_ship`, token),
           meliGet(`/orders/search?seller=${acc.meli_user_id}&order.status=paid&sort=date_desc&limit=50&shipping.status=handling`, token),
+          meliGet(`/orders/search?seller=${acc.meli_user_id}&order.status=paid&sort=date_desc&limit=50&shipping.logistic_type=fulfillment`, token),
         ]);
 
         const orders = [
           ...((dataReady?.results ?? []) as Array<Record<string, unknown>>),
           ...((dataHandling?.results ?? []) as Array<Record<string, unknown>>),
+          ...((dataFull?.results ?? []) as Array<Record<string, unknown>>),
         ];
+        const readyIds   = new Set(((dataReady?.results   ?? []) as Array<Record<string,unknown>>).map(o => (o.shipping as Record<string,unknown>)?.id as number));
+        const handlingIds = new Set(((dataHandling?.results ?? []) as Array<Record<string,unknown>>).map(o => (o.shipping as Record<string,unknown>)?.id as number));
+        const fullIds    = new Set(((dataFull?.results    ?? []) as Array<Record<string,unknown>>).map(o => (o.shipping as Record<string,unknown>)?.id as number));
         const seen = new Set<number>();
 
         for (const order of orders) {
@@ -147,9 +152,11 @@ export async function GET(req: Request) {
           const logistic = (ship.logistic_type as string | undefined) ?? "";
           const tags     = (ship.tags as string[] | undefined) ?? [];
           const mode     = (ship.mode as string | undefined) ?? "";
-          // También chequear tags a nivel de orden
           const orderTags = (order.tags as string[] | undefined) ?? [];
           const allTags   = [...tags, ...orderTags];
+
+          // Si vino de la query dedicada de fulfillment → siempre Full
+          const forceFull = fullIds.has(sid) && !readyIds.has(sid) && !handlingIds.has(sid);
 
           const items = (order.order_items as Array<{
             item?: { id?: string; title?: string; seller_sku?: string };
@@ -165,7 +172,7 @@ export async function GET(req: Request) {
           if (deliveryLimit?.date) deliveryDate = deliveryLimit.date as string;
 
           const rawStatus = (ship.status as string | undefined) ?? "ready_to_ship";
-          const type = classifyType(logistic, allTags, undefined, mode);
+          const type = forceFull ? "full" : classifyType(logistic, allTags, undefined, mode);
 
           allShipments.push({
             shipment_id: sid,
