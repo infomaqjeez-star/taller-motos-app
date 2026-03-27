@@ -1,38 +1,8 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { getSupabase, getValidToken, meliGet, MeliAccount } from "@/lib/meli";
 
 export const dynamic  = "force-dynamic";
 export const revalidate = 0;
-
-const SUPA_URL    = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const ENC_KEY     = process.env.APPJEEZ_MELI_ENCRYPTION_KEY!;
-
-async function deriveKey(passphrase: string): Promise<CryptoKey> {
-  const enc = new TextEncoder();
-  const km  = await crypto.subtle.importKey("raw", enc.encode(passphrase), "PBKDF2", false, ["deriveKey"]);
-  return crypto.subtle.deriveKey(
-    { name: "PBKDF2", salt: enc.encode("appjeez-meli-salt"), iterations: 100000, hash: "SHA-256" },
-    km, { name: "AES-GCM", length: 256 }, false, ["decrypt"]
-  );
-}
-async function decrypt(enc64: string, pass: string): Promise<string> {
-  const key      = await deriveKey(pass);
-  const combined = Uint8Array.from(atob(enc64), c => c.charCodeAt(0));
-  const plain    = await crypto.subtle.decrypt({ name: "AES-GCM", iv: combined.slice(0, 12) }, key, combined.slice(12));
-  return new TextDecoder().decode(plain);
-}
-
-async function meliGet(path: string, token: string) {
-  try {
-    const res = await fetch(`https://api.mercadolibre.com${path}`, {
-      headers: { Authorization: `Bearer ${token}` },
-      signal: AbortSignal.timeout(12000),
-    });
-    if (!res.ok) return null;
-    return res.json();
-  } catch { return null; }
-}
 
 async function meliPost(path: string, token: string, body: unknown) {
   try {
@@ -58,7 +28,7 @@ interface CloneRequest {
 export async function POST(req: Request) {
   let body: CloneRequest;
   try { body = await req.json(); }
-  catch { return NextResponse.json({ error: "JSON inválido" }, { status: 400 }); }
+  catch { return NextResponse.json({ error: "JSON invalido" }, { status: 400 }); }
 
   const { origin_id, dest_id, item_ids } = body;
   if (!origin_id || !dest_id || !item_ids?.length) {
@@ -66,10 +36,10 @@ export async function POST(req: Request) {
   }
 
   try {
-    const supabase = createClient(SUPA_URL, SERVICE_KEY);
+    const supabase = getSupabase();
     const { data: accounts } = await supabase
       .from("meli_accounts")
-      .select("id, meli_user_id, nickname, access_token_enc")
+      .select("id, meli_user_id, nickname, access_token_enc, refresh_token_enc, expires_at, status")
       .in("id", [origin_id, dest_id])
       .eq("status", "active");
 
@@ -77,15 +47,18 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Cuentas no encontradas o inactivas" }, { status: 404 });
     }
 
-    const origin = accounts.find(a => a.id === origin_id)!;
-    const dest   = accounts.find(a => a.id === dest_id)!;
+    const origin = accounts.find(a => a.id === origin_id)! as MeliAccount;
+    const dest   = accounts.find(a => a.id === dest_id)! as MeliAccount;
 
     const [originToken, destToken] = await Promise.all([
-      decrypt(origin.access_token_enc, ENC_KEY),
-      decrypt(dest.access_token_enc, ENC_KEY),
+      getValidToken(origin),
+      getValidToken(dest),
     ]);
 
-    // Títulos existentes en destino para anti-duplicado (paginado hasta 2000)
+    if (!originToken || !destToken) {
+      return NextResponse.json({ error: "Token expirado, reconecta las cuentas" }, { status: 401 });
+    }
+
     const getAllIds = async (userId: string, token: string, status: string): Promise<string[]> => {
       const ids: string[] = [];
       let offset = 0;
@@ -99,7 +72,7 @@ export async function POST(req: Request) {
         if (offset >= total) break;
       }
       return ids;
-    }
+    };
     const [dActive, dPaused] = await Promise.all([
       getAllIds(String(dest.meli_user_id), destToken, "active"),
       getAllIds(String(dest.meli_user_id), destToken, "paused"),
@@ -125,7 +98,6 @@ export async function POST(req: Request) {
 
     for (const itemId of item_ids.slice(0, 100)) {
       try {
-        // Obtener item completo desde origen
         const itemRes = await fetch(`https://api.mercadolibre.com/items/${itemId}`, {
           headers: { Authorization: `Bearer ${originToken}` },
           signal:  AbortSignal.timeout(12000),
@@ -137,15 +109,10 @@ export async function POST(req: Request) {
         const item  = await itemRes.json() as Record<string, unknown>;
         const title = (item.title as string) ?? "";
 
-        // Verificar duplicado
         if (destTitlesNorm.has(title.toLowerCase().trim())) {
-          results.push({ item_id: itemId, title, status: "skipped_duplicate", reason: "Título ya existe en destino" });
+          results.push({ item_id: itemId, title, status: "skipped_duplicate", reason: "Titulo ya existe en destino" });
           continue;
         }
-
-        // ---- Construir payload mínimo y seguro ----
-        // MeLi rechaza muchos campos en POST: description va separada,
-        // no incluir: id, seller_id, status, date_*, health, warnings, etc.
 
         const pictures = (item.pictures as Array<{ id?: string; url?: string; secure_url?: string }> | undefined) ?? [];
         const picturePayload = pictures.slice(0, 12).map(p => {
@@ -164,13 +131,10 @@ export async function POST(req: Request) {
           listing_type_id:    item.listing_type_id ?? "gold_special",
         };
 
-        // family_name requerido por MeLi en ciertas categorías
         if (item.family_name) newItem.family_name = item.family_name;
 
-        // Copiar configuración de envío del original
         const shipping = item.shipping as Record<string, unknown> | undefined;
         if (shipping) {
-          // Solo copiar los campos relevantes, no datos de tracking/orden
           const shippingPayload: Record<string, unknown> = {};
           if (shipping.mode)             shippingPayload.mode           = shipping.mode;
           if (shipping.local_pick_up !== undefined) shippingPayload.local_pick_up = shipping.local_pick_up;
@@ -181,7 +145,6 @@ export async function POST(req: Request) {
           if (Object.keys(shippingPayload).length) newItem.shipping = shippingPayload;
         }
 
-        // Copiar sale_terms del original (solo los permitidos por el vendedor)
         const blockedTerms = new Set(["INSTALLMENTS_CAMPAIGN","INSTALLMENTS","FINANCING"]);
         const rawSaleTerms = (item.sale_terms as Array<Record<string, unknown>> | undefined) ?? [];
         const allowedTerms = rawSaleTerms
@@ -196,14 +159,13 @@ export async function POST(req: Request) {
           newItem.sale_terms = allowedTerms;
         } else {
           newItem.sale_terms = [
-            { id: "WARRANTY_TYPE",  value_name: "Garantía del vendedor" },
-            { id: "WARRANTY_TIME",  value_name: "90 días" },
+            { id: "WARRANTY_TYPE",  value_name: "Garantia del vendedor" },
+            { id: "WARRANTY_TIME",  value_name: "90 dias" },
           ];
         }
 
         if (picturePayload.length) newItem.pictures = picturePayload;
 
-        // Obtener atributos requeridos de la categoría para asegurarnos de incluirlos todos
         const catAttrsData = await meliGet(`/categories/${item.category_id}/attributes`, originToken);
         const requiredAttrIds = new Set<string>(
           ((catAttrsData ?? []) as Array<{ id: string; tags?: { required?: boolean } }>)
@@ -211,7 +173,6 @@ export async function POST(req: Request) {
             .map(a => a.id)
         );
 
-        // Incluir TODOS los atributos del item original con formato completo
         const rawAttrs = (item.attributes as Array<Record<string, unknown>> | undefined) ?? [];
         const readonlyIds = new Set(["ITEM_CONDITION","SELLER_SKU"]);
         const safeAttrs = rawAttrs
@@ -221,7 +182,6 @@ export async function POST(req: Request) {
             if (a.value_id)   attr.value_id   = a.value_id;
             if (a.value_name) attr.value_name = a.value_name;
             if (a.value_struct) attr.value_struct = a.value_struct;
-            // Para atributos con múltiples valores
             if (Array.isArray(a.values) && (a.values as unknown[]).length) {
               attr.value_id   = (a.values as Array<{ id?: string; name?: string }>)[0]?.id   ?? a.value_id;
               attr.value_name = (a.values as Array<{ id?: string; name?: string }>)[0]?.name ?? a.value_name;
@@ -230,7 +190,6 @@ export async function POST(req: Request) {
           })
           .filter(a => a.value_id || a.value_name || a.value_struct);
 
-        // Verificar atributos requeridos y rellenar faltantes con "No aplica"
         const coveredIds = new Set(safeAttrs.map(a => String(a.id)));
         const missingRequired = Array.from(requiredAttrIds).filter(id => !coveredIds.has(id));
         for (const missingId of missingRequired) {
@@ -239,18 +198,14 @@ export async function POST(req: Request) {
 
         if (safeAttrs.length) newItem.attributes = safeAttrs;
 
-        // Publicar en destino con reintentos inteligentes
         let postRes = await meliPost("/items", destToken, newItem);
 
-        // Retry 1: Si falla por title inválido (catalogo MeLi), remover title
         if (!postRes.ok) {
           const errStr = JSON.stringify(postRes.data ?? {});
           if (errStr.includes("title") && errStr.includes("invalid")) {
             delete newItem.title;
             postRes = await meliPost("/items", destToken, newItem);
-          }
-          // Retry 2: Si falla por family_name requerido, agregarlo
-          else if (errStr.includes("family_name") && !newItem.family_name) {
+          } else if (errStr.includes("family_name") && !newItem.family_name) {
             newItem.family_name = item.family_name ?? title;
             postRes = await meliPost("/items", destToken, newItem);
           }
@@ -260,7 +215,6 @@ export async function POST(req: Request) {
           const newId = (postRes.data as Record<string, unknown>)?.id as string;
           destTitlesNorm.add(title.toLowerCase().trim());
 
-          // Agregar descripción en llamada separada (MeLi lo requiere así)
           const descData = await meliGet(`/items/${itemId}/description`, originToken);
           const plainText = (descData?.plain_text as string | undefined) ?? "";
           if (plainText && newId) {
@@ -270,7 +224,6 @@ export async function POST(req: Request) {
           results.push({ item_id: itemId, title, status: "cloned", new_id: newId });
         } else {
           const d = postRes.data as Record<string, unknown>;
-          // MeLi puede devolver cause como array de strings o de objetos
           const rawCauses = (d?.cause ?? []) as unknown[];
           const causeMsg = rawCauses.map(c => {
             if (typeof c === "string") return c;
@@ -289,7 +242,6 @@ export async function POST(req: Request) {
           results.push({ item_id: itemId, title, status: "error", reason });
         }
 
-        // Rate limit: ~250ms entre items
         await new Promise(r => setTimeout(r, 250));
 
       } catch (e) {

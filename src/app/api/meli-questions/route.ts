@@ -1,55 +1,19 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { getActiveAccounts, getValidToken } from "@/lib/meli";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
-const SUPA_URL    = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const ENC_KEY     = process.env.APPJEEZ_MELI_ENCRYPTION_KEY!;
-
-async function deriveKey(passphrase: string): Promise<CryptoKey> {
-  const enc = new TextEncoder();
-  const km  = await crypto.subtle.importKey("raw", enc.encode(passphrase), "PBKDF2", false, ["deriveKey"]);
-  return crypto.subtle.deriveKey(
-    { name: "PBKDF2", salt: enc.encode("appjeez-meli-salt"), iterations: 100000, hash: "SHA-256" },
-    km, { name: "AES-GCM", length: 256 }, false, ["decrypt"]
-  );
-}
-
-async function decrypt(encBase64: string, passphrase: string): Promise<string> {
-  const key      = await deriveKey(passphrase);
-  const combined = Uint8Array.from(atob(encBase64), (c) => c.charCodeAt(0));
-  const plain    = await crypto.subtle.decrypt(
-    { name: "AES-GCM", iv: combined.slice(0, 12) },
-    key,
-    combined.slice(12)
-  );
-  return new TextDecoder().decode(plain);
-}
 
 export async function GET(req: Request) {
   const debug = new URL(req.url).searchParams.get("debug") === "1";
-
   const logs: string[] = [];
-  logs.push(`enc_key_set:${!!ENC_KEY}`);
-  logs.push(`service_key_set:${!!SERVICE_KEY}`);
-  logs.push(`supa_url:${SUPA_URL}`);
 
   try {
-    const supabase = createClient(SUPA_URL, SERVICE_KEY);
-
     const ROMAN = ["I","II","III","IV","V","VI","VII","VIII","IX","X"];
+    const accounts = await getActiveAccounts();
+    logs.push(`accounts_count:${accounts.length}`);
 
-    const { data: accounts, error } = await supabase
-      .from("meli_accounts")
-      .select("id, meli_user_id, nickname, access_token_enc")
-      .eq("status", "active")
-      .order("nickname", { ascending: true });
-
-    logs.push(`accounts_count:${accounts?.length ?? 0}`);
-    if (error) logs.push(`db_error:${error.message}`);
-
-    if (error || !accounts?.length) {
+    if (!accounts.length) {
       return NextResponse.json(debug ? { logs, questions: [] } : []);
     }
 
@@ -62,7 +26,8 @@ export async function GET(req: Request) {
       const roman = ROMAN[accIdx] ?? String(accIdx + 1);
       const alog: Record<string, unknown> = { nickname: acc.nickname, meli_user_id: acc.meli_user_id };
       try {
-        const token = await decrypt(acc.access_token_enc, ENC_KEY);
+        const token = await getValidToken(acc);
+        if (!token) { alog.token_ok = false; alog.error = "token_expired"; accLogs.push(alog); continue; }
         alog.token_ok = true;
 
         const url = `https://api.mercadolibre.com/questions/search?seller_id=${acc.meli_user_id}&status=UNANSWERED&limit=50`;
@@ -129,7 +94,6 @@ export async function GET(req: Request) {
       accLogs.push(alog);
     }
 
-    // Deduplicar por meli_question_id (por si una pregunta aparece en múltiples cuentas)
     const seen = new Set<number>();
     const unique = allQuestions.filter(q => {
       const id = (q as { meli_question_id: number }).meli_question_id;

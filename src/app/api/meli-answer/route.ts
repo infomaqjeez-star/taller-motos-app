@@ -1,35 +1,16 @@
 import { NextResponse, NextRequest } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { getSupabase, getValidToken, MeliAccount } from "@/lib/meli";
 
 export const dynamic  = "force-dynamic";
 export const revalidate = 0;
-
-const SUPA_URL    = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const ENC_KEY     = process.env.APPJEEZ_MELI_ENCRYPTION_KEY!;
-
-async function deriveKey(passphrase: string): Promise<CryptoKey> {
-  const enc = new TextEncoder();
-  const km  = await crypto.subtle.importKey("raw", enc.encode(passphrase), "PBKDF2", false, ["deriveKey"]);
-  return crypto.subtle.deriveKey(
-    { name: "PBKDF2", salt: enc.encode("appjeez-meli-salt"), iterations: 100000, hash: "SHA-256" },
-    km, { name: "AES-GCM", length: 256 }, false, ["decrypt"]
-  );
-}
-async function decrypt(enc64: string, pass: string): Promise<string> {
-  const key      = await deriveKey(pass);
-  const combined = Uint8Array.from(atob(enc64), c => c.charCodeAt(0));
-  const plain    = await crypto.subtle.decrypt({ name: "AES-GCM", iv: combined.slice(0, 12) }, key, combined.slice(12));
-  return new TextDecoder().decode(plain);
-}
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json() as {
       question_id:    number;
       answer_text:    string;
-      meli_account_id?: string; // UUID de Supabase (preferido)
-      meli_user_id?:  string;   // fallback
+      meli_account_id?: string;
+      meli_user_id?:  string;
     };
 
     const { question_id, answer_text, meli_account_id, meli_user_id } = body;
@@ -38,10 +19,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "question_id y answer_text son requeridos" }, { status: 400 });
     }
 
-    const supabase = createClient(SUPA_URL, SERVICE_KEY);
+    const supabase = getSupabase();
 
-    // Buscar la cuenta por ID o meli_user_id
-    let query = supabase.from("meli_accounts").select("id, meli_user_id, nickname, access_token_enc").eq("status", "active");
+    let query = supabase.from("meli_accounts")
+      .select("id, meli_user_id, nickname, access_token_enc, refresh_token_enc, expires_at, status")
+      .eq("status", "active");
     if (meli_account_id) {
       query = query.eq("id", meli_account_id);
     } else if (meli_user_id) {
@@ -55,10 +37,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Cuenta no encontrada" }, { status: 404 });
     }
 
-    const acc   = accounts[0];
-    const token = await decrypt(acc.access_token_enc, ENC_KEY);
+    const acc   = accounts[0] as MeliAccount;
+    const token = await getValidToken(acc);
+    if (!token) {
+      return NextResponse.json({ error: "Token expirado, reconecta la cuenta" }, { status: 401 });
+    }
 
-    // Enviar respuesta directamente a MeLi
     const meliRes = await fetch(`https://api.mercadolibre.com/answers`, {
       method:  "POST",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },

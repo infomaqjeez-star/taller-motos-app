@@ -1,61 +1,25 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { getActiveAccounts, getValidToken, meliGet } from "@/lib/meli";
 
 export const dynamic  = "force-dynamic";
 export const revalidate = 0;
 
-const SUPA_URL    = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const ENC_KEY     = process.env.APPJEEZ_MELI_ENCRYPTION_KEY!;
-
-async function deriveKey(passphrase: string): Promise<CryptoKey> {
-  const enc = new TextEncoder();
-  const km  = await crypto.subtle.importKey("raw", enc.encode(passphrase), "PBKDF2", false, ["deriveKey"]);
-  return crypto.subtle.deriveKey(
-    { name: "PBKDF2", salt: enc.encode("appjeez-meli-salt"), iterations: 100000, hash: "SHA-256" },
-    km, { name: "AES-GCM", length: 256 }, false, ["decrypt"]
-  );
-}
-async function decrypt(enc64: string, pass: string): Promise<string> {
-  const key      = await deriveKey(pass);
-  const combined = Uint8Array.from(atob(enc64), c => c.charCodeAt(0));
-  const plain    = await crypto.subtle.decrypt({ name: "AES-GCM", iv: combined.slice(0, 12) }, key, combined.slice(12));
-  return new TextDecoder().decode(plain);
-}
-
-async function meliGet(path: string, token: string) {
-  try {
-    const res = await fetch(`https://api.mercadolibre.com${path}`, {
-      headers: { Authorization: `Bearer ${token}` },
-      signal: AbortSignal.timeout(10000),
-    });
-    if (!res.ok) return null;
-    return res.json();
-  } catch { return null; }
-}
-
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
-  const accountId = searchParams.get("account_id"); // opcional: filtrar por cuenta
+  const accountId = searchParams.get("account_id");
 
   try {
-    const supabase = createClient(SUPA_URL, SERVICE_KEY);
-    let query = supabase
-      .from("meli_accounts")
-      .select("id, meli_user_id, nickname, access_token_enc")
-      .eq("status", "active")
-      .order("nickname", { ascending: true });
-
-    if (accountId) query = query.eq("id", accountId);
-
-    const { data: accounts, error } = await query;
-    if (error || !accounts?.length) return NextResponse.json([]);
+    let accounts = await getActiveAccounts();
+    if (accountId) accounts = accounts.filter(a => a.id === accountId);
+    if (!accounts.length) return NextResponse.json([]);
 
     const results = await Promise.all(accounts.map(async (acc) => {
       try {
-        const token = await decrypt(acc.access_token_enc, ENC_KEY);
+        const token = await getValidToken(acc);
+        if (!token) {
+          return { account: acc.nickname, meli_user_id: String(acc.meli_user_id), items: [], total: 0, error: "token_expired" };
+        }
 
-        // Obtener IDs de publicaciones activas
         const searchData = await meliGet(
           `/users/${acc.meli_user_id}/items/search?status=active&limit=100`,
           token
@@ -66,7 +30,6 @@ export async function GET(req: Request) {
           return { account: acc.nickname, meli_user_id: String(acc.meli_user_id), items: [] };
         }
 
-        // Obtener detalles en lote (máx 20 por request)
         const chunks: string[][] = [];
         for (let i = 0; i < itemIds.length; i += 20) {
           chunks.push(itemIds.slice(i, i + 20));
@@ -96,7 +59,6 @@ export async function GET(req: Request) {
           }
         }));
 
-        // Ordenar por vendidos desc
         allItems.sort((a, b) => {
           const as = (a as { sold_quantity: number }).sold_quantity;
           const bs = (b as { sold_quantity: number }).sold_quantity;

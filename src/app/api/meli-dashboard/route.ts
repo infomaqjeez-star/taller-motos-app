@@ -1,50 +1,20 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { getActiveAccounts, getValidToken, meliGet, MeliAccount } from "@/lib/meli";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
-const SUPA_URL    = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const ENC_KEY     = process.env.APPJEEZ_MELI_ENCRYPTION_KEY!;
-const MELI        = "https://api.mercadolibre.com";
 
-async function deriveKey(passphrase: string): Promise<CryptoKey> {
-  const enc = new TextEncoder();
-  const km  = await crypto.subtle.importKey("raw", enc.encode(passphrase), "PBKDF2", false, ["deriveKey"]);
-  return crypto.subtle.deriveKey(
-    { name: "PBKDF2", salt: enc.encode("appjeez-meli-salt"), iterations: 100000, hash: "SHA-256" },
-    km, { name: "AES-GCM", length: 256 }, false, ["decrypt"]
-  );
-}
-
-async function decrypt(encBase64: string, passphrase: string): Promise<string> {
-  const key      = await deriveKey(passphrase);
-  const combined = Uint8Array.from(atob(encBase64), (c) => c.charCodeAt(0));
-  const plain    = await crypto.subtle.decrypt(
-    { name: "AES-GCM", iv: combined.slice(0, 12) }, key, combined.slice(12)
-  );
-  return new TextDecoder().decode(plain);
-}
-
-async function meliGet(path: string, token: string) {
+async function processAccount(acc: MeliAccount) {
   try {
-    const res = await fetch(`${MELI}${path}`, {
-      headers: { Authorization: `Bearer ${token}` },
-      signal: AbortSignal.timeout(8000),
-    });
-    if (!res.ok) return null;
-    return res.json();
-  } catch {
-    return null;
-  }
-}
-
-async function processAccount(acc: {
-  id: string; nickname: string; meli_user_id: string; access_token_enc: string;
-}) {
-  try {
-    const token = await decrypt(acc.access_token_enc, ENC_KEY);
-    const uid   = acc.meli_user_id;
+    const token = await getValidToken(acc);
+    if (!token) {
+      return {
+        account: acc.nickname, meli_user_id: String(acc.meli_user_id),
+        error: "token_expired", unanswered_questions: 0, pending_messages: 0,
+        ready_to_ship: 0, total_items: 0, today_orders: 0, today_sales_amount: 0, reputation: null,
+      };
+    }
+    const uid = String(acc.meli_user_id);
 
     const [userData, ordersRes, shipments, itemsSearch, questions] = await Promise.all([
       meliGet(`/users/${uid}`, token),
@@ -54,13 +24,11 @@ async function processAccount(acc: {
       meliGet(`/questions/search?seller_id=${uid}&status=UNANSWERED&limit=1`, token),
     ]);
 
-    // Filtrar órdenes de hoy en horario Argentina (UTC-3)
     const nowArg = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Argentina/Buenos_Aires" }));
     const todayArgStr = `${nowArg.getFullYear()}-${String(nowArg.getMonth()+1).padStart(2,"0")}-${String(nowArg.getDate()).padStart(2,"0")}`;
     const allOrders: { total_amount?: number; date_created?: string }[] = ordersRes?.results ?? [];
-    const todayOrders = allOrders.filter(o => (o.date_created ?? "").startsWith(todayArgStr) || (o.date_created ?? "").slice(0,10) === todayArgStr);
+    const todayOrders = allOrders.filter(o => (o.date_created ?? "").startsWith(todayArgStr));
     const totalAmount = todayOrders.reduce((s, o) => s + (o.total_amount ?? 0), 0);
-    const todayOrdersCount = todayOrders.length;
     const rep = userData?.seller_reputation ?? null;
 
     return {
@@ -70,7 +38,7 @@ async function processAccount(acc: {
       pending_messages:     0,
       ready_to_ship:        shipments?.paging?.total ?? 0,
       total_items:          itemsSearch?.paging?.total ?? 0,
-      today_orders:         todayOrdersCount,
+      today_orders:         todayOrders.length,
       today_sales_amount:   totalAmount,
       reputation: rep ? {
         level_id:               rep.level_id ?? null,
@@ -88,16 +56,9 @@ async function processAccount(acc: {
     };
   } catch (err) {
     return {
-      account:      acc.nickname,
-      meli_user_id: acc.meli_user_id,
-      error:        (err as Error).message,
-      unanswered_questions: 0,
-      pending_messages: 0,
-      ready_to_ship: 0,
-      total_items: 0,
-      today_orders: 0,
-      today_sales_amount: 0,
-      reputation: null,
+      account: acc.nickname, meli_user_id: String(acc.meli_user_id),
+      error: (err as Error).message, unanswered_questions: 0, pending_messages: 0,
+      ready_to_ship: 0, total_items: 0, today_orders: 0, today_sales_amount: 0, reputation: null,
     };
   }
 }
@@ -106,19 +67,9 @@ const ROMAN = ["I","II","III","IV","V","VI","VII","VIII","IX","X"];
 
 export async function GET() {
   try {
-    const supabase = createClient(SUPA_URL, SERVICE_KEY);
+    const accounts = await getActiveAccounts();
+    if (!accounts.length) return NextResponse.json([]);
 
-    const { data: accounts, error } = await supabase
-      .from("meli_accounts")
-      .select("id, meli_user_id, nickname, access_token_enc, created_at")
-      .eq("status", "active")
-      .order("nickname", { ascending: true });
-
-    if (error || !accounts?.length) {
-      return NextResponse.json([]);
-    }
-
-    // Procesar todas las cuentas en paralelo y añadir número romano
     const results = await Promise.all(accounts.map(processAccount));
     const withRoman = results.map((r, i) => ({
       ...r,

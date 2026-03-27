@@ -1,50 +1,9 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { getSupabase, getActiveAccounts, getValidToken, meliGet, meliGetRaw } from "@/lib/meli";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 export const maxDuration = 60;
-
-const SUPA_URL    = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const ENC_KEY     = process.env.APPJEEZ_MELI_ENCRYPTION_KEY!;
-
-async function deriveKey(passphrase: string): Promise<CryptoKey> {
-  const enc = new TextEncoder();
-  const km  = await crypto.subtle.importKey("raw", enc.encode(passphrase), "PBKDF2", false, ["deriveKey"]);
-  return crypto.subtle.deriveKey(
-    { name: "PBKDF2", salt: enc.encode("appjeez-meli-salt"), iterations: 100000, hash: "SHA-256" },
-    km, { name: "AES-GCM", length: 256 }, false, ["decrypt"]
-  );
-}
-async function decrypt(enc64: string, pass: string): Promise<string> {
-  const key      = await deriveKey(pass);
-  const combined = Uint8Array.from(atob(enc64), c => c.charCodeAt(0));
-  const plain    = await crypto.subtle.decrypt({ name: "AES-GCM", iv: combined.slice(0, 12) }, key, combined.slice(12));
-  return new TextDecoder().decode(plain);
-}
-
-async function meliGet(path: string, token: string) {
-  try {
-    const res = await fetch(`https://api.mercadolibre.com${path}`, {
-      headers: { Authorization: `Bearer ${token}` },
-      signal: AbortSignal.timeout(12000),
-    });
-    if (!res.ok) return null;
-    return res.json();
-  } catch { return null; }
-}
-
-async function meliGetRaw(path: string, token: string): Promise<ArrayBuffer | null> {
-  try {
-    const res = await fetch(`https://api.mercadolibre.com${path}`, {
-      headers: { Authorization: `Bearer ${token}` },
-      signal: AbortSignal.timeout(15000),
-    });
-    if (!res.ok) return null;
-    return res.arrayBuffer();
-  } catch { return null; }
-}
 
 interface ShipmentInfo {
   shipment_id: number;
@@ -62,24 +21,21 @@ export async function GET(req: Request) {
   const format = searchParams.get("format") ?? "pdf";
 
   try {
-    const supabase = createClient(SUPA_URL, SERVICE_KEY);
-    const { data: accounts } = await supabase
-      .from("meli_accounts")
-      .select("id, meli_user_id, nickname, access_token_enc")
-      .eq("status", "active")
-      .order("nickname", { ascending: true });
+    const accounts = await getActiveAccounts();
+    if (!accounts.length) return NextResponse.json({ shipments: [], summary: {} });
 
-    if (!accounts?.length) return NextResponse.json({ shipments: [], summary: {} });
-
-    // Obtener etiquetas ya impresas para filtrarlas
+    const supabase = getSupabase();
     const { data: printed } = await supabase.from("meli_printed_labels").select("shipment_id");
     const printedSet = new Set((printed ?? []).map((p: { shipment_id: number }) => p.shipment_id));
 
     const allShipments: ShipmentInfo[] = [];
+    const tokenCache = new Map<string, string>();
 
     await Promise.all(accounts.map(async (acc) => {
       try {
-        const token = await decrypt(acc.access_token_enc, ENC_KEY);
+        const token = await getValidToken(acc);
+        if (!token) return;
+        tokenCache.set(String(acc.meli_user_id), token);
 
         const data = await meliGet(
           `/orders/search?seller=${acc.meli_user_id}&order.status=paid&sort=date_desc&limit=50&shipping.status=ready_to_ship`,
@@ -111,7 +67,7 @@ export async function GET(req: Request) {
           const buyer = order.buyer as Record<string, unknown> | undefined;
 
           allShipments.push({
-            shipment_id: ship.id as number,
+            shipment_id: sid,
             account:     acc.nickname,
             meli_user_id: String(acc.meli_user_id),
             type,
@@ -123,7 +79,6 @@ export async function GET(req: Request) {
       } catch { /* skip account on error */ }
     }));
 
-    // Ordenar: correo primero, luego turbo, luego flex
     const typeOrder = { correo: 0, turbo: 1, flex: 2 };
     allShipments.sort((a, b) => typeOrder[a.type] - typeOrder[b.type]);
 
@@ -131,19 +86,16 @@ export async function GET(req: Request) {
       const correo = allShipments.filter(s => s.type === "correo").length;
       const turbo  = allShipments.filter(s => s.type === "turbo").length;
       const flex   = allShipments.filter(s => s.type === "flex").length;
-
       return NextResponse.json({
         shipments: allShipments,
         summary: { total: allShipments.length, correo, turbo, flex },
       });
     }
 
-    // action === "download" — Descargar etiquetas
     if (!allShipments.length) {
       return NextResponse.json({ error: "No hay envíos pendientes" }, { status: 404 });
     }
 
-    // Seleccionar IDs específicos o todos
     const selectedIds = searchParams.get("ids");
     const targetShipments = selectedIds
       ? allShipments.filter(s => selectedIds.split(",").includes(String(s.shipment_id)))
@@ -153,24 +105,20 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "No hay envíos seleccionados" }, { status: 400 });
     }
 
-    // Agrupar por cuenta (cada cuenta necesita su propio token)
     const byAccount = new Map<string, { token: string; ids: number[] }>();
     for (const s of targetShipments) {
       if (!byAccount.has(s.meli_user_id)) {
-        const acc = accounts.find(a => String(a.meli_user_id) === s.meli_user_id);
-        if (!acc) continue;
-        const token = await decrypt(acc.access_token_enc, ENC_KEY);
-        byAccount.set(s.meli_user_id, { token, ids: [] });
+        const cachedToken = tokenCache.get(s.meli_user_id);
+        if (!cachedToken) continue;
+        byAccount.set(s.meli_user_id, { token: cachedToken, ids: [] });
       }
       byAccount.get(s.meli_user_id)!.ids.push(s.shipment_id);
     }
 
-    // Descargar etiquetas en lotes por cuenta
     const pdfChunks: ArrayBuffer[] = [];
     const response = format === "zpl" ? "zpl2" : "pdf";
 
     for (const accData of Array.from(byAccount.values())) {
-      // MeLi acepta hasta 50 shipment_ids por request
       for (let i = 0; i < accData.ids.length; i += 50) {
         const batch = accData.ids.slice(i, i + 50);
         const idsParam = batch.join(",");
@@ -187,7 +135,6 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "No se pudieron descargar etiquetas" }, { status: 500 });
     }
 
-    // Si hay un solo PDF, devolverlo directo
     if (pdfChunks.length === 1) {
       const contentType = format === "zpl" ? "application/octet-stream" : "application/pdf";
       const ext = format === "zpl" ? "zpl" : "pdf";
@@ -199,20 +146,7 @@ export async function GET(req: Request) {
       });
     }
 
-    // Múltiples PDFs: concatenar en un solo blob (los PDFs de MeLi ya son multi-página)
-    const totalSize = pdfChunks.reduce((s, c) => s + c.byteLength, 0);
-    const merged    = new Uint8Array(totalSize);
-    let offset      = 0;
-    for (const chunk of pdfChunks) {
-      merged.set(new Uint8Array(chunk), offset);
-      offset += chunk.byteLength;
-    }
-
-    // Devolver como ZIP con múltiples PDFs para que el usuario los imprima
-    // O simplemente devolver el primero más grande si no podemos mergear sin librería
-    // Por ahora devolvemos el PDF más grande (MeLi ya agrupa por batch)
     const biggest = pdfChunks.reduce((a, b) => a.byteLength > b.byteLength ? a : b);
-
     const contentType = format === "zpl" ? "application/octet-stream" : "application/pdf";
     const ext = format === "zpl" ? "zpl" : "pdf";
 
@@ -236,7 +170,7 @@ export async function POST(req: Request) {
     if (!shipment_ids?.length) {
       return NextResponse.json({ error: "No shipment_ids" }, { status: 400 });
     }
-    const supabase = createClient(SUPA_URL, SERVICE_KEY);
+    const supabase = getSupabase();
     const rows = shipment_ids.map(id => ({ shipment_id: id }));
     await supabase.from("meli_printed_labels").upsert(rows, { onConflict: "shipment_id" });
     return NextResponse.json({ ok: true, marked: shipment_ids.length });
