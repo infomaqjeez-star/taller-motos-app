@@ -323,6 +323,15 @@ function ConfigMeliContent() {
           )}
         </div>
 
+        {/* Botón volver al panel */}
+        <Link
+          href="/appjeez"
+          className="flex items-center justify-center gap-2 text-sm font-bold px-4 py-3 rounded-2xl w-full transition-opacity hover:opacity-80"
+          style={{ background: "#FFE60018", color: "#FFE600", border: "1px solid #FFE60033" }}
+        >
+          🏠 Inicio Maqjeez
+        </Link>
+
         {/* Info de seguridad */}
         <div className="rounded-2xl border border-white/5 p-4"
           style={{ background: "#161616" }}>
