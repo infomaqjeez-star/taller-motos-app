@@ -22,7 +22,10 @@ interface PriceResponse {
   target_price: number;
   dry_run: boolean;
   results: PriceResult[];
-  summary: { total: number; updated: number; skipped: number; errors: number };
+  summary: {
+    total_items_scanned: number; cache_hits_skipped: number; items_checked: number;
+    matched: number; updated: number; skipped: number; errors: number;
+  };
 }
 
 const STATUS_CFG: Record<string, { color: string; label: string }> = {
@@ -144,6 +147,25 @@ function PreciosInner() {
 
         {data && (
           <>
+            <div className="rounded-2xl p-3 space-y-1" style={{ background: "#1F1F1F", border: "1px solid rgba(255,255,255,0.07)" }}>
+              <div className="flex items-center justify-between text-xs">
+                <span style={{ color: "#6B7280" }}>Items escaneados</span>
+                <span className="font-bold text-white">{data.summary.total_items_scanned.toLocaleString()}</span>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span style={{ color: "#6B7280" }}>Saltados por cache</span>
+                <span className="font-bold" style={{ color: "#00E5FF" }}>{data.summary.cache_hits_skipped.toLocaleString()}</span>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span style={{ color: "#6B7280" }}>Consultados a MeLi</span>
+                <span className="font-bold text-white">{data.summary.items_checked.toLocaleString()}</span>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span style={{ color: "#6B7280" }}>Coincidencias</span>
+                <span className="font-bold" style={{ color: "#FFE600" }}>{data.summary.matched}</span>
+              </div>
+            </div>
+
             <div className="grid grid-cols-3 gap-2">
               <div className="rounded-2xl p-3 text-center" style={{ background: "#1F1F1F", border: "1px solid #39FF1422" }}>
                 <p className="text-2xl font-black" style={{ color: "#39FF14" }}>{data.summary.updated}</p>
