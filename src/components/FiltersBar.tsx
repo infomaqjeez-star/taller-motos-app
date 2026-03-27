@@ -61,31 +61,31 @@ export default function FiltersBar({ filters, onChange, totalCount, filteredCoun
         )}
       </div>
 
-      {/* Filtros en fila */}
-      <div className="flex flex-wrap gap-2 items-center">
-        {/* Tipo de máquina */}
-        <div className="flex flex-wrap gap-1.5 flex-shrink-0">
-          {MOTOR_OPTIONS.map(({ value, label, emoji }) => (
-            <button
-              key={value}
-              onClick={() => onChange({ ...filters, motorType: value as MotorType | "all" })}
-              className={`px-3 py-2 text-xs font-bold rounded-xl transition-colors flex items-center gap-1.5
-                ${filters.motorType === value
-                  ? "bg-orange-500 text-white"
-                  : "bg-gray-800 text-gray-400 hover:text-gray-200 hover:bg-gray-700 border border-gray-700"
-                }`}
-            >
-              <span>{emoji}</span>
-              {label}
-            </button>
-          ))}
-        </div>
+      {/* Fila 1: Tipo de máquina — scroll horizontal */}
+      <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
+        {MOTOR_OPTIONS.map(({ value, label, emoji }) => (
+          <button
+            key={value}
+            onClick={() => onChange({ ...filters, motorType: value as MotorType | "all" })}
+            className={`flex-shrink-0 px-3 py-2 text-xs font-bold rounded-xl transition-colors flex items-center gap-1.5
+              ${filters.motorType === value
+                ? "bg-orange-500 text-white"
+                : "bg-gray-800 text-gray-400 hover:text-gray-200 hover:bg-gray-700 border border-gray-700"
+              }`}
+          >
+            <span>{emoji}</span>
+            {label}
+          </button>
+        ))}
+      </div>
 
+      {/* Fila 2: Estado + Vencidos + Reset */}
+      <div className="flex gap-2 items-center">
         {/* Estado */}
         <select
           value={filters.status}
           onChange={(e) => onChange({ ...filters, status: e.target.value as RepairStatus | "all" })}
-          className="input input-sm flex-1 min-w-[160px]"
+          className="input input-sm flex-1 min-w-0"
         >
           {STATUS_OPTIONS.map(({ value, label }) => (
             <option key={value} value={value}>{label}</option>
@@ -95,24 +95,24 @@ export default function FiltersBar({ filters, onChange, totalCount, filteredCoun
         {/* Vencidos */}
         <button
           onClick={() => onChange({ ...filters, overdueOnly: !filters.overdueOnly })}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold
-            border transition-colors flex-shrink-0
+          className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-bold
+            border transition-colors
             ${filters.overdueOnly
               ? "bg-red-600/20 text-red-400 border-red-600"
               : "bg-gray-800 text-gray-400 border-gray-700 hover:text-gray-200 hover:bg-gray-700"
             }`}
         >
-          <AlertTriangle className="w-4 h-4" />
-          +90 días
+          <AlertTriangle className="w-3.5 h-3.5" />
+          +90d
         </button>
 
         {/* Reset */}
         {hasActiveFilters && (
           <button
             onClick={reset}
-            className="flex items-center gap-1 px-3 py-2.5 rounded-xl text-sm
+            className="flex-shrink-0 flex items-center gap-1 px-3 py-2.5 rounded-xl text-xs
               text-gray-400 hover:text-gray-200 bg-gray-800 hover:bg-gray-700
-              border border-gray-700 transition-colors flex-shrink-0"
+              border border-gray-700 transition-colors"
           >
             <X className="w-3.5 h-3.5" />
             Limpiar
