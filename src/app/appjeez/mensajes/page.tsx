@@ -181,13 +181,13 @@ function QuestionCard({ q, onAnswered }: { q: Question; onAnswered: (id: number)
       const res = await fetch("/api/meli-answer", {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ question_id: q.meli_question_id, answer_text: text }),
+        body:    JSON.stringify({ question_id: q.meli_question_id, answer_text: text, meli_account_id: q.meli_account_id }),
       });
       const data = await res.json();
       if (data.status === "ok") {
         onAnswered(q.meli_question_id);
       } else {
-        setError(data.code ?? "Error al enviar");
+        setError(data.error ?? data.code ?? "Error al enviar");
       }
     } catch {
       setError("Error de red");
