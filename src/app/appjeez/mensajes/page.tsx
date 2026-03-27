@@ -223,7 +223,7 @@ function QuestionCard({ q, onAnswered }: { q: Question; onAnswered: (id: number)
         <div className="flex items-start gap-3">
           {/* Foto del producto — clickable a la publicación */}
           <a
-            href={`https://www.mercadolibre.com.ar/p/${q.item_id}`}
+            href={`https://articulo.mercadolibre.com.ar/${q.item_id.replace(/^([A-Z]+)(\d+)$/, "$1-$2")}`}
             target="_blank"
             rel="noopener noreferrer"
             title="Ver publicación original"
@@ -266,7 +266,7 @@ function QuestionCard({ q, onAnswered }: { q: Question; onAnswered: (id: number)
               </span>
             </div>
             <a
-              href={`https://www.mercadolibre.com.ar/p/${q.item_id}`}
+              href={`https://articulo.mercadolibre.com.ar/${q.item_id.replace(/^([A-Z]+)(\d+)$/, "$1-$2")}`}
               target="_blank"
               rel="noopener noreferrer"
               title="Ver publicación original"
