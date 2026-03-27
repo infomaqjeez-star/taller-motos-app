@@ -158,6 +158,7 @@ export const ordersDb = {
     if (updates.deliveryDate       !== undefined) mapped.delivery_date       = updates.deliveryDate;
     if (updates.linkedParts        !== undefined) mapped.linked_parts        = updates.linkedParts;
     if (updates.internalNotes      !== undefined) mapped.internal_notes      = updates.internalNotes;
+    if (updates.photoUrls          !== undefined) mapped.photo_urls          = updates.photoUrls;
     if (updates.extraMachines      !== undefined) mapped.extra_machines      = updates.extraMachines;
     if (updates.machineTypeOther   !== undefined) mapped.machine_type_other  = updates.machineTypeOther;
     const { error } = await supabase.from("reparaciones").update(mapped).eq("id", id);
