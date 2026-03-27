@@ -1,12 +1,37 @@
 import { NextResponse } from "next/server";
-import { getSupabase, getActiveAccounts, getValidToken, meliGet } from "@/lib/meli";
+import { getSupabase, getActiveAccounts, getValidToken } from "@/lib/meli";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 export const maxDuration = 300;
 
+type AdjustmentType = "percentage" | "fixed_floor" | "fixed_add";
+
 function normalize(s: string): string {
   return s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+}
+
+function computeNewPrice(currentPrice: number, type: AdjustmentType, value: number): number {
+  let result: number;
+  switch (type) {
+    case "percentage":
+      result = currentPrice * (1 + value / 100);
+      break;
+    case "fixed_floor":
+      result = currentPrice < value ? value : currentPrice;
+      break;
+    case "fixed_add":
+      result = currentPrice + value;
+      break;
+    default:
+      result = currentPrice;
+  }
+  return Math.round(result * 100) / 100; // redondeo a 2 decimales
+}
+
+function shouldUpdate(currentPrice: number, newPrice: number, type: AdjustmentType): boolean {
+  if (type === "fixed_floor") return currentPrice < newPrice; // solo si está por debajo del piso
+  return Math.abs(newPrice - currentPrice) >= 0.01;           // siempre para % y suma
 }
 
 async function meliPut(path: string, token: string, body: unknown) {
@@ -67,7 +92,6 @@ async function getAllItemIdsExhaustive(userId: string, token: string, status: st
     ids.push(...r);
     await new Promise(r => setTimeout(r, 180));
   }
-
   return ids;
 }
 
@@ -89,25 +113,49 @@ interface PriceResult {
   title: string;
   old_price: number;
   new_price: number;
+  adjustment_type: AdjustmentType;
+  adjustment_value: number;
   status: "updated" | "skipped" | "error" | "catalog_warning" | "promo_blocked" | "cached_skip";
   reason?: string;
   variations_updated?: number;
+}
+
+function buildResult(
+  base: Omit<PriceResult, "adjustment_type" | "adjustment_value">,
+  type: AdjustmentType, value: number
+): PriceResult {
+  return { ...base, adjustment_type: type, adjustment_value: value };
 }
 
 export async function POST(req: Request) {
   try {
     const body = await req.json() as {
       keyword: string;
-      target_price: number;
+      adjustment_type: AdjustmentType;
+      adjustment_value: number;
       dry_run?: boolean;
       account_ids?: string[];
       clear_cache?: boolean;
+      // legacy compat
+      target_price?: number;
     };
 
-    const { keyword, target_price, dry_run = false, account_ids, clear_cache = false } = body;
+    let { keyword, adjustment_type, adjustment_value, dry_run = false, account_ids, clear_cache = false } = body;
 
-    if (!keyword?.trim() || !target_price || target_price <= 0) {
-      return NextResponse.json({ error: "keyword y target_price (>0) son requeridos" }, { status: 400 });
+    // Compatibilidad retroactiva con target_price
+    if (!adjustment_type && body.target_price) {
+      adjustment_type  = "fixed_floor";
+      adjustment_value = body.target_price;
+    }
+
+    if (!keyword?.trim()) {
+      return NextResponse.json({ error: "keyword es requerida" }, { status: 400 });
+    }
+    if (!adjustment_type || !["percentage", "fixed_floor", "fixed_add"].includes(adjustment_type)) {
+      return NextResponse.json({ error: "adjustment_type inválido (percentage|fixed_floor|fixed_add)" }, { status: 400 });
+    }
+    if (adjustment_value == null || adjustment_value <= 0) {
+      return NextResponse.json({ error: "adjustment_value debe ser > 0" }, { status: 400 });
     }
 
     const normKeyword = normalize(keyword);
@@ -119,7 +167,7 @@ export async function POST(req: Request) {
 
     let accounts = await getActiveAccounts();
     if (account_ids?.length) {
-      accounts = accounts.filter(a => account_ids.includes(a.id));
+      accounts = accounts.filter(a => account_ids!.includes(String(a.meli_user_id)));
     }
     if (!accounts.length) {
       return NextResponse.json({ error: "No hay cuentas activas" }, { status: 404 });
@@ -143,10 +191,10 @@ export async function POST(req: Request) {
     for (const acc of accounts) {
       const token = await getValidToken(acc);
       if (!token) {
-        results.push({
+        results.push(buildResult({
           account: acc.nickname, item_id: "", title: "",
           old_price: 0, new_price: 0, status: "error", reason: "token_expired",
-        });
+        }, adjustment_type, adjustment_value));
         continue;
       }
 
@@ -172,11 +220,7 @@ export async function POST(req: Request) {
           token
         );
 
-        if (!data) {
-          retryQueue.push(...chunk);
-          await new Promise(r => setTimeout(r, 500));
-          continue;
-        }
+        if (!data) { retryQueue.push(...chunk); await new Promise(r => setTimeout(r, 500)); continue; }
 
         const list = (data as Array<{ code: number; body: ItemDetail }>) ?? [];
 
@@ -197,97 +241,102 @@ export async function POST(req: Request) {
           newCacheRows.push({ item_id: item.id, keyword: normKeyword, contains_match: true, last_price: item.price });
 
           const isCatalog = !!(item.catalog_listing || item.catalog_product_id);
-          const hasPromo = Array.isArray(item.deal_ids) && item.deal_ids.length > 0;
+          const hasPromo  = Array.isArray(item.deal_ids) && item.deal_ids.length > 0;
 
           if (item.variations?.length) {
             let varsUpdated = 0;
             const updatedVars = item.variations.map(v => {
-              if (v.price < target_price) { varsUpdated++; return { ...v, price: target_price }; }
+              const np = computeNewPrice(v.price, adjustment_type, adjustment_value);
+              if (shouldUpdate(v.price, np, adjustment_type)) { varsUpdated++; return { ...v, price: np }; }
               return v;
             });
-            const needsBaseUpdate = item.price < target_price;
+            const baseNew = computeNewPrice(item.price, adjustment_type, adjustment_value);
+            const needsBaseUpdate = shouldUpdate(item.price, baseNew, adjustment_type);
 
             if (varsUpdated === 0 && !needsBaseUpdate) {
-              results.push({
+              results.push(buildResult({
                 account: acc.nickname, item_id: item.id, title: item.title,
                 old_price: item.price, new_price: item.price,
-                status: "skipped", reason: "Precio ya es igual o superior",
-              });
+                status: "skipped", reason: "Precio ya cumple la condición",
+              }, adjustment_type, adjustment_value));
               continue;
             }
 
             if (dry_run) {
-              results.push({
+              results.push(buildResult({
                 account: acc.nickname, item_id: item.id, title: item.title,
-                old_price: item.price, new_price: target_price,
+                old_price: item.price, new_price: baseNew,
                 status: isCatalog ? "catalog_warning" : "updated",
-                reason: isCatalog ? "Item de catalogo - subir precio puede perder Buy Box" : undefined,
+                reason: isCatalog ? "Item de catálogo — subir precio puede perder Buy Box" : undefined,
                 variations_updated: varsUpdated,
-              });
+              }, adjustment_type, adjustment_value));
               continue;
             }
 
             const putBody: Record<string, unknown> = {
               variations: updatedVars.map(v => ({ id: v.id, price: v.price })),
             };
-            if (needsBaseUpdate) putBody.price = target_price;
+            if (needsBaseUpdate) putBody.price = baseNew;
 
             const putRes = await meliPut(`/items/${item.id}`, token, putBody);
             if (!putRes.ok) {
               const errMsg = (putRes.data as Record<string, unknown>)?.message as string ?? "";
               if (putRes.status === 429) { retryQueue.push(item.id); continue; }
-              results.push({
+              results.push(buildResult({
                 account: acc.nickname, item_id: item.id, title: item.title,
-                old_price: item.price, new_price: target_price,
-                status: hasPromo && (errMsg.includes("promotion") || errMsg.includes("deal")) ? "promo_blocked" : "error",
-                reason: hasPromo ? "Publicacion en promocion activa" : errMsg.slice(0, 200),
-              });
+                old_price: item.price, new_price: baseNew,
+                status: hasPromo && errMsg.includes("promo") ? "promo_blocked" : "error",
+                reason: hasPromo ? "Publicación en promoción activa" : errMsg.slice(0, 200),
+              }, adjustment_type, adjustment_value));
             } else {
-              results.push({
+              results.push(buildResult({
                 account: acc.nickname, item_id: item.id, title: item.title,
-                old_price: item.price, new_price: target_price,
+                old_price: item.price, new_price: baseNew,
                 status: isCatalog ? "catalog_warning" : "updated",
-                reason: isCatalog ? "Actualizado - Item de catalogo, verificar Buy Box" : undefined,
+                reason: isCatalog ? "Actualizado — verificar Buy Box" : undefined,
                 variations_updated: varsUpdated,
-              });
+              }, adjustment_type, adjustment_value));
             }
+
           } else {
-            if (item.price >= target_price) {
-              results.push({
+            const newPrice = computeNewPrice(item.price, adjustment_type, adjustment_value);
+
+            if (!shouldUpdate(item.price, newPrice, adjustment_type)) {
+              results.push(buildResult({
                 account: acc.nickname, item_id: item.id, title: item.title,
                 old_price: item.price, new_price: item.price,
-                status: "skipped", reason: "Precio ya es igual o superior",
-              });
+                status: "skipped", reason: "Precio ya cumple la condición",
+              }, adjustment_type, adjustment_value));
               continue;
             }
 
             if (dry_run) {
-              results.push({
+              results.push(buildResult({
                 account: acc.nickname, item_id: item.id, title: item.title,
-                old_price: item.price, new_price: target_price,
+                old_price: item.price, new_price: newPrice,
                 status: isCatalog ? "catalog_warning" : "updated",
-                reason: isCatalog ? "Item de catalogo - subir precio puede perder Buy Box" : undefined,
-              });
+                reason: isCatalog ? "Item de catálogo — subir precio puede perder Buy Box" : undefined,
+              }, adjustment_type, adjustment_value));
               continue;
             }
 
-            const putRes = await meliPut(`/items/${item.id}`, token, { price: target_price });
+            const putRes = await meliPut(`/items/${item.id}`, token, { price: newPrice });
             if (!putRes.ok) {
               const errMsg = (putRes.data as Record<string, unknown>)?.message as string ?? "";
               if (putRes.status === 429) { retryQueue.push(item.id); continue; }
-              results.push({
+              results.push(buildResult({
                 account: acc.nickname, item_id: item.id, title: item.title,
-                old_price: item.price, new_price: target_price,
-                status: hasPromo && (errMsg.includes("promotion") || errMsg.includes("deal")) ? "promo_blocked" : "error",
-                reason: hasPromo ? "Publicacion en promocion activa" : errMsg.slice(0, 200),
-              });
+                old_price: item.price, new_price: newPrice,
+                status: hasPromo && errMsg.includes("promo") ? "promo_blocked" : "error",
+                reason: hasPromo ? "Publicación en promoción activa" : errMsg.slice(0, 200),
+              }, adjustment_type, adjustment_value));
             } else {
-              results.push({
+              results.push(buildResult({
                 account: acc.nickname, item_id: item.id, title: item.title,
-                old_price: item.price, new_price: target_price,
+                old_price: item.price, new_price: newPrice,
                 status: isCatalog ? "catalog_warning" : "updated",
-                reason: isCatalog ? "Actualizado - Item de catalogo, verificar Buy Box" : undefined,
-              });
+                reason: isCatalog ? "Actualizado — verificar Buy Box" : undefined,
+              }, adjustment_type, adjustment_value));
             }
           }
 
@@ -297,6 +346,7 @@ export async function POST(req: Request) {
         await new Promise(r => setTimeout(r, 200));
       }
 
+      // Retry queue
       if (retryQueue.length > 0) {
         await new Promise(r => setTimeout(r, 3000));
         for (let i = 0; i < retryQueue.length; i += 20) {
@@ -311,26 +361,26 @@ export async function POST(req: Request) {
           for (const entry of list) {
             if (entry.code !== 200 || !entry.body) continue;
             const item = entry.body;
-            const normTitle = normalize(item.title);
-            if (!normTitle.includes(normKeyword)) {
+            if (!normalize(item.title).includes(normKeyword)) {
               newCacheRows.push({ item_id: item.id, keyword: normKeyword, contains_match: false, last_price: item.price });
               continue;
             }
             newCacheRows.push({ item_id: item.id, keyword: normKeyword, contains_match: true, last_price: item.price });
-            if (item.price < target_price && !dry_run) {
-              const putRes = await meliPut(`/items/${item.id}`, token, { price: target_price });
-              results.push({
+            const newPrice = computeNewPrice(item.price, adjustment_type, adjustment_value);
+            if (shouldUpdate(item.price, newPrice, adjustment_type) && !dry_run) {
+              const putRes = await meliPut(`/items/${item.id}`, token, { price: newPrice });
+              results.push(buildResult({
                 account: acc.nickname, item_id: item.id, title: item.title,
-                old_price: item.price, new_price: target_price,
+                old_price: item.price, new_price: newPrice,
                 status: putRes.ok ? "updated" : "error",
                 reason: putRes.ok ? "Retry exitoso" : ((putRes.data as Record<string, unknown>)?.message as string ?? "").slice(0, 200),
-              });
-            } else if (item.price >= target_price) {
-              results.push({
+              }, adjustment_type, adjustment_value));
+            } else if (!shouldUpdate(item.price, newPrice, adjustment_type)) {
+              results.push(buildResult({
                 account: acc.nickname, item_id: item.id, title: item.title,
                 old_price: item.price, new_price: item.price,
-                status: "skipped", reason: "Precio ya es igual o superior",
-              });
+                status: "skipped", reason: "Precio ya cumple la condición",
+              }, adjustment_type, adjustment_value));
             }
             await new Promise(r => setTimeout(r, 250));
           }
@@ -348,20 +398,28 @@ export async function POST(req: Request) {
       }
     }
 
-    const updated = results.filter(r => r.status === "updated" || r.status === "catalog_warning").length;
-    const skipped = results.filter(r => r.status === "skipped").length;
-    const errors  = results.filter(r => r.status === "error" || r.status === "promo_blocked").length;
+    const updated  = results.filter(r => r.status === "updated" || r.status === "catalog_warning").length;
+    const skipped  = results.filter(r => r.status === "skipped").length;
+    const errors   = results.filter(r => r.status === "error" || r.status === "promo_blocked").length;
+
+    const typeLabels: Record<AdjustmentType, string> = {
+      percentage:  `+${adjustment_value}%`,
+      fixed_floor: `Precio piso $${adjustment_value}`,
+      fixed_add:   `+$${adjustment_value} fijo`,
+    };
 
     return NextResponse.json({
       keyword,
-      target_price,
+      adjustment_type,
+      adjustment_value,
+      adjustment_label: typeLabels[adjustment_type],
       dry_run,
       results,
       summary: {
         total_items_scanned: totalScanned,
-        cache_hits_skipped: cacheHits,
-        items_checked: totalScanned - cacheHits,
-        matched: results.length,
+        cache_hits_skipped:  cacheHits,
+        items_checked:       totalScanned - cacheHits,
+        matched:             results.length,
         updated, skipped, errors,
       },
     });
