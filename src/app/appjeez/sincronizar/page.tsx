@@ -31,18 +31,6 @@ interface CompareData {
   already_exists: MeliItemPreview[];
   summary:        { origin_total: number; dest_total: number; can_clone: number; already_exists: number };
 }
-interface CloneResult {
-  item_id: string;
-  title:   string;
-  status:  "cloned" | "skipped_duplicate" | "error";
-  new_id?: string;
-  reason?: string;
-}
-interface CloneSummary {
-  origin: string; dest: string;
-  results: CloneResult[];
-  summary: { total: number; cloned: number; skipped_duplicate: number; errors: number };
-}
 interface Account { id: string; nickname: string; meli_user_id: string; }
 interface ErrorEntry {
   item_id:      string;
@@ -93,9 +81,6 @@ function SyncInner() {
   const [compareData, setCompareData] = useState<CompareData | null>(null);
   const [compareError, setCompareError] = useState<string | null>(null);
   const [selected,    setSelected]    = useState<Set<string>>(new Set());
-  const [cloning,     setCloning]     = useState(false);
-  const [cloneResult, setCloneResult] = useState<CloneSummary | null>(null);
-  const [cloneTab,    setCloneTab]    = useState<"results"|"skipped"|"errors">("results");
   const [search,      setSearch]      = useState("");
 
   // ---- Auto-sync SSE state ----
@@ -135,8 +120,8 @@ function SyncInner() {
 
   const addLog = (msg: string) => setAutoLog(prev => [...prev.slice(-199), msg]);
 
-  // ---- Start SSE sync ----
-  const startSync = useCallback(async (resumeId?: string) => {
+  // ---- Start SSE sync (auto or manual) ----
+  const startSync = useCallback(async (options?: { resumeId?: string; itemIds?: string[] }) => {
     setAutoSyncing(true);
     setStopping(false);
     setAutoLog([]);
@@ -144,9 +129,10 @@ function SyncInner() {
     setErrorReport([]);
     setProgress(null);
 
-    const payload: Record<string, string> = { mode: syncMode };
-    if (resumeId) payload.resume_job_id = resumeId;
+    const payload: Record<string, unknown> = { mode: syncMode };
+    if (options?.resumeId) payload.resume_job_id = options.resumeId;
     if (originId && destId) { payload.origin_id = originId; payload.dest_id = destId; }
+    if (options?.itemIds)   payload.item_ids = options.itemIds;
 
     try {
       const res = await fetch("/api/meli-sync/auto-sync", {
@@ -261,7 +247,7 @@ function SyncInner() {
   const handleCompare = useCallback(async () => {
     if (!originId || !destId || originId === destId) return;
     setComparing(true); setCompareData(null); setCompareError(null);
-    setSelected(new Set()); setCloneResult(null);
+    setSelected(new Set());
     try {
       const res = await fetch(`/api/meli-sync/compare?origin_id=${originId}&dest_id=${destId}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -280,19 +266,7 @@ function SyncInner() {
     i.title.toLowerCase().includes(search.toLowerCase())
   );
 
-  const handleClone = useCallback(async (itemIds: string[]) => {
-    if (!itemIds.length || !originId || !destId) return;
-    setCloning(true); setCloneResult(null);
-    try {
-      const res = await fetch("/api/meli-sync/clone", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ origin_id: originId, dest_id: destId, item_ids: itemIds }),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      setCloneResult(await res.json());
-    } catch (e) { setCompareError((e as Error).message); }
-    finally { setCloning(false); }
-  }, [originId, destId]);
+  const handleClone = useCallback((_itemIds: string[]) => { /* unified into startSync */ }, []);
 
   const [openAlready, setOpenAlready] = useState(false);
 
@@ -367,7 +341,7 @@ function SyncInner() {
               {/* Botón Retomar (si hay job pausado) */}
               {resumeJobId && (
                 <button
-                  onClick={() => startSync(resumeJobId)}
+                  onClick={() => startSync({ resumeId: resumeJobId ?? undefined })}
                   className="w-full py-3 rounded-xl font-black text-sm transition-all flex items-center justify-center gap-2"
                   style={{ background: "#FFE600", color: "#121212" }}>
                   <RotateCcw className="w-4 h-4" />
@@ -483,7 +457,7 @@ function SyncInner() {
               <label className="text-xs font-bold mb-1.5 block" style={{ color: "#6B7280" }}>CUENTA ORIGEN (de donde se copian)</label>
               <select
                 value={originId}
-                onChange={e => { setOriginId(e.target.value); setCompareData(null); setCloneResult(null); }}
+                onChange={e => { setOriginId(e.target.value); setCompareData(null); }}
                 className="w-full rounded-xl px-3 py-2.5 text-sm font-semibold text-white"
                 style={{ background: "#121212", border: "1px solid rgba(255,255,255,0.1)" }}>
                 <option value="">— Seleccionar cuenta origen —</option>
@@ -504,7 +478,7 @@ function SyncInner() {
               <label className="text-xs font-bold mb-1.5 block" style={{ color: "#6B7280" }}>CUENTA DESTINO (donde se publican)</label>
               <select
                 value={destId}
-                onChange={e => { setDestId(e.target.value); setCompareData(null); setCloneResult(null); }}
+                onChange={e => { setDestId(e.target.value); setCompareData(null); }}
                 className="w-full rounded-xl px-3 py-2.5 text-sm font-semibold text-white"
                 style={{ background: "#121212", border: "1px solid rgba(255,255,255,0.1)" }}>
                 <option value="">— Seleccionar cuenta destino —</option>
@@ -535,7 +509,7 @@ function SyncInner() {
         )}
 
         {/* Resultado del análisis */}
-        {compareData && !cloneResult && (
+        {compareData && (
           <>
             <div className="grid grid-cols-2 gap-3">
               <div className="rounded-2xl p-4 text-center" style={{ background: "#39FF1410", border: "1px solid #39FF1430" }}>
@@ -597,23 +571,32 @@ function SyncInner() {
 
                 <div className="p-4 border-t space-y-2" style={{ borderColor: "rgba(255,255,255,0.07)" }}>
                   <button
-                    onClick={() => handleClone(Array.from(selected))}
-                    disabled={selected.size === 0 || cloning}
+                    onClick={() => startSync({ itemIds: Array.from(selected) })}
+                    disabled={selected.size === 0 || autoSyncing}
                     className="w-full py-3 rounded-xl font-black text-sm transition-all disabled:opacity-40 flex items-center justify-center gap-2"
                     style={{ background: "#39FF14", color: "#121212" }}>
-                    {cloning
+                    {autoSyncing
                       ? <><RefreshCw className="w-4 h-4 animate-spin" /> Clonando...</>
                       : <><Copy className="w-4 h-4" /> Clonar seleccionadas ({selected.size})</>}
                   </button>
                   <button
-                    onClick={() => handleClone(compareData.can_clone.map(i => i.id))}
-                    disabled={cloning}
+                    onClick={() => startSync({ itemIds: compareData.can_clone.map(i => i.id) })}
+                    disabled={autoSyncing}
                     className="w-full py-3 rounded-xl font-black text-sm transition-all disabled:opacity-40 flex items-center justify-center gap-2"
                     style={{ background: "#FFE600", color: "#121212" }}>
-                    {cloning
+                    {autoSyncing
                       ? <><RefreshCw className="w-4 h-4 animate-spin" /> Clonando...</>
                       : <><Zap className="w-4 h-4" /> Sincronizar TODAS ({compareData.can_clone.length})</>}
                   </button>
+                  {autoSyncing && (
+                    <button
+                      onClick={stopSync}
+                      disabled={stopping}
+                      className="w-full py-2.5 rounded-xl font-black text-sm transition-all flex items-center justify-center gap-2"
+                      style={{ background: stopping ? "#4B5563" : "#ef4444", color: "white" }}>
+                      {stopping ? <><RefreshCw className="w-4 h-4 animate-spin" /> Deteniendo...</> : <><Square className="w-4 h-4" /> DETENER</>}
+                    </button>
+                  )}
                 </div>
               </div>
             )}
@@ -654,67 +637,13 @@ function SyncInner() {
           </>
         )}
 
-        {/* Resultado de clonación manual */}
-        {cloneResult && (
-          <div className="space-y-4">
-            <div className="grid grid-cols-3 gap-2">
-              {[
-                { label: "Clonadas",   val: cloneResult.summary.cloned,            color: "#39FF14" },
-                { label: "Omitidas",   val: cloneResult.summary.skipped_duplicate, color: "#FF9800" },
-                { label: "Con error",  val: cloneResult.summary.errors,            color: "#ef4444" },
-              ].map(s => (
-                <div key={s.label} className="rounded-2xl p-4 text-center" style={{ background: "#1F1F1F", border: `1px solid ${s.color}22` }}>
-                  <p className="text-3xl font-black" style={{ color: s.color }}>{s.val}</p>
-                  <p className="text-[10px] font-bold text-white mt-1">{s.label}</p>
-                </div>
-              ))}
-            </div>
-
-            <div className="rounded-2xl overflow-hidden" style={{ background: "#1F1F1F", border: "1px solid rgba(255,255,255,0.07)" }}>
-              <div className="flex border-b" style={{ borderColor: "rgba(255,255,255,0.07)" }}>
-                {(["results","skipped","errors"] as const).map(t => (
-                  <button key={t} onClick={() => setCloneTab(t)}
-                    className="flex-1 py-2.5 text-xs font-bold transition-all"
-                    style={cloneTab === t ? { background: "#FFE600", color: "#121212" } : { color: "#6B7280" }}>
-                    {t === "results" ? `✅ Clonadas (${cloneResult.summary.cloned})`
-                      : t === "skipped" ? `⏭ Omitidas (${cloneResult.summary.skipped_duplicate})`
-                      : `❌ Errores (${cloneResult.summary.errors})`}
-                  </button>
-                ))}
-              </div>
-              <div className="p-3 space-y-2 max-h-72 overflow-y-auto">
-                {cloneResult.results
-                  .filter(r => cloneTab === "results" ? r.status === "cloned" : cloneTab === "skipped" ? r.status === "skipped_duplicate" : r.status === "error")
-                  .map((r, i) => (
-                    <div key={i} className="flex items-start gap-2 py-2 border-b" style={{ borderColor: "rgba(255,255,255,0.04)" }}>
-                      {r.status === "cloned"
-                        ? <CheckCircle2 className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: "#39FF14" }} />
-                        : r.status === "skipped_duplicate"
-                        ? <SkipForward  className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: "#FF9800" }} />
-                        : <XCircle      className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: "#ef4444" }} />}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs text-white line-clamp-1">{r.title}</p>
-                        {r.new_id && <p className="text-[10px]" style={{ color: "#39FF14" }}>Nuevo ID: {r.new_id}</p>}
-                        {r.reason && <p className="text-[10px]" style={{ color: "#6B7280" }}>{r.reason}</p>}
-                      </div>
-                    </div>
-                  ))}
-                {cloneResult.results.filter(r =>
-                  cloneTab === "results" ? r.status === "cloned"
-                  : cloneTab === "skipped" ? r.status === "skipped_duplicate"
-                  : r.status === "error"
-                ).length === 0 && (
-                  <p className="text-center py-4 text-xs" style={{ color: "#6B7280" }}>Sin registros en esta categoría</p>
-                )}
-              </div>
-            </div>
-
-            <button onClick={() => { setCloneResult(null); setCompareData(null); setSelected(new Set()); }}
-              className="w-full py-3 rounded-xl font-black text-sm"
-              style={{ background: "#1F1F1F", color: "#FFE600", border: "1px solid #FFE60033" }}>
-              Nueva Sincronización
-            </button>
-          </div>
+        {/* Botón limpiar comparación */}
+        {compareData && autoSummary && !autoSyncing && (
+          <button onClick={() => { setCompareData(null); setSelected(new Set()); setAutoSummary(null); setAutoLog([]); setErrorReport([]); }}
+            className="w-full py-3 rounded-xl font-black text-sm"
+            style={{ background: "#1F1F1F", color: "#FFE600", border: "1px solid #FFE60033" }}>
+            Nueva Sincronización
+          </button>
         )}
       </div>
     </main>

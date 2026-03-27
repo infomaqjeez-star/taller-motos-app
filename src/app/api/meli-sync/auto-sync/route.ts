@@ -9,13 +9,14 @@ interface AutoSyncRequest {
   dest_id?: string;
   mode?: "all" | "new_only";
   resume_job_id?: string;
+  item_ids?: string[]; // Manual mode: skip compare, clone these specific IDs
 }
 
 export async function POST(req: Request) {
   let body: AutoSyncRequest;
   try { body = await req.json(); } catch { body = {}; }
 
-  const { origin_id, dest_id, mode = "all", resume_job_id } = body;
+  const { origin_id, dest_id, mode = "all", resume_job_id, item_ids } = body;
   const baseUrl = new URL(req.url).origin;
   const supabase = getSupabase();
   const enc = new TextEncoder();
@@ -85,7 +86,93 @@ export async function POST(req: Request) {
           clearInterval(pingInterval); controller.close(); return;
         }
 
-        // ---- Determine pairs ----
+        // ---- Manual mode: item_ids provided → skip compare, clone directly ----
+        if (item_ids && item_ids.length > 0 && origin_id && dest_id) {
+          const orig = accounts.find(a => a.id === origin_id) as MeliAccount | undefined;
+          const dst  = accounts.find(a => a.id === dest_id) as MeliAccount | undefined;
+          if (!orig || !dst) {
+            send("error", { message: "Cuentas no encontradas" });
+            await supabase.from("sync_jobs").update({ status: "error" }).eq("id", jobId);
+            clearInterval(pingInterval); controller.close(); return;
+          }
+          // Validate tokens
+          send("log", { msg: "Verificando tokens de las cuentas..." });
+          const [originToken, destToken] = await Promise.all([getValidToken(orig), getValidToken(dst)]);
+          if (!originToken || !destToken) {
+            send("error", { message: "Token expirado. Reconectá las cuentas en Configuración." });
+            await supabase.from("sync_jobs").update({ status: "error" }).eq("id", jobId);
+            clearInterval(pingInterval); controller.close(); return;
+          }
+          send("log", { msg: `✓ Tokens activos. Clonando ${item_ids.length} publicación(es) de ${orig.nickname} → ${dst.nickname}` });
+
+          let totalCloned = 0, totalSkipped = 0, totalErrors = 0;
+          const allErrors: Array<{ item_id: string; title: string; reason_code: string; reason_human: string; suggestion: string }> = [];
+
+          const BATCH = 20;
+          for (let batchStart = 0; batchStart < item_ids.length; batchStart += BATCH) {
+            const { data: js } = await supabase.from("sync_jobs").select("status").eq("id", jobId).single();
+            if (js?.status === "stopping") {
+              await supabase.from("sync_jobs").update({
+                status: "paused",
+                checkpoint: { item_ids_remaining: item_ids.slice(batchStart) },
+                summary: { cloned: totalCloned, skipped: totalSkipped, errors: totalErrors },
+                updated_at: new Date().toISOString(),
+              }).eq("id", jobId);
+              send("stopped", { job_id: jobId, summary: { cloned: totalCloned, skipped: totalSkipped, errors: totalErrors } });
+              clearInterval(pingInterval); controller.close(); return;
+            }
+
+            const batch = item_ids.slice(batchStart, batchStart + BATCH);
+            const batchNum = Math.floor(batchStart / BATCH) + 1;
+            const totalBatches = Math.ceil(item_ids.length / BATCH);
+            send("log", { msg: `Clonando lote ${batchNum}/${totalBatches} (${batch.length} items)...` });
+
+            try {
+              const cloneRes = await fetch(`${baseUrl}/api/meli-sync/clone`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ origin_id, dest_id, item_ids: batch }),
+              });
+              if (cloneRes.ok) {
+                const r = await cloneRes.json() as {
+                  summary: { cloned: number; skipped_duplicate: number; errors: number };
+                  results: Array<{ item_id: string; title: string; status: string; reason?: string }>;
+                };
+                totalCloned  += r.summary?.cloned ?? 0;
+                totalSkipped += r.summary?.skipped_duplicate ?? 0;
+                totalErrors  += r.summary?.errors ?? 0;
+                send("log", { msg: `✓ ${r.summary?.cloned ?? 0} clonadas, ${r.summary?.skipped_duplicate ?? 0} omitidas, ${r.summary?.errors ?? 0} errores` });
+                for (const er of (r.results ?? []).filter(x => x.status === "error")) {
+                  const code = extractErrorCode(er.reason ?? "");
+                  const { label, suggestion } = humanizeError(code);
+                  allErrors.push({ item_id: er.item_id, title: er.title, reason_code: code, reason_human: label, suggestion });
+                }
+              } else {
+                send("log", { msg: `⚠️ Error lote HTTP ${cloneRes.status}` });
+                totalErrors += batch.length;
+              }
+            } catch (e) {
+              send("log", { msg: `⚠️ Error de red: ${(e as Error).message}` });
+              totalErrors += batch.length;
+            }
+            send("progress", { cloned: totalCloned, skipped: totalSkipped, errors: totalErrors });
+          }
+
+          await supabase.from("sync_jobs").update({
+            status: "done",
+            checkpoint: {},
+            summary: { cloned: totalCloned, skipped: totalSkipped, errors: totalErrors },
+            error_log: allErrors,
+            updated_at: new Date().toISOString(),
+          }).eq("id", jobId);
+
+          send("log", { msg: "=== CLONACIÓN MANUAL COMPLETA ===" });
+          send("log", { msg: `Clonadas: ${totalCloned} | Omitidas: ${totalSkipped} | Errores: ${totalErrors}` });
+          send("done", { job_id: jobId, summary: { cloned: totalCloned, skipped: totalSkipped, errors: totalErrors }, errors: allErrors });
+          clearInterval(pingInterval); controller.close(); return;
+        }
+
+        // ---- Determine pairs (auto mode) ----
         type Pair = { origin: MeliAccount; dest: MeliAccount };
         let pairs: Pair[];
 
