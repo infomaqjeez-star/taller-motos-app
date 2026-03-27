@@ -114,6 +114,7 @@ export async function POST(req: Request) {
           `/items?ids=${chunk.join(",")}&attributes=id,title,price,currency_id,status,catalog_listing,catalog_product_id,deal_ids,variations`,
           token
         );
+        if (!data) { await new Promise(r => setTimeout(r, 300)); continue; }
         const list = (data ?? []) as Array<{ code: number; body: ItemDetail }>;
 
         for (const entry of list) {
@@ -227,7 +228,7 @@ export async function POST(req: Request) {
           await new Promise(r => setTimeout(r, 200));
         }
 
-        if (allIds.length > 40) await new Promise(r => setTimeout(r, 150));
+        if (allIds.length > 20) await new Promise(r => setTimeout(r, 200));
       }
     }
 
