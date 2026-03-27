@@ -22,6 +22,8 @@ interface ShipmentInfo {
   status: string;
   urgency: UrgencyType;
   delivery_date: string | null;
+  thumbnail: string | null;
+  item_id: string | null;
   printed_at?: string;
 }
 interface Summary {
@@ -78,7 +80,7 @@ function ShipmentRow({ s, selected, onToggle }: {
   return (
     <div
       onClick={() => onToggle?.(s.shipment_id)}
-      className={`flex items-center gap-3 px-4 py-3 rounded-xl mb-1 transition-all ${onToggle ? "cursor-pointer" : ""}`}
+      className={`flex items-center gap-3 px-3 py-2.5 rounded-xl mb-1 transition-all ${onToggle ? "cursor-pointer" : ""}`}
       style={{
         background: selected ? "#FFE60008" : "transparent",
         border: rowBorder(s.urgency),
@@ -92,6 +94,19 @@ function ShipmentRow({ s, selected, onToggle }: {
           {selected && <CheckCircle2 className="w-3.5 h-3.5 text-black" />}
         </div>
       )}
+      {/* Foto del producto */}
+      <div className="w-12 h-12 rounded-lg flex-shrink-0 overflow-hidden"
+        style={{ background: "#2A2A2A", border: "1px solid rgba(255,255,255,0.07)" }}>
+        {s.thumbnail ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={s.thumbnail} alt={s.title}
+            className="w-full h-full object-cover" />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <Package className="w-5 h-5" style={{ color: "#4B5563" }} />
+          </div>
+        )}
+      </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
           <TypeBadge type={s.type} />

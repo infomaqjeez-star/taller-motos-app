@@ -18,6 +18,8 @@ interface ShipmentInfo {
   status: string;
   urgency: UrgencyType;
   delivery_date: string | null;
+  thumbnail: string | null;
+  item_id: string | null;
 }
 
 function classifyUrgency(deliveryDate: string | null): UrgencyType {
@@ -116,7 +118,7 @@ export async function GET(req: Request) {
           const tags = (ship.tags as string[] | undefined) ?? [];
           const type = classifyType(logistic, tags);
 
-          const items = (order.order_items as Array<{ item?: { title?: string } }> | undefined) ?? [];
+          const items = (order.order_items as Array<{ item?: { id?: string; title?: string } }> | undefined) ?? [];
           const buyer = order.buyer as Record<string, unknown> | undefined;
 
           let deliveryDate: string | null = null;
@@ -134,6 +136,8 @@ export async function GET(req: Request) {
             status: (ship.status as string | undefined) ?? "ready_to_ship",
             urgency: classifyUrgency(deliveryDate),
             delivery_date: deliveryDate,
+            thumbnail: null,
+            item_id: items[0]?.item?.id ?? null,
           });
         }
       } catch { /* skip account */ }
@@ -183,6 +187,32 @@ export async function GET(req: Request) {
       const ud = urgencyOrder[a.urgency] - urgencyOrder[b.urgency];
       return ud !== 0 ? ud : typeOrder[a.type] - typeOrder[b.type];
     });
+
+    // Batch fetch de thumbnails — agrupa item_ids únicos, 20 por request
+    const uniqueItemIds = [...new Set(allShipments.map(s => s.item_id).filter(Boolean))] as string[];
+    const thumbnailMap = new Map<string, string>();
+    const firstToken = tokenCache.values().next().value as string | undefined;
+    if (firstToken && uniqueItemIds.length) {
+      for (let i = 0; i < uniqueItemIds.length; i += 20) {
+        const batch = uniqueItemIds.slice(i, i + 20);
+        try {
+          const res = await meliGet(`/items?ids=${batch.join(",")}&attributes=id,thumbnail`, firstToken) as Array<{ code: number; body?: { id: string; thumbnail?: string } }> | null;
+          if (Array.isArray(res)) {
+            for (const entry of res) {
+              if (entry.code === 200 && entry.body?.id && entry.body.thumbnail) {
+                thumbnailMap.set(entry.body.id, entry.body.thumbnail);
+              }
+            }
+          }
+        } catch { /* skip thumbnails */ }
+        if (i + 20 < uniqueItemIds.length) await new Promise(r => setTimeout(r, 150));
+      }
+      for (const s of allShipments) {
+        if (s.item_id && thumbnailMap.has(s.item_id)) {
+          s.thumbnail = thumbnailMap.get(s.item_id)!;
+        }
+      }
+    }
 
     if (action === "list") {
       // Pendientes = no impresos, no full
