@@ -220,7 +220,7 @@ export default function BudgetImage({ order, onClose }: Props) {
               <div style={{ fontWeight: 800, fontSize: 15, color: "#1a3a5c", marginBottom: 4 }}>{order.clientName}</div>
               <div style={{ fontSize: 11, color: "#64748b", marginBottom: 2 }}>Tel: {order.clientPhone}</div>
               <div style={{ fontSize: 11, color: "#64748b", marginBottom: 2 }}>
-                <strong>Equipo:</strong> {order.brand} {order.model} — Motor {order.motorType === "2T" ? "2 Tiempos" : "4 Tiempos"}
+                <strong>Equipo:</strong> {order.brand} {order.model} — Tipo: {order.motorType}
               </div>
               <div style={{ fontSize: 11, color: "#64748b", marginBottom: 2, lineHeight: 1.5 }}>
                 <strong>Falla reportada:</strong> {order.reportedIssues}

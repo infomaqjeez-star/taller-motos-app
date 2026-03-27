@@ -3,7 +3,7 @@
 // Diseñado para MVP con localStorage y migración fácil a Supabase/PostgreSQL
 // ============================================================
 
-export type MotorType = "2T" | "4T";
+export type MotorType = "2T" | "4T" | "desmalezadora" | "motosierra" | "grupo_electrogeno" | "otros";
 
 export type RepairStatus =
   | "ingresado"
@@ -99,8 +99,8 @@ export interface PartToOrder {
 // ============================================================
 
 export const MOTOR_TYPE_LABELS: Record<MotorType, string> = {
-  "2T": "2 Tiempos (2T)",
-  "4T": "4 Tiempos (4T)",
+  "2T": "2 Tiempos (2T)",  desmalezadora: "Desmalezadora", motosierra: "Motosierra", grupo_electrogeno: "Grupo Electr\u00f3geno", otros: "Otros",
+  
 };
 
 export const REPAIR_STATUS_LABELS: Record<RepairStatus, string> = {
