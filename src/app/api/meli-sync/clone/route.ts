@@ -170,17 +170,19 @@ export async function POST(req: Request) {
           if (Object.keys(shippingPayload).length) newItem.shipping = shippingPayload;
         }
 
-        // Copiar sale_terms del original (garantía - requerido en Argentina)
+        // Copiar sale_terms del original (solo los permitidos por el vendedor)
+        const blockedTerms = new Set(["INSTALLMENTS_CAMPAIGN","INSTALLMENTS","FINANCING"]);
         const rawSaleTerms = (item.sale_terms as Array<Record<string, unknown>> | undefined) ?? [];
-        if (rawSaleTerms.length) {
-          newItem.sale_terms = rawSaleTerms
-            .filter(t => t.id)
-            .map(t => {
-              const term: Record<string, unknown> = { id: t.id };
-              if (t.value_id)   term.value_id   = t.value_id;
-              if (t.value_name) term.value_name = t.value_name;
-              return term;
-            });
+        const allowedTerms = rawSaleTerms
+          .filter(t => t.id && !blockedTerms.has(String(t.id)))
+          .map(t => {
+            const term: Record<string, unknown> = { id: t.id };
+            if (t.value_id)   term.value_id   = t.value_id;
+            if (t.value_name) term.value_name = t.value_name;
+            return term;
+          });
+        if (allowedTerms.length) {
+          newItem.sale_terms = allowedTerms;
         } else {
           newItem.sale_terms = [
             { id: "WARRANTY_TYPE",  value_name: "Garantía del vendedor" },
