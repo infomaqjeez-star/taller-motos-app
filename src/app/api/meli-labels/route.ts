@@ -6,7 +6,7 @@ export const revalidate = 0;
 export const maxDuration = 60;
 
 type UrgencyType = "delayed" | "today" | "upcoming";
-type LogisticType = "flex" | "turbo" | "correo";
+type LogisticType = "flex" | "turbo" | "correo" | "full";
 
 interface ShipmentInfo {
   shipment_id: number;
@@ -34,12 +34,16 @@ function classifyUrgency(deliveryDate: string | null): UrgencyType {
 function classifyType(logisticType: string, tags: string[]): LogisticType {
   const lt = (logisticType ?? "").toLowerCase();
   const tagStr = (tags ?? []).join(",").toLowerCase();
+  // Full (fulfillment) — aislado
+  if (lt === "fulfillment" || lt.includes("fulfillment")) return "full";
+  // Turbo / same day
   if (
     tagStr.includes("turbo") ||
     tagStr.includes("same_day") ||
     tagStr.includes("express") ||
     lt === "turbo"
   ) return "turbo";
+  // Flex
   if (lt === "self_service" || lt.includes("flex")) return "flex";
   return "correo";
 }
@@ -50,12 +54,27 @@ export async function GET(req: Request) {
   const format = searchParams.get("format") ?? "pdf";
   const supabase = getSupabase();
 
+  // Historial con filtro opcional de período
   if (action === "history") {
-    const { data } = await supabase
+    const period = searchParams.get("period") ?? "all"; // "today" | "week" | "all"
+    let query = supabase
       .from("meli_printed_labels")
       .select("*")
       .order("printed_at", { ascending: false })
-      .limit(100);
+      .limit(200);
+
+    if (period === "today") {
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      query = query.gte("printed_at", todayStart.toISOString()) as typeof query;
+    } else if (period === "week") {
+      const weekStart = new Date();
+      weekStart.setDate(weekStart.getDate() - 7);
+      weekStart.setHours(0, 0, 0, 0);
+      query = query.gte("printed_at", weekStart.toISOString()) as typeof query;
+    }
+
+    const { data } = await query;
     return NextResponse.json({ shipments: data ?? [] });
   }
 
@@ -120,7 +139,7 @@ export async function GET(req: Request) {
       } catch { /* skip account */ }
     }));
 
-    // Fetch shipment details for accurate type + delivery date
+    // Enriquecer con detalle de shipment para tipo y fecha exactos
     const byAccountMap = new Map<string, { token: string; ids: number[] }>();
     for (const s of allShipments) {
       if (!byAccountMap.has(s.meli_user_id)) {
@@ -138,14 +157,11 @@ export async function GET(req: Request) {
             try {
               const detail = await meliGet(`/shipments/${sid}`, token) as Record<string, unknown> | null;
               if (!detail) return;
-
               const s = allShipments.find(x => x.shipment_id === sid);
               if (!s) return;
-
               const lt = (detail.logistic_type as string | undefined) ?? "";
               const tags = (detail.tags as string[] | undefined) ?? [];
               s.type = classifyType(lt, tags);
-
               const estDelivery =
                 (detail.estimated_delivery_limit as Record<string, unknown> | undefined) ??
                 ((detail.shipping_option as Record<string, unknown> | undefined)
@@ -160,24 +176,32 @@ export async function GET(req: Request) {
       })
     );
 
+    // Ordenar: urgencia primero (demorado > hoy > próximo), luego tipo
     const urgencyOrder: Record<UrgencyType, number> = { delayed: 0, today: 1, upcoming: 2 };
-    const typeOrder: Record<LogisticType, number> = { correo: 0, turbo: 1, flex: 2 };
+    const typeOrder: Record<LogisticType, number> = { correo: 0, turbo: 1, flex: 2, full: 3 };
     allShipments.sort((a, b) => {
       const ud = urgencyOrder[a.urgency] - urgencyOrder[b.urgency];
       return ud !== 0 ? ud : typeOrder[a.type] - typeOrder[b.type];
     });
 
     if (action === "list") {
+      // Pendientes = no impresos, no full
+      const pending = allShipments.filter(s => s.type !== "full");
+      // Full separado
+      const full    = allShipments.filter(s => s.type === "full");
+
       return NextResponse.json({
-        shipments: allShipments,
+        shipments: pending,
+        full,
         summary: {
-          total:    allShipments.length,
-          correo:   allShipments.filter(s => s.type === "correo").length,
-          turbo:    allShipments.filter(s => s.type === "turbo").length,
-          flex:     allShipments.filter(s => s.type === "flex").length,
-          delayed:  allShipments.filter(s => s.urgency === "delayed").length,
-          today:    allShipments.filter(s => s.urgency === "today").length,
-          upcoming: allShipments.filter(s => s.urgency === "upcoming").length,
+          total:    pending.length,
+          correo:   pending.filter(s => s.type === "correo").length,
+          turbo:    pending.filter(s => s.type === "turbo").length,
+          flex:     pending.filter(s => s.type === "flex").length,
+          full:     full.length,
+          delayed:  pending.filter(s => s.urgency === "delayed").length,
+          today:    pending.filter(s => s.urgency === "today").length,
+          upcoming: pending.filter(s => s.urgency === "upcoming").length,
         },
       });
     }
@@ -186,7 +210,7 @@ export async function GET(req: Request) {
     const selectedIds = searchParams.get("ids");
     const targetShipments = selectedIds
       ? allShipments.filter(s => selectedIds.split(",").includes(String(s.shipment_id)))
-      : allShipments;
+      : allShipments.filter(s => s.type !== "full");
 
     if (!targetShipments.length) {
       return NextResponse.json({ error: "No hay envíos seleccionados" }, { status: 400 });
