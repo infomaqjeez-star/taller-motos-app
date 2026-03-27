@@ -38,15 +38,22 @@ function isDatePast(dateStr: string | null): boolean {
   return new Date(dateStr) < today;
 }
 
+function nextBusinessDay(from: Date): Date {
+  const d = new Date(from);
+  do { d.setDate(d.getDate() + 1); } while (d.getDay() === 0 || d.getDay() === 6);
+  return d;
+}
+
 function classifyUrgency(deliveryDate: string | null): UrgencyType {
   if (!deliveryDate) return "upcoming";
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const d     = new Date(deliveryDate); d.setHours(0, 0, 0, 0);
-  const diff  = Math.round((d.getTime() - today.getTime()) / 86400000);
-  if (diff < 0)  return "delayed";
-  if (diff === 0) return "today";
-  if (diff === 1) return "tomorrow";
-  if (diff <= 7)  return "week";
+  if (d.getTime() < today.getTime())  return "delayed";
+  if (d.getTime() === today.getTime()) return "today";
+  const nbd = nextBusinessDay(today); nbd.setHours(0, 0, 0, 0);
+  if (d.getTime() === nbd.getTime()) return "tomorrow";
+  const diff = Math.round((d.getTime() - today.getTime()) / 86400000);
+  if (diff <= 7) return "week";
   return "upcoming";
 }
 
@@ -86,8 +93,7 @@ function classifyType(logisticType: string, tags: string[], substatus?: string, 
 
 function parseOrder(
   order: Record<string, unknown>,
-  acc: { nickname: string; meli_user_id: number | string },
-  forceFull: boolean
+  acc: { nickname: string; meli_user_id: number | string }
 ): ShipmentInfo | null {
   const ship = order.shipping as Record<string, unknown> | undefined;
   if (!ship?.id) return null;
@@ -113,7 +119,7 @@ function parseOrder(
   if (deliveryLimit?.date) deliveryDate = deliveryLimit.date as string;
 
   const rawStatus = (ship.status as string | undefined) ?? "ready_to_ship";
-  const type = forceFull ? "full" : classifyType(logistic, allTags, undefined, mode);
+  const type = classifyType(logistic, allTags, undefined, mode);
 
   return {
     shipment_id:    sid,
@@ -187,23 +193,17 @@ export async function GET(req: Request) {
         if (!token) return;
         tokenCache.set(String(acc.meli_user_id), token);
 
-        const [dataReady, dataHandling, dataFull, dataShipped] = await Promise.all([
+        const [dataReady, dataHandling, dataShipped] = await Promise.all([
           meliGet(`/orders/search?seller=${acc.meli_user_id}&order.status=paid&sort=date_desc&limit=50&shipping.status=ready_to_ship`, token),
           meliGet(`/orders/search?seller=${acc.meli_user_id}&order.status=paid&sort=date_desc&limit=50&shipping.status=handling`, token),
-          meliGet(`/orders/search?seller=${acc.meli_user_id}&order.status=paid&sort=date_desc&limit=50&shipping.logistic_type=fulfillment`, token),
           meliGet(`/orders/search?seller=${acc.meli_user_id}&order.status=paid&sort=date_desc&limit=50&shipping.status=shipped`, token),
         ]);
 
         const readyResults    = ((dataReady?.results    ?? []) as Array<Record<string, unknown>>);
         const handlingResults = ((dataHandling?.results ?? []) as Array<Record<string, unknown>>);
-        const fullResults     = ((dataFull?.results     ?? []) as Array<Record<string, unknown>>);
         const shippedResults  = ((dataShipped?.results  ?? []) as Array<Record<string, unknown>>);
 
-        const readyIds   = new Set(readyResults.map(o    => (o.shipping as Record<string,unknown>)?.id as number));
-        const handlingIds = new Set(handlingResults.map(o => (o.shipping as Record<string,unknown>)?.id as number));
-        const fullIds    = new Set(fullResults.map(o     => (o.shipping as Record<string,unknown>)?.id as number));
-
-        const pendingOrders = [...readyResults, ...handlingResults, ...fullResults];
+        const pendingOrders = [...readyResults, ...handlingResults];
         const seenPending   = new Set<number>();
 
         for (const order of pendingOrders) {
@@ -213,9 +213,7 @@ export async function GET(req: Request) {
           if (seenPending.has(sid) || printedSet.has(sid)) continue;
           seenPending.add(sid);
 
-          // Si el shipment aparece en la query dedicada de fulfillment → siempre Full
-          const forceFull = fullIds.has(sid);
-          const info = parseOrder(order, acc, forceFull);
+          const info = parseOrder(order, acc);
           if (info) allShipments.push(info);
         }
 
@@ -227,7 +225,7 @@ export async function GET(req: Request) {
           const sid = ship.id as number;
           if (seenShipped.has(sid)) continue;
           seenShipped.add(sid);
-          const info = parseOrder(order, acc, false);
+          const info = parseOrder(order, acc);
           if (info) allInTransit.push(info);
         }
 
@@ -261,10 +259,8 @@ export async function GET(req: Request) {
               const substatus = (detail.substatus as string | undefined) ?? "";
               const mode      = (detail.mode as string | undefined) ?? "";
               s.substatus = substatus || null;
-              // Solo actualizar tipo si no fue forzado como full en la query
-              if (s.type !== "full") {
-                s.type = classifyType(lt, tags, substatus, mode);
-              }
+              // Tipo definitivo desde /shipments/{id} — fuente de verdad
+              s.type = classifyType(lt, tags, substatus, mode);
 
               const shipStatus = (detail.status as string | undefined);
               if (shipStatus) {

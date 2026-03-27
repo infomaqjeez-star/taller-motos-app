@@ -57,8 +57,8 @@ const TYPE_CFG: Record<LogisticType, { color: string; label: string; icon: React
 
 const URGENCY_CFG: Record<UrgencyType, { label: string; color: string }> = {
   delayed:  { label: "DEMORADO",    color: "#ef4444" },
-  today:    { label: "HOY",         color: "#FF9800" },
-  tomorrow: { label: "MAÑANA",      color: "#60a5fa" },
+  today:    { label: "HOY",         color: "#FBBF24" },
+  tomorrow: { label: "MAÑANA",      color: "#22c55e" },
   week:     { label: "ESTA SEMANA", color: "#6B7280" },
   upcoming: { label: "PRÓXIMO",     color: "#4B5563" },
 };
@@ -99,10 +99,9 @@ function ShipmentCard({ s, selected, onToggle, showCheckbox = true }: {
   s: ShipmentInfo; selected?: boolean; onToggle?: (id: number) => void; showCheckbox?: boolean;
 }) {
   const urg = URGENCY_CFG[s.urgency] ?? URGENCY_CFG["upcoming"];
-  const borderColor =
-    s.urgency === "delayed"  ? "#ef4444" :
-    s.urgency === "today"    ? "#FF9800" :
-    s.urgency === "tomorrow" ? "#60a5fa" : "rgba(255,255,255,0.06)";
+  const borderColor = (s.urgency && s.urgency !== "week" && s.urgency !== "upcoming")
+    ? urg.color
+    : "rgba(255,255,255,0.06)";
 
   const formattedDate = s.order_date
     ? new Date(s.order_date).toLocaleString("es-AR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })
@@ -560,15 +559,15 @@ function EtiquetasInner() {
                   const upc  = all.filter(s => s.urgency === "upcoming");
                   return (
                     <div className="rounded-2xl overflow-hidden"
-                      style={{ background: "#161616", border: "2px solid #60a5fa30" }}>
+                      style={{ background: "#161616", border: "2px solid #22c55e30" }}>
                       <div className="px-4 py-3 flex items-center gap-2"
-                        style={{ borderBottom: "1px solid #60a5fa20" }}>
-                        <Clock className="w-4 h-4 flex-shrink-0" style={{ color: "#60a5fa" }} />
-                        <p className="font-black text-sm flex-1" style={{ color: "#60a5fa" }}>
+                        style={{ borderBottom: "1px solid #22c55e20" }}>
+                        <Clock className="w-4 h-4 flex-shrink-0" style={{ color: "#22c55e" }} />
+                        <p className="font-black text-sm flex-1" style={{ color: "#22c55e" }}>
                           Próximas a despachar
                         </p>
                         <span className="text-xs font-black px-2 py-0.5 rounded-full"
-                          style={{ background: "#60a5fa20", color: "#60a5fa" }}>{proximas.length}</span>
+                          style={{ background: "#22c55e20", color: "#22c55e" }}>{proximas.length}</span>
                       </div>
                       <div className="px-2 pt-2 pb-2 space-y-0">
                         {proximas.length === 0 ? (
@@ -582,8 +581,8 @@ function EtiquetasInner() {
                           <>
                             {tmw.length > 0 && (
                               <div className="mb-2">
-                                <p className="text-[11px] font-black px-2 py-1" style={{ color: "#60a5fa" }}>
-                                  MAÑANA ({tmw.length})
+                                <p className="text-[11px] font-black px-2 py-1" style={{ color: "#22c55e" }}>
+                                  MAÑANA / PRÓXIMO DÍA HÁBIL ({tmw.length})
                                 </p>
                                 {(["correo", "flex", "turbo"] as LogisticType[]).map(t => (
                                   <TypeAccordion key={t} type={t}
