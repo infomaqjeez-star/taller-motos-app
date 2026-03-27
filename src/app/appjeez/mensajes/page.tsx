@@ -221,8 +221,14 @@ function QuestionCard({ q, onAnswered }: { q: Question; onAnswered: (id: number)
       style={{ background: "#1F1F1F", border: "1px solid rgba(255,255,255,0.07)" }}>
       <button onClick={() => setOpen(o => !o)} className="w-full text-left p-4">
         <div className="flex items-start gap-3">
-          {/* Foto del producto */}
-          <div className="w-14 h-14 rounded-xl overflow-hidden flex-shrink-0"
+          {/* Foto del producto — clickable a la publicación */}
+          <a
+            href={`https://www.mercadolibre.com.ar/p/${q.item_id}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Ver publicación original"
+            onClick={e => e.stopPropagation()}
+            className="w-14 h-14 rounded-xl overflow-hidden flex-shrink-0 cursor-pointer relative group"
             style={{ background: "#2a2a2a", border: "1px solid rgba(255,255,255,0.08)" }}>
             {q.item_thumbnail ? (
               <Image
@@ -230,7 +236,7 @@ function QuestionCard({ q, onAnswered }: { q: Question; onAnswered: (id: number)
                 alt={q.item_title}
                 width={56}
                 height={56}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover transition-opacity group-hover:opacity-70"
                 unoptimized
               />
             ) : (
@@ -238,7 +244,13 @@ function QuestionCard({ q, onAnswered }: { q: Question; onAnswered: (id: number)
                 <Package className="w-6 h-6 text-gray-600" />
               </div>
             )}
-          </div>
+            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+              style={{ background: "rgba(0,0,0,0.55)" }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+              </svg>
+            </div>
+          </a>
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1 flex-wrap">
@@ -253,7 +265,14 @@ function QuestionCard({ q, onAnswered }: { q: Question; onAnswered: (id: number)
                 @{account}
               </span>
             </div>
-            <p className="text-[11px] text-gray-500 truncate mb-1">{q.item_title || q.item_id}</p>
+            <a
+              href={`https://www.mercadolibre.com.ar/p/${q.item_id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Ver publicación original"
+              onClick={e => e.stopPropagation()}
+              className="text-[11px] text-gray-500 truncate mb-1 hover:text-blue-400 hover:underline block transition-colors"
+            >{q.item_title || q.item_id}</a>
             <p className="text-sm text-white font-medium leading-snug line-clamp-2">{q.question_text}</p>
           </div>
 
