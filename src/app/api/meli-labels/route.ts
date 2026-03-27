@@ -54,23 +54,29 @@ function statusLabel(status: string, type: LogisticType): string {
   return map[status] ?? status;
 }
 
-function classifyType(logisticType: string, tags: string[], substatus?: string): LogisticType {
-  const lt = (logisticType ?? "").toLowerCase();
+function classifyType(logisticType: string, tags: string[], substatus?: string, mode?: string): LogisticType {
+  const lt  = (logisticType ?? "").toLowerCase();
   const tagStr = (tags ?? []).join(",").toLowerCase();
-  const ss = (substatus ?? "").toLowerCase();
-  // Full (fulfillment) — aislado, nunca se imprime por el vendedor
-  if (lt === "fulfillment" || lt.includes("fulfillment")) return "full";
-  // Turbo / same-day: self_service con entrega en horas
+  const ss  = (substatus ?? "").toLowerCase();
+  const md  = (mode ?? "").toLowerCase();
+
+  // Full — cualquier indicio de fulfillment
   if (
-    tagStr.includes("turbo") ||
-    tagStr.includes("same_day") ||
-    tagStr.includes("express") ||
-    ss.includes("turbo") ||
-    lt === "turbo"
+    lt === "fulfillment" || lt.includes("fulfillment") ||
+    tagStr.includes("fulfillment") ||
+    md === "fulfillment" || md.includes("fulfillment")
+  ) return "full";
+
+  // Turbo / same-day
+  if (
+    tagStr.includes("turbo") || tagStr.includes("same_day") ||
+    tagStr.includes("express") || ss.includes("turbo") || lt === "turbo"
   ) return "turbo";
-  // Flex: self_service estándar (próximo día hábil)
+
+  // Flex
   if (lt === "self_service" || lt.includes("flex") || tagStr.includes("flex")) return "flex";
-  // Correo: cross_docking, drop_off, me2, default
+
+  // Correo (cross_docking, drop_off, me2, etc.)
   return "correo";
 }
 
@@ -139,7 +145,11 @@ export async function GET(req: Request) {
           seen.add(sid);
 
           const logistic = (ship.logistic_type as string | undefined) ?? "";
-          const tags = (ship.tags as string[] | undefined) ?? [];
+          const tags     = (ship.tags as string[] | undefined) ?? [];
+          const mode     = (ship.mode as string | undefined) ?? "";
+          // También chequear tags a nivel de orden
+          const orderTags = (order.tags as string[] | undefined) ?? [];
+          const allTags   = [...tags, ...orderTags];
 
           const items = (order.order_items as Array<{
             item?: { id?: string; title?: string; seller_sku?: string };
@@ -155,7 +165,7 @@ export async function GET(req: Request) {
           if (deliveryLimit?.date) deliveryDate = deliveryLimit.date as string;
 
           const rawStatus = (ship.status as string | undefined) ?? "ready_to_ship";
-          const type = classifyType(logistic, tags);
+          const type = classifyType(logistic, allTags, undefined, mode);
 
           allShipments.push({
             shipment_id: sid,
@@ -205,11 +215,12 @@ export async function GET(req: Request) {
               if (!s) return;
 
               // Tipo correcto desde el shipment (más preciso que la orden)
-              const lt = (detail.logistic_type as string | undefined) ?? "";
-              const tags = (detail.tags as string[] | undefined) ?? [];
+              const lt       = (detail.logistic_type as string | undefined) ?? "";
+              const tags     = (detail.tags as string[] | undefined) ?? [];
               const substatus = (detail.substatus as string | undefined) ?? "";
+              const mode     = (detail.mode as string | undefined) ?? "";
               s.substatus = substatus || null;
-              s.type = classifyType(lt, tags, substatus);
+              s.type = classifyType(lt, tags, substatus, mode);
 
               // Actualizar status desde el shipment
               const shipStatus = (detail.status as string | undefined);
