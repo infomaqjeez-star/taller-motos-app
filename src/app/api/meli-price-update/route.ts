@@ -1,4 +1,3 @@
-import { NextResponse } from "next/server";
 import { getSupabase, getActiveAccounts, getValidToken } from "@/lib/meli";
 
 export const dynamic = "force-dynamic";
@@ -7,59 +6,60 @@ export const maxDuration = 300;
 
 type AdjustmentType = "percentage" | "fixed_floor" | "fixed_add";
 
+/* ── Helpers ─────────────────────────────────────────────────────── */
 function normalize(s: string): string {
   return s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+}
+
+function isExcluded(normTitle: string, excludeNorm: string[]): string | null {
+  for (const word of excludeNorm) {
+    if (!word) continue;
+    // Busca la palabra como token completo (ignora mayúsculas/tildes)
+    const rx = new RegExp(`(^|\\s|[^a-z0-9])${word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}($|\\s|[^a-z0-9])`);
+    if (rx.test(` ${normTitle} `)) return word;
+  }
+  return null;
 }
 
 function computeNewPrice(currentPrice: number, type: AdjustmentType, value: number): number {
   let result: number;
   switch (type) {
-    case "percentage":
-      result = currentPrice * (1 + value / 100);
-      break;
-    case "fixed_floor":
-      result = currentPrice < value ? value : currentPrice;
-      break;
-    case "fixed_add":
-      result = currentPrice + value;
-      break;
-    default:
-      result = currentPrice;
+    case "percentage":  result = currentPrice * (1 + value / 100); break;
+    case "fixed_floor": result = currentPrice < value ? value : currentPrice; break;
+    case "fixed_add":   result = currentPrice + value; break;
+    default:            result = currentPrice;
   }
-  return Math.round(result * 100) / 100; // redondeo a 2 decimales
+  return Math.round(result * 100) / 100;
 }
 
 function shouldUpdate(currentPrice: number, newPrice: number, type: AdjustmentType): boolean {
-  if (type === "fixed_floor") return currentPrice < newPrice; // solo si está por debajo del piso
-  return Math.abs(newPrice - currentPrice) >= 0.01;           // siempre para % y suma
+  if (type === "fixed_floor") return currentPrice < newPrice;
+  return Math.abs(newPrice - currentPrice) >= 0.01;
 }
 
-async function meliPut(path: string, token: string, body: unknown) {
+async function meliPut(path: string, token: string, body: unknown, signal?: AbortSignal) {
   try {
     const res = await fetch(`https://api.mercadolibre.com${path}`, {
       method: "PUT",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       body: JSON.stringify(body),
-      signal: AbortSignal.timeout(15000),
+      signal: signal ?? AbortSignal.timeout(15000),
     });
-    const data = await res.json();
-    return { ok: res.ok, status: res.status, data };
+    return { ok: res.ok, status: res.status, data: await res.json() };
   } catch (e) {
     return { ok: false, status: 0, data: { message: (e as Error).message } };
   }
 }
 
-async function meliGetWithRetry(path: string, token: string, retries = 3): Promise<unknown> {
+async function meliGetWithRetry(path: string, token: string, signal?: AbortSignal, retries = 3): Promise<unknown> {
   for (let attempt = 0; attempt < retries; attempt++) {
+    if (signal?.aborted) return null;
     try {
       const res = await fetch(`https://api.mercadolibre.com${path}`, {
         headers: { Authorization: `Bearer ${token}` },
         signal: AbortSignal.timeout(12000),
       });
-      if (res.status === 429) {
-        await new Promise(r => setTimeout(r, 2000 * (attempt + 1)));
-        continue;
-      }
+      if (res.status === 429) { await new Promise(r => setTimeout(r, 2000 * (attempt + 1))); continue; }
       if (!res.ok) return null;
       return res.json();
     } catch {
@@ -69,361 +69,276 @@ async function meliGetWithRetry(path: string, token: string, retries = 3): Promi
   return null;
 }
 
-async function getAllItemIdsExhaustive(userId: string, token: string, status: string): Promise<string[]> {
+async function getAllItemIds(userId: string, token: string, status: string, signal?: AbortSignal): Promise<string[]> {
   const ids: string[] = [];
   let offset = 0;
   const limit = 100;
-
   const first = await meliGetWithRetry(
-    `/users/${userId}/items/search?status=${status}&limit=${limit}&offset=0`, token
+    `/users/${userId}/items/search?status=${status}&limit=${limit}&offset=0`, token, signal
   ) as { results?: string[]; paging?: { total?: number } } | null;
-
   if (!first?.results?.length) return ids;
   ids.push(...first.results);
   const total = first.paging?.total ?? first.results.length;
-
-  while (offset + limit < total && offset < 10000) {
+  while (offset + limit < total && offset < 10000 && !signal?.aborted) {
     offset += limit;
     const page = await meliGetWithRetry(
-      `/users/${userId}/items/search?status=${status}&limit=${limit}&offset=${offset}`, token
+      `/users/${userId}/items/search?status=${status}&limit=${limit}&offset=${offset}`, token, signal
     ) as { results?: string[] } | null;
-    const r = page?.results ?? [];
-    if (!r.length) break;
-    ids.push(...r);
+    if (!page?.results?.length) break;
+    ids.push(...page.results);
     await new Promise(r => setTimeout(r, 180));
   }
   return ids;
 }
 
 interface ItemDetail {
-  id: string;
-  title: string;
-  price: number;
-  currency_id: string;
-  status: string;
-  catalog_listing?: boolean;
-  catalog_product_id?: string;
+  id: string; title: string; price: number;
+  catalog_listing?: boolean; catalog_product_id?: string;
   deal_ids?: string[];
   variations?: Array<{ id: number; price: number; [k: string]: unknown }>;
 }
 
-interface PriceResult {
-  account: string;
-  item_id: string;
-  title: string;
-  old_price: number;
-  new_price: number;
-  adjustment_type: AdjustmentType;
-  adjustment_value: number;
-  status: "updated" | "skipped" | "error" | "catalog_warning" | "promo_blocked" | "cached_skip";
-  reason?: string;
-  variations_updated?: number;
+/* ── SSE helper ──────────────────────────────────────────────────── */
+function sse(data: unknown): string {
+  return `data: ${JSON.stringify(data)}\n\n`;
 }
 
-function buildResult(
-  base: Omit<PriceResult, "adjustment_type" | "adjustment_value">,
-  type: AdjustmentType, value: number
-): PriceResult {
-  return { ...base, adjustment_type: type, adjustment_value: value };
-}
-
+/* ── POST handler ────────────────────────────────────────────────── */
 export async function POST(req: Request) {
-  try {
-    const body = await req.json() as {
-      keyword: string;
-      adjustment_type: AdjustmentType;
-      adjustment_value: number;
-      dry_run?: boolean;
-      account_ids?: string[];
-      clear_cache?: boolean;
-      // legacy compat
-      target_price?: number;
-    };
+  const body = await req.json() as {
+    keyword: string;
+    exclude_words?: string;
+    adjustment_type: AdjustmentType;
+    adjustment_value: number;
+    dry_run?: boolean;
+    account_ids?: string[];
+    clear_cache?: boolean;
+    // legacy
+    target_price?: number;
+  };
 
-    let { keyword, adjustment_type, adjustment_value, dry_run = false, account_ids, clear_cache = false } = body;
+  let { keyword, adjustment_type, adjustment_value, dry_run = false, account_ids, clear_cache = false } = body;
+  const excludeRaw = body.exclude_words ?? "";
 
-    // Compatibilidad retroactiva con target_price
-    if (!adjustment_type && body.target_price) {
-      adjustment_type  = "fixed_floor";
-      adjustment_value = body.target_price;
-    }
+  if (!adjustment_type && body.target_price) {
+    adjustment_type = "fixed_floor";
+    adjustment_value = body.target_price;
+  }
 
-    if (!keyword?.trim()) {
-      return NextResponse.json({ error: "keyword es requerida" }, { status: 400 });
-    }
-    if (!adjustment_type || !["percentage", "fixed_floor", "fixed_add"].includes(adjustment_type)) {
-      return NextResponse.json({ error: "adjustment_type inválido (percentage|fixed_floor|fixed_add)" }, { status: 400 });
-    }
-    if (adjustment_value == null || adjustment_value <= 0) {
-      return NextResponse.json({ error: "adjustment_value debe ser > 0" }, { status: 400 });
-    }
+  if (!keyword?.trim()) {
+    return new Response(sse({ type: "error", message: "keyword es requerida" }), { status: 400, headers: { "Content-Type": "text/event-stream" } });
+  }
 
-    const normKeyword = normalize(keyword);
-    const supabase = getSupabase();
+  const normKeyword  = normalize(keyword);
+  const excludeNorm  = excludeRaw.split(",").map(w => normalize(w)).filter(Boolean);
+  const supabase = getSupabase();
 
-    if (clear_cache) {
-      await supabase.from("items_keyword_cache").delete().eq("keyword", normKeyword);
-    }
+  if (clear_cache) {
+    await supabase.from("items_keyword_cache").delete().eq("keyword", normKeyword);
+  }
 
-    let accounts = await getActiveAccounts();
-    if (account_ids?.length) {
-      accounts = accounts.filter(a => account_ids!.includes(String(a.meli_user_id)));
-    }
-    if (!accounts.length) {
-      return NextResponse.json({ error: "No hay cuentas activas" }, { status: 404 });
-    }
+  let accounts = await getActiveAccounts();
+  if (account_ids?.length) {
+    accounts = accounts.filter(a => account_ids!.includes(String(a.meli_user_id)));
+  }
 
-    const { data: cachedRows } = await supabase
-      .from("items_keyword_cache")
-      .select("item_id, contains_match")
-      .eq("keyword", normKeyword);
+  const abortCtrl = new AbortController();
+  const signal = abortCtrl.signal;
 
-    const cacheMap = new Map<string, boolean>();
-    for (const row of cachedRows ?? []) {
-      cacheMap.set(row.item_id, row.contains_match);
-    }
+  // Si el cliente cierra la conexión → abortar
+  req.signal?.addEventListener("abort", () => abortCtrl.abort());
 
-    const results: PriceResult[] = [];
-    const newCacheRows: Array<{ item_id: string; keyword: string; contains_match: boolean; last_price: number | null }> = [];
+  const encoder = new TextEncoder();
+  const { readable, writable } = new TransformStream<Uint8Array, Uint8Array>();
+  const writer = writable.getWriter();
+
+  const send = async (data: unknown) => {
+    try { await writer.write(encoder.encode(sse(data))); } catch { /* stream closed */ }
+  };
+
+  /* ── Proceso principal en background ─────────────────────────── */
+  (async () => {
+    const results: unknown[] = [];
     let totalScanned = 0;
     let cacheHits = 0;
+    let processed = 0;
+    let stopped = false;
 
-    for (const acc of accounts) {
-      const token = await getValidToken(acc);
-      if (!token) {
-        results.push(buildResult({
-          account: acc.nickname, item_id: "", title: "",
-          old_price: 0, new_price: 0, status: "error", reason: "token_expired",
-        }, adjustment_type, adjustment_value));
-        continue;
-      }
+    try {
+      const { data: cachedRows } = await supabase
+        .from("items_keyword_cache")
+        .select("item_id, contains_match")
+        .eq("keyword", normKeyword);
+      const cacheMap = new Map<string, boolean>();
+      for (const row of cachedRows ?? []) cacheMap.set(row.item_id, row.contains_match);
 
-      const [activeIds, pausedIds] = await Promise.all([
-        getAllItemIdsExhaustive(String(acc.meli_user_id), token, "active"),
-        getAllItemIdsExhaustive(String(acc.meli_user_id), token, "paused"),
-      ]);
-      const allIds = [...activeIds, ...pausedIds];
-      totalScanned += allIds.length;
+      for (const acc of accounts) {
+        if (signal.aborted) { stopped = true; break; }
 
-      const idsToCheck = allIds.filter(id => {
-        const cached = cacheMap.get(id);
-        if (cached === false) { cacheHits++; return false; }
-        return true;
-      });
-
-      const retryQueue: string[] = [];
-
-      for (let i = 0; i < idsToCheck.length; i += 20) {
-        const chunk = idsToCheck.slice(i, i + 20);
-        const data = await meliGetWithRetry(
-          `/items?ids=${chunk.join(",")}&attributes=id,title,price,currency_id,status,catalog_listing,catalog_product_id,deal_ids,variations`,
-          token
-        );
-
-        if (!data) { retryQueue.push(...chunk); await new Promise(r => setTimeout(r, 500)); continue; }
-
-        const list = (data as Array<{ code: number; body: ItemDetail }>) ?? [];
-
-        for (const entry of list) {
-          if (entry.code !== 200 || !entry.body) {
-            if (entry.code === 429) retryQueue.push(entry.body?.id ?? "");
-            continue;
-          }
-          const item = entry.body;
-          const normTitle = normalize(item.title);
-          const matches = normTitle.includes(normKeyword);
-
-          if (!matches) {
-            newCacheRows.push({ item_id: item.id, keyword: normKeyword, contains_match: false, last_price: item.price });
-            continue;
-          }
-
-          newCacheRows.push({ item_id: item.id, keyword: normKeyword, contains_match: true, last_price: item.price });
-
-          const isCatalog = !!(item.catalog_listing || item.catalog_product_id);
-          const hasPromo  = Array.isArray(item.deal_ids) && item.deal_ids.length > 0;
-
-          if (item.variations?.length) {
-            let varsUpdated = 0;
-            const updatedVars = item.variations.map(v => {
-              const np = computeNewPrice(v.price, adjustment_type, adjustment_value);
-              if (shouldUpdate(v.price, np, adjustment_type)) { varsUpdated++; return { ...v, price: np }; }
-              return v;
-            });
-            const baseNew = computeNewPrice(item.price, adjustment_type, adjustment_value);
-            const needsBaseUpdate = shouldUpdate(item.price, baseNew, adjustment_type);
-
-            if (varsUpdated === 0 && !needsBaseUpdate) {
-              results.push(buildResult({
-                account: acc.nickname, item_id: item.id, title: item.title,
-                old_price: item.price, new_price: item.price,
-                status: "skipped", reason: "Precio ya cumple la condición",
-              }, adjustment_type, adjustment_value));
-              continue;
-            }
-
-            if (dry_run) {
-              results.push(buildResult({
-                account: acc.nickname, item_id: item.id, title: item.title,
-                old_price: item.price, new_price: baseNew,
-                status: isCatalog ? "catalog_warning" : "updated",
-                reason: isCatalog ? "Item de catálogo — subir precio puede perder Buy Box" : undefined,
-                variations_updated: varsUpdated,
-              }, adjustment_type, adjustment_value));
-              continue;
-            }
-
-            const putBody: Record<string, unknown> = {
-              variations: updatedVars.map(v => ({ id: v.id, price: v.price })),
-            };
-            if (needsBaseUpdate) putBody.price = baseNew;
-
-            const putRes = await meliPut(`/items/${item.id}`, token, putBody);
-            if (!putRes.ok) {
-              const errMsg = (putRes.data as Record<string, unknown>)?.message as string ?? "";
-              if (putRes.status === 429) { retryQueue.push(item.id); continue; }
-              results.push(buildResult({
-                account: acc.nickname, item_id: item.id, title: item.title,
-                old_price: item.price, new_price: baseNew,
-                status: hasPromo && errMsg.includes("promo") ? "promo_blocked" : "error",
-                reason: hasPromo ? "Publicación en promoción activa" : errMsg.slice(0, 200),
-              }, adjustment_type, adjustment_value));
-            } else {
-              results.push(buildResult({
-                account: acc.nickname, item_id: item.id, title: item.title,
-                old_price: item.price, new_price: baseNew,
-                status: isCatalog ? "catalog_warning" : "updated",
-                reason: isCatalog ? "Actualizado — verificar Buy Box" : undefined,
-                variations_updated: varsUpdated,
-              }, adjustment_type, adjustment_value));
-            }
-
-          } else {
-            const newPrice = computeNewPrice(item.price, adjustment_type, adjustment_value);
-
-            if (!shouldUpdate(item.price, newPrice, adjustment_type)) {
-              results.push(buildResult({
-                account: acc.nickname, item_id: item.id, title: item.title,
-                old_price: item.price, new_price: item.price,
-                status: "skipped", reason: "Precio ya cumple la condición",
-              }, adjustment_type, adjustment_value));
-              continue;
-            }
-
-            if (dry_run) {
-              results.push(buildResult({
-                account: acc.nickname, item_id: item.id, title: item.title,
-                old_price: item.price, new_price: newPrice,
-                status: isCatalog ? "catalog_warning" : "updated",
-                reason: isCatalog ? "Item de catálogo — subir precio puede perder Buy Box" : undefined,
-              }, adjustment_type, adjustment_value));
-              continue;
-            }
-
-            const putRes = await meliPut(`/items/${item.id}`, token, { price: newPrice });
-            if (!putRes.ok) {
-              const errMsg = (putRes.data as Record<string, unknown>)?.message as string ?? "";
-              if (putRes.status === 429) { retryQueue.push(item.id); continue; }
-              results.push(buildResult({
-                account: acc.nickname, item_id: item.id, title: item.title,
-                old_price: item.price, new_price: newPrice,
-                status: hasPromo && errMsg.includes("promo") ? "promo_blocked" : "error",
-                reason: hasPromo ? "Publicación en promoción activa" : errMsg.slice(0, 200),
-              }, adjustment_type, adjustment_value));
-            } else {
-              results.push(buildResult({
-                account: acc.nickname, item_id: item.id, title: item.title,
-                old_price: item.price, new_price: newPrice,
-                status: isCatalog ? "catalog_warning" : "updated",
-                reason: isCatalog ? "Actualizado — verificar Buy Box" : undefined,
-              }, adjustment_type, adjustment_value));
-            }
-          }
-
-          await new Promise(r => setTimeout(r, 220));
+        const token = await getValidToken(acc);
+        if (!token) {
+          await send({ type: "account_skip", account: acc.nickname, reason: "token_expired" });
+          continue;
         }
 
-        await new Promise(r => setTimeout(r, 200));
-      }
+        await send({ type: "account_start", account: acc.nickname });
 
-      // Retry queue
-      if (retryQueue.length > 0) {
-        await new Promise(r => setTimeout(r, 3000));
-        for (let i = 0; i < retryQueue.length; i += 20) {
-          const chunk = retryQueue.slice(i, i + 20).filter(Boolean);
-          if (!chunk.length) continue;
+        const [activeIds, pausedIds] = await Promise.all([
+          getAllItemIds(String(acc.meli_user_id), token, "active",  signal),
+          getAllItemIds(String(acc.meli_user_id), token, "paused",  signal),
+        ]);
+        const allIds = [...activeIds, ...pausedIds];
+        totalScanned += allIds.length;
+
+        const idsToCheck = allIds.filter(id => {
+          if (cacheMap.get(id) === false) { cacheHits++; return false; }
+          return true;
+        });
+
+        const total = idsToCheck.length;
+        await send({ type: "account_total", account: acc.nickname, total, totalScanned });
+
+        const newCacheRows: Array<{ item_id: string; keyword: string; contains_match: boolean; last_price: number | null; checked_at: string }> = [];
+
+        for (let i = 0; i < idsToCheck.length; i += 20) {
+          if (signal.aborted) { stopped = true; break; }
+
+          const chunk = idsToCheck.slice(i, i + 20);
           const data = await meliGetWithRetry(
-            `/items?ids=${chunk.join(",")}&attributes=id,title,price,currency_id,status,catalog_listing,catalog_product_id,deal_ids,variations`,
-            token, 2
+            `/items?ids=${chunk.join(",")}&attributes=id,title,price,catalog_listing,catalog_product_id,deal_ids,variations`,
+            token, signal
           );
-          if (!data) continue;
+          if (!data) { await new Promise(r => setTimeout(r, 500)); continue; }
+
           const list = (data as Array<{ code: number; body: ItemDetail }>) ?? [];
+
           for (const entry of list) {
+            if (signal.aborted) { stopped = true; break; }
             if (entry.code !== 200 || !entry.body) continue;
+
             const item = entry.body;
-            if (!normalize(item.title).includes(normKeyword)) {
-              newCacheRows.push({ item_id: item.id, keyword: normKeyword, contains_match: false, last_price: item.price });
+            processed++;
+            const normTitle = normalize(item.title);
+            const matches = normTitle.includes(normKeyword);
+
+            if (!matches) {
+              newCacheRows.push({ item_id: item.id, keyword: normKeyword, contains_match: false, last_price: item.price, checked_at: new Date().toISOString() });
+              await send({ type: "progress", current: processed, total, item_id: item.id, title: item.title, status: "no_match", account: acc.nickname });
               continue;
             }
-            newCacheRows.push({ item_id: item.id, keyword: normKeyword, contains_match: true, last_price: item.price });
-            const newPrice = computeNewPrice(item.price, adjustment_type, adjustment_value);
-            if (shouldUpdate(item.price, newPrice, adjustment_type) && !dry_run) {
-              const putRes = await meliPut(`/items/${item.id}`, token, { price: newPrice });
-              results.push(buildResult({
-                account: acc.nickname, item_id: item.id, title: item.title,
-                old_price: item.price, new_price: newPrice,
-                status: putRes.ok ? "updated" : "error",
-                reason: putRes.ok ? "Retry exitoso" : ((putRes.data as Record<string, unknown>)?.message as string ?? "").slice(0, 200),
-              }, adjustment_type, adjustment_value));
-            } else if (!shouldUpdate(item.price, newPrice, adjustment_type)) {
-              results.push(buildResult({
-                account: acc.nickname, item_id: item.id, title: item.title,
-                old_price: item.price, new_price: item.price,
-                status: "skipped", reason: "Precio ya cumple la condición",
-              }, adjustment_type, adjustment_value));
+
+            // Filtro excluyentes
+            const excludedBy = isExcluded(normTitle, excludeNorm);
+            if (excludedBy) {
+              newCacheRows.push({ item_id: item.id, keyword: normKeyword, contains_match: true, last_price: item.price, checked_at: new Date().toISOString() });
+              await send({ type: "progress", current: processed, total, item_id: item.id, title: item.title, status: "excluded", excluded_by: excludedBy, account: acc.nickname });
+              results.push({ account: acc.nickname, item_id: item.id, title: item.title, old_price: item.price, new_price: item.price, status: "excluded", reason: `Excluido por: "${excludedBy}"` });
+              continue;
             }
-            await new Promise(r => setTimeout(r, 250));
+
+            newCacheRows.push({ item_id: item.id, keyword: normKeyword, contains_match: true, last_price: item.price, checked_at: new Date().toISOString() });
+
+            const isCatalog = !!(item.catalog_listing || item.catalog_product_id);
+            const hasPromo  = Array.isArray(item.deal_ids) && item.deal_ids.length > 0;
+
+            // Calcular nuevo precio (soporta variaciones)
+            const baseNew = computeNewPrice(item.price, adjustment_type, adjustment_value);
+            const needsBase = shouldUpdate(item.price, baseNew, adjustment_type);
+
+            if (item.variations?.length) {
+              const updatedVars = item.variations.map(v => ({
+                ...v, price: computeNewPrice(v.price, adjustment_type, adjustment_value),
+              }));
+              const varsToUpdate = updatedVars.filter((v, idx) =>
+                shouldUpdate(item.variations![idx].price, v.price, adjustment_type)
+              );
+
+              if (!needsBase && varsToUpdate.length === 0) {
+                await send({ type: "progress", current: processed, total, item_id: item.id, title: item.title, status: "skipped", account: acc.nickname });
+                results.push({ account: acc.nickname, item_id: item.id, title: item.title, old_price: item.price, new_price: item.price, status: "skipped", reason: "Ya cumple la condición" });
+                continue;
+              }
+
+              await send({ type: "progress", current: processed, total, item_id: item.id, title: item.title, status: dry_run ? "would_update" : "updating", old_price: item.price, new_price: baseNew, account: acc.nickname });
+
+              if (!dry_run) {
+                const putBody: Record<string, unknown> = { variations: updatedVars.map(v => ({ id: v.id, price: v.price })) };
+                if (needsBase) putBody.price = baseNew;
+                const putRes = await meliPut(`/items/${item.id}`, token, putBody, signal);
+                const status = putRes.ok ? (isCatalog ? "catalog_warning" : "updated") : (hasPromo ? "promo_blocked" : "error");
+                results.push({ account: acc.nickname, item_id: item.id, title: item.title, old_price: item.price, new_price: baseNew, status, reason: putRes.ok ? (isCatalog ? "Verificar Buy Box" : undefined) : (putRes.data as Record<string,unknown>)?.message, variations_updated: varsToUpdate.length });
+              } else {
+                results.push({ account: acc.nickname, item_id: item.id, title: item.title, old_price: item.price, new_price: baseNew, status: isCatalog ? "catalog_warning" : "updated", variations_updated: varsToUpdate.length });
+              }
+            } else {
+              if (!needsBase) {
+                await send({ type: "progress", current: processed, total, item_id: item.id, title: item.title, status: "skipped", account: acc.nickname });
+                results.push({ account: acc.nickname, item_id: item.id, title: item.title, old_price: item.price, new_price: item.price, status: "skipped", reason: "Ya cumple la condición" });
+                continue;
+              }
+
+              await send({ type: "progress", current: processed, total, item_id: item.id, title: item.title, status: dry_run ? "would_update" : "updating", old_price: item.price, new_price: baseNew, account: acc.nickname });
+
+              if (!dry_run) {
+                const putRes = await meliPut(`/items/${item.id}`, token, { price: baseNew }, signal);
+                const status = putRes.ok ? (isCatalog ? "catalog_warning" : "updated") : (hasPromo ? "promo_blocked" : "error");
+                results.push({ account: acc.nickname, item_id: item.id, title: item.title, old_price: item.price, new_price: baseNew, status, reason: putRes.ok ? (isCatalog ? "Verificar Buy Box" : undefined) : (putRes.data as Record<string,unknown>)?.message });
+              } else {
+                results.push({ account: acc.nickname, item_id: item.id, title: item.title, old_price: item.price, new_price: baseNew, status: isCatalog ? "catalog_warning" : "updated" });
+              }
+            }
+
+            await new Promise(r => setTimeout(r, 220));
           }
+
+          // Guardar caché en batch
+          if (newCacheRows.length >= 100) {
+            await supabase.from("items_keyword_cache").upsert(newCacheRows, { onConflict: "item_id,keyword" });
+            newCacheRows.length = 0;
+          }
+          await new Promise(r => setTimeout(r, 200));
         }
+
+        if (newCacheRows.length > 0) {
+          await supabase.from("items_keyword_cache").upsert(newCacheRows, { onConflict: "item_id,keyword" });
+        }
+
+        if (stopped) break;
       }
+    } catch (e) {
+      await send({ type: "error", message: (e as Error).message });
     }
 
-    if (newCacheRows.length > 0) {
-      for (let i = 0; i < newCacheRows.length; i += 500) {
-        const batch = newCacheRows.slice(i, i + 500);
-        await supabase.from("items_keyword_cache").upsert(
-          batch.map(r => ({ ...r, checked_at: new Date().toISOString() })),
-          { onConflict: "item_id,keyword" }
-        );
-      }
-    }
+    const updated  = (results as Array<{ status: string }>).filter(r => r.status === "updated" || r.status === "catalog_warning").length;
+    const skipped  = (results as Array<{ status: string }>).filter(r => r.status === "skipped").length;
+    const excluded = (results as Array<{ status: string }>).filter(r => r.status === "excluded").length;
+    const errors   = (results as Array<{ status: string }>).filter(r => r.status === "error" || r.status === "promo_blocked").length;
 
-    const updated  = results.filter(r => r.status === "updated" || r.status === "catalog_warning").length;
-    const skipped  = results.filter(r => r.status === "skipped").length;
-    const errors   = results.filter(r => r.status === "error" || r.status === "promo_blocked").length;
-
-    const typeLabels: Record<AdjustmentType, string> = {
-      percentage:  `+${adjustment_value}%`,
-      fixed_floor: `Precio piso $${adjustment_value}`,
-      fixed_add:   `+$${adjustment_value} fijo`,
-    };
-
-    return NextResponse.json({
+    await send({
+      type: stopped ? "stopped" : "done",
       keyword,
       adjustment_type,
       adjustment_value,
-      adjustment_label: typeLabels[adjustment_type],
       dry_run,
       results,
       summary: {
         total_items_scanned: totalScanned,
-        cache_hits_skipped:  cacheHits,
-        items_checked:       totalScanned - cacheHits,
-        matched:             results.length,
-        updated, skipped, errors,
+        cache_hits_skipped: cacheHits,
+        matched: results.length,
+        updated, skipped, excluded, errors,
+        stopped,
       },
     });
-  } catch (e) {
-    return NextResponse.json({ error: (e as Error).message }, { status: 500 });
-  }
+
+    await writer.close();
+  })();
+
+  return new Response(readable, {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache, no-transform",
+      "X-Accel-Buffering": "no",
+      "Connection": "keep-alive",
+    },
+  });
 }
