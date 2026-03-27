@@ -217,6 +217,13 @@ function TypeAccordion({ type, items, selected, onToggle, onPrint, downloading, 
   const selIn    = selected ? blockIds.filter(id => selected.has(id)) : [];
   const allSel   = selIn.length === blockIds.length;
 
+  // Día de despacho del primer ítem del grupo
+  const firstDispatch = items[0]?.dispatch_date;
+  const dispatchDay = firstDispatch
+    ? new Date(firstDispatch).toLocaleDateString("es-AR", { weekday: "long" })
+        .replace(/^\w/, c => c.toUpperCase())
+    : null;
+
   const toggleAll = () => {
     if (!onToggle) return;
     allSel ? blockIds.forEach(onToggle) : blockIds.filter(id => !selected?.has(id)).forEach(onToggle);
@@ -229,7 +236,13 @@ function TypeAccordion({ type, items, selected, onToggle, onPrint, downloading, 
         style={{ borderBottom: open ? `1px solid ${cfg.color}20` : "none" }}
         onClick={() => setOpen(v => !v)}>
         <span style={{ color: cfg.color }}>{cfg.icon}</span>
-        <span className="font-black text-sm flex-1" style={{ color: cfg.color }}>{cfg.label}</span>
+        <span className="font-black text-sm" style={{ color: cfg.color }}>{cfg.label}</span>
+        {dispatchDay && (
+          <span className="text-xs font-semibold" style={{ color: cfg.color + "bb" }}>
+            | {dispatchDay}
+          </span>
+        )}
+        <span className="flex-1" />
         <span className="text-xs font-black px-2 py-0.5 rounded-full mr-2"
           style={{ background: `${cfg.color}20`, color: cfg.color }}>{items.length}</span>
         {open
