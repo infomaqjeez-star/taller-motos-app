@@ -11,12 +11,18 @@ type LogisticType = "flex" | "turbo" | "correo" | "full";
 interface ShipmentInfo {
   shipment_id: number;
   order_id: number | null;
+  order_date: string | null;
   account: string;
   meli_user_id: string;
   type: LogisticType;
   buyer: string;
+  buyer_nickname: string | null;
   title: string;
+  quantity: number;
+  unit_price: number | null;
+  seller_sku: string | null;
   status: string;
+  status_label: string | null;
   urgency: UrgencyType;
   delivery_date: string | null;
   thumbnail: string | null;
@@ -32,6 +38,18 @@ function classifyUrgency(deliveryDate: string | null): UrgencyType {
   if (delivery.getTime() < today.getTime()) return "delayed";
   if (delivery.getTime() === today.getTime()) return "today";
   return "upcoming";
+}
+
+function statusLabel(status: string, type: LogisticType): string {
+  const map: Record<string, string> = {
+    ready_to_ship: type === "full" ? "Procesando en la bodega" : "Listo para despachar",
+    handling:      type === "full" ? "Procesando en la bodega" : "Preparando envío",
+    shipped:       "En camino",
+    delivered:     "Entregado",
+    not_delivered: "No entregado",
+    cancelled:     "Cancelado",
+  };
+  return map[status] ?? status;
 }
 
 function classifyType(logisticType: string, tags: string[]): LogisticType {
@@ -117,29 +135,42 @@ export async function GET(req: Request) {
 
           const logistic = (ship.logistic_type as string | undefined) ?? "";
           const tags = (ship.tags as string[] | undefined) ?? [];
-          const type = classifyType(logistic, tags);
 
-          const items = (order.order_items as Array<{ item?: { id?: string; title?: string } }> | undefined) ?? [];
+          const items = (order.order_items as Array<{
+            item?: { id?: string; title?: string; seller_sku?: string };
+            quantity?: number;
+            unit_price?: number;
+          }> | undefined) ?? [];
           const buyer = order.buyer as Record<string, unknown> | undefined;
+          const firstItem = items[0];
 
           let deliveryDate: string | null = null;
           const shippingOpt = ship.shipping_option as Record<string, unknown> | undefined;
           const deliveryLimit = shippingOpt?.estimated_delivery_limit as Record<string, unknown> | undefined;
           if (deliveryLimit?.date) deliveryDate = deliveryLimit.date as string;
 
+          const rawStatus = (ship.status as string | undefined) ?? "ready_to_ship";
+          const type = classifyType(logistic, tags);
+
           allShipments.push({
             shipment_id: sid,
-            order_id: (order.id as number | undefined) ?? null,
-            account: acc.nickname,
+            order_id:     (order.id as number | undefined) ?? null,
+            order_date:   (order.date_created as string | undefined) ?? null,
+            account:      acc.nickname,
             meli_user_id: String(acc.meli_user_id),
             type,
-            buyer: `${(buyer?.first_name as string | undefined) ?? ""} ${(buyer?.last_name as string | undefined) ?? ""}`.trim(),
-            title: items[0]?.item?.title ?? "Producto",
-            status: (ship.status as string | undefined) ?? "ready_to_ship",
-            urgency: classifyUrgency(deliveryDate),
-            delivery_date: deliveryDate,
-            thumbnail: null,
-            item_id: items[0]?.item?.id ?? null,
+            buyer:          `${(buyer?.first_name as string | undefined) ?? ""} ${(buyer?.last_name as string | undefined) ?? ""}`.trim(),
+            buyer_nickname: (buyer?.nickname as string | undefined) ?? null,
+            title:          firstItem?.item?.title ?? "Producto",
+            quantity:       firstItem?.quantity ?? 1,
+            unit_price:     firstItem?.unit_price ?? null,
+            seller_sku:     firstItem?.item?.seller_sku ?? null,
+            status:         rawStatus,
+            status_label:   statusLabel(rawStatus, type),
+            urgency:        classifyUrgency(deliveryDate),
+            delivery_date:  deliveryDate,
+            thumbnail:      null,
+            item_id:        firstItem?.item?.id ?? null,
           });
         }
       } catch { /* skip account */ }
