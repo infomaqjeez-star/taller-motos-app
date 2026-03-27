@@ -27,6 +27,8 @@ function toOrder(r: Record<string, unknown>): WorkOrder {
     linkedParts:        (r.linked_parts as string[]) ?? [],
     internalNotes:      r.internal_notes as string,
     photoUrls:          (r.photo_urls as string[]) ?? [],
+    extraMachines:      (r.extra_machines as WorkOrder["extraMachines"]) ?? [],
+    machineTypeOther:   r.machine_type_other as string | undefined,
   };
 }
 
@@ -50,6 +52,8 @@ function fromOrder(o: WorkOrder) {
     linked_parts:        o.linkedParts,
     internal_notes:      o.internalNotes,
     photo_urls:          o.photoUrls ?? [],
+    extra_machines:      o.extraMachines ?? [],
+    machine_type_other:  o.machineTypeOther ?? null,
   };
 }
 
@@ -154,6 +158,8 @@ export const ordersDb = {
     if (updates.deliveryDate       !== undefined) mapped.delivery_date       = updates.deliveryDate;
     if (updates.linkedParts        !== undefined) mapped.linked_parts        = updates.linkedParts;
     if (updates.internalNotes      !== undefined) mapped.internal_notes      = updates.internalNotes;
+    if (updates.extraMachines      !== undefined) mapped.extra_machines      = updates.extraMachines;
+    if (updates.machineTypeOther   !== undefined) mapped.machine_type_other  = updates.machineTypeOther;
     const { error } = await supabase.from("reparaciones").update(mapped).eq("id", id);
     if (error) throw error;
   },
