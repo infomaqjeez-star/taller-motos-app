@@ -219,12 +219,11 @@ export async function POST(req: Request) {
           })
           .filter(a => a.value_id || a.value_name || a.value_struct);
 
-        // Verificar que todos los atributos requeridos están cubiertos
+        // Verificar atributos requeridos y rellenar faltantes con "No aplica"
         const coveredIds = new Set(safeAttrs.map(a => String(a.id)));
         const missingRequired = Array.from(requiredAttrIds).filter(id => !coveredIds.has(id));
-        if (missingRequired.length) {
-          results.push({ item_id: itemId, title, status: "error", reason: `Atributos requeridos faltantes: ${missingRequired.join(", ")}` });
-          continue;
+        for (const missingId of missingRequired) {
+          safeAttrs.push({ id: missingId, value_name: "Does not apply" });
         }
 
         if (safeAttrs.length) newItem.attributes = safeAttrs;
