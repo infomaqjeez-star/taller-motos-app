@@ -13,12 +13,18 @@ type MainTab = "despachar" | "proximos" | "impresas" | "full";
 interface ShipmentInfo {
   shipment_id: number;
   order_id: number | null;
+  order_date: string | null;
   account: string;
   meli_user_id: string;
   type: LogisticType;
   buyer: string;
+  buyer_nickname: string | null;
   title: string;
+  quantity: number;
+  unit_price: number | null;
+  seller_sku: string | null;
   status: string;
+  status_label: string | null;
   urgency: UrgencyType;
   delivery_date: string | null;
   thumbnail: string | null;
@@ -66,58 +72,114 @@ function UrgencyBadge({ urgency }: { urgency: UrgencyType }) {
   return null;
 }
 
-/* ── Fila de envío ── */
+/* ── Fila de envío estilo MeLi Ventas ── */
 function ShipmentRow({ s, selected, onToggle }: {
   s: ShipmentInfo; selected?: boolean; onToggle?: (id: number) => void;
 }) {
+  const borderColor =
+    s.urgency === "delayed" ? "#ef4444" :
+    s.urgency === "today"   ? "#FF9800" :
+    "rgba(255,255,255,0.07)";
+
+  const formattedDate = s.order_date
+    ? new Date(s.order_date).toLocaleString("es-AR", { day:"2-digit", month:"short", hour:"2-digit", minute:"2-digit" })
+    : null;
+
+  const deliveryStr = s.delivery_date
+    ? new Date(s.delivery_date).toLocaleDateString("es-AR", { weekday:"long", day:"numeric", month:"long" })
+    : null;
+
   return (
     <div
       onClick={() => onToggle?.(s.shipment_id)}
-      className={`flex items-center gap-3 px-3 py-2.5 rounded-xl mb-1 transition-all ${onToggle ? "cursor-pointer" : ""}`}
+      className={`rounded-2xl mb-2 overflow-hidden transition-all ${onToggle ? "cursor-pointer" : ""}`}
       style={{
-        background: selected ? "#FFE60008" : "rgba(255,255,255,0.02)",
-        border: selected ? "1px solid #FFE60030" :
-          s.urgency === "delayed" ? "1px solid #ef444430" :
-          s.urgency === "today"   ? "1px solid #FF980030" :
-          "1px solid rgba(255,255,255,0.04)",
+        background: selected ? "rgba(255,230,0,0.05)" : "#1A1A1A",
+        border: `1px solid ${selected ? "#FFE60040" : borderColor}`,
       }}>
-      {onToggle && (
-        <div className="w-5 h-5 rounded-md flex-shrink-0 flex items-center justify-center border-2 transition-all"
-          style={{
-            borderColor: selected ? "#FFE600" : "#374151",
-            background: selected ? "#FFE600" : "transparent",
-          }}>
-          {selected && <CheckCircle2 className="w-3.5 h-3.5 text-black" />}
-        </div>
-      )}
-      <div className="w-11 h-11 rounded-lg flex-shrink-0 overflow-hidden"
-        style={{ background: "#2A2A2A", border: "1px solid rgba(255,255,255,0.07)" }}>
-        {s.thumbnail
-          // eslint-disable-next-line @next/next/no-img-element
-          ? <img src={s.thumbnail} alt={s.title} className="w-full h-full object-cover" />
-          : <div className="w-full h-full flex items-center justify-center">
-              <Package className="w-5 h-5" style={{ color: "#4B5563" }} />
-            </div>
-        }
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
-          <UrgencyBadge urgency={s.urgency} />
-          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-            style={{ background: "#FFE60018", color: "#FFE600" }}>
-            {s.account}
+
+      {/* Fila superior: checkbox + orden + fecha + tipo + comprador */}
+      <div className="flex items-center gap-2 px-3 pt-2.5 pb-1.5 flex-wrap"
+        style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+        {onToggle && (
+          <div className="w-4 h-4 rounded flex-shrink-0 flex items-center justify-center border-2 transition-all"
+            style={{ borderColor: selected ? "#FFE600" : "#374151", background: selected ? "#FFE600" : "transparent" }}>
+            {selected && <CheckCircle2 className="w-3 h-3 text-black" />}
+          </div>
+        )}
+        {/* Cuenta badge */}
+        <span className="text-[10px] font-black px-2 py-0.5 rounded-full flex-shrink-0"
+          style={{ background: "#FFE60020", color: "#FFE600" }}>
+          {s.account}
+        </span>
+        {/* Número de venta */}
+        {s.order_id && (
+          <span className="text-[10px] font-bold flex-shrink-0" style={{ color: "#9CA3AF" }}>
+            #{s.order_id}
           </span>
-        </div>
-        <p className="text-xs text-white font-medium line-clamp-1">{s.title}</p>
-        <p className="text-[10px]" style={{ color: "#6B7280" }}>
-          {s.buyer}
-          {s.order_id && (
-            <span className="ml-1 font-bold" style={{ color: "#FFE600" }}>
-              · Venta #{s.order_id}
-            </span>
+        )}
+        {/* Fecha */}
+        {formattedDate && (
+          <span className="text-[10px] flex-shrink-0" style={{ color: "#6B7280" }}>
+            {formattedDate} hs
+          </span>
+        )}
+        {/* Type badge */}
+        <TypeBadge type={s.type} />
+        {/* Urgency badge */}
+        <UrgencyBadge urgency={s.urgency} />
+        {/* Comprador — empuja a la derecha */}
+        <div className="ml-auto text-right flex-shrink-0">
+          <p className="text-[10px] font-bold text-white leading-tight">{s.buyer}</p>
+          {s.buyer_nickname && (
+            <p className="text-[9px]" style={{ color: "#6B7280" }}>{s.buyer_nickname}</p>
           )}
-          {s.delivery_date && ` · ${new Date(s.delivery_date).toLocaleDateString("es-AR")}`}
-        </p>
+        </div>
+      </div>
+
+      {/* Fila inferior: estado + imagen + producto + precio + cantidad + SKU */}
+      <div className="px-3 py-2">
+        {/* Estado del envío */}
+        <div className="mb-1.5">
+          <p className="text-[11px] font-black text-white">{s.status_label ?? s.status}</p>
+          {deliveryStr && (
+            <p className="text-[10px]" style={{ color: "#9CA3AF" }}>
+              Llega el {deliveryStr}
+            </p>
+          )}
+        </div>
+
+        {/* Producto */}
+        <div className="flex items-center gap-2.5">
+          <div className="w-10 h-10 rounded-lg flex-shrink-0 overflow-hidden"
+            style={{ background: "#2A2A2A", border: "1px solid rgba(255,255,255,0.07)" }}>
+            {s.thumbnail
+              // eslint-disable-next-line @next/next/no-img-element
+              ? <img src={s.thumbnail} alt={s.title} className="w-full h-full object-cover" />
+              : <div className="w-full h-full flex items-center justify-center">
+                  <Package className="w-4 h-4" style={{ color: "#4B5563" }} />
+                </div>
+            }
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs text-white font-medium line-clamp-2 leading-tight">{s.title}</p>
+            <div className="flex items-center gap-3 mt-0.5 flex-wrap">
+              {s.unit_price != null && (
+                <span className="text-[11px] font-black" style={{ color: "#39FF14" }}>
+                  ${s.unit_price.toLocaleString("es-AR")}
+                </span>
+              )}
+              <span className="text-[10px]" style={{ color: "#6B7280" }}>
+                {s.quantity} unidad{s.quantity > 1 ? "es" : ""}
+              </span>
+              {s.seller_sku && (
+                <span className="text-[10px]" style={{ color: "#6B7280" }}>
+                  SKU: {s.seller_sku}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
