@@ -348,6 +348,7 @@ function AppJeezInner() {
     { label: "Etiquetas",       icon: <Tag className="w-4 h-4" />,             href: "/appjeez/etiquetas",     active: false },
     { label: "Publicaciones",   icon: <Package className="w-4 h-4" />,         href: "/appjeez/publicaciones", active: false },
     { label: "Sincronizar",     icon: <Copy className="w-4 h-4" />,            href: "/appjeez/sincronizar",   active: false },
+    { label: "Precios",         icon: <DollarSign className="w-4 h-4" />,     href: "/appjeez/precios",       active: false },
     { label: "Órdenes",         icon: <ShoppingCart className="w-4 h-4" />,    href: "/appjeez/ordenes",       active: false },
     { label: "Cuentas MeLi",    icon: <Store className="w-4 h-4" />,           href: "/configuracion/meli",    active: false },
   ];
