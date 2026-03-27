@@ -40,7 +40,7 @@ async function meliPost(path: string, token: string, body: unknown) {
       method:  "POST",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       body:    JSON.stringify(body),
-      signal:  AbortSignal.timeout(15000),
+      signal:  AbortSignal.timeout(20000),
     });
     const data = await res.json();
     return { ok: res.ok, status: res.status, data };
@@ -50,12 +50,11 @@ async function meliPost(path: string, token: string, body: unknown) {
 }
 
 interface CloneRequest {
-  origin_id: string;   // UUID cuenta origen en Supabase
-  dest_id:   string;   // UUID cuenta destino en Supabase
-  item_ids:  string[]; // IDs de publicaciones a clonar (ej: ["MLA123","MLA456"])
+  origin_id: string;
+  dest_id:   string;
+  item_ids:  string[];
 }
 
-// POST /api/meli-sync/clone
 export async function POST(req: Request) {
   let body: CloneRequest;
   try { body = await req.json(); }
@@ -86,7 +85,7 @@ export async function POST(req: Request) {
       decrypt(dest.access_token_enc, ENC_KEY),
     ]);
 
-    // Obtener títulos existentes en destino (anti-duplicado)
+    // Títulos existentes en destino para anti-duplicado
     const [activeData, pausedData] = await Promise.all([
       meliGet(`/users/${dest.meli_user_id}/items/search?status=active&limit=100`, destToken),
       meliGet(`/users/${dest.meli_user_id}/items/search?status=paused&limit=100`, destToken),
@@ -96,14 +95,12 @@ export async function POST(req: Request) {
       ...((pausedData?.results ?? []) as string[]),
     ];
     const destTitlesNorm = new Set<string>();
-    if (destIds.length) {
-      for (let i = 0; i < destIds.length; i += 20) {
-        const chunk = destIds.slice(i, i + 20);
-        const data = await meliGet(`/items?ids=${chunk.join(",")}&attributes=title`, destToken);
-        const list = (data ?? []) as Array<{ code: number; body: { title: string } }>;
-        for (const e of list) {
-          if (e.code === 200) destTitlesNorm.add(e.body.title.toLowerCase().trim());
-        }
+    for (let i = 0; i < destIds.length; i += 20) {
+      const chunk = destIds.slice(i, i + 20);
+      const data  = await meliGet(`/items?ids=${chunk.join(",")}&attributes=title`, destToken);
+      const list  = (data ?? []) as Array<{ code: number; body: { title: string } }>;
+      for (const e of list) {
+        if (e.code === 200) destTitlesNorm.add(e.body.title.toLowerCase().trim());
       }
     }
 
@@ -115,75 +112,86 @@ export async function POST(req: Request) {
       reason?: string;
     }> = [];
 
-    // Procesar en serie con rate limiting (evitar ban de MeLi)
-    for (const itemId of item_ids.slice(0, 100)) { // máx 100 por request
+    for (const itemId of item_ids.slice(0, 100)) {
       try {
-        // Obtener detalles completos del item origen
-        const res = await fetch(`https://api.mercadolibre.com/items/${itemId}`, {
+        // Obtener item completo desde origen
+        const itemRes = await fetch(`https://api.mercadolibre.com/items/${itemId}`, {
           headers: { Authorization: `Bearer ${originToken}` },
-          signal:  AbortSignal.timeout(10000),
+          signal:  AbortSignal.timeout(12000),
         });
-        if (!res.ok) {
-          results.push({ item_id: itemId, title: itemId, status: "error", reason: `HTTP ${res.status}` });
+        if (!itemRes.ok) {
+          results.push({ item_id: itemId, title: itemId, status: "error", reason: `HTTP ${itemRes.status} al obtener item` });
           continue;
         }
-        const item = await res.json() as Record<string, unknown>;
+        const item  = await itemRes.json() as Record<string, unknown>;
         const title = (item.title as string) ?? "";
 
-        // Verificar duplicado por título
+        // Verificar duplicado
         if (destTitlesNorm.has(title.toLowerCase().trim())) {
           results.push({ item_id: itemId, title, status: "skipped_duplicate", reason: "Título ya existe en destino" });
           continue;
         }
 
-        // Obtener descripción
-        const descRes = await meliGet(`/items/${itemId}/description`, originToken);
-        const description = (descRes?.plain_text as string) ?? "";
+        // ---- Construir payload mínimo y seguro ----
+        // MeLi rechaza muchos campos en POST: description va separada,
+        // no incluir: id, seller_id, status, date_*, health, warnings, etc.
 
-        // Construir payload de la nueva publicación
+        const pictures = (item.pictures as Array<{ id?: string; url?: string }> | undefined) ?? [];
+        const picturePayload = pictures.slice(0, 12).map(p => {
+          // Preferir picture ID (ya está en CDN de MeLi, más confiable)
+          if (p.id) return { id: p.id };
+          const url = (p.url ?? "").replace("http://", "https://");
+          return { source: url };
+        }).filter(p => ("id" in p && p.id) || ("source" in p && p.source));
+
         const newItem: Record<string, unknown> = {
-          title:            item.title,
-          category_id:      item.category_id,
-          price:            item.price,
-          currency_id:      item.currency_id ?? "ARS",
-          available_quantity: item.available_quantity ?? 1,
-          buying_mode:      item.buying_mode ?? "buy_it_now",
-          condition:        item.condition ?? "new",
-          listing_type_id:  item.listing_type_id ?? "gold_special",
-          description:      { plain_text: description },
+          title:              item.title,
+          category_id:        item.category_id,
+          price:              item.price,
+          currency_id:        item.currency_id ?? "ARS",
+          available_quantity: (item.available_quantity as number) > 0 ? item.available_quantity : 1,
+          buying_mode:        "buy_it_now",
+          condition:          item.condition ?? "new",
+          listing_type_id:    item.listing_type_id ?? "gold_special",
         };
 
-        // Incluir fotos (hasta 12)
-        const pictures = (item.pictures as Array<{ url: string }> | undefined) ?? [];
-        if (pictures.length) {
-          newItem.pictures = pictures.slice(0, 12).map(p => ({
-            source: (p.url as string).replace("http://", "https://"),
-          }));
-        }
+        if (picturePayload.length) newItem.pictures = picturePayload;
 
-        // Incluir atributos si existen
-        if (Array.isArray(item.attributes) && (item.attributes as unknown[]).length) {
-          newItem.attributes = item.attributes;
-        }
+        // Solo incluir atributos simples (evitar atributos con objetos complejos que rompen el POST)
+        const rawAttrs = (item.attributes as Array<Record<string, unknown>> | undefined) ?? [];
+        const safeAttrs = rawAttrs.filter(a =>
+          a.id && a.value_name &&
+          typeof a.value_name === "string" &&
+          !["SELLER_SKU","ALPHANUMERIC_MODEL","ITEM_CONDITION"].includes(String(a.id))
+        ).map(a => ({ id: a.id, value_name: a.value_name }));
+        if (safeAttrs.length) newItem.attributes = safeAttrs;
 
-        // Incluir variantes si existen
-        if (Array.isArray(item.variations) && (item.variations as unknown[]).length) {
-          newItem.variations = item.variations;
-        }
-
-        // Publicar en cuenta destino
+        // Publicar en destino
         const postRes = await meliPost("/items", destToken, newItem);
 
         if (postRes.ok) {
           const newId = (postRes.data as Record<string, unknown>)?.id as string;
-          destTitlesNorm.add(title.toLowerCase().trim()); // evitar duplicado en la misma tanda
+          destTitlesNorm.add(title.toLowerCase().trim());
+
+          // Agregar descripción en llamada separada (MeLi lo requiere así)
+          const descData = await meliGet(`/items/${itemId}/description`, originToken);
+          const plainText = (descData?.plain_text as string | undefined) ?? "";
+          if (plainText && newId) {
+            await meliPost(`/items/${newId}/description`, destToken, { plain_text: plainText });
+          }
+
           results.push({ item_id: itemId, title, status: "cloned", new_id: newId });
         } else {
-          const errMsg = (postRes.data as Record<string, unknown>)?.message as string | undefined;
-          results.push({ item_id: itemId, title, status: "error", reason: errMsg ?? `HTTP ${postRes.status}` });
+          const d = postRes.data as Record<string, unknown>;
+          // Extraer mensaje de error útil de MeLi
+          const cause = (d?.cause as Array<{ code: number; description: string }> | undefined)?.[0];
+          const reason = cause
+            ? `[${cause.code}] ${cause.description}`
+            : (d?.message as string | undefined) ?? `HTTP ${postRes.status}`;
+          results.push({ item_id: itemId, title, status: "error", reason });
         }
 
-        // Rate limit: 300 req/min → ~200ms entre publicaciones
+        // Rate limit: ~250ms entre items
         await new Promise(r => setTimeout(r, 250));
 
       } catch (e) {
@@ -191,9 +199,9 @@ export async function POST(req: Request) {
       }
     }
 
-    const cloned   = results.filter(r => r.status === "cloned").length;
-    const skipped  = results.filter(r => r.status === "skipped_duplicate").length;
-    const errors   = results.filter(r => r.status === "error").length;
+    const cloned  = results.filter(r => r.status === "cloned").length;
+    const skipped = results.filter(r => r.status === "skipped_duplicate").length;
+    const errors  = results.filter(r => r.status === "error").length;
 
     return NextResponse.json({
       origin:  origin.nickname,
