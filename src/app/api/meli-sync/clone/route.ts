@@ -136,13 +136,11 @@ export async function POST(req: Request) {
         // MeLi rechaza muchos campos en POST: description va separada,
         // no incluir: id, seller_id, status, date_*, health, warnings, etc.
 
-        const pictures = (item.pictures as Array<{ id?: string; url?: string }> | undefined) ?? [];
+        const pictures = (item.pictures as Array<{ id?: string; url?: string; secure_url?: string }> | undefined) ?? [];
         const picturePayload = pictures.slice(0, 12).map(p => {
-          // Preferir picture ID (ya está en CDN de MeLi, más confiable)
-          if (p.id) return { id: p.id };
-          const url = (p.url ?? "").replace("http://", "https://");
+          const url = (p.secure_url ?? p.url ?? "").replace("http://", "https://");
           return { source: url };
-        }).filter(p => ("id" in p && p.id) || ("source" in p && p.source));
+        }).filter(p => p.source);
 
         const newItem: Record<string, unknown> = {
           title:              item.title,
@@ -206,6 +204,7 @@ export async function POST(req: Request) {
             const attr: Record<string, unknown> = { id: a.id };
             if (a.value_id)   attr.value_id   = a.value_id;
             if (a.value_name) attr.value_name = a.value_name;
+            if (a.value_struct) attr.value_struct = a.value_struct;
             // Para atributos con múltiples valores
             if (Array.isArray(a.values) && (a.values as unknown[]).length) {
               attr.value_id   = (a.values as Array<{ id?: string; name?: string }>)[0]?.id   ?? a.value_id;
@@ -213,7 +212,7 @@ export async function POST(req: Request) {
             }
             return attr;
           })
-          .filter(a => a.value_id || a.value_name);
+          .filter(a => a.value_id || a.value_name || a.value_struct);
 
         // Verificar que todos los atributos requeridos están cubiertos
         const coveredIds = new Set(safeAttrs.map(a => String(a.id)));
@@ -252,8 +251,12 @@ export async function POST(req: Request) {
             }
             return String(c);
           }).join(" | ");
-          const reason = causeMsg
-            || `${d?.message ?? d?.error ?? "error"} | payload_keys:${Object.keys(newItem).join(",")} | meli_resp:${JSON.stringify(d).slice(0, 400)}`;
+          const reason = [
+            causeMsg,
+            d?.message as string | undefined,
+            `keys:[${Object.keys(newItem).join(",")}]`,
+            `resp:${JSON.stringify(d).slice(0, 400)}`
+          ].filter(Boolean).join(" | ");
           results.push({ item_id: itemId, title, status: "error", reason });
         }
 
