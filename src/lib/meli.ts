@@ -34,7 +34,7 @@ export async function encrypt(text: string, pass: string = ENC_KEY): Promise<str
   const combined = new Uint8Array(iv.byteLength + ct.byteLength);
   combined.set(iv, 0);
   combined.set(new Uint8Array(ct), iv.byteLength);
-  return btoa(String.fromCharCode(...combined));
+  return btoa(String.fromCharCode.apply(null, Array.from(combined)));
 }
 
 interface RefreshResult {
