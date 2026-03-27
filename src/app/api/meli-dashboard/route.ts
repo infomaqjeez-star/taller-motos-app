@@ -43,28 +43,25 @@ async function processAccount(acc: {
   id: string; nickname: string; meli_user_id: string; access_token_enc: string;
 }) {
   try {
-    const token   = await decrypt(acc.access_token_enc, ENC_KEY);
-    const uid     = acc.meli_user_id;
+    const token = await decrypt(acc.access_token_enc, ENC_KEY);
+    const uid   = acc.meli_user_id;
 
-    // Fecha de hoy en formato Argentina (UTC-3)
-    const now = new Date();
-    const todayStr = now.toISOString().slice(0, 10); // YYYY-MM-DD
-    const todayFrom = `${todayStr}T00:00:00.000-03:00`;
-
-    const [userData, ordersToday, shipments, itemsSearch, questions] = await Promise.all([
+    const [userData, ordersRes, shipments, itemsSearch, questions] = await Promise.all([
       meliGet(`/users/${uid}`, token),
-      meliGet(`/orders/search?seller=${uid}&order.status=paid&order.date_created.from=${encodeURIComponent(todayFrom)}&limit=50`, token),
+      meliGet(`/orders/search?seller=${uid}&order.status=paid&sort=date_desc&limit=50`, token),
       meliGet(`/shipments/search?seller_id=${uid}&status=ready_to_ship&limit=1`, token),
       meliGet(`/users/${uid}/items/search?limit=1`, token),
       meliGet(`/questions/search?seller_id=${uid}&status=UNANSWERED&limit=1`, token),
     ]);
 
+    // Filtrar órdenes de hoy en horario Argentina (UTC-3)
+    const nowArg = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Argentina/Buenos_Aires" }));
+    const todayArgStr = `${nowArg.getFullYear()}-${String(nowArg.getMonth()+1).padStart(2,"0")}-${String(nowArg.getDate()).padStart(2,"0")}`;
+    const allOrders: { total_amount?: number; date_created?: string }[] = ordersRes?.results ?? [];
+    const todayOrders = allOrders.filter(o => (o.date_created ?? "").startsWith(todayArgStr) || (o.date_created ?? "").slice(0,10) === todayArgStr);
+    const totalAmount = todayOrders.reduce((s, o) => s + (o.total_amount ?? 0), 0);
+    const todayOrdersCount = todayOrders.length;
     const rep = userData?.seller_reputation ?? null;
-    const orders = ordersToday?.results ?? [];
-    const totalAmount = orders.reduce(
-      (s: number, o: { total_amount?: number }) => s + (o.total_amount ?? 0), 0
-    );
-    const todayOrdersCount = ordersToday?.paging?.total ?? orders.length;
 
     return {
       account:              acc.nickname,
