@@ -210,8 +210,16 @@ export async function POST(req: Request) {
           results.push({ item_id: itemId, title, status: "cloned", new_id: newId });
         } else {
           const d = postRes.data as Record<string, unknown>;
-          const causes = (d?.cause as Array<{ code?: number; description?: string }> | undefined) ?? [];
-          const causeMsg = causes.map(c => `[${c.code}] ${c.description}`).filter(c => c !== "[undefined] undefined").join(" | ");
+          // MeLi puede devolver cause como array de strings o de objetos
+          const rawCauses = (d?.cause ?? []) as unknown[];
+          const causeMsg = rawCauses.map(c => {
+            if (typeof c === "string") return c;
+            if (typeof c === "object" && c !== null) {
+              const o = c as Record<string, unknown>;
+              return o.description ?? o.code ?? JSON.stringify(o);
+            }
+            return String(c);
+          }).join(" | ");
           const reason = causeMsg
             || (d?.message as string | undefined)
             || (d?.error as string | undefined)
