@@ -153,6 +153,87 @@ function SyncInner() {
   }, [originId, destId]);
 
   const [openAlready, setOpenAlready] = useState(false);
+  const [autoSyncing, setAutoSyncing] = useState(false);
+  const [autoLog, setAutoLog] = useState<string[]>([]);
+
+  const handleAutoSync = useCallback(async () => {
+    if (accounts.length < 2) return;
+    setAutoSyncing(true);
+    setAutoLog([]);
+    setCloneResult(null);
+    setCompareData(null);
+
+    const log = (msg: string) => setAutoLog(prev => [...prev, msg]);
+    log("Iniciando sincronización automática...");
+
+    try {
+      // Paso 1: Determinar cuenta con más publicaciones (origen)
+      log("Analizando cuentas...");
+      const countPromises = accounts.map(async (acc) => {
+        const res = await fetch(`/api/meli-sync/compare?origin_id=${acc.id}&dest_id=${acc.id}`).catch(() => null);
+        const d = res && res.ok ? await res.json().catch(() => null) : null;
+        return { id: acc.id, nickname: acc.nickname, total: d?.origin?.total ?? 0 };
+      });
+      const counts = await Promise.all(countPromises);
+      counts.sort((a, b) => b.total - a.total);
+      const mainAcc = counts[0];
+      log(`Cuenta principal: ${mainAcc.nickname} (${mainAcc.total} publicaciones)`);
+
+      let totalCloned = 0;
+      let totalSkipped = 0;
+      let totalErrors = 0;
+
+      // Paso 2: Para cada otra cuenta, comparar y clonar lo que falta
+      for (const destAcc of counts.slice(1)) {
+        log(`--- ${mainAcc.nickname} → ${destAcc.nickname} ---`);
+        log(`Comparando publicaciones...`);
+
+        const cmpRes = await fetch(`/api/meli-sync/compare?origin_id=${mainAcc.id}&dest_id=${destAcc.id}`);
+        if (!cmpRes.ok) { log(`Error al comparar: HTTP ${cmpRes.status}`); continue; }
+        const cmpData = await cmpRes.json();
+
+        const canClone = (cmpData?.can_clone ?? []) as Array<{ id: string }>;
+        const alreadyExist = cmpData?.summary?.already_exists ?? 0;
+        log(`${canClone.length} para clonar, ${alreadyExist} ya existen`);
+
+        if (!canClone.length) {
+          log(`Ya sincronizada`);
+          totalSkipped += alreadyExist;
+          continue;
+        }
+
+        // Clonar en lotes de 50
+        for (let i = 0; i < canClone.length; i += 50) {
+          const batch = canClone.slice(i, i + 50).map(item => item.id);
+          log(`Clonando lote ${Math.floor(i / 50) + 1}/${Math.ceil(canClone.length / 50)} (${batch.length} items)...`);
+
+          const cloneRes = await fetch("/api/meli-sync/clone", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ origin_id: mainAcc.id, dest_id: destAcc.id, item_ids: batch }),
+          });
+
+          if (cloneRes.ok) {
+            const r = await cloneRes.json();
+            totalCloned  += r.summary?.cloned ?? 0;
+            totalSkipped += r.summary?.skipped_duplicate ?? 0;
+            totalErrors  += r.summary?.errors ?? 0;
+            log(`✓ ${r.summary?.cloned ?? 0} clonadas, ${r.summary?.skipped_duplicate ?? 0} omitidas, ${r.summary?.errors ?? 0} errores`);
+          } else {
+            log(`Error en lote: HTTP ${cloneRes.status}`);
+            totalErrors += batch.length;
+          }
+        }
+      }
+
+      log(`=== RESUMEN FINAL ===`);
+      log(`Clonadas: ${totalCloned} | Omitidas: ${totalSkipped} | Errores: ${totalErrors}`);
+    } catch (e) {
+      log(`Error fatal: ${(e as Error).message}`);
+    } finally {
+      setAutoSyncing(false);
+    }
+  }, [accounts]);
 
   return (
     <main className="min-h-screen pb-24" style={{ background: "#121212" }}>
@@ -224,6 +305,40 @@ function SyncInner() {
               ? <span className="flex items-center justify-center gap-2"><RefreshCw className="w-4 h-4 animate-spin" /> Analizando publicaciones...</span>
               : "Analizar y Comparar"}
           </button>
+        </div>
+
+        {/* Botón Sync Automático */}
+        <div className="rounded-2xl p-5 space-y-3" style={{ background: "#1F1F1F", border: "1px solid rgba(255,255,255,0.07)" }}>
+          <div className="flex items-center gap-3">
+            <Zap className="w-5 h-5" style={{ color: "#39FF14" }} />
+            <div>
+              <p className="text-sm font-black text-white">Sincronización Automática</p>
+              <p className="text-[10px]" style={{ color: "#6B7280" }}>
+                Detecta la cuenta con más publicaciones y clona a todas las demás
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={handleAutoSync}
+            disabled={autoSyncing || accounts.length < 2}
+            className="w-full py-3 rounded-xl font-black text-sm transition-all disabled:opacity-40 flex items-center justify-center gap-2"
+            style={{ background: "#39FF14", color: "#121212" }}>
+            {autoSyncing
+              ? <><RefreshCw className="w-4 h-4 animate-spin" /> Sincronizando todas las cuentas...</>
+              : <><Zap className="w-4 h-4" /> Sincronizar Todas las Cuentas ({accounts.length})</>}
+          </button>
+          {autoLog.length > 0 && (
+            <div className="rounded-xl p-3 max-h-60 overflow-y-auto space-y-1" style={{ background: "#121212" }}>
+              {autoLog.map((line, i) => (
+                <p key={i} className="text-[11px] font-mono" style={{
+                  color: line.startsWith("===") ? "#FFE600"
+                    : line.startsWith("Error") ? "#ef4444"
+                    : line.includes("clonadas") ? "#39FF14"
+                    : "#9CA3AF"
+                }}>{line}</p>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Error */}
