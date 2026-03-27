@@ -311,7 +311,7 @@ function SyncInner() {
                 {/* Acciones */}
                 <div className="p-4 border-t space-y-2" style={{ borderColor: "rgba(255,255,255,0.07)" }}>
                   <button
-                    onClick={() => handleClone([...selected])}
+                    onClick={() => handleClone(Array.from(selected))}
                     disabled={selected.size === 0 || cloning}
                     className="w-full py-3 rounded-xl font-black text-sm transition-all disabled:opacity-40 flex items-center justify-center gap-2"
                     style={{ background: "#39FF14", color: "#121212" }}>
