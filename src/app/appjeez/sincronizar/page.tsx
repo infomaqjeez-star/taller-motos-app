@@ -304,7 +304,7 @@ function SyncInner() {
                     />
                   ))}
                   {filtered.length === 0 && (
-                    <p className="text-center py-4 text-xs" style={{ color: "#6B7280" }}>Sin resultados para "{search}"</p>
+                    <p className="text-center py-4 text-xs" style={{ color: "#6B7280" }}>Sin resultados para &quot;{search}&quot;</p>
                   )}
                 </div>
 
