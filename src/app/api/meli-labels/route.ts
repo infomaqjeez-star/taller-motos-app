@@ -104,6 +104,9 @@ function parseOrder(
   const mode      = (ship.mode as string | undefined) ?? "";
   const orderTags = (order.tags as string[] | undefined) ?? [];
   const allTags   = [...tags, ...orderTags];
+  // Tracking prefix "INVE" = Full — disponible a veces en el objeto de orden también
+  const trackingFromOrder = String((ship.tracking_number ?? ship.tracking_id ?? "") as string).toUpperCase();
+  const isFullByTracking  = trackingFromOrder.startsWith("INVE");
 
   const items = (order.order_items as Array<{
     item?: { id?: string; title?: string; seller_sku?: string };
@@ -119,7 +122,7 @@ function parseOrder(
   if (deliveryLimit?.date) deliveryDate = deliveryLimit.date as string;
 
   const rawStatus = (ship.status as string | undefined) ?? "ready_to_ship";
-  const type = classifyType(logistic, allTags, undefined, mode);
+  const type = isFullByTracking ? "full" : classifyType(logistic, allTags, undefined, mode);
 
   return {
     shipment_id:    sid,
@@ -258,9 +261,23 @@ export async function GET(req: Request) {
               const tags      = (detail.tags as string[] | undefined) ?? [];
               const substatus = (detail.substatus as string | undefined) ?? "";
               const mode      = (detail.mode as string | undefined) ?? "";
+              // Tracking number prefix "INVE" = MercadoLibre Full (Fulfillment inventory) — señal infalible
+              const trackingNumber = String(
+                (detail.tracking_number ?? detail.tracking_id ?? "") as string
+              ).toUpperCase();
+
               s.substatus = substatus || null;
-              // Tipo definitivo desde /shipments/{id} — fuente de verdad
-              s.type = classifyType(lt, tags, substatus, mode);
+
+              // Tipo definitivo desde /shipments/{id}
+              if (
+                trackingNumber.startsWith("INVE") ||
+                lt === "fulfillment" || lt.includes("fulfillment") ||
+                (tags as string[]).some((t: string) => t.toLowerCase().includes("fulfillment"))
+              ) {
+                s.type = "full";
+              } else {
+                s.type = classifyType(lt, tags, substatus, mode);
+              }
 
               const shipStatus = (detail.status as string | undefined);
               if (shipStatus) {
