@@ -505,25 +505,120 @@ function EtiquetasInner() {
             {/* ══ TAB A DESPACHAR ══ */}
             {mainTab === "despachar" && (
               <>
-                {all.length === 0 ? (
-                  <div className="rounded-2xl p-10 text-center" style={{ background: "#1A1A1A" }}>
-                    <CheckCircle2 className="w-8 h-8 mx-auto mb-2" style={{ color: "#39FF14" }} />
-                    <p className="text-white font-bold text-sm">¡Todo al día!</p>
-                    <p className="text-xs mt-1" style={{ color: "#6B7280" }}>Sin envíos pendientes</p>
-                  </div>
-                ) : (
-                  <>
-                    {(["delayed", "today", "tomorrow", "week", "upcoming"] as UrgencyType[]).map(urg => (
-                      <UrgencyGroup key={urg} urgency={urg}
-                        items={all.filter(s => s.urgency === urg)}
-                        selected={selected} onToggle={toggleItem}
-                        onPrint={handlePrint} downloading={downloading} />
-                    ))}
-                    <p className="text-[10px] text-center pt-1" style={{ color: "#4B5563" }}>
-                      Al imprimir, los envíos se mueven a Impresas automáticamente
-                    </p>
-                  </>
-                )}
+                {/* ─ Bloque URGENTES ─ */}
+                {(() => {
+                  const urgentes = all.filter(s => s.urgency === "delayed" || s.urgency === "today");
+                  return (
+                    <div className="rounded-2xl overflow-hidden"
+                      style={{ background: "#161616", border: "2px solid #FF980040" }}>
+                      <div className="px-4 py-3 flex items-center gap-2"
+                        style={{ borderBottom: "1px solid #FF980025" }}>
+                        <AlertCircle className="w-4 h-4 flex-shrink-0" style={{ color: "#FF9800" }} />
+                        <p className="font-black text-sm flex-1" style={{ color: "#FF9800" }}>
+                          Urgentes — Despachar HOY
+                        </p>
+                        <span className="text-xs font-black px-2 py-0.5 rounded-full"
+                          style={{ background: "#FF980020", color: "#FF9800" }}>{urgentes.length}</span>
+                      </div>
+                      <div className="px-2 pt-2 pb-2 space-y-0">
+                        {(["correo", "flex", "turbo"] as LogisticType[]).map(t => (
+                          <TypeAccordion key={t} type={t}
+                            items={urgentes.filter(s => s.type === t)}
+                            selected={selected} onToggle={toggleItem}
+                            onPrint={handlePrint} downloading={downloading}
+                            defaultOpen />
+                        ))}
+                        {urgentes.length === 0 && (
+                          <div className="py-6 text-center">
+                            <CheckCircle2 className="w-6 h-6 mx-auto mb-1.5" style={{ color: "#39FF14" }} />
+                            <p className="text-sm font-bold text-white">Sin urgentes hoy</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* ─ Bloque PRÓXIMAS ─ */}
+                {(() => {
+                  const proximas = all.filter(s => s.urgency === "tomorrow" || s.urgency === "week" || s.urgency === "upcoming");
+                  const tmw  = all.filter(s => s.urgency === "tomorrow");
+                  const week = all.filter(s => s.urgency === "week");
+                  const upc  = all.filter(s => s.urgency === "upcoming");
+                  return (
+                    <div className="rounded-2xl overflow-hidden"
+                      style={{ background: "#161616", border: "2px solid #60a5fa30" }}>
+                      <div className="px-4 py-3 flex items-center gap-2"
+                        style={{ borderBottom: "1px solid #60a5fa20" }}>
+                        <Clock className="w-4 h-4 flex-shrink-0" style={{ color: "#60a5fa" }} />
+                        <p className="font-black text-sm flex-1" style={{ color: "#60a5fa" }}>
+                          Próximas a despachar
+                        </p>
+                        <span className="text-xs font-black px-2 py-0.5 rounded-full"
+                          style={{ background: "#60a5fa20", color: "#60a5fa" }}>{proximas.length}</span>
+                      </div>
+                      <div className="px-2 pt-2 pb-2 space-y-0">
+                        {proximas.length === 0 ? (
+                          <div className="py-6 text-center">
+                            <p className="text-sm font-bold text-white">Sin envíos próximos</p>
+                            <p className="text-[11px] mt-1" style={{ color: "#6B7280" }}>
+                              Aparecerán aquí los envíos de Correo, Flex y Turbo con fecha futura
+                            </p>
+                          </div>
+                        ) : (
+                          <>
+                            {tmw.length > 0 && (
+                              <div className="mb-2">
+                                <p className="text-[11px] font-black px-2 py-1" style={{ color: "#60a5fa" }}>
+                                  MAÑANA ({tmw.length})
+                                </p>
+                                {(["correo", "flex", "turbo"] as LogisticType[]).map(t => (
+                                  <TypeAccordion key={t} type={t}
+                                    items={tmw.filter(s => s.type === t)}
+                                    selected={selected} onToggle={toggleItem}
+                                    onPrint={handlePrint} downloading={downloading}
+                                    defaultOpen />
+                                ))}
+                              </div>
+                            )}
+                            {week.length > 0 && (
+                              <div className="mb-2">
+                                <p className="text-[11px] font-black px-2 py-1" style={{ color: "#9CA3AF" }}>
+                                  ESTA SEMANA ({week.length})
+                                </p>
+                                {(["correo", "flex", "turbo"] as LogisticType[]).map(t => (
+                                  <TypeAccordion key={t} type={t}
+                                    items={week.filter(s => s.type === t)}
+                                    selected={selected} onToggle={toggleItem}
+                                    onPrint={handlePrint} downloading={downloading}
+                                    defaultOpen={false} />
+                                ))}
+                              </div>
+                            )}
+                            {upc.length > 0 && (
+                              <div>
+                                <p className="text-[11px] font-black px-2 py-1" style={{ color: "#4B5563" }}>
+                                  MÁS ADELANTE ({upc.length})
+                                </p>
+                                {(["correo", "flex", "turbo"] as LogisticType[]).map(t => (
+                                  <TypeAccordion key={t} type={t}
+                                    items={upc.filter(s => s.type === t)}
+                                    selected={selected} onToggle={toggleItem}
+                                    onPrint={handlePrint} downloading={downloading}
+                                    defaultOpen={false} />
+                                ))}
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                <p className="text-[10px] text-center pt-1" style={{ color: "#4B5563" }}>
+                  Al imprimir, los envíos se mueven a Impresas automáticamente
+                </p>
               </>
             )}
 
