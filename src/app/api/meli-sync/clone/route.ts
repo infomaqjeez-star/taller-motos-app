@@ -86,7 +86,7 @@ export async function POST(req: Request) {
     ]);
 
     // Títulos existentes en destino para anti-duplicado (paginado hasta 2000)
-    async function getAllIds(userId: string, token: string, status: string): Promise<string[]> {
+    const getAllIds = async (userId: string, token: string, status: string): Promise<string[]> => {
       const ids: string[] = [];
       let offset = 0;
       while (offset < 2000) {
