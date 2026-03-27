@@ -227,8 +227,22 @@ export async function POST(req: Request) {
 
         if (safeAttrs.length) newItem.attributes = safeAttrs;
 
-        // Publicar en destino
-        const postRes = await meliPost("/items", destToken, newItem);
+        // Publicar en destino con reintentos inteligentes
+        let postRes = await meliPost("/items", destToken, newItem);
+
+        // Retry 1: Si falla por title inválido (catalogo MeLi), remover title
+        if (!postRes.ok) {
+          const errStr = JSON.stringify(postRes.data ?? {});
+          if (errStr.includes("title") && errStr.includes("invalid")) {
+            delete newItem.title;
+            postRes = await meliPost("/items", destToken, newItem);
+          }
+          // Retry 2: Si falla por family_name requerido, agregarlo
+          else if (errStr.includes("family_name") && !newItem.family_name) {
+            newItem.family_name = item.family_name ?? title;
+            postRes = await meliPost("/items", destToken, newItem);
+          }
+        }
 
         if (postRes.ok) {
           const newId = (postRes.data as Record<string, unknown>)?.id as string;
