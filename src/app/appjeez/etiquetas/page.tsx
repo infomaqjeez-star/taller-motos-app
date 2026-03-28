@@ -1,10 +1,14 @@
 "use client";
 import { useEffect, useState, useCallback, useRef, Suspense } from "react";
 import { connectQZ, qzGetPrinters, qzPrintZPL, isQZConnected } from "@/lib/qztray";
+import {
+  isWebUSBSupported, getUSBPrinter, openUSBPrinter, requestUSBPrinter,
+  printZPLviaUSB, isUSBPrinterOpen, getUSBPrinterName, initUSBEvents,
+} from "@/lib/webusb-printer";
 import Link from "next/link";
 import {
   ArrowLeft, RefreshCw, Printer, Download, CheckCircle2,
-  Package, Truck, Zap, AlertCircle, ChevronDown, ChevronRight, Clock,
+  Package, Truck, Zap, AlertCircle, ChevronDown, ChevronRight, Clock, Usb,
 } from "lucide-react";
 
 type UrgencyType  = "delayed" | "today" | "tomorrow" | "week" | "upcoming";
@@ -359,6 +363,10 @@ function EtiquetasInner() {
   const [printStatus, setPrintStatus] = useState<string | null>(null);
   const printStatusTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // WebUSB — direct USB printing (no software required)
+  const [usbStatus, setUsbStatus] = useState<"unsupported"|"disconnected"|"connecting"|"connected"|"error">("disconnected");
+  const [usbError,  setUsbError]  = useState<string | null>(null);
+
   const load = useCallback(async () => {
     setLoading(true); setError(null);
     try {
@@ -386,6 +394,19 @@ function EtiquetasInner() {
 
   useEffect(() => { load(); }, [load]);
   useEffect(() => { if (mainTab === "impresas") loadHistory(histPeriod); }, [mainTab, histPeriod, loadHistory]);
+
+  // WebUSB: init events + auto-connect on mount
+  useEffect(() => {
+    if (!isWebUSBSupported()) { setUsbStatus("unsupported"); return; }
+    initUSBEvents();
+    getUSBPrinter().then(device => {
+      if (!device) return;
+      setUsbStatus("connecting");
+      openUSBPrinter(device)
+        .then(() => setUsbStatus("connected"))
+        .catch(() => setUsbStatus("disconnected"));
+    }).catch(() => setUsbStatus("disconnected"));
+  }, []);
 
   const toggleItem = (id: number) =>
     setSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
@@ -438,8 +459,32 @@ function EtiquetasInner() {
         const zplText = await blob.text();
         let sentViaQZ = false;
 
-        // Auto-connect QZ Tray and resolve printer name in a single local variable
-        // (setPrinterName is async React state — we can't rely on it updating before we print)
+        // ── 1. WebUSB — direct USB printing (no QZ Tray needed) ──────────────
+        if (isWebUSBSupported()) {
+          try {
+            // Auto-connect if not already open
+            if (!isUSBPrinterOpen()) {
+              const device = await getUSBPrinter();
+              if (device) {
+                setUsbStatus("connecting");
+                await openUSBPrinter(device);
+                setUsbStatus("connected");
+              }
+            }
+            if (isUSBPrinterOpen()) {
+              await printZPLviaUSB(zplText);
+              showStatus(`✓ Impreso directo vía USB (${getUSBPrinterName() ?? "impresora"})`);
+              setUsbStatus("connected");
+              sentViaQZ = true;
+            }
+          } catch (usbErr) {
+            setUsbStatus("error");
+            setUsbError((usbErr as Error).message);
+            // Fallback silencioso a QZ Tray
+          }
+        }
+
+        // ── 2. QZ Tray fallback ───────────────────────────────────────────────
         let resolvedPrinter = printerName || localStorage.getItem("qz_printer_name") || "";
 
         if (!isQZConnected()) {
@@ -566,6 +611,46 @@ function EtiquetasInner() {
           )}
         </button>
       </div>
+
+      {/* USB Direct panel */}
+      {usbStatus !== "unsupported" && (
+        <div className="mx-4 mt-1 rounded-2xl p-3 flex items-center justify-between"
+          style={{ background: "#1A1A1A", border: `1px solid ${usbStatus === "connected" ? "#39FF1440" : "rgba(255,255,255,0.1)"}` }}>
+          <div>
+            <p className="text-sm font-bold text-white">Impresora Directa (USB)</p>
+            {usbStatus === "connected" && (
+              <p className="text-[11px] text-green-400">● USB Conectada — {getUSBPrinterName() ?? "impresora"}</p>
+            )}
+            {usbStatus === "disconnected" && (
+              <p className="text-[11px] text-gray-400">● USB Desconectada</p>
+            )}
+            {usbStatus === "connecting" && (
+              <p className="text-[11px] text-yellow-400">● Conectando…</p>
+            )}
+            {usbStatus === "error" && (
+              <p className="text-[11px] text-red-400">● Error USB: {usbError ?? "desconocido"}</p>
+            )}
+          </div>
+          {(usbStatus === "disconnected" || usbStatus === "error") && (
+            <button
+              onClick={async () => {
+                try {
+                  setUsbStatus("connecting");
+                  const dev = await requestUSBPrinter();
+                  await openUSBPrinter(dev);
+                  setUsbStatus("connected");
+                } catch (e) {
+                  setUsbStatus("error");
+                  setUsbError((e as Error).message);
+                }
+              }}
+              className="text-xs font-bold px-3 py-1.5 rounded-lg"
+              style={{ background: "#39FF14", color: "#000" }}>
+              Vincular Impresora USB
+            </button>
+          )}
+        </div>
+      )}
 
       {/* QZ Tray panel */}
       {showQZPanel && (
