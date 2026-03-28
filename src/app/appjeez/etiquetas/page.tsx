@@ -395,7 +395,7 @@ function EtiquetasInner() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           shipment_ids: ids,
-          shipments: printed.map(s => ({ shipment_id: s.shipment_id, account: s.account, type: s.type, buyer: s.buyer, title: s.title })),
+          shipments: printed.map(s => ({ shipment_id: s.shipment_id, account: s.account, type: s.type, buyer: s.buyer, title: s.title, thumbnail: s.thumbnail })),
         }),
       });
       load();

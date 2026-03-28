@@ -298,7 +298,7 @@ export async function GET(req: Request) {
                     process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
                   );
                   await sb.from("meli_printed_labels").upsert(
-                    { shipment_id: s.shipment_id, printed_at: new Date().toISOString(), account: s.account, type: s.type, buyer: s.buyer, title: s.title },
+                    { shipment_id: s.shipment_id, printed_at: new Date().toISOString(), account: s.account, type: s.type, buyer: s.buyer, title: s.title, thumbnail: s.thumbnail },
                     { onConflict: "shipment_id" }
                   );
                 } catch { /* ignore */ }
@@ -474,7 +474,7 @@ export async function POST(req: Request) {
   try {
     const { shipment_ids, shipments } = await req.json() as {
       shipment_ids: number[];
-      shipments?: Array<{ shipment_id: number; account?: string; type?: string; buyer?: string; title?: string }>;
+      shipments?: Array<{ shipment_id: number; account?: string; type?: string; buyer?: string; title?: string; thumbnail?: string }>;
     };
     if (!shipment_ids?.length) {
       return NextResponse.json({ error: "No shipment_ids" }, { status: 400 });
@@ -488,6 +488,7 @@ export async function POST(req: Request) {
         type:        detail?.type ?? null,
         buyer:       detail?.buyer ?? null,
         title:       detail?.title ?? null,
+        thumbnail:   detail?.thumbnail ?? null,
         printed_at:  new Date().toISOString(),
       };
     });
