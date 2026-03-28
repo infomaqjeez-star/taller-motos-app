@@ -64,7 +64,18 @@ export function connectQZ(preferSecure = true): Promise<void> {
       let msg: QZMsg;
       try { msg = JSON.parse(ev.data as string); } catch { return; }
 
-      // Any message means we're connected
+      // QZ Tray 2.x handshake: server sends {"call":"websocket.connected","uid":"..."}
+      // Client MUST acknowledge before sending any commands, otherwise QZ Tray closes the connection.
+      if (!_connected && msg.call === "websocket.connected") {
+        ws.send(JSON.stringify({ uid: msg.uid, call: "websocket.connected", result: null }));
+        clearTimeout(timer);
+        _connected = true;
+        _ws = ws;
+        resolve();
+        return;
+      }
+
+      // Fallback for older QZ Tray versions: any message = connected
       if (!_connected) {
         clearTimeout(timer);
         _connected = true;
