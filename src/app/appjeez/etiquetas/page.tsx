@@ -385,10 +385,43 @@ function EtiquetasInner() {
       const res = await fetch(`/api/meli-labels?action=download&format=${format}&ids=${ids.join(",")}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const blob = await res.blob();
-      const url  = URL.createObjectURL(blob);
-      if (format === "pdf") { const w = window.open(url, "_blank"); if (w) w.print(); }
-      else { const a = document.createElement("a"); a.href = url; a.download = "etiquetas.zpl"; a.click(); }
-      URL.revokeObjectURL(url);
+
+      if (format === "pdf") {
+        const url = URL.createObjectURL(blob);
+        const w = window.open(url, "_blank");
+        if (w) w.print();
+        URL.revokeObjectURL(url);
+      } else {
+        // Nombre dinámico: Etiqueta_[IDs abreviado]_[tipo].zpl
+        const shipments = (data?.shipments ?? []).filter(s => ids.includes(s.shipment_id));
+        const tipo = shipments.length === 1 ? (shipments[0].type ?? "envio") : "multi";
+        const idPart = ids.length === 1 ? String(ids[0]) : `${ids[0]}_y${ids.length - 1}mas`;
+        const filename = `Etiqueta_${idPart}_${tipo}.zpl`;
+
+        // File System Access API — muestra "Guardar como..." nativo en Chrome/Edge
+        if ("showSaveFilePicker" in window) {
+          try {
+            const fileHandle = await (window as Window & { showSaveFilePicker: (opts: unknown) => Promise<{ createWritable: () => Promise<{ write: (b: Blob) => Promise<void>; close: () => Promise<void> }> }> }).showSaveFilePicker({
+              suggestedName: filename,
+              types: [{ description: "ZPL Label File", accept: { "application/octet-stream": [".zpl"] } }],
+            });
+            const writable = await fileHandle.createWritable();
+            await writable.write(blob);
+            await writable.close();
+          } catch (err) {
+            // Usuario canceló el diálogo — no es un error real
+            if ((err as { name?: string }).name !== "AbortError") throw err;
+            return;
+          }
+        } else {
+          // Fallback: descarga automática con nombre dinámico
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url; a.download = filename; a.click();
+          URL.revokeObjectURL(url);
+        }
+      }
+
       const printed = (data?.shipments ?? []).filter(s => ids.includes(s.shipment_id));
       await fetch("/api/meli-labels", {
         method: "POST",
