@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, useCallback, useRef, Suspense } from "react";
 import { connectQZ, qzGetPrinters, qzPrintZPL, isQZConnected } from "@/lib/qztray";
+import { isSpoolerAgentAvailable, printZPLviaAgent, purgeAgentQueue } from "@/lib/spooler-agent";
 import {
   isWebUSBSupported, getUSBPrinter, openUSBPrinter, requestUSBPrinter,
   printZPLviaUSB, isUSBPrinterOpen, getUSBPrinterName, initUSBEvents,
@@ -367,6 +368,9 @@ function EtiquetasInner() {
   const [usbStatus, setUsbStatus] = useState<"unsupported"|"disconnected"|"connecting"|"connected"|"error">("disconnected");
   const [usbError,  setUsbError]  = useState<string | null>(null);
 
+  // Spooler Agent — local Windows print server
+  const [agentStatus, setAgentStatus] = useState<"unchecked"|"available"|"unavailable">("unchecked");
+
   const load = useCallback(async () => {
     setLoading(true); setError(null);
     try {
@@ -406,6 +410,11 @@ function EtiquetasInner() {
         .then(() => setUsbStatus("connected"))
         .catch(() => setUsbStatus("disconnected"));
     }).catch(() => setUsbStatus("disconnected"));
+  }, []);
+
+  // Spooler Agent: health check on mount
+  useEffect(() => {
+    isSpoolerAgentAvailable().then(ok => setAgentStatus(ok ? "available" : "unavailable"));
   }, []);
 
   const toggleItem = (id: number) =>
@@ -457,7 +466,7 @@ function EtiquetasInner() {
         const filename = `Etiqueta_${idPart}_${tipo}.zpl`;
 
         const zplText = await blob.text();
-        let sentViaQZ = false;
+        let printed = false;
 
         // ── 1. WebUSB — direct USB printing (no QZ Tray needed) ──────────────
         if (isWebUSBSupported()) {
@@ -475,16 +484,34 @@ function EtiquetasInner() {
               await printZPLviaUSB(zplText);
               showStatus(`✓ Impreso directo vía USB (${getUSBPrinterName() ?? "impresora"})`);
               setUsbStatus("connected");
-              sentViaQZ = true;
+              printed = true;
             }
           } catch (usbErr) {
             setUsbStatus("error");
             setUsbError((usbErr as Error).message);
+            // Fallback silencioso a Spooler Agent / QZ Tray
+          }
+        }
+
+        // ── 2. Agente Local (Spooler Windows) ────────────────────────────────
+        if (!printed) {
+          try {
+            const ok = agentStatus === "available" || await isSpoolerAgentAvailable();
+            if (ok) {
+              setAgentStatus("available");
+              if (ids.length > 1) await purgeAgentQueue().catch(() => {});
+              await printZPLviaAgent(zplText);
+              showStatus("✓ Impreso vía Spooler Windows");
+              printed = true;
+            }
+          } catch {
+            setAgentStatus("unavailable");
             // Fallback silencioso a QZ Tray
           }
         }
 
-        // ── 2. QZ Tray fallback ───────────────────────────────────────────────
+        // ── 3. QZ Tray fallback ───────────────────────────────────────────────
+        if (!printed) {
         let resolvedPrinter = printerName || localStorage.getItem("qz_printer_name") || "";
 
         if (!isQZConnected()) {
@@ -511,15 +538,17 @@ function EtiquetasInner() {
           try {
             await qzPrintZPL(zplText, resolvedPrinter);
             showStatus(`✓ Enviado a impresora "${resolvedPrinter}" con éxito`);
-            sentViaQZ = true;
+            printed = true;
           } catch (qzErr) {
             setQzStatus("error");
             setQzError((qzErr as Error).message);
             showStatus(`⚠ QZ Tray falló — guardando archivo...`);
           }
         }
+        } // end QZ Tray block
 
-        if (!sentViaQZ) {
+        // ── 4. File download fallback ─────────────────────────────────────────
+        if (!printed) {
           // File System Access API — "Guardar como..." nativo en Chrome/Edge
           if ("showSaveFilePicker" in window) {
             try {
@@ -559,7 +588,7 @@ function EtiquetasInner() {
       load();
     } catch (e) { setError((e as Error).message); }
     finally { setDownloading(false); }
-  }, [data, load, printerName, qzStatus, showStatus]);
+  }, [data, load, printerName, qzStatus, agentStatus, showStatus]);
 
   const all            = data?.shipments        ?? [];
   const fullItems      = data?.full             ?? [];
@@ -652,13 +681,55 @@ function EtiquetasInner() {
         </div>
       )}
 
-      {/* QZ Tray panel */}
+      {/* Spooler Agent panel */}
+      <div className="mx-4 mt-1 rounded-2xl p-3 flex items-center justify-between"
+        style={{ background: "#1A1A1A", border: `1px solid ${agentStatus === "available" ? "#39FF1440" : "rgba(255,255,255,0.1)"}` }}>
+        <div>
+          <p className="text-sm font-bold text-white">Agente Local (Spooler)</p>
+          {agentStatus === "available" && (
+            <p className="text-[11px] text-green-400">● Agente Activo — imprime directo al Spooler Windows</p>
+          )}
+          {agentStatus === "unavailable" && (
+            <p className="text-[11px] text-gray-400">● Agente No Detectado</p>
+          )}
+          {agentStatus === "unchecked" && (
+            <p className="text-[11px] text-gray-500">● Verificando...</p>
+          )}
+        </div>
+        <div className="flex gap-1.5">
+          {agentStatus === "available" && (
+            <button
+              onClick={async () => {
+                try {
+                  await purgeAgentQueue();
+                  showStatus("✓ Cola de impresión limpiada");
+                } catch { showStatus("⚠ No se pudo limpiar la cola"); }
+              }}
+              className="text-[10px] font-bold px-2 py-1 rounded-lg"
+              style={{ background: "rgba(255,255,255,0.08)", color: "#9CA3AF" }}>
+              Limpiar Cola
+            </button>
+          )}
+          <button
+            onClick={async () => {
+              setAgentStatus("unchecked");
+              const ok = await isSpoolerAgentAvailable();
+              setAgentStatus(ok ? "available" : "unavailable");
+            }}
+            className="text-[10px] font-bold px-2 py-1 rounded-lg"
+            style={{ background: agentStatus === "unavailable" ? "#FFE60020" : "rgba(255,255,255,0.08)", color: agentStatus === "unavailable" ? "#FFE600" : "#9CA3AF" }}>
+            {agentStatus === "unavailable" ? "Reintentar" : "Verificar"}
+          </button>
+        </div>
+      </div>
+
+      {/* QZ Tray panel (respaldo) */}
       {showQZPanel && (
         <div className="mx-4 mt-1 rounded-2xl p-4 space-y-3"
           style={{ background: "#1A1A1A", border: `1px solid ${qzStatus === "connected" ? "#39FF1440" : "rgba(255,255,255,0.1)"}` }}>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-bold text-white">Impresión Directa (RAW)</p>
+              <p className="text-sm font-bold text-white">QZ Tray (Respaldo)</p>
               <p className="text-[11px]" style={{ color: "#6B7280" }}>Envía ZPL directo a la Zebra vía QZ Tray</p>
             </div>
             <span className="text-[10px] font-black px-2 py-0.5 rounded-full"
