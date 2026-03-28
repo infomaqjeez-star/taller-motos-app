@@ -471,34 +471,49 @@ export async function GET(req: Request) {
         const bytes = new Uint8Array(chunk);
         // Check if it's a ZIP file (starts with PK\x03\x04)
         if (bytes[0] === 0x50 && bytes[1] === 0x4B && bytes[2] === 0x03 && bytes[3] === 0x04) {
-          // Simple ZIP extraction: find the file data between headers
-          // Local file header: PK\x03\x04 (30 bytes + filename + extra)
+          // Find sizes from Central Directory (local header may have 0 for streamed ZIPs)
+          let compSize = bytes[18] | (bytes[19] << 8) | (bytes[20] << 16) | (bytes[21] << 24);
+          const compMethod = bytes[8] | (bytes[9] << 8);
           const fnLen = bytes[26] | (bytes[27] << 8);
           const exLen = bytes[28] | (bytes[29] << 8);
-          const compMethod = bytes[8] | (bytes[9] << 8);
-          const compSize = bytes[18] | (bytes[19] << 8) | (bytes[20] << 16) | (bytes[21] << 24);
           const dataStart = 30 + fnLen + exLen;
 
-          if (compMethod === 0) {
-            // Stored (no compression)
+          // If compSize is 0, read from Central Directory entry (PK\x01\x02)
+          if (compSize === 0) {
+            for (let i = 0; i < bytes.length - 4; i++) {
+              if (bytes[i] === 0x50 && bytes[i+1] === 0x4B && bytes[i+2] === 0x01 && bytes[i+3] === 0x02) {
+                compSize = bytes[i+20] | (bytes[i+21] << 8) | (bytes[i+22] << 16) | (bytes[i+23] << 24);
+                break;
+              }
+            }
+          }
+          // If still 0, estimate: data between local header and central directory
+          if (compSize === 0) {
+            for (let i = dataStart; i < bytes.length - 4; i++) {
+              if (bytes[i] === 0x50 && bytes[i+1] === 0x4B && (bytes[i+2] === 0x01 || bytes[i+2] === 0x07)) {
+                compSize = i - dataStart;
+                // If data descriptor (PK\x07\x08), skip 4 bytes back
+                if (bytes[i+2] === 0x07) compSize = i - dataStart;
+                break;
+              }
+            }
+          }
+
+          if (compMethod === 0 && compSize > 0) {
             const raw = bytes.slice(dataStart, dataStart + compSize);
             zplTexts.push(new TextDecoder().decode(raw));
-          } else if (compMethod === 8) {
-            // Deflated — use Node.js zlib
+          } else if (compMethod === 8 && compSize > 0) {
             try {
               const compressed = bytes.slice(dataStart, dataStart + compSize);
               const decompressed = inflateRawSync(Buffer.from(compressed));
               zplTexts.push(decompressed.toString("utf8"));
             } catch {
-              // If decompression fails, send raw
               zplTexts.push(new TextDecoder().decode(bytes));
             }
           } else {
-            // Unknown compression — send raw bytes as-is
             zplTexts.push(new TextDecoder().decode(bytes));
           }
         } else {
-          // Not a ZIP — already plain text ZPL
           zplTexts.push(new TextDecoder().decode(bytes));
         }
       }

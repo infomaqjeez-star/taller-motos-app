@@ -16,6 +16,7 @@ const http = require("http");
 const { execSync, exec } = require("child_process");
 const fs = require("fs");
 const path = require("path");
+const zlib = require("zlib");
 
 const PORT = parseInt(process.env.PRINT_AGENT_PORT || "7070", 10);
 const DEFAULT_PRINTER = "4BARCODE 4B-2054K";
@@ -81,6 +82,54 @@ function ensurePaperSize(zpl) {
   // 203 dpi: 100mm = ~800 dots, 150mm = ~1200 dots
   const prefix = `^XA${!hasWidth ? "^PW800" : ""}${!hasLength ? "^LL1200" : ""}^XZ\n`;
   return prefix + zpl;
+}
+
+// ── Extract ZPL from ZIP if needed ────────────────────────────────────────────
+function extractZPL(input) {
+  const buf = Buffer.from(input, "binary");
+  if (buf[0] === 0x50 && buf[1] === 0x4B && buf[2] === 0x03 && buf[3] === 0x04) {
+    log("Detectado ZIP — extrayendo ZPL...");
+    const compMethod = buf[8] | (buf[9] << 8);
+    let compSize = buf[18] | (buf[19] << 8) | (buf[20] << 16) | (buf[21] << 24);
+    const fnLen = buf[26] | (buf[27] << 8);
+    const exLen = buf[28] | (buf[29] << 8);
+    const dataStart = 30 + fnLen + exLen;
+
+    // If compSize is 0, find it from Central Directory
+    if (compSize === 0) {
+      for (let i = 0; i < buf.length - 4; i++) {
+        if (buf[i] === 0x50 && buf[i+1] === 0x4B && buf[i+2] === 0x01 && buf[i+3] === 0x02) {
+          compSize = buf[i+20] | (buf[i+21] << 8) | (buf[i+22] << 16) | (buf[i+23] << 24);
+          break;
+        }
+      }
+    }
+    // If still 0, estimate from next PK signature
+    if (compSize === 0) {
+      for (let i = dataStart; i < buf.length - 4; i++) {
+        if (buf[i] === 0x50 && buf[i+1] === 0x4B && (buf[i+2] === 0x01 || buf[i+2] === 0x07)) {
+          compSize = i - dataStart;
+          break;
+        }
+      }
+    }
+
+    log(`ZIP: method=${compMethod}, compSize=${compSize}, dataStart=${dataStart}`);
+
+    if (compMethod === 0 && compSize > 0) {
+      return buf.slice(dataStart, dataStart + compSize).toString("utf8");
+    } else if (compMethod === 8 && compSize > 0) {
+      try {
+        const compressed = buf.slice(dataStart, dataStart + compSize);
+        const decompressed = zlib.inflateRawSync(compressed);
+        log(`ZIP descomprimido: ${decompressed.length} bytes`);
+        return decompressed.toString("utf8");
+      } catch (e) {
+        log(`ERROR descomprimiendo ZIP: ${e.message}`);
+      }
+    }
+  }
+  return input;
 }
 
 // ── RAW print via Win32 P/Invoke (winspool.drv) ──────────────────────────────
@@ -254,11 +303,13 @@ const server = http.createServer(async (req, res) => {
         return;
       }
       const printer = body.printer || DEFAULT_PRINTER;
-      log(`Imprimiendo ${body.zpl.length} bytes en "${printer}"...`);
+      // Extract ZPL from ZIP if MeLi sent a ZIP container
+      const zplContent = extractZPL(body.zpl);
+      log(`Imprimiendo ${zplContent.length} bytes en "${printer}"...`);
       // Debug: save last ZPL to file for inspection
-      try { fs.writeFileSync(path.join(__dirname, "_last_zpl.txt"), body.zpl, "utf8"); } catch {}
-      await printRaw(body.zpl, printer);
-      json(res, 200, { status: "ok", printer, bytes: body.zpl.length });
+      try { fs.writeFileSync(path.join(__dirname, "_last_zpl.txt"), zplContent, "utf8"); } catch {}
+      await printRaw(zplContent, printer);
+      json(res, 200, { status: "ok", printer, bytes: zplContent.length });
       return;
     }
 
