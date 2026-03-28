@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabase, getActiveAccounts, getValidToken, meliGet, meliGetRaw, meliGetWithRetry } from "@/lib/meli";
+import { PDFDocument } from "pdf-lib";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -423,6 +424,10 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "No hay envíos seleccionados" }, { status: 400 });
     }
 
+    // Ordenar por tipo de logística: correo → turbo → flex
+    const printOrder: Record<LogisticType, number> = { correo: 0, turbo: 1, flex: 2, full: 3 };
+    targetShipments.sort((a, b) => printOrder[a.type] - printOrder[b.type]);
+
     const byAccount = new Map<string, { token: string; ids: number[] }>();
     for (const s of targetShipments) {
       if (!byAccount.has(s.meli_user_id)) {
@@ -453,15 +458,49 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "No se pudieron descargar etiquetas" }, { status: 500 });
     }
 
-    const biggest = pdfChunks.reduce((a, b) => a.byteLength > b.byteLength ? a : b);
     const contentType = format === "zpl" ? "application/octet-stream" : "application/pdf";
     const ext = format === "zpl" ? "zpl" : "pdf";
 
-    return new NextResponse(biggest, {
+    // ZPL: concatenar texto; PDF: mergear con pdf-lib
+    if (format === "zpl") {
+      const merged = new Uint8Array(pdfChunks.reduce((s, c) => s + c.byteLength, 0));
+      let offset = 0;
+      for (const chunk of pdfChunks) {
+        merged.set(new Uint8Array(chunk), offset);
+        offset += chunk.byteLength;
+      }
+      return new NextResponse(merged, {
+        headers: {
+          "Content-Type": contentType,
+          "Content-Disposition": `attachment; filename="etiquetas-appjeez.${ext}"`,
+          "X-Total-Labels": String(targetShipments.length),
+        },
+      });
+    }
+
+    // PDF Merge — unificar todos los chunks en un solo documento
+    const mergedPdf = await PDFDocument.create();
+    for (const chunk of pdfChunks) {
+      try {
+        const src = await PDFDocument.load(chunk, { ignoreEncryption: true });
+        const pages = await mergedPdf.copyPages(src, src.getPageIndices());
+        for (const page of pages) mergedPdf.addPage(page);
+      } catch {
+        // Si un chunk es inválido, lo saltamos sin romper el resto
+        console.warn("[etiquetas] Chunk de PDF inválido, saltando...");
+      }
+    }
+
+    const mergedBytes = await mergedPdf.save();
+    const mergedBuffer = Buffer.from(mergedBytes);
+
+    const today = new Date().toISOString().slice(0, 10);
+    return new NextResponse(mergedBuffer, {
       headers: {
-        "Content-Type": contentType,
-        "Content-Disposition": `attachment; filename="etiquetas-appjeez.${ext}"`,
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `attachment; filename="Etiquetas_MaqJeez_${today}.pdf"`,
         "X-Total-Labels": String(targetShipments.length),
+        "X-Total-Pages": String(mergedPdf.getPageCount()),
       },
     });
 
