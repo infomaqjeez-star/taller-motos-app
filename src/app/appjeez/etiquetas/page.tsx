@@ -404,7 +404,7 @@ function EtiquetasInner() {
       setQzPrinters(printers);
       setQzStatus("connected");
       if (!printerName && printers.length > 0) {
-        const zebra = printers.find(p => /noxus|zebra|zd|zp|gc|lp|tlp|zt|xprinter|tsc|godex|brother|dymo/i.test(p)) ?? printers[0];
+        const zebra = printers.find(p => /4barcode|4b-|noxus|zebra|zd|zp|gc|lp|tlp|zt|xprinter|tsc|godex|brother|dymo/i.test(p)) ?? printers[0];
         setPrinterName(zebra);
         localStorage.setItem("qz_printer_name", zebra);
       }
@@ -450,7 +450,7 @@ function EtiquetasInner() {
             setQzStatus("connected");
             // Pick best printer: stored name → auto-detect → first available
             if (!resolvedPrinter) {
-              const found = printers.find(p => /noxus|zebra|zd|zp|gc|lp|tlp|zt|xprinter|tsc|godex|brother|dymo/i.test(p)) ?? printers[0] ?? "";
+              const found = printers.find(p => /4barcode|4b-|noxus|zebra|zd|zp|gc|lp|tlp|zt|xprinter|tsc|godex|brother|dymo/i.test(p)) ?? printers[0] ?? "";
               resolvedPrinter = found;
               if (found) {
                 setPrinterName(found);
@@ -604,7 +604,7 @@ function EtiquetasInner() {
             ) : (
               <input
                 type="text"
-                placeholder="Nombre exacto de la impresora (ej: NoxusPOS, Zebra ZD420)"
+                placeholder="Nombre exacto de la impresora (ej: 4BARCODE 4B-2054K)"
                 value={printerName}
                 onChange={e => { setPrinterName(e.target.value); localStorage.setItem("qz_printer_name", e.target.value); }}
                 className="flex-1 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-600"
