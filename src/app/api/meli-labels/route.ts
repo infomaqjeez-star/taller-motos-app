@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getSupabase, getActiveAccounts, getValidToken, meliGet, meliGetRaw } from "@/lib/meli";
+import { getSupabase, getActiveAccounts, getValidToken, meliGet, meliGetRaw, meliGetWithRetry } from "@/lib/meli";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -247,43 +247,47 @@ export async function GET(req: Request) {
       byAccountMap.get(s.meli_user_id)!.ids.push(s.shipment_id);
     }
 
-    await Promise.all(
-      Array.from(byAccountMap.values()).map(async ({ token, ids }) => {
+    // Batched enrichment — 10 shipments at a time to reduce rate-limit pressure
+    for (const { token, ids } of Array.from(byAccountMap.values())) {
+      for (let batchStart = 0; batchStart < ids.length; batchStart += 10) {
+        const batch = ids.slice(batchStart, batchStart + 10);
         await Promise.all(
-          ids.map(async (sid) => {
+          batch.map(async (sid) => {
+            const s = allToEnrich.find(x => x.shipment_id === sid);
+            if (!s) return;
             try {
-              const detail = await meliGet(`/shipments/${sid}`, token) as Record<string, unknown> | null;
-              if (!detail) return;
-              const s = allToEnrich.find(x => x.shipment_id === sid);
-              if (!s) return;
+              const detail = await meliGetWithRetry(`/shipments/${sid}`, token) as Record<string, unknown> | null;
+              if (!detail) {
+                console.warn(`[etiquetas] Enrichment falló para shipment ${sid} (tipo actual: ${s.type})`);
+                return; // conserva el tipo que parseOrder asignó — NO se sobreescribe
+              }
 
-              const lt        = (detail.logistic_type as string | undefined) ?? "";
+              const lt        = ((detail.logistic_type as string | undefined) ?? "").toLowerCase();
               const tags      = (detail.tags as string[] | undefined) ?? [];
               const substatus = (detail.substatus as string | undefined) ?? "";
-              const mode      = (detail.mode as string | undefined) ?? "";
-              // Tracking number prefix "INVE" = MercadoLibre Full (Fulfillment inventory) — señal infalible
+              const mode      = ((detail.mode as string | undefined) ?? "").toLowerCase();
               const trackingNumber = String(
                 (detail.tracking_number ?? detail.tracking_id ?? "") as string
               ).toUpperCase();
 
               s.substatus = substatus || null;
 
-              // Tipo definitivo desde /shipments/{id}
+              // Tipo definitivo — cualquier señal de Full es suficiente
               if (
                 trackingNumber.startsWith("INVE") ||
                 lt === "fulfillment" || lt.includes("fulfillment") ||
-                (tags as string[]).some((t: string) => t.toLowerCase().includes("fulfillment"))
+                mode === "fulfillment" || mode.includes("fulfillment") ||
+                tags.some((t: string) => t.toLowerCase().includes("fulfillment"))
               ) {
                 s.type = "full";
               } else {
                 s.type = classifyType(lt, tags, substatus, mode);
               }
 
+              // Siempre recomputar status_label con el tipo final
               const shipStatus = (detail.status as string | undefined);
-              if (shipStatus) {
-                s.status = shipStatus;
-                s.status_label = statusLabel(shipStatus, s.type);
-              }
+              if (shipStatus) s.status = shipStatus;
+              s.status_label = statusLabel(s.status, s.type);
 
               // Auto-sync: si MeLi ya marcó impresa
               if (substatus === "printed" || substatus === "label_printed") {
@@ -327,8 +331,10 @@ export async function GET(req: Request) {
             } catch { /* skip */ }
           })
         );
-      })
-    );
+        // Pausa entre batches para no saturar la API
+        if (batchStart + 10 < ids.length) await new Promise(r => setTimeout(r, 200));
+      }
+    }
 
     // ── Thumbnails ────────────────────────────────────────────────────────────
     const thumbnailMap  = new Map<string, string>();

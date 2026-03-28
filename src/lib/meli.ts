@@ -137,6 +137,43 @@ export async function meliGet(path: string, token: string) {
   } catch { return null; }
 }
 
+export async function meliGetWithRetry(
+  path: string,
+  token: string,
+  retries = 1,
+  delayMs = 1000
+): Promise<unknown | null> {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(`https://api.mercadolibre.com${path}`, {
+        headers: { Authorization: `Bearer ${token}` },
+        signal: AbortSignal.timeout(15000),
+      });
+      if (res.status === 429 && attempt < retries) {
+        console.warn(`[meli] 429 rate limit en ${path}, reintentando...`);
+        await new Promise(r => setTimeout(r, delayMs * 2));
+        continue;
+      }
+      if (!res.ok) {
+        if (attempt < retries) {
+          await new Promise(r => setTimeout(r, delayMs));
+          continue;
+        }
+        return null;
+      }
+      return res.json();
+    } catch {
+      if (attempt < retries) {
+        console.warn(`[meli] Timeout en ${path}, intento ${attempt + 1}/${retries + 1}`);
+        await new Promise(r => setTimeout(r, delayMs));
+        continue;
+      }
+      return null;
+    }
+  }
+  return null;
+}
+
 export async function meliGetRaw(path: string, token: string): Promise<ArrayBuffer | null> {
   try {
     const res = await fetch(`https://api.mercadolibre.com${path}`, {
