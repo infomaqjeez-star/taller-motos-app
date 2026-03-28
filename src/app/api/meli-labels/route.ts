@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSupabase, getActiveAccounts, getValidToken, meliGet, meliGetRaw, meliGetWithRetry } from "@/lib/meli";
 import { PDFDocument } from "pdf-lib";
+import { inflateRawSync } from "zlib";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -483,7 +484,6 @@ export async function GET(req: Request) {
             zplTexts.push(new TextDecoder().decode(raw));
           } else if (compMethod === 8) {
             // Deflated — use Node.js zlib
-            const { inflateRawSync } = require("zlib");
             const compressed = bytes.slice(dataStart, dataStart + compSize);
             const decompressed = inflateRawSync(Buffer.from(compressed));
             zplTexts.push(decompressed.toString("utf8"));
