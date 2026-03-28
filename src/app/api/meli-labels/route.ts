@@ -6,6 +6,7 @@ import { inflateRawSync } from "zlib";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 export const maxDuration = 60;
+export const runtime = "nodejs";
 
 type UrgencyType = "delayed" | "today" | "tomorrow" | "week" | "upcoming";
 type LogisticType = "flex" | "turbo" | "correo" | "full";
@@ -484,9 +485,14 @@ export async function GET(req: Request) {
             zplTexts.push(new TextDecoder().decode(raw));
           } else if (compMethod === 8) {
             // Deflated — use Node.js zlib
-            const compressed = bytes.slice(dataStart, dataStart + compSize);
-            const decompressed = inflateRawSync(Buffer.from(compressed));
-            zplTexts.push(decompressed.toString("utf8"));
+            try {
+              const compressed = bytes.slice(dataStart, dataStart + compSize);
+              const decompressed = inflateRawSync(Buffer.from(compressed));
+              zplTexts.push(decompressed.toString("utf8"));
+            } catch {
+              // If decompression fails, send raw
+              zplTexts.push(new TextDecoder().decode(bytes));
+            }
           } else {
             // Unknown compression — send raw bytes as-is
             zplTexts.push(new TextDecoder().decode(bytes));
