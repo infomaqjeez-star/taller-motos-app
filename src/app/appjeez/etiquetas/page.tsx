@@ -438,30 +438,34 @@ function EtiquetasInner() {
         const zplText = await blob.text();
         let sentViaQZ = false;
 
-        // Auto-connect QZ Tray if not already connected
+        // Auto-connect QZ Tray and resolve printer name in a single local variable
+        // (setPrinterName is async React state — we can't rely on it updating before we print)
+        let resolvedPrinter = printerName || localStorage.getItem("qz_printer_name") || "";
+
         if (!isQZConnected()) {
           try {
             setQzStatus("connecting");
             const printers = await qzGetPrinters();
             setQzPrinters(printers);
             setQzStatus("connected");
-            // Auto-select NoxusPOS if no printer selected yet
-            const foundPrinter = printers.find(p => /noxus|zebra|zd|zp|gc|lp|tlp|zt|xprinter|tsc|godex|brother|dymo/i.test(p)) ?? printers[0] ?? "";
-            const activePrinter = printerName || foundPrinter;
-            if (activePrinter && !printerName) {
-              setPrinterName(activePrinter);
-              localStorage.setItem("qz_printer_name", activePrinter);
+            // Pick best printer: stored name → auto-detect → first available
+            if (!resolvedPrinter) {
+              const found = printers.find(p => /noxus|zebra|zd|zp|gc|lp|tlp|zt|xprinter|tsc|godex|brother|dymo/i.test(p)) ?? printers[0] ?? "";
+              resolvedPrinter = found;
+              if (found) {
+                setPrinterName(found);
+                localStorage.setItem("qz_printer_name", found);
+              }
             }
           } catch {
             setQzStatus("error");
           }
         }
 
-        const activePrinter = printerName || localStorage.getItem("qz_printer_name") || "";
-        if (activePrinter && isQZConnected()) {
+        if (resolvedPrinter && isQZConnected()) {
           try {
-            await qzPrintZPL(zplText, activePrinter);
-            showStatus(`✓ Enviado a impresora "${activePrinter}" con éxito`);
+            await qzPrintZPL(zplText, resolvedPrinter);
+            showStatus(`✓ Enviado a impresora "${resolvedPrinter}" con éxito`);
             sentViaQZ = true;
           } catch (qzErr) {
             setQzStatus("error");
