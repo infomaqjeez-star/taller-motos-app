@@ -87,11 +87,12 @@ function ensurePaperSize(zpl) {
 function printRaw(zplContent, printerName) {
   return new Promise((resolve, reject) => {
     const zpl = ensurePaperSize(zplContent);
-    // Escape for PowerShell — encode as Base64 to avoid quoting issues
+    // Encode as Base64 to avoid quoting issues
     const b64 = Buffer.from(zpl, "utf8").toString("base64");
 
-    const ps = `
-$ErrorActionPreference = 'Stop'
+    // Write PowerShell script to a temp file (avoids escaping hell)
+    const tmpPs1 = path.join(__dirname, "_print_job.ps1");
+    const ps = `$ErrorActionPreference = 'Stop'
 
 $code = @'
 using System;
@@ -164,10 +165,15 @@ $bytes = [System.Convert]::FromBase64String('${b64}')
 Write-Output 'OK'
 `;
 
+    fs.writeFileSync(tmpPs1, ps, "utf8");
+
     exec(
-      `powershell -NoProfile -NonInteractive -Command "${ps.replace(/"/g, '\\"').replace(/\n/g, " ")}"`,
+      `powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "${tmpPs1}"`,
       { timeout: 15000 },
       (err, stdout, stderr) => {
+        // Clean up temp file
+        try { fs.unlinkSync(tmpPs1); } catch {}
+
         if (err) {
           const msg = (stderr || stdout || err.message).trim();
           log(`ERROR print: ${msg}`);

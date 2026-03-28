@@ -1,0 +1,5 @@
+[2026-03-28T20:12:27.225Z] === Print Agent v1.0.0 escuchando en http://127.0.0.1:7070 ===
+[2026-03-28T20:12:28.463Z] Impresora encontrada: "4BARCODE 4B-2054K"
+[2026-03-28T20:15:55.214Z] Imprimiendo 2197 bytes en "4BARCODE 4B-2054K"...
+[2026-03-28T20:15:55.303Z] ERROR print: La l�nea de comandos es demasiado larga.
+[2026-03-28T20:15:55.304Z] ERROR: La l�nea de comandos es demasiado larga.
