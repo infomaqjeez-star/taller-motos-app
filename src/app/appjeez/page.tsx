@@ -397,6 +397,7 @@ function AppJeezInner() {
 
   const navItems = [
     { label: "Dashboard",       icon: <BarChart2 className="w-4 h-4" />,       href: "/appjeez",               active: true  },
+    { label: "Estadísticas",    icon: <TrendingUp className="w-4 h-4" />,      href: "/appjeez/estadisticas",  active: false },
     { label: "Mensajería",      icon: <MessageCircle className="w-4 h-4" />,   href: "/appjeez/mensajes",      active: false },
     { label: "Envíos",          icon: <Truck className="w-4 h-4" />,           href: "/appjeez/envios",        active: false },
     { label: "Etiquetas",       icon: <Tag className="w-4 h-4" />,             href: "/appjeez/etiquetas",     active: false },

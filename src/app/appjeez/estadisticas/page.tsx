@@ -1,0 +1,472 @@
+"use client";
+import { useEffect, useState, useCallback } from "react";
+import Link from "next/link";
+import {
+  TrendingUp, RefreshCw, AlertTriangle, ChevronDown, ChevronUp,
+  ShoppingCart, DollarSign, Tag, Package, BarChart2, MessageCircle,
+  Truck, Copy, Store, Zap, ArrowLeft,
+} from "lucide-react";
+import {
+  LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell, BarChart, Bar, Legend,
+} from "recharts";
+
+// ── Types ──────────────────────────────────────────────────────────────────
+interface SalesByDay  { date: string; orders: number; amount: number }
+interface TopProduct  { title: string; sku: string; qty: number; revenue: number }
+interface ShipBreak   { correo: number; flex: number; turbo: number; full: number; other: number }
+interface Reputation  {
+  account: string; meli_user_id: string; level_id: string;
+  power_seller_status: string | null;
+  claims_rate: number; cancellations_rate: number; delayed_rate: number;
+  transactions_total: number; transactions_completed: number;
+  ratings_positive: number; ratings_negative: number;
+}
+interface PerAccount  { account: string; meli_user_id: string; total_orders: number; total_amount: number }
+interface StatsData {
+  period: string; account_id: string; accounts_count: number;
+  sales_by_day: SalesByDay[];
+  top_products: TopProduct[];
+  shipping_breakdown: ShipBreak;
+  reputation: Reputation[];
+  totals: { total_orders: number; total_amount: number; avg_ticket: number; cancellation_count: number };
+  per_account: PerAccount[];
+}
+interface AccountOption { nickname: string; meli_user_id: string }
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+const fmt  = (n: number) => `$${n.toLocaleString("es-AR", { maximumFractionDigits: 0 })}`;
+const pct  = (n: number) => `${(n * 100).toFixed(1)}%`;
+
+function repColor(level_id: string): string {
+  if (level_id.includes("green")  || level_id === "5_green")  return "#39FF14";
+  if (level_id.includes("yellow") || level_id === "4_light_green") return "#FFE600";
+  if (level_id.includes("orange") || level_id === "3_orange") return "#FF9800";
+  if (level_id.includes("red")    || level_id === "2_red" || level_id === "1_red") return "#ef4444";
+  return "#6B7280";
+}
+function repLabel(level_id: string): string {
+  if (level_id.includes("green"))  return "Verde";
+  if (level_id.includes("light_green")) return "Verde Claro";
+  if (level_id.includes("yellow")) return "Amarillo";
+  if (level_id.includes("orange")) return "Naranja";
+  if (level_id.includes("red"))    return "Rojo";
+  return "Sin datos";
+}
+function isAlert(level_id: string) {
+  return level_id.includes("yellow") || level_id.includes("orange") ||
+         level_id.includes("red") || level_id.startsWith("1_") || level_id.startsWith("2_") || level_id.startsWith("3_");
+}
+
+const SHIP_COLORS: Record<string, string> = {
+  correo: "#FF9800", flex: "#00E5FF", turbo: "#A855F7", full: "#FFE600", other: "#4B5563"
+};
+const SHIP_LABELS: Record<string, string> = {
+  correo: "Correo", flex: "Flex", turbo: "Turbo", full: "Full", other: "Otros"
+};
+
+// ── Custom Tooltip ─────────────────────────────────────────────────────────
+function SalesTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{value: number; name: string}>; label?: string }) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="rounded-xl px-3 py-2 text-xs" style={{ background: "#1F1F1F", border: "1px solid rgba(255,255,255,0.1)" }}>
+      <p className="font-bold mb-1 text-white">{label}</p>
+      {payload.map((p, i) => (
+        <p key={i} style={{ color: p.name === "orders" ? "#FFE600" : "#00E5FF" }}>
+          {p.name === "orders" ? `Ventas: ${p.value}` : `Ingresos: ${fmt(p.value)}`}
+        </p>
+      ))}
+    </div>
+  );
+}
+
+// ── Main Component ─────────────────────────────────────────────────────────
+export default function EstadisticasPage() {
+  const [data,           setData]           = useState<StatsData | null>(null);
+  const [loading,        setLoading]        = useState(true);
+  const [error,          setError]          = useState<string | null>(null);
+  const [period,         setPeriod]         = useState("7d");
+  const [accountId,      setAccountId]      = useState("all");
+  const [accounts,       setAccounts]       = useState<AccountOption[]>([]);
+  const [showRepDetail,  setShowRepDetail]  = useState<string | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true); setError(null);
+    try {
+      const res = await fetch(`/api/meli-stats?period=${period}&account_id=${accountId}`);
+      if (!res.ok) throw new Error((await res.json()).error ?? "Error al cargar estadísticas");
+      const json: StatsData = await res.json();
+      setData(json);
+      if (json.per_account?.length > 0 && accounts.length === 0) {
+        setAccounts(json.per_account.map(a => ({ nickname: a.account, meli_user_id: a.meli_user_id })));
+      }
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  }, [period, accountId, accounts.length]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const navItems = [
+    { label: "Dashboard",     icon: <BarChart2 className="w-4 h-4" />,   href: "/appjeez"                },
+    { label: "Estadísticas",  icon: <TrendingUp className="w-4 h-4" />,  href: "/appjeez/estadisticas"   },
+    { label: "Mensajería",    icon: <MessageCircle className="w-4 h-4" />,href: "/appjeez/mensajes"      },
+    { label: "Envíos",        icon: <Truck className="w-4 h-4" />,        href: "/appjeez/envios"        },
+    { label: "Etiquetas",     icon: <Tag className="w-4 h-4" />,          href: "/appjeez/etiquetas"     },
+    { label: "Publicaciones", icon: <Package className="w-4 h-4" />,      href: "/appjeez/publicaciones" },
+    { label: "Sincronizar",   icon: <Copy className="w-4 h-4" />,         href: "/appjeez/sincronizar"   },
+    { label: "Precios",       icon: <DollarSign className="w-4 h-4" />,   href: "/appjeez/precios"       },
+    { label: "Promociones",   icon: <Zap className="w-4 h-4" />,          href: "/appjeez/promociones"   },
+    { label: "Órdenes",       icon: <ShoppingCart className="w-4 h-4" />, href: "/appjeez/ordenes"       },
+    { label: "Cuentas MeLi",  icon: <Store className="w-4 h-4" />,        href: "/configuracion/meli"    },
+  ];
+
+  const pieData = data ? Object.entries(data.shipping_breakdown)
+    .filter(([, v]) => (v as number) > 0)
+    .map(([k, v]) => ({ name: SHIP_LABELS[k] ?? k, value: v as number, color: SHIP_COLORS[k] ?? "#6B7280" }))
+    : [];
+
+  const alertAccounts = data?.reputation.filter(r => isAlert(r.level_id)) ?? [];
+
+  return (
+    <div className="min-h-screen flex" style={{ background: "#121212" }}>
+
+      {/* Sidebar desktop */}
+      <aside className="hidden sm:flex flex-col w-56 flex-shrink-0 border-r"
+        style={{ background: "#181818", borderColor: "rgba(255,255,255,0.06)" }}>
+        <div className="px-5 py-5 border-b" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+          <p className="font-black text-xl" style={{ color: "#FFE600" }}>AppJeez</p>
+          <p className="text-[11px] mt-0.5" style={{ color: "#6B7280" }}>Panel Mercado Libre</p>
+        </div>
+        <nav className="flex-1 px-3 py-4 space-y-1">
+          {navItems.map(n => (
+            <Link key={n.href} href={n.href}
+              className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors"
+              style={n.href === "/appjeez/estadisticas"
+                ? { background: "#FFE60018", color: "#FFE600" }
+                : { color: "#6B7280" }}>
+              {n.icon} {n.label}
+            </Link>
+          ))}
+        </nav>
+      </aside>
+
+      {/* Main */}
+      <main className="flex-1 min-w-0 overflow-y-auto">
+        {/* Header */}
+        <div className="sticky top-0 z-30 px-4 py-3 flex items-center justify-between"
+          style={{ background: "#181818", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+          <div className="flex items-center gap-3">
+            <Link href="/appjeez" className="sm:hidden p-1.5 rounded-lg" style={{ color: "#6B7280" }}>
+              <ArrowLeft className="w-4 h-4" />
+            </Link>
+            <div>
+              <p className="font-black text-base text-white">Estadísticas</p>
+              <p className="text-[11px]" style={{ color: "#6B7280" }}>
+                {data ? `${data.accounts_count} cuenta${data.accounts_count !== 1 ? "s" : ""}` : "Cargando..."}
+              </p>
+            </div>
+          </div>
+          <button onClick={load} disabled={loading}
+            className="p-2 rounded-xl transition-all" style={{ background: "#1F1F1F" }}>
+            <RefreshCw className={`w-4 h-4 text-gray-400 ${loading ? "animate-spin" : ""}`} />
+          </button>
+        </div>
+
+        <div className="px-4 py-4 space-y-4 max-w-4xl mx-auto pb-24">
+
+          {/* Filters */}
+          <div className="flex flex-wrap gap-2 items-center">
+            {/* Period */}
+            <div className="flex rounded-xl overflow-hidden border" style={{ borderColor: "rgba(255,255,255,0.1)" }}>
+              {[{ v: "today", l: "Hoy" }, { v: "7d", l: "7 días" }, { v: "30d", l: "30 días" }].map(p => (
+                <button key={p.v} onClick={() => setPeriod(p.v)}
+                  className="px-3 py-1.5 text-xs font-bold transition-all"
+                  style={period === p.v
+                    ? { background: "#FFE600", color: "#121212" }
+                    : { background: "#1F1F1F", color: "#6B7280" }}>
+                  {p.l}
+                </button>
+              ))}
+            </div>
+
+            {/* Account selector */}
+            <select value={accountId} onChange={e => setAccountId(e.target.value)}
+              className="rounded-xl px-3 py-1.5 text-xs font-semibold text-white"
+              style={{ background: "#1F1F1F", border: "1px solid rgba(255,255,255,0.1)" }}>
+              <option value="all">Todas las cuentas</option>
+              {accounts.map(a => (
+                <option key={a.meli_user_id} value={a.meli_user_id}>{a.nickname}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Error */}
+          {error && (
+            <div className="rounded-2xl p-4 flex items-center gap-3"
+              style={{ background: "#ef444418", border: "1px solid #ef444440" }}>
+              <AlertTriangle className="w-5 h-5 flex-shrink-0" style={{ color: "#ef4444" }} />
+              <p className="text-sm text-white">{error}</p>
+            </div>
+          )}
+
+          {/* Loading skeleton */}
+          {loading && (
+            <div className="space-y-3">
+              {[1,2,3].map(i => (
+                <div key={i} className="h-24 rounded-2xl animate-pulse" style={{ background: "#1F1F1F" }} />
+              ))}
+            </div>
+          )}
+
+          {data && !loading && (
+            <>
+              {/* Reputation alerts */}
+              {alertAccounts.length > 0 && (
+                <div className="rounded-2xl p-4 space-y-2"
+                  style={{ background: "#FF980018", border: "1px solid #FF980040" }}>
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 flex-shrink-0" style={{ color: "#FF9800" }} />
+                    <p className="text-sm font-bold text-white">Alerta de Reputación</p>
+                  </div>
+                  {alertAccounts.map(r => (
+                    <p key={r.meli_user_id} className="text-xs" style={{ color: "#FF9800" }}>
+                      ⚠ <strong>{r.account}</strong> está en nivel <strong>{repLabel(r.level_id)}</strong>
+                      {" — "}Reclamos: {pct(r.claims_rate)} | Cancelaciones: {pct(r.cancellations_rate)}
+                    </p>
+                  ))}
+                </div>
+              )}
+
+              {/* KPI Cards */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {[
+                  { label: "Ventas",       value: String(data.totals.total_orders),  icon: <ShoppingCart className="w-4 h-4" />, color: "#FFE600" },
+                  { label: "Ingresos",     value: fmt(data.totals.total_amount),     icon: <DollarSign className="w-4 h-4" />,   color: "#39FF14" },
+                  { label: "Ticket Prom.", value: fmt(data.totals.avg_ticket),        icon: <TrendingUp className="w-4 h-4" />,   color: "#00E5FF" },
+                  { label: "Cuentas",      value: String(data.accounts_count),        icon: <Store className="w-4 h-4" />,         color: "#A855F7" },
+                ].map(k => (
+                  <div key={k.label} className="rounded-2xl p-4"
+                    style={{ background: "#1A1A1A", border: "1px solid rgba(255,255,255,0.06)" }}>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span style={{ color: k.color }}>{k.icon}</span>
+                      <span className="text-[11px] font-bold" style={{ color: "#6B7280" }}>{k.label.toUpperCase()}</span>
+                    </div>
+                    <p className="text-xl font-black text-white">{k.value}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Per-account breakdown */}
+              {data.per_account.length > 1 && (
+                <div className="rounded-2xl overflow-hidden"
+                  style={{ background: "#1A1A1A", border: "1px solid rgba(255,255,255,0.06)" }}>
+                  <div className="px-4 py-3 border-b" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+                    <p className="text-xs font-bold text-white">VENTAS POR CUENTA</p>
+                  </div>
+                  <div className="divide-y divide-white/5">
+                    {data.per_account.map(a => (
+                      <div key={a.meli_user_id} className="px-4 py-3 flex items-center justify-between">
+                        <span className="text-sm text-white font-semibold">{a.account}</span>
+                        <div className="text-right">
+                          <p className="text-sm font-black" style={{ color: "#FFE600" }}>{fmt(a.total_amount)}</p>
+                          <p className="text-[11px]" style={{ color: "#6B7280" }}>{a.total_orders} ventas</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Line chart — ventas por día */}
+              <div className="rounded-2xl p-4"
+                style={{ background: "#1A1A1A", border: "1px solid rgba(255,255,255,0.06)" }}>
+                <p className="text-xs font-bold text-white mb-4">VENTAS POR DÍA</p>
+                <ResponsiveContainer width="100%" height={200}>
+                  <LineChart data={data.sales_by_day}
+                    margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+                    <XAxis dataKey="date" tick={{ fill: "#6B7280", fontSize: 10 }}
+                      tickFormatter={d => d.slice(5)} />
+                    <YAxis tick={{ fill: "#6B7280", fontSize: 10 }} />
+                    <Tooltip content={<SalesTooltip />} />
+                    <Line type="monotone" dataKey="orders" stroke="#FFE600" strokeWidth={2}
+                      dot={false} name="orders" />
+                    <Line type="monotone" dataKey="amount" stroke="#00E5FF" strokeWidth={2}
+                      dot={false} name="amount" yAxisId={0} hide />
+                  </LineChart>
+                </ResponsiveContainer>
+                <div className="flex gap-4 mt-2 justify-center">
+                  <span className="text-[11px] flex items-center gap-1.5" style={{ color: "#FFE600" }}>
+                    <span className="w-3 h-0.5 rounded" style={{ background: "#FFE600", display: "inline-block" }} />
+                    Cantidad de ventas
+                  </span>
+                </div>
+              </div>
+
+              {/* Pie + Bar row */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+                {/* Pie chart — shipping breakdown */}
+                <div className="rounded-2xl p-4"
+                  style={{ background: "#1A1A1A", border: "1px solid rgba(255,255,255,0.06)" }}>
+                  <p className="text-xs font-bold text-white mb-3">ENVÍOS POR TIPO</p>
+                  {pieData.length > 0 ? (
+                    <>
+                      <ResponsiveContainer width="100%" height={180}>
+                        <PieChart>
+                          <Pie data={pieData} cx="50%" cy="50%" outerRadius={70}
+                            dataKey="value" nameKey="name" label={false}>
+                            {pieData.map((entry, i) => (
+                              <Cell key={i} fill={entry.color} />
+                            ))}
+                          </Pie>
+                          <Tooltip
+                            contentStyle={{ background: "#1F1F1F", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12 }}
+                            labelStyle={{ color: "#fff" }}
+                            itemStyle={{ color: "#9CA3AF" }}
+                          />
+                          <Legend
+                            iconType="circle"
+                            iconSize={8}
+                            formatter={v => <span style={{ color: "#9CA3AF", fontSize: 11 }}>{v}</span>}
+                          />
+                        </PieChart>
+                      </ResponsiveContainer>
+                      <div className="grid grid-cols-2 gap-1 mt-2">
+                        {pieData.map(d => (
+                          <div key={d.name} className="flex items-center gap-1.5">
+                            <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: d.color }} />
+                            <span className="text-[11px]" style={{ color: "#9CA3AF" }}>{d.name}: <strong className="text-white">{d.value}</strong></span>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  ) : (
+                    <p className="text-xs text-center py-8" style={{ color: "#6B7280" }}>Sin datos de envíos</p>
+                  )}
+                </div>
+
+                {/* Bar chart — top 10 productos */}
+                <div className="rounded-2xl p-4"
+                  style={{ background: "#1A1A1A", border: "1px solid rgba(255,255,255,0.06)" }}>
+                  <p className="text-xs font-bold text-white mb-3">TOP 10 PRODUCTOS</p>
+                  {data.top_products.length > 0 ? (
+                    <ResponsiveContainer width="100%" height={220}>
+                      <BarChart
+                        layout="vertical"
+                        data={data.top_products.slice(0, 10).map(p => ({
+                          name: p.title.length > 22 ? p.title.slice(0, 22) + "…" : p.title,
+                          qty: p.qty,
+                        }))}
+                        margin={{ top: 0, right: 8, left: 0, bottom: 0 }}>
+                        <XAxis type="number" tick={{ fill: "#6B7280", fontSize: 10 }} />
+                        <YAxis type="category" dataKey="name" width={90}
+                          tick={{ fill: "#9CA3AF", fontSize: 9 }} />
+                        <Tooltip
+                          contentStyle={{ background: "#1F1F1F", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12 }}
+                          labelStyle={{ color: "#fff", fontSize: 11 }}
+                          itemStyle={{ color: "#FFE600", fontSize: 11 }}
+                          formatter={(v) => [`${v} uds.`, "Vendidos"]}
+                        />
+                        <Bar dataKey="qty" fill="#FFE600" radius={[0, 4, 4, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <p className="text-xs text-center py-8" style={{ color: "#6B7280" }}>Sin datos de productos</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Reputation cards */}
+              {data.reputation.length > 0 && (
+                <div className="space-y-3">
+                  <p className="text-xs font-bold" style={{ color: "#6B7280" }}>SALUD DE CUENTAS</p>
+                  {data.reputation.map(r => {
+                    const color = repColor(r.level_id);
+                    const alert = isAlert(r.level_id);
+                    const open  = showRepDetail === r.meli_user_id;
+                    return (
+                      <div key={r.meli_user_id}
+                        className="rounded-2xl overflow-hidden"
+                        style={{
+                          background: "#1A1A1A",
+                          border: `1px solid ${alert ? color + "60" : "rgba(255,255,255,0.06)"}`,
+                          boxShadow: alert ? `0 0 12px ${color}20` : undefined,
+                        }}>
+                        <button
+                          onClick={() => setShowRepDetail(open ? null : r.meli_user_id)}
+                          className="w-full px-4 py-3 flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <span className="w-3 h-3 rounded-full flex-shrink-0"
+                              style={{ background: color }} />
+                            <div className="text-left">
+                              <p className="text-sm font-bold text-white">{r.account}</p>
+                              <p className="text-[11px] font-bold" style={{ color }}>
+                                {repLabel(r.level_id)}
+                                {alert && " ⚠"}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <div className="text-right text-[11px]" style={{ color: "#6B7280" }}>
+                              <p>{r.transactions_total.toLocaleString()} ventas</p>
+                              <p>{pct(r.ratings_positive)} positivas</p>
+                            </div>
+                            {open
+                              ? <ChevronUp className="w-4 h-4" style={{ color: "#6B7280" }} />
+                              : <ChevronDown className="w-4 h-4" style={{ color: "#6B7280" }} />}
+                          </div>
+                        </button>
+
+                        {open && (
+                          <div className="px-4 pb-4 grid grid-cols-3 gap-3 border-t"
+                            style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+                            {[
+                              { label: "Reclamos", value: pct(r.claims_rate), bad: r.claims_rate > 0.04 },
+                              { label: "Cancelaciones", value: pct(r.cancellations_rate), bad: r.cancellations_rate > 0.02 },
+                              { label: "Demora despacho", value: pct(r.delayed_rate), bad: r.delayed_rate > 0.05 },
+                            ].map(m => (
+                              <div key={m.label} className="pt-3 text-center">
+                                <p className="text-[10px] font-bold mb-1" style={{ color: "#6B7280" }}>{m.label.toUpperCase()}</p>
+                                <p className="text-lg font-black" style={{ color: m.bad ? "#ef4444" : "#39FF14" }}>{m.value}</p>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* Mobile bottom nav */}
+        <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-40 flex border-t"
+          style={{ background: "#181818", borderColor: "rgba(255,255,255,0.08)" }}>
+          {[
+            { label: "Dashboard",    href: "/appjeez",              icon: <BarChart2 className="w-5 h-5" /> },
+            { label: "Stats",        href: "/appjeez/estadisticas", icon: <TrendingUp className="w-5 h-5" /> },
+            { label: "Mensajes",     href: "/appjeez/mensajes",     icon: <MessageCircle className="w-5 h-5" /> },
+            { label: "Etiquetas",    href: "/appjeez/etiquetas",    icon: <Tag className="w-5 h-5" /> },
+            { label: "Más",          href: "#",                     icon: <ChevronUp className="w-5 h-5" />, onClick: () => setMobileMenuOpen(o => !o) },
+          ].map(n => (
+            <Link key={n.href} href={n.href}
+              onClick={n.onClick}
+              className="flex-1 flex flex-col items-center justify-center py-2.5 gap-0.5 text-[10px] font-semibold transition-colors"
+              style={n.href === "/appjeez/estadisticas"
+                ? { color: "#FFE600" }
+                : { color: "#6B7280" }}>
+              {n.icon}
+              <span>{n.label}</span>
+            </Link>
+          ))}
+        </nav>
+      </main>
+    </div>
+  );
+}
