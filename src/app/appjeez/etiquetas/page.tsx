@@ -438,10 +438,31 @@ function EtiquetasInner() {
         const zplText = await blob.text();
         let sentViaQZ = false;
 
-        if (printerName && (isQZConnected() || qzStatus === "connected")) {
+        // Auto-connect QZ Tray if not already connected
+        if (!isQZConnected()) {
           try {
-            await qzPrintZPL(zplText, printerName);
-            showStatus(`✓ Enviado a impresora "${printerName}" con éxito`);
+            setQzStatus("connecting");
+            const printers = await qzGetPrinters();
+            setQzPrinters(printers);
+            setQzStatus("connected");
+            // Auto-select NoxusPOS if no printer selected yet
+            const activePrinter = printerName ||
+              printers.find(p => /noxus|zebra|zd|zp|gc|lp|tlp|zt|xprinter|tsc|godex|brother|dymo/i.test(p)) ??
+              printers[0] ?? "";
+            if (activePrinter && !printerName) {
+              setPrinterName(activePrinter);
+              localStorage.setItem("qz_printer_name", activePrinter);
+            }
+          } catch {
+            setQzStatus("error");
+          }
+        }
+
+        const activePrinter = printerName || localStorage.getItem("qz_printer_name") || "";
+        if (activePrinter && isQZConnected()) {
+          try {
+            await qzPrintZPL(zplText, activePrinter);
+            showStatus(`✓ Enviado a impresora "${activePrinter}" con éxito`);
             sentViaQZ = true;
           } catch (qzErr) {
             setQzStatus("error");
