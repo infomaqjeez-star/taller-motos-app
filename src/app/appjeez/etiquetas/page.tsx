@@ -404,7 +404,7 @@ function EtiquetasInner() {
       setQzPrinters(printers);
       setQzStatus("connected");
       if (!printerName && printers.length > 0) {
-        const zebra = printers.find(p => /zebra|zd|zp|gc|lp|tlp|zt/i.test(p)) ?? printers[0];
+        const zebra = printers.find(p => /noxus|zebra|zd|zp|gc|lp|tlp|zt|xprinter|tsc|godex|brother|dymo/i.test(p)) ?? printers[0];
         setPrinterName(zebra);
         localStorage.setItem("qz_printer_name", zebra);
       }
@@ -580,7 +580,7 @@ function EtiquetasInner() {
             ) : (
               <input
                 type="text"
-                placeholder="Nombre de la impresora (ej: ZDesigner ZD420)"
+                placeholder="Nombre exacto de la impresora (ej: NoxusPOS, Zebra ZD420)"
                 value={printerName}
                 onChange={e => { setPrinterName(e.target.value); localStorage.setItem("qz_printer_name", e.target.value); }}
                 className="flex-1 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-600"
