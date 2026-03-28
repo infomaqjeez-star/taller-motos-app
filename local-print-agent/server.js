@@ -74,14 +74,32 @@ function getInstalledPrinters() {
   }
 }
 
-// ── ZPL paper size injection ──────────────────────────────────────────────────
+// ── ZPL calibration + paper size injection ────────────────────────────────────
 function ensurePaperSize(zpl) {
-  const hasWidth = /\^PW/i.test(zpl);
-  const hasLength = /\^LL/i.test(zpl);
-  if (hasWidth && hasLength) return zpl;
-  // 203 dpi: 100mm = ~800 dots, 150mm = ~1200 dots
-  const prefix = `^XA${!hasWidth ? "^PW800" : ""}${!hasLength ? "^LL1200" : ""}^XZ\n`;
-  return prefix + zpl;
+  // Replace ^PW with correct width if present, or inject it
+  // 203 DPI: 100mm = 812 dots, 150mm = 1218 dots
+  let result = zpl;
+
+  // Inject ^LH (Label Home) for centering if not present
+  if (!/\^LH/i.test(result)) {
+    result = result.replace(/(\^XA)/i, "$1^LH0,0");
+  }
+
+  // Fix or inject ^PW (Print Width) — 812 dots = 100mm @ 203dpi
+  if (/\^PW/i.test(result)) {
+    result = result.replace(/\^PW\d+/i, "^PW812");
+  } else {
+    result = result.replace(/(\^XA)/i, "$1^PW812");
+  }
+
+  // Fix or inject ^LL (Label Length) — 1218 dots = 150mm @ 203dpi
+  if (/\^LL/i.test(result)) {
+    result = result.replace(/\^LL\d+/i, "^LL1218");
+  } else {
+    result = result.replace(/(\^XA)/i, "$1^LL1218");
+  }
+
+  return result;
 }
 
 // ── Extract ZPL from ZIP if needed ────────────────────────────────────────────

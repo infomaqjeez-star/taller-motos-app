@@ -1,15 +1,10 @@
 "use client";
 import { useEffect, useState, useCallback, useRef, Suspense } from "react";
-import { connectQZ, qzGetPrinters, qzPrintZPL, isQZConnected } from "@/lib/qztray";
 import { isSpoolerAgentAvailable, printZPLviaAgent, purgeAgentQueue } from "@/lib/spooler-agent";
-import {
-  isWebUSBSupported, getUSBPrinter, openUSBPrinter, requestUSBPrinter,
-  printZPLviaUSB, isUSBPrinterOpen, getUSBPrinterName, initUSBEvents,
-} from "@/lib/webusb-printer";
 import Link from "next/link";
 import {
   ArrowLeft, RefreshCw, Printer, Download, CheckCircle2,
-  Package, Truck, Zap, AlertCircle, ChevronDown, ChevronRight, Clock, Usb,
+  Package, Truck, Zap, AlertCircle, ChevronDown, ChevronRight, Clock,
 } from "lucide-react";
 
 type UrgencyType  = "delayed" | "today" | "tomorrow" | "week" | "upcoming";
@@ -353,22 +348,11 @@ function EtiquetasInner() {
   const [mainTab,     setMainTab]     = useState<MainTab>("despachar");
   const [histPeriod,  setHistPeriod]  = useState<HistPeriod>("today");
 
-  // QZ Tray — RAW printing
-  const [qzStatus,    setQzStatus]   = useState<"idle"|"connecting"|"connected"|"error">("idle");
-  const [qzError,     setQzError]    = useState<string | null>(null);
-  const [qzPrinters,  setQzPrinters] = useState<string[]>([]);
-  const [printerName, setPrinterName] = useState<string>(() =>
-    typeof window !== "undefined" ? (localStorage.getItem("qz_printer_name") ?? "") : ""
-  );
-  const [showQZPanel, setShowQZPanel] = useState(false);
+  // Print status
   const [printStatus, setPrintStatus] = useState<string | null>(null);
   const printStatusTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // WebUSB — direct USB printing (no software required)
-  const [usbStatus, setUsbStatus] = useState<"unsupported"|"disconnected"|"connecting"|"connected"|"error">("disconnected");
-  const [usbError,  setUsbError]  = useState<string | null>(null);
-
-  // Spooler Agent — local Windows print server
+  // Spooler Agent — local Windows print server (auto-detected)
   const [agentStatus, setAgentStatus] = useState<"unchecked"|"available"|"unavailable">("unchecked");
 
   const load = useCallback(async () => {
@@ -399,20 +383,7 @@ function EtiquetasInner() {
   useEffect(() => { load(); }, [load]);
   useEffect(() => { if (mainTab === "impresas") loadHistory(histPeriod); }, [mainTab, histPeriod, loadHistory]);
 
-  // WebUSB: init events + auto-connect on mount
-  useEffect(() => {
-    if (!isWebUSBSupported()) { setUsbStatus("unsupported"); return; }
-    initUSBEvents();
-    getUSBPrinter().then(device => {
-      if (!device) return;
-      setUsbStatus("connecting");
-      openUSBPrinter(device)
-        .then(() => setUsbStatus("connected"))
-        .catch(() => setUsbStatus("disconnected"));
-    }).catch(() => setUsbStatus("disconnected"));
-  }, []);
-
-  // Spooler Agent: health check on mount
+  // Spooler Agent: silent health check on mount
   useEffect(() => {
     isSpoolerAgentAvailable().then(ok => setAgentStatus(ok ? "available" : "unavailable"));
   }, []);
@@ -420,29 +391,12 @@ function EtiquetasInner() {
   const toggleItem = (id: number) =>
     setSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
-  // QZ Tray helpers
+  // Print helpers
   const showStatus = useCallback((msg: string) => {
     setPrintStatus(msg);
     if (printStatusTimer.current) clearTimeout(printStatusTimer.current);
     printStatusTimer.current = setTimeout(() => setPrintStatus(null), 4000);
   }, []);
-
-  const handleConnectQZ = useCallback(async () => {
-    setQzStatus("connecting"); setQzError(null);
-    try {
-      const printers = await qzGetPrinters();
-      setQzPrinters(printers);
-      setQzStatus("connected");
-      if (!printerName && printers.length > 0) {
-        const zebra = printers.find(p => /4barcode|4b-|noxus|zebra|zd|zp|gc|lp|tlp|zt|xprinter|tsc|godex|brother|dymo/i.test(p)) ?? printers[0];
-        setPrinterName(zebra);
-        localStorage.setItem("qz_printer_name", zebra);
-      }
-    } catch (e) {
-      setQzStatus("error");
-      setQzError((e as Error).message);
-    }
-  }, [printerName]);
 
   const handlePrint = useCallback(async (format: "pdf" | "zpl", ids: number[]) => {
     if (!ids.length) return;
@@ -459,136 +413,51 @@ function EtiquetasInner() {
         URL.revokeObjectURL(url);
 
       } else {
-        // ── ZPL: intentar RAW via QZ Tray primero ────────────────────────
         const shipments = (data?.shipments ?? []).filter(s => ids.includes(s.shipment_id));
         const tipo   = shipments.length === 1 ? (shipments[0].type ?? "envio") : "multi";
         const idPart = ids.length === 1 ? String(ids[0]) : `${ids[0]}_y${ids.length - 1}mas`;
         const filename = `Etiqueta_${idPart}_${tipo}.zpl`;
-
         const zplText = await blob.text();
         let printed = false;
 
-        // ── 1. WebUSB — direct USB printing (no QZ Tray needed) ──────────────
-        if (isWebUSBSupported()) {
-          try {
-            // Auto-connect if not already open
-            if (!isUSBPrinterOpen()) {
-              const device = await getUSBPrinter();
-              if (device) {
-                setUsbStatus("connecting");
-                await openUSBPrinter(device);
-                setUsbStatus("connected");
-              }
-            }
-            if (isUSBPrinterOpen()) {
-              await printZPLviaUSB(zplText);
-              showStatus(`✓ Impreso directo vía USB (${getUSBPrinterName() ?? "impresora"})`);
-              setUsbStatus("connected");
-              printed = true;
-            }
-          } catch (usbErr) {
-            setUsbStatus("error");
-            setUsbError((usbErr as Error).message);
-            // Fallback silencioso a Spooler Agent / QZ Tray
-          }
-        }
-
-        // ── 2. Agente Local (Spooler Windows) ────────────────────────────────
-        if (!printed) {
-          try {
-            const ok = agentStatus === "available" || await isSpoolerAgentAvailable();
-            if (ok) {
-              setAgentStatus("available");
-              if (ids.length > 1) await purgeAgentQueue().catch(() => {});
-              await printZPLviaAgent(zplText);
-              showStatus("✓ Impreso vía Spooler Windows");
-              printed = true;
-            }
-          } catch {
-            setAgentStatus("unavailable");
-            // Fallback silencioso a QZ Tray
-          }
-        }
-
-        // ── 3. QZ Tray fallback ───────────────────────────────────────────────
-        if (!printed) {
-        let resolvedPrinter = printerName || localStorage.getItem("qz_printer_name") || "";
-
-        if (!isQZConnected()) {
-          try {
-            setQzStatus("connecting");
-            const printers = await qzGetPrinters();
-            setQzPrinters(printers);
-            setQzStatus("connected");
-            // Pick best printer: stored name → auto-detect → first available
-            if (!resolvedPrinter) {
-              const found = printers.find(p => /4barcode|4b-|noxus|zebra|zd|zp|gc|lp|tlp|zt|xprinter|tsc|godex|brother|dymo/i.test(p)) ?? printers[0] ?? "";
-              resolvedPrinter = found;
-              if (found) {
-                setPrinterName(found);
-                localStorage.setItem("qz_printer_name", found);
-              }
-            }
-          } catch {
-            setQzStatus("error");
-          }
-        }
-
-        if (resolvedPrinter && isQZConnected()) {
-          try {
-            await qzPrintZPL(zplText, resolvedPrinter);
-            showStatus(`✓ Enviado a impresora "${resolvedPrinter}" con éxito`);
+        // ── 1. Agente Local (Spooler Windows) — auto-detect ─────────────────
+        try {
+          const ok = agentStatus === "available" || await isSpoolerAgentAvailable();
+          if (ok) {
+            setAgentStatus("available");
+            if (ids.length > 1) await purgeAgentQueue().catch(() => {});
+            await printZPLviaAgent(zplText);
+            showStatus("✓ Impreso vía impresora directa");
             printed = true;
-          } catch (qzErr) {
-            setQzStatus("error");
-            setQzError((qzErr as Error).message);
-            showStatus(`⚠ QZ Tray falló — guardando archivo...`);
           }
+        } catch {
+          setAgentStatus("unavailable");
         }
-        } // end QZ Tray block
 
-        // ── 4. File download fallback ─────────────────────────────────────────
+        // ── 2. Descarga de archivo (fallback) ───────────────────────────────
         if (!printed) {
-          // File System Access API — "Guardar como..." nativo en Chrome/Edge
-          if ("showSaveFilePicker" in window) {
-            try {
-              const fileHandle = await (window as Window & { showSaveFilePicker: (o: unknown) => Promise<{ createWritable: () => Promise<{ write: (b: Blob) => Promise<void>; close: () => Promise<void> }> }> }).showSaveFilePicker({
-                suggestedName: filename,
-                types: [{ description: "ZPL Label File", accept: { "application/octet-stream": [".zpl"] } }],
-              });
-              const writable = await fileHandle.createWritable();
-              await writable.write(blob);
-              await writable.close();
-              showStatus(`✓ Guardado como ${filename}`);
-            } catch (err) {
-              if ((err as { name?: string }).name !== "AbortError") throw err;
-              return; // usuario canceló
-            }
-          } else {
-            // Fallback final: descarga automática
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url; a.download = filename; a.click();
-            URL.revokeObjectURL(url);
-            showStatus(`✓ Descargando ${filename}`);
-          }
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url; a.download = filename; a.click();
+          URL.revokeObjectURL(url);
+          showStatus("⚠ Impresora no detectada — archivo descargado");
         }
       }
 
       // Marcar como impresas en la DB
-      const printed = (data?.shipments ?? []).filter(s => ids.includes(s.shipment_id));
+      const printedShipments = (data?.shipments ?? []).filter(s => ids.includes(s.shipment_id));
       await fetch("/api/meli-labels", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           shipment_ids: ids,
-          shipments: printed.map(s => ({ shipment_id: s.shipment_id, account: s.account, type: s.type, buyer: s.buyer, title: s.title, thumbnail: s.thumbnail })),
+          shipments: printedShipments.map(s => ({ shipment_id: s.shipment_id, account: s.account, type: s.type, buyer: s.buyer, title: s.title, thumbnail: s.thumbnail })),
         }),
       });
       load();
     } catch (e) { setError((e as Error).message); }
     finally { setDownloading(false); }
-  }, [data, load, printerName, qzStatus, agentStatus, showStatus]);
+  }, [data, load, agentStatus, showStatus]);
 
   const all            = data?.shipments        ?? [];
   const fullItems      = data?.full             ?? [];
@@ -625,170 +494,22 @@ function EtiquetasInner() {
             <p className="text-[10px]" style={{ color: "#6B7280" }}>Panel de despacho multicuenta</p>
           </div>
         </div>
-        <button onClick={load} disabled={loading} className="p-2 rounded-lg" style={{ background: "rgba(255,255,255,0.05)" }}>
-          <RefreshCw className={`w-4 h-4 text-gray-400 ${loading ? "animate-spin" : ""}`} />
-        </button>
-        {/* QZ Tray config button */}
-        <button
-          onClick={() => setShowQZPanel(p => !p)}
-          className="p-2 rounded-lg relative"
-          style={{ background: qzStatus === "connected" ? "#39FF1420" : "rgba(255,255,255,0.05)" }}
-          title="Configurar impresión directa (QZ Tray)">
-          <Printer className={`w-4 h-4 ${qzStatus === "connected" ? "text-green-400" : "text-gray-400"}`} />
-          {qzStatus === "connected" && (
-            <span className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-green-400" />
-          )}
-        </button>
-      </div>
-
-      {/* USB Direct panel */}
-      {usbStatus !== "unsupported" && (
-        <div className="mx-4 mt-1 rounded-2xl p-3 flex items-center justify-between"
-          style={{ background: "#1A1A1A", border: `1px solid ${usbStatus === "connected" ? "#39FF1440" : "rgba(255,255,255,0.1)"}` }}>
-          <div>
-            <p className="text-sm font-bold text-white">Impresora Directa (USB)</p>
-            {usbStatus === "connected" && (
-              <p className="text-[11px] text-green-400">● USB Conectada — {getUSBPrinterName() ?? "impresora"}</p>
-            )}
-            {usbStatus === "disconnected" && (
-              <p className="text-[11px] text-gray-400">● USB Desconectada</p>
-            )}
-            {usbStatus === "connecting" && (
-              <p className="text-[11px] text-yellow-400">● Conectando…</p>
-            )}
-            {usbStatus === "error" && (
-              <p className="text-[11px] text-red-400">● Error USB: {usbError ?? "desconocido"}</p>
-            )}
+        <div className="flex items-center gap-2">
+          {/* Printer status LED */}
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg" style={{ background: "rgba(255,255,255,0.05)" }}
+            title={agentStatus === "available" ? "Impresora conectada" : "Impresora no detectada"}>
+            <span className={`w-2 h-2 rounded-full ${agentStatus === "available" ? "bg-green-400" : agentStatus === "unchecked" ? "bg-yellow-400 animate-pulse" : "bg-gray-600"}`} />
+            <Printer className={`w-3.5 h-3.5 ${agentStatus === "available" ? "text-green-400" : "text-gray-500"}`} />
           </div>
-          {(usbStatus === "disconnected" || usbStatus === "error") && (
-            <button
-              onClick={async () => {
-                try {
-                  setUsbStatus("connecting");
-                  const dev = await requestUSBPrinter();
-                  await openUSBPrinter(dev);
-                  setUsbStatus("connected");
-                } catch (e) {
-                  setUsbStatus("error");
-                  setUsbError((e as Error).message);
-                }
-              }}
-              className="text-xs font-bold px-3 py-1.5 rounded-lg"
-              style={{ background: "#39FF14", color: "#000" }}>
-              Vincular Impresora USB
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* Spooler Agent panel */}
-      <div className="mx-4 mt-1 rounded-2xl p-3 flex items-center justify-between"
-        style={{ background: "#1A1A1A", border: `1px solid ${agentStatus === "available" ? "#39FF1440" : "rgba(255,255,255,0.1)"}` }}>
-        <div>
-          <p className="text-sm font-bold text-white">Agente Local (Spooler)</p>
-          {agentStatus === "available" && (
-            <p className="text-[11px] text-green-400">● Agente Activo — imprime directo al Spooler Windows</p>
-          )}
-          {agentStatus === "unavailable" && (
-            <p className="text-[11px] text-gray-400">● Agente No Detectado</p>
-          )}
-          {agentStatus === "unchecked" && (
-            <p className="text-[11px] text-gray-500">● Verificando...</p>
-          )}
-        </div>
-        <div className="flex gap-1.5">
-          {agentStatus === "available" && (
-            <button
-              onClick={async () => {
-                try {
-                  await purgeAgentQueue();
-                  showStatus("✓ Cola de impresión limpiada");
-                } catch { showStatus("⚠ No se pudo limpiar la cola"); }
-              }}
-              className="text-[10px] font-bold px-2 py-1 rounded-lg"
-              style={{ background: "rgba(255,255,255,0.08)", color: "#9CA3AF" }}>
-              Limpiar Cola
-            </button>
-          )}
-          <button
-            onClick={async () => {
-              setAgentStatus("unchecked");
-              const ok = await isSpoolerAgentAvailable();
-              setAgentStatus(ok ? "available" : "unavailable");
-            }}
-            className="text-[10px] font-bold px-2 py-1 rounded-lg"
-            style={{ background: agentStatus === "unavailable" ? "#FFE60020" : "rgba(255,255,255,0.08)", color: agentStatus === "unavailable" ? "#FFE600" : "#9CA3AF" }}>
-            {agentStatus === "unavailable" ? "Reintentar" : "Verificar"}
+          <button onClick={load} disabled={loading} className="p-2 rounded-lg" style={{ background: "rgba(255,255,255,0.05)" }}>
+            <RefreshCw className={`w-4 h-4 text-gray-400 ${loading ? "animate-spin" : ""}`} />
           </button>
         </div>
       </div>
 
-      {/* QZ Tray panel (respaldo) */}
-      {showQZPanel && (
-        <div className="mx-4 mt-1 rounded-2xl p-4 space-y-3"
-          style={{ background: "#1A1A1A", border: `1px solid ${qzStatus === "connected" ? "#39FF1440" : "rgba(255,255,255,0.1)"}` }}>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-bold text-white">QZ Tray (Respaldo)</p>
-              <p className="text-[11px]" style={{ color: "#6B7280" }}>Envía ZPL directo a la Zebra vía QZ Tray</p>
-            </div>
-            <span className="text-[10px] font-black px-2 py-0.5 rounded-full"
-              style={{
-                background: qzStatus === "connected" ? "#39FF1420" : qzStatus === "error" ? "#ef444420" : "#1F1F1F",
-                color: qzStatus === "connected" ? "#39FF14" : qzStatus === "error" ? "#ef4444" : "#6B7280",
-              }}>
-              {qzStatus === "connecting" ? "Conectando..." : qzStatus === "connected" ? "● Conectado" : qzStatus === "error" ? "● Error" : "● Desconectado"}
-            </span>
-          </div>
-
-          {qzError && (
-            <p className="text-xs rounded-xl p-2" style={{ background: "#ef444418", color: "#ef4444" }}>
-              {qzError}
-              <br /><span className="opacity-70">Instalá QZ Tray desde <strong>qz.io</strong> y activá &quot;Allow Unsigned&quot;.</span>
-            </p>
-          )}
-
-          <div className="flex gap-2">
-            {qzPrinters.length > 0 ? (
-              <select value={printerName}
-                onChange={e => { setPrinterName(e.target.value); localStorage.setItem("qz_printer_name", e.target.value); }}
-                className="flex-1 rounded-xl px-3 py-2 text-xs font-semibold text-white"
-                style={{ background: "#121212", border: "1px solid rgba(255,255,255,0.12)" }}>
-                <option value="">— Seleccionar impresora —</option>
-                {qzPrinters.map(p => <option key={p} value={p}>{p}</option>)}
-              </select>
-            ) : (
-              <input
-                type="text"
-                placeholder="Nombre exacto de la impresora (ej: 4BARCODE 4B-2054K)"
-                value={printerName}
-                onChange={e => { setPrinterName(e.target.value); localStorage.setItem("qz_printer_name", e.target.value); }}
-                className="flex-1 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-600"
-                style={{ background: "#121212", border: "1px solid rgba(255,255,255,0.12)" }}
-              />
-            )}
-            <button onClick={handleConnectQZ} disabled={qzStatus === "connecting"}
-              className="px-3 py-2 rounded-xl text-xs font-black transition-all disabled:opacity-50"
-              style={{ background: "#FFE600", color: "#121212" }}>
-              {qzStatus === "connecting" ? "..." : "Conectar"}
-            </button>
-          </div>
-
-          {printStatus && (
-            <p className="text-xs font-bold" style={{ color: printStatus.startsWith("✓") ? "#39FF14" : "#FF9800" }}>
-              {printStatus}
-            </p>
-          )}
-
-          <p className="text-[10px]" style={{ color: "#4B5563" }}>
-            Si QZ Tray no está instalado, el ZPL se guardará como archivo. <a href="https://qz.io/download/" target="_blank" rel="noopener noreferrer" className="underline" style={{ color: "#6B7280" }}>Descargar QZ Tray →</a>
-          </p>
-        </div>
-      )}
-
-      {/* Print status toast (cuando el panel está cerrado) */}
-      {printStatus && !showQZPanel && (
-        <div className="fixed bottom-20 left-4 right-4 z-50 rounded-2xl px-4 py-3 text-sm font-bold text-center animate-pulse"
+      {/* Print status toast */}
+      {printStatus && (
+        <div className="fixed bottom-20 left-4 right-4 z-50 rounded-2xl px-4 py-3 text-sm font-bold text-center"
           style={{ background: printStatus.startsWith("✓") ? "#39FF1420" : "#FF980020",
                    border: `1px solid ${printStatus.startsWith("✓") ? "#39FF1440" : "#FF980040"}`,
                    color: printStatus.startsWith("✓") ? "#39FF14" : "#FF9800" }}>
