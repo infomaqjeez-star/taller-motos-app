@@ -1,5 +1,6 @@
 "use client";
-import { useEffect, useState, useCallback, Suspense } from "react";
+import { useEffect, useState, useCallback, useRef, Suspense } from "react";
+import { connectQZ, qzGetPrinters, qzPrintZPL, isQZConnected } from "@/lib/qztray";
 import Link from "next/link";
 import {
   ArrowLeft, RefreshCw, Printer, Download, CheckCircle2,
@@ -347,6 +348,17 @@ function EtiquetasInner() {
   const [mainTab,     setMainTab]     = useState<MainTab>("despachar");
   const [histPeriod,  setHistPeriod]  = useState<HistPeriod>("today");
 
+  // QZ Tray — RAW printing
+  const [qzStatus,    setQzStatus]   = useState<"idle"|"connecting"|"connected"|"error">("idle");
+  const [qzError,     setQzError]    = useState<string | null>(null);
+  const [qzPrinters,  setQzPrinters] = useState<string[]>([]);
+  const [printerName, setPrinterName] = useState<string>(() =>
+    typeof window !== "undefined" ? (localStorage.getItem("qz_printer_name") ?? "") : ""
+  );
+  const [showQZPanel, setShowQZPanel] = useState(false);
+  const [printStatus, setPrintStatus] = useState<string | null>(null);
+  const printStatusTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const load = useCallback(async () => {
     setLoading(true); setError(null);
     try {
@@ -378,6 +390,30 @@ function EtiquetasInner() {
   const toggleItem = (id: number) =>
     setSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
+  // QZ Tray helpers
+  const showStatus = useCallback((msg: string) => {
+    setPrintStatus(msg);
+    if (printStatusTimer.current) clearTimeout(printStatusTimer.current);
+    printStatusTimer.current = setTimeout(() => setPrintStatus(null), 4000);
+  }, []);
+
+  const handleConnectQZ = useCallback(async () => {
+    setQzStatus("connecting"); setQzError(null);
+    try {
+      const printers = await qzGetPrinters();
+      setQzPrinters(printers);
+      setQzStatus("connected");
+      if (!printerName && printers.length > 0) {
+        const zebra = printers.find(p => /zebra|zd|zp|gc|lp|tlp|zt/i.test(p)) ?? printers[0];
+        setPrinterName(zebra);
+        localStorage.setItem("qz_printer_name", zebra);
+      }
+    } catch (e) {
+      setQzStatus("error");
+      setQzError((e as Error).message);
+    }
+  }, [printerName]);
+
   const handlePrint = useCallback(async (format: "pdf" | "zpl", ids: number[]) => {
     if (!ids.length) return;
     setDownloading(true);
@@ -391,37 +427,57 @@ function EtiquetasInner() {
         const w = window.open(url, "_blank");
         if (w) w.print();
         URL.revokeObjectURL(url);
+
       } else {
-        // Nombre dinámico: Etiqueta_[IDs abreviado]_[tipo].zpl
+        // ── ZPL: intentar RAW via QZ Tray primero ────────────────────────
         const shipments = (data?.shipments ?? []).filter(s => ids.includes(s.shipment_id));
-        const tipo = shipments.length === 1 ? (shipments[0].type ?? "envio") : "multi";
+        const tipo   = shipments.length === 1 ? (shipments[0].type ?? "envio") : "multi";
         const idPart = ids.length === 1 ? String(ids[0]) : `${ids[0]}_y${ids.length - 1}mas`;
         const filename = `Etiqueta_${idPart}_${tipo}.zpl`;
 
-        // File System Access API — muestra "Guardar como..." nativo en Chrome/Edge
-        if ("showSaveFilePicker" in window) {
+        const zplText = await blob.text();
+        let sentViaQZ = false;
+
+        if (printerName && (isQZConnected() || qzStatus === "connected")) {
           try {
-            const fileHandle = await (window as Window & { showSaveFilePicker: (opts: unknown) => Promise<{ createWritable: () => Promise<{ write: (b: Blob) => Promise<void>; close: () => Promise<void> }> }> }).showSaveFilePicker({
-              suggestedName: filename,
-              types: [{ description: "ZPL Label File", accept: { "application/octet-stream": [".zpl"] } }],
-            });
-            const writable = await fileHandle.createWritable();
-            await writable.write(blob);
-            await writable.close();
-          } catch (err) {
-            // Usuario canceló el diálogo — no es un error real
-            if ((err as { name?: string }).name !== "AbortError") throw err;
-            return;
+            await qzPrintZPL(zplText, printerName);
+            showStatus(`✓ Enviado a impresora "${printerName}" con éxito`);
+            sentViaQZ = true;
+          } catch (qzErr) {
+            setQzStatus("error");
+            setQzError((qzErr as Error).message);
+            showStatus(`⚠ QZ Tray falló — guardando archivo...`);
           }
-        } else {
-          // Fallback: descarga automática con nombre dinámico
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement("a");
-          a.href = url; a.download = filename; a.click();
-          URL.revokeObjectURL(url);
+        }
+
+        if (!sentViaQZ) {
+          // File System Access API — "Guardar como..." nativo en Chrome/Edge
+          if ("showSaveFilePicker" in window) {
+            try {
+              const fileHandle = await (window as Window & { showSaveFilePicker: (o: unknown) => Promise<{ createWritable: () => Promise<{ write: (b: Blob) => Promise<void>; close: () => Promise<void> }> }> }).showSaveFilePicker({
+                suggestedName: filename,
+                types: [{ description: "ZPL Label File", accept: { "application/octet-stream": [".zpl"] } }],
+              });
+              const writable = await fileHandle.createWritable();
+              await writable.write(blob);
+              await writable.close();
+              showStatus(`✓ Guardado como ${filename}`);
+            } catch (err) {
+              if ((err as { name?: string }).name !== "AbortError") throw err;
+              return; // usuario canceló
+            }
+          } else {
+            // Fallback final: descarga automática
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url; a.download = filename; a.click();
+            URL.revokeObjectURL(url);
+            showStatus(`✓ Descargando ${filename}`);
+          }
         }
       }
 
+      // Marcar como impresas en la DB
       const printed = (data?.shipments ?? []).filter(s => ids.includes(s.shipment_id));
       await fetch("/api/meli-labels", {
         method: "POST",
@@ -434,7 +490,7 @@ function EtiquetasInner() {
       load();
     } catch (e) { setError((e as Error).message); }
     finally { setDownloading(false); }
-  }, [data, load]);
+  }, [data, load, printerName, qzStatus, showStatus]);
 
   const all            = data?.shipments        ?? [];
   const fullItems      = data?.full             ?? [];
@@ -474,7 +530,91 @@ function EtiquetasInner() {
         <button onClick={load} disabled={loading} className="p-2 rounded-lg" style={{ background: "rgba(255,255,255,0.05)" }}>
           <RefreshCw className={`w-4 h-4 text-gray-400 ${loading ? "animate-spin" : ""}`} />
         </button>
+        {/* QZ Tray config button */}
+        <button
+          onClick={() => setShowQZPanel(p => !p)}
+          className="p-2 rounded-lg relative"
+          style={{ background: qzStatus === "connected" ? "#39FF1420" : "rgba(255,255,255,0.05)" }}
+          title="Configurar impresión directa (QZ Tray)">
+          <Printer className={`w-4 h-4 ${qzStatus === "connected" ? "text-green-400" : "text-gray-400"}`} />
+          {qzStatus === "connected" && (
+            <span className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-green-400" />
+          )}
+        </button>
       </div>
+
+      {/* QZ Tray panel */}
+      {showQZPanel && (
+        <div className="mx-4 mt-1 rounded-2xl p-4 space-y-3"
+          style={{ background: "#1A1A1A", border: `1px solid ${qzStatus === "connected" ? "#39FF1440" : "rgba(255,255,255,0.1)"}` }}>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-bold text-white">Impresión Directa (RAW)</p>
+              <p className="text-[11px]" style={{ color: "#6B7280" }}>Envía ZPL directo a la Zebra vía QZ Tray</p>
+            </div>
+            <span className="text-[10px] font-black px-2 py-0.5 rounded-full"
+              style={{
+                background: qzStatus === "connected" ? "#39FF1420" : qzStatus === "error" ? "#ef444420" : "#1F1F1F",
+                color: qzStatus === "connected" ? "#39FF14" : qzStatus === "error" ? "#ef4444" : "#6B7280",
+              }}>
+              {qzStatus === "connecting" ? "Conectando..." : qzStatus === "connected" ? "● Conectado" : qzStatus === "error" ? "● Error" : "● Desconectado"}
+            </span>
+          </div>
+
+          {qzError && (
+            <p className="text-xs rounded-xl p-2" style={{ background: "#ef444418", color: "#ef4444" }}>
+              {qzError}
+              <br /><span className="opacity-70">Instalá QZ Tray desde <strong>qz.io</strong> y activá "Allow Unsigned".</span>
+            </p>
+          )}
+
+          <div className="flex gap-2">
+            {qzPrinters.length > 0 ? (
+              <select value={printerName}
+                onChange={e => { setPrinterName(e.target.value); localStorage.setItem("qz_printer_name", e.target.value); }}
+                className="flex-1 rounded-xl px-3 py-2 text-xs font-semibold text-white"
+                style={{ background: "#121212", border: "1px solid rgba(255,255,255,0.12)" }}>
+                <option value="">— Seleccionar impresora —</option>
+                {qzPrinters.map(p => <option key={p} value={p}>{p}</option>)}
+              </select>
+            ) : (
+              <input
+                type="text"
+                placeholder="Nombre de la impresora (ej: ZDesigner ZD420)"
+                value={printerName}
+                onChange={e => { setPrinterName(e.target.value); localStorage.setItem("qz_printer_name", e.target.value); }}
+                className="flex-1 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-600"
+                style={{ background: "#121212", border: "1px solid rgba(255,255,255,0.12)" }}
+              />
+            )}
+            <button onClick={handleConnectQZ} disabled={qzStatus === "connecting"}
+              className="px-3 py-2 rounded-xl text-xs font-black transition-all disabled:opacity-50"
+              style={{ background: "#FFE600", color: "#121212" }}>
+              {qzStatus === "connecting" ? "..." : "Conectar"}
+            </button>
+          </div>
+
+          {printStatus && (
+            <p className="text-xs font-bold" style={{ color: printStatus.startsWith("✓") ? "#39FF14" : "#FF9800" }}>
+              {printStatus}
+            </p>
+          )}
+
+          <p className="text-[10px]" style={{ color: "#4B5563" }}>
+            Si QZ Tray no está instalado, el ZPL se guardará como archivo. <a href="https://qz.io/download/" target="_blank" rel="noopener noreferrer" className="underline" style={{ color: "#6B7280" }}>Descargar QZ Tray →</a>
+          </p>
+        </div>
+      )}
+
+      {/* Print status toast (cuando el panel está cerrado) */}
+      {printStatus && !showQZPanel && (
+        <div className="fixed bottom-20 left-4 right-4 z-50 rounded-2xl px-4 py-3 text-sm font-bold text-center animate-pulse"
+          style={{ background: printStatus.startsWith("✓") ? "#39FF1420" : "#FF980020",
+                   border: `1px solid ${printStatus.startsWith("✓") ? "#39FF1440" : "#FF980040"}`,
+                   color: printStatus.startsWith("✓") ? "#39FF14" : "#FF9800" }}>
+          {printStatus}
+        </div>
+      )}
 
       <div className="max-w-2xl mx-auto px-4 pt-4 space-y-3">
 
