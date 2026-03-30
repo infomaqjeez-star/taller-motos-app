@@ -1,5 +1,6 @@
 import { NextResponse, NextRequest } from "next/server";
 import { getSupabase, getValidToken, MeliAccount } from "@/lib/meli";
+import { saveToKnowledgeBase } from "@/lib/knowledgeBase";
 
 export const dynamic  = "force-dynamic";
 export const revalidate = 0;
@@ -7,10 +8,11 @@ export const revalidate = 0;
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json() as {
-      question_id:    number;
-      answer_text:    string;
-      meli_account_id?: string;
-      meli_user_id?:  string;
+      question_id:       number;
+      answer_text:       string;
+      meli_account_id?:  string;
+      meli_user_id?:     string;
+      pregunta_original?: string; // Opcional: para guardar en knowledge_base
     };
 
     const { question_id, answer_text, meli_account_id, meli_user_id } = body;
@@ -55,6 +57,15 @@ export async function POST(req: NextRequest) {
     if (!meliRes.ok) {
       const errMsg = (meliData?.message as string | undefined) ?? (meliData?.error as string | undefined) ?? `HTTP ${meliRes.status}`;
       return NextResponse.json({ status: "error", error: errMsg }, { status: 400 });
+    }
+
+    // ✅ Guardar respuesta exitosa en knowledge_base (histórico inteligente)
+    if (body.pregunta_original) {
+      await saveToKnowledgeBase(
+        body.pregunta_original,
+        answer_text,
+        []
+      );
     }
 
     return NextResponse.json({ status: "ok", message: "Pregunta respondida exitosamente", data: meliData });

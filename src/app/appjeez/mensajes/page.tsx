@@ -8,6 +8,7 @@ import {
   CheckCircle2, AlertCircle, ChevronDown, ChevronUp,
   Search, Package, Settings, Plus, Trash2, Edit2, Check, X,
 } from "lucide-react";
+import QuestionSuggestion from "@/components/QuestionSuggestion";
 
 const DEFAULT_TEMPLATES = [
   "¡Hola! Sí, el producto está disponible. ¿Tenés alguna consulta adicional?",
@@ -197,7 +198,12 @@ function QuestionCard({ q, onAnswered }: { q: Question; onAnswered: (id: number)
       const res = await fetch("/api/meli-answer", {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ question_id: q.meli_question_id, answer_text: finalText, meli_account_id: q.meli_account_id }),
+        body:    JSON.stringify({
+          question_id: q.meli_question_id,
+          answer_text: finalText,
+          meli_account_id: q.meli_account_id,
+          pregunta_original: q.question_text, // Para guardar en knowledge_base
+        }),
       });
       const data = await res.json();
       if (data.status === "ok") {
@@ -288,6 +294,12 @@ function QuestionCard({ q, onAnswered }: { q: Question; onAnswered: (id: number)
             <p className="text-xs font-semibold mb-1" style={{ color: "#6B7280" }}>Pregunta completa:</p>
             <p className="text-sm text-white">{q.question_text}</p>
           </div>
+
+          {/* ✨ Componente de sugerencias basado en historial */}
+          <QuestionSuggestion
+            preguntaTexto={q.question_text}
+            onUseSuggestion={(texto) => setText(texto)}
+          />
 
           {templates.length > 0 && (
             <div>
