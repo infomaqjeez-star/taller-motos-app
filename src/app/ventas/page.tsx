@@ -4,10 +4,12 @@ import { useState, useEffect, useCallback } from "react";
 import {
   Plus, Trash2, ShoppingCart, BarChart2, List,
   TrendingUp, Package, CreditCard, ChevronDown,
-  CheckCircle, XCircle, AlertTriangle, Calendar, Pencil, Save, X,
+  CheckCircle, XCircle, AlertTriangle, Calendar, Pencil, Save, X, Printer,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import BottomNav from "@/components/BottomNav";
+import ClientDataForm from "@/components/ClientDataForm";
+import TicketPrinter from "@/components/TicketPrinter";
 import { ventasDb } from "@/lib/db";
 import { generateId } from "@/lib/utils";
 import {
@@ -115,10 +117,12 @@ function VentaCard({
   venta,
   onCancelar,
   onEditar,
+  onPrintTicket,
 }: {
   venta: VentaRepuesto;
   onCancelar: (id: string) => void;
   onEditar: (v: VentaRepuesto) => void;
+  onPrintTicket: (venta: VentaRepuesto) => void;
 }) {
   const [open, setOpen] = useState(false);
   const hora = new Date(venta.createdAt).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
@@ -176,6 +180,12 @@ function VentaCard({
           )}
           {!cancelada && (
             <div className="mt-2 flex items-center gap-4">
+              <button
+                onClick={() => onPrintTicket(venta)}
+                className="flex items-center gap-2 text-xs text-green-400 hover:text-green-300 font-semibold"
+              >
+                <Printer className="w-4 h-4" /> Imprimir Ticket
+              </button>
               <button
                 onClick={() => onEditar(venta)}
                 className="flex items-center gap-2 text-xs text-blue-400 hover:text-blue-300 font-semibold"
@@ -356,10 +366,14 @@ export default function VentasPage() {
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
 
+  // ── Datos del cliente (para ticket)
+  const [clientData, setClientData] = useState<{ nombre?: string; dni?: string; direccion?: string }>({});
+
   // ── Movimientos del día
   const [ventasHoy, setVentasHoy] = useState<VentaRepuesto[]>([]);
   const [loadingHoy, setLoadingHoy] = useState(false);
   const [editVenta, setEditVenta] = useState<VentaRepuesto | null>(null);
+  const [ticketModal, setTicketModal] = useState<{ isOpen: boolean; ventaId?: string }>({ isOpen: false });
 
   // ── Estadísticas
   const [rango, setRango] = useState<RangoStats>("hoy");
@@ -516,6 +530,12 @@ export default function VentasPage() {
         {/* ══════════════════ NUEVA VENTA ══════════════════ */}
         {tab === "nueva" && (
           <div className="space-y-4">
+            {/* ── Datos del Cliente ── */}
+            <ClientDataForm
+              initialData={clientData}
+              onClientDataChange={setClientData}
+            />
+
             <div className="card border border-white/10">
               <h2 className="text-base font-bold text-gray-200 mb-4 flex items-center gap-2">
                 <ShoppingCart className="w-5 h-5 text-[#FDB71A]" />
@@ -657,7 +677,13 @@ export default function VentasPage() {
               </div>
             ) : (
               ventasHoy.map(v => (
-                <VentaCard key={v.id} venta={v} onCancelar={handleCancelar} onEditar={setEditVenta} />
+                <VentaCard 
+                  key={v.id} 
+                  venta={v} 
+                  onCancelar={handleCancelar} 
+                  onEditar={setEditVenta}
+                  onPrintTicket={(venta) => setTicketModal({ isOpen: true, ventaId: venta.id })}
+                />
               ))
             )}
           </div>
@@ -819,6 +845,15 @@ export default function VentasPage() {
           venta={editVenta}
           onClose={() => setEditVenta(null)}
           onSave={handleEditarVenta}
+        />
+      )}
+
+      {ticketModal.isOpen && (
+        <TicketPrinter
+          isOpen={ticketModal.isOpen}
+          venta={ventasHoy.find(v => v.id === ticketModal.ventaId) || { items: [], total: 0, metodoPago: "efectivo", createdAt: "" }}
+          clientData={clientData}
+          onClose={() => setTicketModal({ isOpen: false })}
         />
       )}
 
