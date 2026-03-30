@@ -28,8 +28,12 @@ export default function QuestionAlertGlobal() {
     if (stored === "true") setEnabled(true);
 
     const storedMode = localStorage.getItem(ALERT_MODE_STORAGE_KEY) as AlertMode | null;
+    console.log("[INIT] Modo almacenado en localStorage:", storedMode, "Key usado:", ALERT_MODE_STORAGE_KEY);
     if (storedMode && Object.keys(ALERT_MODES).includes(storedMode)) {
+      console.log("[INIT] Restaurando modo desde localStorage:", storedMode);
       setAlertMode(storedMode);
+    } else {
+      console.log("[INIT] Modo no encontrado o inválido, usando default: taller");
     }
 
     // ✅ PRELOAD: Cargar los 3 audios en RAM al montar el componente
@@ -63,6 +67,7 @@ export default function QuestionAlertGlobal() {
 
   // Sync alert mode with localStorage
   useEffect(() => {
+    console.log("[SYNC] Guardando modo en localStorage:", alertMode, "Key:", ALERT_MODE_STORAGE_KEY);
     localStorage.setItem(ALERT_MODE_STORAGE_KEY, alertMode);
   }, [alertMode]);
 
@@ -71,11 +76,12 @@ export default function QuestionAlertGlobal() {
     try {
       const audios = (window as any).preloadedAudios;
       if (!audios || !audios[mode]) {
-        console.error("❌ Audio no precargado:", mode);
+        console.error("❌ Audio no precargado:", mode, "Audios disponibles:", Object.keys(audios || {}));
         return;
       }
 
       const audio = audios[mode];
+      console.log(`[AUDIO] Reproduciendo ${mode}:`, audio.src);
       audio.currentTime = 0;
       audio.play().catch((e: Error) => {
         console.error("❌ Error reproduciendo audio:", e);
@@ -237,6 +243,7 @@ export default function QuestionAlertGlobal() {
                     >
                       <button
                         onClick={() => {
+                          console.log("[MODE SELECT] Cambiando a modo:", mode);
                           setAlertMode(mode);
                           playAlertSound(mode);
                           showModeNotification(mode);
