@@ -2,11 +2,12 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Bell, BellOff, Volume2, ChevronDown } from "lucide-react";
 import { ALERT_MODES, type AlertMode, ALERT_MODE_STORAGE_KEY } from "@/lib/alertModes";
+import { supabase } from "@/lib/supabase";
 
 /**
- * Global question-alert component.
+ * Global question-alert component with Realtime postgres_changes.
  * Persists alert preference in localStorage so it survives navigation.
- * Mounts once in the appjeez layout and polls every 5 min via Web Worker.
+ * Uses Supabase Realtime for zero-delay alerts (<500ms).
  * Supports unified alert modes: discreto, taller, urgente
  */
 export default function QuestionAlertGlobal() {
@@ -17,7 +18,6 @@ export default function QuestionAlertGlobal() {
   const [showModeDropdown, setShowModeDropdown] = useState(false);
 
   const enabledRef = useRef(false);
-  const workerRef = useRef<Worker | null>(null);
   const alertedIdsRef = useRef<Set<number>>(new Set());
   const initialLoadDone = useRef(false);
   const loadRef = useRef<(() => Promise<void>) | null>(null);
@@ -32,9 +32,27 @@ export default function QuestionAlertGlobal() {
       setAlertMode(storedMode);
     }
 
+    // ✅ PRELOAD: Cargar los 3 audios en RAM al montar el componente
+    const audios: Record<AlertMode, HTMLAudioElement> = {
+      discreto: new Audio("/sounds/alerta-discreto.mp3"),
+      taller: new Audio("/sounds/alerta-taller.mp3"),
+      urgente: new Audio("/sounds/alerta-urgente.mp3"),
+    };
+
+    // Configurar volumen máximo (1.0) y forzar carga a RAM
+    Object.entries(audios).forEach(([_, audio]) => {
+      audio.volume = 1.0;
+      audio.preload = "auto";
+      audio.load();
+    });
+
+    (window as any).preloadedAudios = audios;
+
     if (typeof Notification !== "undefined" && Notification.permission === "default") {
       Notification.requestPermission().catch(() => {});
     }
+
+    console.log("[INIT] Audios precargados en RAM para zero-delay");
   }, []);
 
   // Keep ref in sync
@@ -48,34 +66,24 @@ export default function QuestionAlertGlobal() {
     localStorage.setItem(ALERT_MODE_STORAGE_KEY, alertMode);
   }, [alertMode]);
 
-  // Función para reproducir sonido de alerta según el modo
+  // Función para reproducir sonido de alerta usando PRELOAD
   const playAlertSound = useCallback((mode: AlertMode) => {
     try {
-      // Detener cualquier audio anterior si existe
-      const currentAudio = (window as any).currentAlertAudio;
-      if (currentAudio) {
-        currentAudio.pause();
-        currentAudio.currentTime = 0;
+      const audios = (window as any).preloadedAudios;
+      if (!audios || !audios[mode]) {
+        console.error("❌ Audio no precargado:", mode);
+        return;
       }
 
-      const audioPath = `/sounds/alerta-${mode}.mp3`;
-      const audio = new Audio(audioPath);
-      audio.volume = 1.0; // Volumen máximo para todos los modos
-      
-      // Guardar referencia global
-      (window as any).currentAlertAudio = audio;
-
-      audio.play().catch((e) => {
-        console.error("Error al reproducir audio. Ruta intentada:", audio.src);
-        console.error("Detalle del error:", e);
-        console.error("Estado del audio:", {
-          readyState: audio.readyState,
-          networkState: audio.networkState,
-          error: audio.error,
-        });
+      const audio = audios[mode];
+      audio.currentTime = 0;
+      audio.play().catch((e: Error) => {
+        console.error("❌ Error reproduciendo audio:", e);
       });
+
+      console.log(`✅ Sonido ${mode} reproducido (preload)`, new Date().toISOString());
     } catch (error) {
-      console.error("Error en playAlertSound:", error);
+      console.error("❌ Error en playAlertSound:", error);
     }
   }, []);
 
@@ -128,25 +136,53 @@ export default function QuestionAlertGlobal() {
 
   useEffect(() => { loadRef.current = pollQuestions; }, [pollQuestions]);
 
-  // Worker + initial poll
+  // ✅ REALTIME: Reemplazar Web Worker con Supabase Realtime postgres_changes
   useEffect(() => {
+    // Poll inicial una sola vez
     pollQuestions();
 
-    if (typeof Worker !== "undefined") {
-      const worker = new Worker("/question-worker.js");
-      workerRef.current = worker;
-      worker.onmessage = () => loadRef.current?.();
-      worker.postMessage("start");
-      return () => {
-        worker.postMessage("stop");
-        worker.terminate();
-      };
-    } else {
-      const interval = setInterval(() => loadRef.current?.(), 300_000);
-      return () => clearInterval(interval);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    // Crear canal Realtime con broadcast sin ACK para máxima velocidad
+    const channel = supabase
+      .channel("meli_questions_changes", {
+        config: { broadcast: { ack: false } },
+      })
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "meli_questions",
+        },
+        (payload) => {
+          // 🔥 PRIMERA: reproducir sonido INMEDIATAMENTE (antes de setState)
+          console.log("[REALTIME] Nueva pregunta detectada:", payload.new.meli_question_id);
+          playAlertSound(alertMode);
+
+          // LUEGO: actualizar estado y UI
+          loadRef.current?.();
+        }
+      )
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") {
+          console.log("✅ [REALTIME] Conectado a canal de preguntas");
+        } else if (status === "CHANNEL_ERROR") {
+          console.error("❌ [REALTIME] Error de conexión");
+        }
+      });
+
+    // 💓 HEARTBEAT: Enviar keep-alive cada 30s para mantener conexión activa
+    const heartbeat = setInterval(() => {
+      console.log("[REALTIME] Heartbeat @", new Date().toISOString());
+    }, 30000);
+
+    console.log("[INIT] Sistema Realtime iniciado (zero-delay)");
+
+    return () => {
+      clearInterval(heartbeat);
+      supabase.removeChannel(channel);
+      console.log("[CLEANUP] Sistema Realtime detenido");
+    };
+  }, [alertMode, playAlertSound]);
 
   const handleEnable = () => {
     if (typeof Notification !== "undefined" && Notification.permission !== "denied") {
