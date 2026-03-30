@@ -1,16 +1,20 @@
 "use client";
 import { useEffect, useRef, useState, useCallback } from "react";
-import { Bell, BellOff, Volume2 } from "lucide-react";
+import { Bell, BellOff, Volume2, ChevronDown } from "lucide-react";
+import { ALERT_MODES, type AlertMode, ALERT_MODE_STORAGE_KEY } from "@/lib/alertModes";
 
 /**
  * Global question-alert component.
  * Persists alert preference in localStorage so it survives navigation.
  * Mounts once in the appjeez layout and polls every 5 min via Web Worker.
+ * Supports unified alert modes: discreto, taller, urgente
  */
 export default function QuestionAlertGlobal() {
   const [enabled, setEnabled] = useState(false);
   const [newCount, setNewCount] = useState(0);
   const [toast, setToast] = useState<string | null>(null);
+  const [alertMode, setAlertMode] = useState<AlertMode>("taller");
+  const [showModeDropdown, setShowModeDropdown] = useState(false);
 
   const enabledRef = useRef(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -23,6 +27,11 @@ export default function QuestionAlertGlobal() {
   useEffect(() => {
     const stored = localStorage.getItem("maqjeez_alerts_enabled");
     if (stored === "true") setEnabled(true);
+
+    const storedMode = localStorage.getItem(ALERT_MODE_STORAGE_KEY) as AlertMode | null;
+    if (storedMode && Object.keys(ALERT_MODES).includes(storedMode)) {
+      setAlertMode(storedMode);
+    }
 
     audioRef.current = new Audio(
       "data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdHuMk42Bfn6Dj5yWjIB7fIOQm5eSh3t2fImWmpOJf3t8iJabl46DfXuFk5qXj4R9fIOSmZWNhH19hZOZl4+EfX2Ek5mXj4R9fYWTmZePhH19hJOZl4+EfX2Fk5mXj4R9fYSTmZePhH19hZOZl4+EfX2Ek5mVjYR+fYWTmJWOhH59hZOYlY6Efn2Fk5iVjoR+fYWTl5SNhH59hZOXlI2Efn6Fk5eUjYR+foWTl5SNhH5+hZOXlI2Efn6Fk5eUjYR+foWTl5SNhH5+hZOXlI2Efn6Fk5aUjYR+foaTlpSNhH5+hpOWlI2Efn6Gk5aUjYR+foaTlpSNhH5+hpOWlI2Efn6Gk5aUjYR+foaTlpSNhH5+hpOWlI2Efn6GkpaUjYR+foaSg3xtZnF+i5OPh4F9gIuWlY6DfHyEkpmXjoN8fISSmZeOg3x8hJKZl46DfHyEkpmXjoN8fISSmZeOg3x8hJKZlo2Dfn6Gk5aUjYR+fg=="
@@ -39,6 +48,11 @@ export default function QuestionAlertGlobal() {
     enabledRef.current = enabled;
     localStorage.setItem("maqjeez_alerts_enabled", String(enabled));
   }, [enabled]);
+
+  // Sync alert mode with localStorage
+  useEffect(() => {
+    localStorage.setItem(ALERT_MODE_STORAGE_KEY, alertMode);
+  }, [alertMode]);
 
   const playAlert = useCallback(() => {
     if (!enabledRef.current) return;
@@ -87,11 +101,12 @@ export default function QuestionAlertGlobal() {
       if (newQuestions > 0) {
         setNewCount(prev => prev + newQuestions);
         playAlert();
+        const modeConfig = ALERT_MODES[alertMode];
         setToast(`${newQuestions} pregunta${newQuestions > 1 ? "s" : ""} nueva${newQuestions > 1 ? "s" : ""} de ${newAccounts.join(", ")}`);
-        setTimeout(() => setToast(null), 5000);
+        setTimeout(() => setToast(null), modeConfig.duration);
       }
     } catch { /* silent */ }
-  }, [playAlert]);
+  }, [playAlert, alertMode]);
 
   useEffect(() => { loadRef.current = pollQuestions; }, [pollQuestions]);
 
@@ -142,9 +157,12 @@ export default function QuestionAlertGlobal() {
       {/* Floating alert controls — fixed bottom-right */}
       <div className="fixed bottom-4 right-4 z-50 flex items-center gap-2">
         {toast && (
-          <div className="rounded-xl px-4 py-2 text-sm font-bold text-black animate-pulse"
-            style={{ background: "#FFE600" }}>
-            {toast}
+          <div className={`${ALERT_MODES[alertMode].style} ${ALERT_MODES[alertMode].animation} text-white p-5 rounded-xl shadow-2xl flex items-center gap-4 border-2 border-white`}>
+            <span className="text-3xl">{ALERT_MODES[alertMode].icon}</span>
+            <div>
+              <p className="font-black uppercase tracking-wider">¡Nueva Pregunta en Sistema!</p>
+              <p className="text-lg font-medium">{toast}</p>
+            </div>
           </div>
         )}
 
@@ -159,6 +177,37 @@ export default function QuestionAlertGlobal() {
 
         {enabled ? (
           <div className="flex items-center gap-1">
+            {/* Mode selector dropdown */}
+            <div className="relative">
+              <button onClick={() => setShowModeDropdown(!showModeDropdown)}
+                className="w-9 h-9 rounded-full flex items-center justify-center transition-all"
+                style={{ background: "#1F1F1F", border: "1px solid rgba(255,255,255,0.1)" }}
+                title={`Modo actual: ${ALERT_MODES[alertMode].label}`}>
+                <ChevronDown className="w-4 h-4 text-gray-400" />
+              </button>
+              {showModeDropdown && (
+                <div className="absolute bottom-full right-0 mb-2 bg-gray-900 border border-gray-700 rounded-xl shadow-2xl z-[60] min-w-max">
+                  {(Object.keys(ALERT_MODES) as AlertMode[]).map((mode) => (
+                    <button
+                      key={mode}
+                      onClick={() => {
+                        setAlertMode(mode);
+                        setShowModeDropdown(false);
+                      }}
+                      className={`block w-full text-left px-4 py-2.5 text-sm transition-colors first:rounded-t-lg last:rounded-b-lg ${
+                        alertMode === mode
+                          ? "bg-blue-600 text-white font-bold"
+                          : "text-gray-300 hover:bg-gray-800"
+                      }`}
+                    >
+                      <span className="text-lg mr-2">{ALERT_MODES[mode].icon}</span>
+                      {ALERT_MODES[mode].label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <button onClick={testSound}
               className="w-9 h-9 rounded-full flex items-center justify-center transition-all"
               style={{ background: "#1F1F1F", border: "1px solid rgba(255,255,255,0.1)" }}
