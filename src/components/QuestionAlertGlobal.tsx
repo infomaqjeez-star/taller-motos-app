@@ -70,10 +70,34 @@ export default function QuestionAlertGlobal() {
 
   // Función para reproducir sonido de alerta según el modo
   const playAlertSound = useCallback((mode: AlertMode) => {
-    const config = ALERT_MODES[mode];
-    const audio = new Audio(config.soundFile);
-    audio.volume = config.volume;
-    audio.play().catch((e) => console.log("Error al reproducir audio:", e));
+    try {
+      // Detener cualquier audio anterior si existe
+      const currentAudio = (window as any).currentAlertAudio;
+      if (currentAudio) {
+        currentAudio.pause();
+        currentAudio.currentTime = 0;
+      }
+
+      const config = ALERT_MODES[mode];
+      const audioPath = `/sounds/alerta-${mode}.mp3`;
+      const audio = new Audio(audioPath);
+      audio.volume = config.volume;
+      
+      // Guardar referencia global
+      (window as any).currentAlertAudio = audio;
+
+      audio.play().catch((e) => {
+        console.error("Error al reproducir audio. Ruta intentada:", audio.src);
+        console.error("Detalle del error:", e);
+        console.error("Estado del audio:", {
+          readyState: audio.readyState,
+          networkState: audio.networkState,
+          error: audio.error,
+        });
+      });
+    } catch (error) {
+      console.error("Error en playAlertSound:", error);
+    }
   }, []);
 
   // Función para mostrar notificación de cambio de modo
