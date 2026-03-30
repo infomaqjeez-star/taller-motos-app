@@ -7,6 +7,7 @@ interface ClientData {
   nombre?: string;
   dni?: string;
   direccion?: string;
+  telefono?: string;
 }
 
 interface Props {
@@ -18,18 +19,20 @@ export default function ClientDataForm({ initialData = {}, onClientDataChange }:
   const [nombre, setNombre] = useState(initialData.nombre || "");
   const [dni, setDni] = useState(initialData.dni || "");
   const [direccion, setDireccion] = useState(initialData.direccion || "");
+  const [telefono, setTelefono] = useState(initialData.telefono || "");
 
   useEffect(() => {
-    onClientDataChange({ nombre, dni, direccion });
-  }, [nombre, dni, direccion, onClientDataChange]);
+    onClientDataChange({ nombre, dni, direccion, telefono });
+  }, [nombre, dni, direccion, telefono, onClientDataChange]);
 
   const handleReset = () => {
     setNombre("");
     setDni("");
     setDireccion("");
+    setTelefono("");
   };
 
-  const isEmpty = !nombre && !dni && !direccion;
+  const isEmpty = !nombre && !dni && !direccion && !telefono;
 
   return (
     <div className="card border border-white/10 mb-4">
@@ -62,7 +65,7 @@ export default function ClientDataForm({ initialData = {}, onClientDataChange }:
       </div>
 
       {/* Inputs grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
         {/* Nombre */}
         <div>
           <label className="text-xs text-gray-500 font-semibold mb-1 flex items-center gap-1">
@@ -101,6 +104,20 @@ export default function ClientDataForm({ initialData = {}, onClientDataChange }:
             placeholder="Ej: Av. Siempreviva 123"
             value={direccion}
             onChange={(e) => setDireccion(e.target.value)}
+            className="input input-sm w-full"
+          />
+        </div>
+
+        {/* Teléfono */}
+        <div>
+          <label className="text-xs text-gray-500 font-semibold mb-1 flex items-center gap-1">
+            📱 Teléfono
+          </label>
+          <input
+            type="tel"
+            placeholder="Ej: 1123456789"
+            value={telefono}
+            onChange={(e) => setTelefono(e.target.value)}
             className="input input-sm w-full"
           />
         </div>

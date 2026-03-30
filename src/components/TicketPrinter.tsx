@@ -16,6 +16,7 @@ interface Props {
     nombre?: string;
     dni?: string;
     direccion?: string;
+    telefono?: string;
   };
   onClose: () => void;
 }
@@ -30,7 +31,7 @@ export default function TicketPrinter({ isOpen, venta, clientData, onClose }: Pr
   };
 
   const formatCurrency = (n: number) =>
-    "$" + n.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+    "$" + n.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   const formatDateTime = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -44,6 +45,9 @@ export default function TicketPrinter({ isOpen, venta, clientData, onClose }: Pr
   };
 
   const clientName = clientData?.nombre || "Consumidor Final";
+  const clientDni = clientData?.dni || "-";
+  const clientDir = clientData?.direccion || "-";
+  const clientTel = clientData?.telefono || "-";
 
   return (
     <>
@@ -55,12 +59,12 @@ export default function TicketPrinter({ isOpen, venta, clientData, onClose }: Pr
 
       {/* Modal */}
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-lg shadow-2xl w-full max-w-sm max-h-[90vh] flex flex-col">
+        <div className="bg-white rounded-lg shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b">
             <div className="flex items-center gap-2">
               <Printer className="w-4 h-4 text-blue-600" />
-              <h2 className="font-bold text-gray-900">Vista Previa del Ticket</h2>
+              <h2 className="font-bold text-gray-900">Comprobante de Venta A4</h2>
             </div>
             <button
               onClick={onClose}
@@ -70,112 +74,146 @@ export default function TicketPrinter({ isOpen, venta, clientData, onClose }: Pr
             </button>
           </div>
 
-          {/* Scrollable ticket preview */}
+          {/* Scrollable preview */}
           <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
-            {/* Ticket content (styled for 80mm thermal printer) */}
+            {/* A4 Comprobante */}
             <div
-              id="ticket-content"
-              className="bg-white p-3"
+              id="comprobante-a4"
               style={{
-                fontFamily: "'Courier New', monospace",
-                fontSize: "12px",
-                width: "80mm",
+                width: "100%",
+                maxWidth: "800px",
                 margin: "0 auto",
+                fontFamily: "Arial, sans-serif",
+                color: "#333",
+                padding: "20px",
                 border: "1px solid #ddd",
+                background: "white",
               }}
             >
               {/* Encabezado */}
-              <div style={{ textAlign: "center", marginBottom: "10px" }}>
-                <h2 style={{ margin: "0 0 2px 0", fontSize: "18px", fontWeight: "bold" }}>
-                  MAQJEEZ
-                </h2>
-                <p style={{ margin: "2px 0", fontSize: "10px", color: "#666" }}>
-                  Venta de Maquinaria y Servicios Técnicos
-                </p>
-                <p style={{ margin: "2px 0", fontSize: "10px", color: "#666" }}>
-                  Carlos Spegazzini, Ezeiza - Buenos Aires
-                </p>
-              </div>
-
-              {/* Advertencia Legal */}
-              <div
-                style={{
-                  textAlign: "center",
-                  margin: "5px 0",
-                  padding: "3px",
-                  border: "1px solid #000",
-                  fontWeight: "bold",
-                  fontSize: "11px",
-                }}
-              >
-                NO VÁLIDO COMO FACTURA
-              </div>
+              <table style={{ width: "100%", marginBottom: "20px", borderBottom: "2px solid #000", paddingBottom: "10px" }}>
+                <tr>
+                  <td style={{ width: "50%" }}>
+                    <h1 style={{ margin: "0", color: "#000", fontSize: "28px" }}>MAQJEEZ</h1>
+                    <p style={{ margin: "5px 0", fontWeight: "bold", fontSize: "12px" }}>
+                      Venta de Maquinaria y Servicios Técnicos
+                    </p>
+                    <p style={{ margin: "0", fontSize: "11px", color: "#666" }}>
+                      Carlos Spegazzini, Ezeiza - Buenos Aires
+                    </p>
+                  </td>
+                  <td style={{ width: "50%", textAlign: "right", verticalAlign: "top" }}>
+                    <h3 style={{ margin: "0", fontSize: "18px", fontWeight: "bold" }}>COMPROBANTE DE VENTA</h3>
+                    <p style={{ margin: "5px 0", fontSize: "11px", color: "#666" }}>
+                      Fecha: {formatDateTime(venta.createdAt)}
+                    </p>
+                    <div
+                      style={{
+                        display: "inline-block",
+                        border: "2px solid #000",
+                        padding: "8px",
+                        marginTop: "5px",
+                        fontWeight: "bold",
+                        fontSize: "12px",
+                      }}
+                    >
+                      NO VÁLIDO COMO FACTURA
+                    </div>
+                  </td>
+                </tr>
+              </table>
 
               {/* Datos del Cliente */}
-              <div style={{ marginTop: "10px", marginBottom: "10px", fontSize: "11px" }}>
-                <p style={{ margin: "0 0 2px 0" }}>
-                  <strong>Cliente:</strong> {clientName}
-                </p>
-                {clientData?.dni && (
-                  <p style={{ margin: "0 0 2px 0" }}>
-                    <strong>DNI/CUIT:</strong> {clientData.dni}
-                  </p>
-                )}
-                {clientData?.direccion && (
-                  <p style={{ margin: "0 0 2px 0" }}>
-                    <strong>Dir:</strong> {clientData.direccion}
-                  </p>
-                )}
+              <div
+                style={{
+                  margin: "20px 0",
+                  padding: "10px",
+                  backgroundColor: "#f9f9f9",
+                  borderRadius: "5px",
+                  border: "1px solid #e0e0e0",
+                }}
+              >
+                <h4 style={{ margin: "0 0 10px 0", borderBottom: "1px solid #ccc", fontSize: "13px", fontWeight: "bold" }}>
+                  Datos del Cliente
+                </h4>
+                <table style={{ width: "100%", fontSize: "12px" }}>
+                  <tr>
+                    <td style={{ width: "50%" }}>
+                      <strong>Nombre:</strong> {clientName}
+                    </td>
+                    <td style={{ width: "50%" }}>
+                      <strong>DNI/CUIT:</strong> {clientDni}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <strong>Dirección:</strong> {clientDir}
+                    </td>
+                    <td>
+                      <strong>Teléfono:</strong> {clientTel}
+                    </td>
+                  </tr>
+                </table>
               </div>
 
-              {/* Separador */}
-              <div style={{ borderTop: "1px dashed #000", margin: "10px 0" }} />
-
-              {/* Tabla de productos */}
-              <table style={{ width: "100%", marginBottom: "10px", fontSize: "11px" }}>
+              {/* Tabla de Productos */}
+              <table
+                style={{
+                  width: "100%",
+                  borderCollapse: "collapse",
+                  marginTop: "20px",
+                  marginBottom: "20px",
+                }}
+              >
                 <thead>
-                  <tr style={{ borderBottom: "1px solid #000" }}>
-                    <th style={{ textAlign: "left", padding: "2px 0" }}>Cant.</th>
-                    <th style={{ textAlign: "left", padding: "2px 0" }}>Producto</th>
-                    <th style={{ textAlign: "right", padding: "2px 0" }}>Total</th>
+                  <tr style={{ backgroundColor: "#000", color: "#fff" }}>
+                    <th style={{ padding: "10px", textAlign: "left", border: "1px solid #000", width: "10%" }}>Cant.</th>
+                    <th style={{ padding: "10px", textAlign: "left", border: "1px solid #000", width: "45%" }}>
+                      Descripción del Producto / Servicio
+                    </th>
+                    <th style={{ padding: "10px", textAlign: "right", border: "1px solid #000", width: "20%" }}>Precio Unit.</th>
+                    <th style={{ padding: "10px", textAlign: "right", border: "1px solid #000", width: "25%" }}>Subtotal</th>
                   </tr>
                 </thead>
                 <tbody>
                   {venta.items.map((item) => (
                     <tr key={item.id}>
-                      <td style={{ textAlign: "left", padding: "2px 0" }}>{item.cantidad}</td>
-                      <td style={{ textAlign: "left", padding: "2px 0", flex: 1 }}>
-                        {item.producto.substring(0, 20)}
+                      <td style={{ padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>{item.cantidad}</td>
+                      <td style={{ padding: "10px", border: "1px solid #ddd" }}>{item.producto}</td>
+                      <td style={{ padding: "10px", border: "1px solid #ddd", textAlign: "right" }}>
+                        {formatCurrency(item.precioUnit)}
                       </td>
-                      <td style={{ textAlign: "right", padding: "2px 0" }}>
+                      <td style={{ padding: "10px", border: "1px solid #ddd", textAlign: "right", fontWeight: "bold" }}>
                         {formatCurrency(item.subtotal)}
                       </td>
                     </tr>
                   ))}
                 </tbody>
+                <tfoot>
+                  <tr>
+                    <td colSpan={3} style={{ padding: "10px", textAlign: "right", fontWeight: "bold", fontSize: "14px" }}>
+                      TOTAL:
+                    </td>
+                    <td
+                      style={{
+                        padding: "10px",
+                        textAlign: "right",
+                        fontWeight: "bold",
+                        fontSize: "16px",
+                        border: "2px solid #000",
+                        backgroundColor: "#f0f0f0",
+                      }}
+                    >
+                      {formatCurrency(venta.total)}
+                    </td>
+                  </tr>
+                </tfoot>
               </table>
 
-              {/* Separador final */}
-              <div style={{ borderTop: "1px dashed #000", margin: "10px 0" }} />
-
-              {/* Total */}
-              <div
-                style={{
-                  textAlign: "right",
-                  fontSize: "14px",
-                  fontWeight: "bold",
-                  marginBottom: "10px",
-                }}
-              >
-                TOTAL: {formatCurrency(venta.total)}
-              </div>
-
               {/* Pie */}
-              <div style={{ textAlign: "center", marginTop: "10px", fontSize: "10px" }}>
-                <p style={{ margin: "2px 0" }}>¡Gracias por su compra en MaqJeez!</p>
-                <p style={{ margin: "2px 0", color: "#666" }}>
-                  {formatDateTime(venta.createdAt)}
-                </p>
+              <div style={{ marginTop: "50px", textAlign: "center", fontSize: "11px", color: "#777" }}>
+                <p>Gracias por confiar en MaqJeez para sus herramientas y servicios técnicos.</p>
+                <p>Este documento es un resumen de operación comercial interna.</p>
               </div>
             </div>
           </div>
@@ -194,34 +232,41 @@ export default function TicketPrinter({ isOpen, venta, clientData, onClose }: Pr
               style={{ background: "#2563EB" }}
             >
               <Printer className="w-4 h-4" />
-              Imprimir
+              Imprimir A4
             </button>
           </div>
         </div>
       </div>
 
-      {/* Print styles */}
+      {/* Print styles para A4 */}
       <style>{`
         @media print {
           body {
             margin: 0;
             padding: 0;
+            background: white;
           }
           
           * {
             box-shadow: none !important;
             background: white !important;
-            color: black !important;
+            color: #000 !important;
           }
           
-          #ticket-content {
+          @page {
+            size: A4;
+            margin: 10mm;
+          }
+          
+          #comprobante-a4 {
             margin: 0 !important;
             border: none !important;
-            width: 80mm !important;
+            width: 100% !important;
             max-width: 100%;
-            font-family: 'Courier New', monospace;
+            font-family: Arial, sans-serif;
             font-size: 12px;
             line-height: 1.4;
+            color: #000;
           }
           
           button {
@@ -236,6 +281,15 @@ export default function TicketPrinter({ isOpen, venta, clientData, onClose }: Pr
           div[class*="overlay"],
           div[class*="Modal"] {
             display: none !important;
+          }
+          
+          table {
+            color: #000 !important;
+            border-collapse: collapse;
+          }
+          
+          td, th {
+            color: #000 !important;
           }
         }
       `}</style>
