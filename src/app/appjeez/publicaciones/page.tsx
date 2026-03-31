@@ -1,10 +1,11 @@
 "use client";
 import { useEffect, useState, useCallback, Suspense } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { ArrowLeft, RefreshCw, Package, TrendingUp, ExternalLink, Search, ChevronDown, ChevronUp, Store, AlertCircle } from "lucide-react";
 
 interface MeliItem { id: string; title: string; price: number; available_quantity: number; sold_quantity: number; status: string; thumbnail: string; secure_thumbnail: string; permalink: string; currency_id: string; }
-interface AccountData { account: string; meli_user_id: string; items: MeliItem[]; total: number; error?: string; }
+interface AccountData { account: string; meli_user_id: string; items: MeliItem[]; total: number; cached_at?: string; error?: string; }
 
 function fmt(n: number, c = "ARS") { return new Intl.NumberFormat("es-AR", { style: "currency", currency: c, maximumFractionDigits: 0 }).format(n); }
 
@@ -15,10 +16,59 @@ const STATUS_MAP: Record<string, { label: string; color: string }> = {
   inactive: { label: "Inactiva",  color: "#6B7280" },
 };
 
+function ProductCard({ item }: { item: MeliItem }) {
+  const st = STATUS_MAP[item.status] ?? { label: item.status, color: "#6B7280" };
+  const thumb = (item.secure_thumbnail || item.thumbnail || "").replace("http://", "https://");
+
+  return (
+    <div className="rounded-xl overflow-hidden flex flex-col h-full"
+      style={{ background: "#121212", border: "1px solid rgba(255,255,255,0.06)" }}>
+      {/* Foto con lazy loading */}
+      <div className="relative w-full h-32 flex items-center justify-center flex-shrink-0" style={{ background: "#1a1a1a" }}>
+        {thumb
+          ? (
+            <Image
+              src={thumb}
+              alt={item.title}
+              width={128}
+              height={128}
+              loading="lazy"
+              className="w-full h-full object-contain p-1"
+              unoptimized={true}
+            />
+          )
+          : <Package className="w-10 h-10 text-gray-600" />}
+        <span className="absolute top-1.5 right-1.5 text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+          style={{ background: st.color + "22", color: st.color, border: `1px solid ${st.color}44` }}>
+          {st.label}
+        </span>
+      </div>
+      {/* Info */}
+      <div className="p-2.5 flex flex-col gap-1.5 flex-1 overflow-hidden">
+        <p className="text-[11px] font-semibold text-white line-clamp-2 leading-tight">{item.title}</p>
+        <p className="text-base font-black" style={{ color: "#FFE600" }}>{fmt(item.price, item.currency_id)}</p>
+        <div className="flex gap-2 text-[10px]">
+          <span style={{ color: "#6B7280" }}>Stock: <b className="text-white">{item.available_quantity}</b></span>
+          <span style={{ color: "#6B7280" }}>
+            <TrendingUp className="w-2.5 h-2.5 inline" /> <b style={{ color: "#39FF14" }}>{item.sold_quantity}</b>
+          </span>
+        </div>
+        <a href={item.permalink} target="_blank" rel="noopener noreferrer"
+          className="mt-auto flex items-center justify-center gap-1 py-1 rounded-lg text-[10px] font-bold hover:opacity-80"
+          style={{ background: "#FFE60018", color: "#FFE600" }}>
+          Ver en MeLi <ExternalLink className="w-2.5 h-2.5" />
+        </a>
+      </div>
+    </div>
+  );
+}
+
 function AccountSection({ data }: { data: AccountData }) {
   const [open, setOpen]     = useState(true);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"all"|"active"|"paused"|"closed">("all");
+  const [offset, setOffset] = useState(0);
+  const LIMIT = 50;
 
   const filtered = data.items.filter(i => {
     const matchSearch = i.title.toLowerCase().includes(search.toLowerCase());
@@ -26,9 +76,21 @@ function AccountSection({ data }: { data: AccountData }) {
     return matchSearch && matchFilter;
   });
 
+  const displayed = filtered.slice(0, offset + LIMIT);
+  const hasMore = displayed.length < filtered.length;
+
   const activeCount = data.items.filter(i => i.status === "active").length;
   const totalStock  = data.items.reduce((s, i) => s + i.available_quantity, 0);
   const totalSold   = data.items.reduce((s, i) => s + i.sold_quantity, 0);
+
+  // Resetear offset cuando cambia búsqueda/filtro
+  useEffect(() => setOffset(0), [search, filter]);
+
+  const colCount = 4; // lg:grid-cols-4
+  const itemHeight = 220;
+  const itemWidth = 150;
+  const rowCount = Math.ceil(displayed.length / colCount);
+  const gridHeight = Math.min(rowCount * itemHeight, 600); // Max height 600px, auto-scroll
 
   return (
     <div className="rounded-2xl overflow-hidden mb-4" style={{ background: "#1F1F1F", border: "1px solid rgba(255,255,255,0.07)" }}>
@@ -75,47 +137,31 @@ function AccountSection({ data }: { data: AccountData }) {
             </div>
           </div>
 
-          {/* Grid de items */}
+          {/* Virtualización con react-window */}
           {filtered.length === 0
             ? <p className="text-center py-8 text-sm" style={{ color: "#6B7280" }}>Sin publicaciones</p>
             : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                {filtered.map(item => {
-                  const st = STATUS_MAP[item.status] ?? { label: item.status, color: "#6B7280" };
-                  const thumb = (item.secure_thumbnail || item.thumbnail || "").replace("http://", "https://");
-                  return (
-                    <div key={item.id} className="rounded-xl overflow-hidden flex flex-col"
-                      style={{ background: "#121212", border: "1px solid rgba(255,255,255,0.06)" }}>
-                      {/* Foto */}
-                      <div className="relative w-full h-32 flex items-center justify-center" style={{ background: "#1a1a1a" }}>
-                        {thumb
-                          ? <img src={thumb} alt={item.title} className="w-full h-full object-contain p-1" />
-                          : <Package className="w-10 h-10 text-gray-600" />}
-                        <span className="absolute top-1.5 right-1.5 text-[10px] font-bold px-1.5 py-0.5 rounded-full"
-                          style={{ background: st.color + "22", color: st.color, border: `1px solid ${st.color}44` }}>
-                          {st.label}
-                        </span>
-                      </div>
-                      {/* Info */}
-                      <div className="p-2.5 flex flex-col gap-1.5 flex-1">
-                        <p className="text-[11px] font-semibold text-white line-clamp-2 leading-tight">{item.title}</p>
-                        <p className="text-base font-black" style={{ color: "#FFE600" }}>{fmt(item.price, item.currency_id)}</p>
-                        <div className="flex gap-2 text-[10px]">
-                          <span style={{ color: "#6B7280" }}>Stock: <b className="text-white">{item.available_quantity}</b></span>
-                          <span style={{ color: "#6B7280" }}>
-                            <TrendingUp className="w-2.5 h-2.5 inline" /> <b style={{ color: "#39FF14" }}>{item.sold_quantity}</b>
-                          </span>
-                        </div>
-                        <a href={item.permalink} target="_blank" rel="noopener noreferrer"
-                          className="mt-auto flex items-center justify-center gap-1 py-1 rounded-lg text-[10px] font-bold hover:opacity-80"
-                          style={{ background: "#FFE60018", color: "#FFE600" }}>
-                          Ver en MeLi <ExternalLink className="w-2.5 h-2.5" />
-                        </a>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+              <>
+                {/* Fallback a grid simple si react-window no está disponible */}
+                <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${colCount}, 1fr)`, maxHeight: `${gridHeight}px`, overflowY: "auto" }}>
+                  {displayed.map((item) => (
+                    <ProductCard key={item.id} item={item} />
+                  ))}
+                </div>
+
+                {/* Botón "Cargar más" */}
+                {hasMore && (
+                  <div className="text-center mt-4">
+                    <button
+                      onClick={() => setOffset(o => o + LIMIT)}
+                      className="px-4 py-2 rounded-xl text-sm font-bold"
+                      style={{ background: "#FFE600", color: "#121212" }}
+                    >
+                      Cargar más ({displayed.length} de {filtered.length})
+                    </button>
+                  </div>
+                )}
+              </>
             )}
         </div>
       )}
