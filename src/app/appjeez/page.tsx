@@ -14,6 +14,7 @@ import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import { useNotificationStream } from "@/hooks/useNotificationStream";
 import AccountSelector from "@/components/AccountSelector";
 import AccountDetailsPanel from "@/components/AccountDetailsPanel";
+import UnifiedPostSalePanel from "@/components/UnifiedPostSalePanel";
 import KpiBar from "@/components/KpiBar";
 
 interface Reputation {
@@ -443,6 +444,33 @@ function AppJeezInner() {
   const totalSales = accounts.reduce((s, a) => s + (a.today_orders ?? 0), 0);
   const totalAmount = accounts.reduce((s, a) => s + (a.today_sales_amount ?? 0), 0);
 
+  // Construir datos para el panel de post-venta unificado
+  const postSaleMetrics = accounts.map(acc => {
+    const claimsPercent = acc.claims_count ?? 0;
+    let riskLevel: "low" | "medium" | "high" | "critical" = "low";
+
+    if (claimsPercent > 2) {
+      riskLevel = "critical";
+    } else if (claimsPercent > 1.5) {
+      riskLevel = "high";
+    } else if (claimsPercent > 1) {
+      riskLevel = "medium";
+    }
+
+    return {
+      meli_user_id: acc.meli_user_id,
+      account_name: acc.account,
+      roman_index: acc.roman_index || "",
+      claims_count: acc.claims_count ?? 0,
+      claims_percent: acc.reputation?.claims ? (acc.reputation.claims * 100) : undefined,
+      mediations_count: 0, // TODO: Obtener de API
+      mediations_percent: acc.reputation?.cancellations ? (acc.reputation.cancellations * 100) : undefined,
+      delayed_shipments: 0, // TODO: Obtener de API
+      cancellations_percent: acc.reputation?.delayed_handling_time ? (acc.reputation.delayed_handling_time * 100) : undefined,
+      reputation_risk: riskLevel,
+    };
+  });
+
   const navItems = [
     { label: "Dashboard",       icon: <BarChart2 className="w-4 h-4" />,       href: "/appjeez",               active: true  },
     { label: "Estadísticas",    icon: <TrendingUp className="w-4 h-4" />,      href: "/appjeez/estadisticas",  active: false },
@@ -614,7 +642,12 @@ function AppJeezInner() {
 
           {/* Global summary */}
           {!loading && accounts.length > 0 && (
-            <KpiBar accountsCount={accounts.length} salesToday={totalSales} totalAmount={totalAmount} urgentAlerts={totalUrgent} />
+            <>
+              <KpiBar accountsCount={accounts.length} salesToday={totalSales} totalAmount={totalAmount} urgentAlerts={totalUrgent} />
+              
+              {/* Unified Post-Sale Panel - Gestión de problemas críticos */}
+              <UnifiedPostSalePanel accounts={postSaleMetrics} isLoading={loading} />
+            </>
           )}
 
           {/* Error */}
