@@ -33,6 +33,8 @@ interface ShipmentInfo {
   dispatch_date: string | null;
   thumbnail: string | null;
   item_id: string | null;
+  printed_at?: string | null;  // NUEVO: timestamp de impresión
+  is_printed?: boolean;        // NUEVO: derivado de printed_at
 }
 
 function isDatePast(dateStr: string | null): boolean {
@@ -635,6 +637,55 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true, marked: shipment_ids.length });
   } catch (e) {
     console.error("[meli-labels POST] Error:", e);
+    return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+  }
+}
+
+// ── PATCH: Cambiar estado de etiqueta ──────────────────────────────────────
+export async function PATCH(req: Request) {
+  try {
+    const { shipment_id, status } = await req.json() as {
+      shipment_id: number;
+      status: 'pending' | 'printed' | 'cancelled';
+    };
+
+    if (!shipment_id || !status) {
+      return NextResponse.json({ error: "Missing shipment_id or status" }, { status: 400 });
+    }
+
+    const supabase = getSupabase();
+    const now = new Date().toISOString();
+
+    // Actualizar en etiquetas_history
+    const updateData: any = { 
+      status,
+      updated_at: now,
+    };
+
+    // Si status es 'printed', setear printed_at
+    if (status === 'printed') {
+      updateData.printed_at = now;
+    }
+    // Si status es 'pending', limpiar printed_at
+    else if (status === 'pending') {
+      updateData.printed_at = null;
+    }
+
+    const { error } = await supabase
+      .from("etiquetas_history")
+      .update(updateData)
+      .eq("shipment_id", shipment_id);
+
+    if (error) {
+      console.error("[meli-labels PATCH] Error updating:", error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    console.log(`[meli-labels PATCH] Updated shipment ${shipment_id} to status=${status}`);
+
+    return NextResponse.json({ ok: true, updated_at: now });
+  } catch (e) {
+    console.error("[meli-labels PATCH] Error:", e);
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
 }
