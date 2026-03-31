@@ -142,22 +142,7 @@ export default function QuestionAlertGlobal() {
 
   useEffect(() => { loadRef.current = pollQuestions; }, [pollQuestions]);
 
-  // ⏸️ FASE 1: Realtime deshabilitado temporalmente por problemas de WebSocket con Cloudflare
-  // Se mantiene polling como fallback robusto
-  useEffect(() => {
-    console.log("[POLLING] Iniciando polling de preguntas");
-    pollQuestions();
-
-    // Polling cada 10 segundos
-    const pollInterval = setInterval(pollQuestions, 10000);
-
-    return () => {
-      clearInterval(pollInterval);
-      console.log("[POLLING] Detenido");
-    };
-  }, [pollQuestions]);
-
-  /* COMENTADO TEMPORALMENTE - REALTIME CON WEBSOCKET
+  // ✅ FASE 4: Realtime re-habilitado (ahora con CSP headers que permiten wss://)
   useEffect(() => {
     // Poll inicial una sola vez
     pollQuestions();
@@ -204,7 +189,6 @@ export default function QuestionAlertGlobal() {
       console.log("[CLEANUP] Sistema Realtime detenido");
     };
   }, [alertMode, playAlertSound]);
-  */
 
   const handleEnable = () => {
     if (typeof Notification !== "undefined" && Notification.permission !== "denied") {
