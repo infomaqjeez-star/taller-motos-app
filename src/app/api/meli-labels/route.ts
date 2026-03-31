@@ -33,6 +33,7 @@ interface ShipmentInfo {
   dispatch_date: string | null;
   thumbnail: string | null;
   item_id: string | null;
+  purchase_url?: string | null;  // URL a la compra específica en MeLi
   printed_at?: string | null;  // NUEVO: timestamp de impresión
   is_printed?: boolean;        // NUEVO: derivado de printed_at
 }
@@ -151,6 +152,7 @@ function parseOrder(
     dispatch_date:  null,
     thumbnail:      null,
     item_id:        firstItem?.item?.id ?? null,
+    purchase_url:   (order.id as number | undefined) ? `https://www.mercadolibre.com.ar/compras/${order.id}` : null,
   };
 }
 

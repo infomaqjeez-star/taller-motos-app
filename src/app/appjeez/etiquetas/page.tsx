@@ -25,6 +25,7 @@ interface ShipmentInfo {
   dispatch_date: string | null;
   printed_at?: string | null;
   item_id: string | null;
+  purchase_url?: string | null;
   urgency: "delayed" | "today" | "tomorrow" | "week" | "upcoming";
   status: string;
   status_label: string | null;
@@ -87,11 +88,12 @@ function LabelCard({
       )}
       {/* Imagen 100x100px */}
       <a
-        href={`https://articulo.mercadolibre.com.ar/${shipment.item_id}`}
+        href={shipment.purchase_url || `https://www.mercadolibre.com.ar/compras/${shipment.order_id}`}
         target="_blank"
         rel="noopener noreferrer"
         className="w-24 h-24 rounded-xl flex-shrink-0 overflow-hidden flex items-center justify-center cursor-pointer group relative"
         style={{ background: "#2a2a2a", border: "1px solid rgba(255,255,255,0.1)" }}
+        title="Ver compra en Mercado Libre"
       >
         {thumb ? (
           <Image
