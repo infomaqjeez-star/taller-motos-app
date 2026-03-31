@@ -22,7 +22,7 @@ interface Reputation  {
   transactions_total: number; transactions_completed: number;
   ratings_positive: number; ratings_negative: number;
 }
-interface PerAccount  { account: string; meli_user_id: string; total_orders: number; total_amount: number }
+interface PerAccount  { account: string; meli_user_id: string; total_orders: number; total_amount: number; sales_by_day?: SalesByDay[] }
 interface StatsData {
   period: string; account_id: string; accounts_count: number;
   sales_by_day: SalesByDay[];
@@ -66,17 +66,77 @@ const SHIP_LABELS: Record<string, string> = {
   correo: "Correo", flex: "Flex", turbo: "Turbo", full: "Full", other: "Otros"
 };
 
-// ── Custom Tooltip ─────────────────────────────────────────────────────────
-function SalesTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{value: number; name: string}>; label?: string }) {
+// Colores fijos para cada cuenta (máx 10)
+const ACCOUNT_COLORS = [
+  "#3b82f6", // Azul
+  "#ef4444", // Rojo
+  "#10b981", // Verde
+  "#f59e0b", // Naranja
+  "#8b5cf6", // Púrpura
+  "#ec4899", // Rosa
+  "#06b6d4", // Cyan
+  "#eab308", // Amarillo limón
+  "#6366f1", // Índigo
+  "#14b8a6", // Teal
+];
+
+// ── Transform data for multi-account chart ────────────────────────────────
+function buildMultiAccountChartData(
+  salesByDay: SalesByDay[] = [],
+  perAccount: PerAccount[] = [],
+  visibleAccounts: Record<string, boolean> = {}
+) {
+  if (!salesByDay.length || !perAccount.length) return [];
+
+  // Inicializar mapa de datos por fecha y cuenta
+  const dateMap = new Map<string, Record<string, number>>();
+  
+  // Agrupar sales_by_day por fecha (para Total)
+  const totalByDate = new Map<string, number>();
+  salesByDay.forEach(s => {
+    totalByDate.set(s.date, (totalByDate.get(s.date) ?? 0) + s.amount);
+  });
+
+  // Para cada cuenta, procesar su sales_by_day
+  perAccount.forEach(acc => {
+    if (!acc.sales_by_day?.length) return;
+    acc.sales_by_day.forEach(s => {
+      if (!dateMap.has(s.date)) dateMap.set(s.date, {});
+      dateMap.get(s.date)![acc.meli_user_id] = (dateMap.get(s.date)![acc.meli_user_id] ?? 0) + s.amount;
+    });
+  });
+
+  // Construir array de datos
+  return Array.from(dateMap.entries())
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([date, accounts]) => ({
+      date,
+      total: totalByDate.get(date) ?? 0,
+      ...accounts,
+    }));
+}
+function SalesTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{value: number; name: string; color?: string}>; label?: string }) {
   if (!active || !payload?.length) return null;
+  
+  // Separar Total de las cuentas individuales
+  const total = payload.find(p => p.name === "Total");
+  const accountsOnly = payload.filter(p => p.name !== "Total");
+  
   return (
-    <div className="rounded-xl px-3 py-2 text-xs" style={{ background: "#1F1F1F", border: "1px solid rgba(255,255,255,0.1)" }}>
-      <p className="font-bold mb-1 text-white">{label}</p>
-      {payload.map((p, i) => (
-        <p key={i} style={{ color: p.name === "orders" ? "#FFE600" : "#00E5FF" }}>
-          {p.name === "orders" ? `Ventas: ${p.value}` : `Ingresos: ${fmt(p.value)}`}
+    <div className="rounded-lg px-4 py-3 text-xs" style={{ background: "#1F1F1F", border: "1px solid rgba(255,255,255,0.2)" }}>
+      <p className="font-bold mb-2 text-white">{label}</p>
+      {total && (
+        <p className="mb-2 font-semibold" style={{ color: total.color || "#999" }}>
+          📊 Total: ${total.value.toLocaleString()}
         </p>
-      ))}
+      )}
+      <div className="space-y-1">
+        {accountsOnly.map((p, i) => (
+          <p key={i} style={{ color: p.color || "#999" }}>
+            📌 {p.name}: ${p.value.toLocaleString()}
+          </p>
+        ))}
+      </div>
     </div>
   );
 }
@@ -85,6 +145,7 @@ function SalesTooltip({ active, payload, label }: { active?: boolean; payload?: 
 export default function EstadisticasPage() {
   const [data,           setData]           = useState<StatsData | null>(null);
   const [loading,        setLoading]        = useState(true);
+  const [visibleAccounts, setVisibleAccounts] = useState<Record<string, boolean>>({});
   const [error,          setError]          = useState<string | null>(null);
   const [period,         setPeriod]         = useState("7d");
   const [accountId,      setAccountId]      = useState("all");
@@ -280,29 +341,86 @@ export default function EstadisticasPage() {
                 </div>
               )}
 
-              {/* Line chart — ventas por día */}
+              {/* Line chart — ventas por día (multicuenta) */}
               <div className="rounded-2xl p-4"
                 style={{ background: "#1A1A1A", border: "1px solid rgba(255,255,255,0.06)" }}>
-                <p className="text-xs font-bold text-white mb-4">VENTAS POR DÍA</p>
-                <ResponsiveContainer width="100%" height={200}>
-                  <LineChart data={data.sales_by_day}
-                    margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
-                    <XAxis dataKey="date" tick={{ fill: "#6B7280", fontSize: 10 }}
-                      tickFormatter={d => d.slice(5)} />
-                    <YAxis tick={{ fill: "#6B7280", fontSize: 10 }} />
-                    <Tooltip content={<SalesTooltip />} />
-                    <Line type="monotone" dataKey="orders" stroke="#FFE600" strokeWidth={2}
-                      dot={false} name="orders" />
-                    <Line type="monotone" dataKey="amount" stroke="#00E5FF" strokeWidth={2}
-                      dot={false} name="amount" yAxisId={0} hide />
-                  </LineChart>
-                </ResponsiveContainer>
-                <div className="flex gap-4 mt-2 justify-center">
-                  <span className="text-[11px] flex items-center gap-1.5" style={{ color: "#FFE600" }}>
-                    <span className="w-3 h-0.5 rounded" style={{ background: "#FFE600", display: "inline-block" }} />
-                    Cantidad de ventas
-                  </span>
-                </div>
+                <p className="text-xs font-bold text-white mb-4">VENTAS POR DÍA (Multicuenta)</p>
+                
+                {/* Datos del gráfico */}
+                {(() => {
+                  // Inicializar visibleAccounts si no está configurado
+                  if (Object.keys(visibleAccounts).length === 0 && data.per_account.length > 0) {
+                    const newVis: Record<string, boolean> = { total: true };
+                    data.per_account.forEach(acc => { newVis[acc.meli_user_id] = true; });
+                    setVisibleAccounts(newVis);
+                  }
+
+                  const chartData = buildMultiAccountChartData(data.sales_by_day, data.per_account, visibleAccounts);
+
+                  return (
+                    <>
+                      {/* Gráfico */}
+                      <ResponsiveContainer width="100%" height={250}>
+                        <LineChart data={chartData} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+                          <XAxis dataKey="date" tick={{ fill: "#6B7280", fontSize: 10 }}
+                            tickFormatter={d => d.slice(5)} />
+                          <YAxis tick={{ fill: "#6B7280", fontSize: 10 }} />
+                          <Tooltip content={<SalesTooltip />} />
+
+                          {/* Línea Total */}
+                          {visibleAccounts["total"] !== false && (
+                            <Line type="monotone" dataKey="total" stroke="#999" strokeWidth={2} strokeDasharray="5 5"
+                              dot={false} name="Total" />
+                          )}
+
+                          {/* Líneas por cuenta */}
+                          {data.per_account.map((acc, idx) => 
+                            visibleAccounts[acc.meli_user_id] !== false ? (
+                              <Line key={acc.meli_user_id}
+                                type="monotone" dataKey={acc.meli_user_id} stroke={ACCOUNT_COLORS[idx % ACCOUNT_COLORS.length]}
+                                strokeWidth={2} dot={false} name={acc.account} />
+                            ) : null
+                          )}
+                        </LineChart>
+                      </ResponsiveContainer>
+
+                      {/* Leyenda con checkboxes */}
+                      <div className="mt-4 p-3 rounded-lg" style={{ background: "#121212", border: "1px solid rgba(255,255,255,0.05)" }}>
+                        <p className="text-[11px] font-semibold text-gray-400 mb-2 uppercase tracking-wider">Mostrar/Ocultar Cuentas</p>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                          {/* Checkbox Total */}
+                          <label className="flex items-center gap-1.5 cursor-pointer text-xs p-2 rounded hover:bg-opacity-50"
+                            style={{ background: "rgba(153,153,153,0.05)", border: "1px solid rgba(153,153,153,0.2)" }}>
+                            <input
+                              type="checkbox"
+                              checked={visibleAccounts["total"] !== false}
+                              onChange={e => setVisibleAccounts({...visibleAccounts, total: e.target.checked})}
+                              className="w-3 h-3 cursor-pointer"
+                            />
+                            <span style={{ color: "#999", fontWeight: 600 }}>─ ─ Total</span>
+                          </label>
+
+                          {/* Checkboxes por cuenta */}
+                          {data.per_account.map((acc, idx) => (
+                            <label key={acc.meli_user_id}
+                              className="flex items-center gap-1.5 cursor-pointer text-xs p-2 rounded hover:bg-opacity-50"
+                              style={{ background: `${ACCOUNT_COLORS[idx % ACCOUNT_COLORS.length]}15`, border: `1px solid ${ACCOUNT_COLORS[idx % ACCOUNT_COLORS.length]}44` }}>
+                              <input
+                                type="checkbox"
+                                checked={visibleAccounts[acc.meli_user_id] !== false}
+                                onChange={e => setVisibleAccounts({...visibleAccounts, [acc.meli_user_id]: e.target.checked})}
+                                className="w-3 h-3 cursor-pointer"
+                              />
+                              <span style={{ color: ACCOUNT_COLORS[idx % ACCOUNT_COLORS.length], fontWeight: 600 }}>
+                                @{acc.account}
+                              </span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
 
               {/* Pie + Bar row */}

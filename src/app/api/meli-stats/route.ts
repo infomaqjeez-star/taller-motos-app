@@ -332,6 +332,7 @@ export async function GET(req: NextRequest) {
         total_orders:  a.totals.total_orders,
         total_amount:  a.totals.total_amount,
         sales_by_logistic: a.sales_by_logistic,
+        sales_by_day:  a.sales_by_day,
       })),
     });
   } catch (e) {
