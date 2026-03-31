@@ -143,9 +143,16 @@ export default function QuestionAlertGlobal() {
   useEffect(() => { loadRef.current = pollQuestions; }, [pollQuestions]);
 
   // ✅ FASE 4: Realtime re-habilitado (ahora con CSP headers que permiten wss://)
+  // + FALLBACK a Polling si WebSocket falla
   useEffect(() => {
     // Poll inicial una sola vez
     pollQuestions();
+
+    let realtimeConnected = false;
+    let realtimeTimer: NodeJS.Timeout | null = null;
+    let pollingFallback: NodeJS.Timeout | null = null;
+
+    console.log("[REALTIME] Iniciando conexión WebSocket...");
 
     // Crear canal Realtime con broadcast sin ACK para máxima velocidad
     const channel = supabase
@@ -170,25 +177,45 @@ export default function QuestionAlertGlobal() {
       )
       .subscribe((status) => {
         if (status === "SUBSCRIBED") {
-          console.log("✅ [REALTIME] Conectado a canal de preguntas");
+          realtimeConnected = true;
+          console.log("✅ [REALTIME] Conectado a canal de preguntas (WebSocket OK)");
+          // Cancelar fallback si estaba activo
+          if (pollingFallback) clearInterval(pollingFallback);
         } else if (status === "CHANNEL_ERROR") {
-          console.error("❌ [REALTIME] Error de conexión");
+          console.error("❌ [REALTIME] Error de conexión al canal");
+        } else if (status === "CLOSED") {
+          console.warn("⚠️  [REALTIME] Conexión cerrada");
+        } else {
+          console.log("[REALTIME] Status:", status);
         }
       });
+
+    // ✅ FALLBACK: Si Realtime no se conecta en 5s, activar polling cada 10s
+    realtimeTimer = setTimeout(() => {
+      if (!realtimeConnected) {
+        console.warn("[FALLBACK] Realtime no respondió en 5s. Activando polling como fallback...");
+        pollingFallback = setInterval(() => {
+          console.log("[FALLBACK POLL] Verificando nuevas preguntas...");
+          pollQuestions();
+        }, 10000); // Polling cada 10 segundos
+      }
+    }, 5000);
 
     // 💓 HEARTBEAT: Enviar keep-alive cada 30s para mantener conexión activa
     const heartbeat = setInterval(() => {
       console.log("[REALTIME] Heartbeat @", new Date().toISOString());
     }, 30000);
 
-    console.log("[INIT] Sistema Realtime iniciado (zero-delay)");
+    console.log("[INIT] Sistema Realtime + Fallback Polling iniciado");
 
     return () => {
+      if (realtimeTimer) clearTimeout(realtimeTimer);
+      if (pollingFallback) clearInterval(pollingFallback);
       clearInterval(heartbeat);
       supabase.removeChannel(channel);
       console.log("[CLEANUP] Sistema Realtime detenido");
     };
-  }, [alertMode, playAlertSound]);
+  }, [alertMode, playAlertSound, pollQuestions]);
 
   const handleEnable = () => {
     if (typeof Notification !== "undefined" && Notification.permission !== "denied") {
