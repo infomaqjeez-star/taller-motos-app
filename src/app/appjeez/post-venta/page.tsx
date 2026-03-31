@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, AlertTriangle } from "lucide-react";
 import UnifiedPostSalePanel from "@/components/UnifiedPostSalePanel";
@@ -19,6 +20,9 @@ interface AccountData {
 }
 
 export default function PostVentaPage() {
+  const searchParams = useSearchParams();
+  const selectedAccount = searchParams.get("account");
+  
   const [accounts, setAccounts] = useState<AccountData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -83,7 +87,9 @@ export default function PostVentaPage() {
         >
           <div className="flex items-center gap-2">
             <AlertTriangle className="w-5 h-5" style={{ color: "#EF4444" }} />
-            <h1 className="font-black text-lg text-white">Gestión Post-Venta</h1>
+            <h1 className="font-black text-lg text-white">
+              Gestión Post-Venta {selectedAccount ? `- @${selectedAccount}` : "(Unificada)"}
+            </h1>
           </div>
           <Link
             href="/appjeez"
@@ -145,7 +151,7 @@ export default function PostVentaPage() {
                       <span className="truncate">{acc.account_name}</span>
                     </div>
 
-                    <div className="text-center">
+                    <div className="text-center cursor-pointer transition-all hover:scale-105 hover:opacity-80">
                       <p className="font-bold" style={{ color: acc.claims_count > 0 ? "#EF4444" : "#6B7280" }}>
                         {acc.claims_count}
                       </p>
@@ -156,7 +162,7 @@ export default function PostVentaPage() {
                       )}
                     </div>
 
-                    <div className="text-center">
+                    <div className="text-center cursor-pointer transition-all hover:scale-105 hover:opacity-80">
                       <p className="font-bold" style={{ color: (acc.mediations_count ?? 0) > 0 ? "#FF5722" : "#6B7280" }}>
                         {acc.mediations_count ?? 0}
                       </p>
@@ -167,7 +173,7 @@ export default function PostVentaPage() {
                       )}
                     </div>
 
-                    <div className="text-center">
+                    <div className="text-center cursor-pointer transition-all hover:scale-105 hover:opacity-80">
                       <p className="font-bold" style={{ color: (acc.delayed_shipments ?? 0) > 0 ? "#FFE600" : "#6B7280" }}>
                         {acc.delayed_shipments ?? 0}
                       </p>

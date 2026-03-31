@@ -181,11 +181,12 @@ export default function UnifiedPostSalePanel({ accounts, isLoading = false }: Pr
                 {/* Reclamos */}
                 {(acc.claims_count ?? 0) > 0 && (
                   <div
-                    className="rounded p-1.5 text-center"
+                    className="rounded p-1.5 text-center cursor-pointer transition-all hover:scale-105 hover:shadow-lg"
                     style={{
-                      background: "#EF444422",
+                      background: "#EF444222",
                       border: "1px solid #EF444444",
                     }}
+                    onClick={() => console.log("Clicked claims for account:", acc.meli_user_id)}
                   >
                     <p className="text-xs font-bold" style={{ color: "#EF4444" }}>
                       {acc.claims_count}
@@ -204,11 +205,12 @@ export default function UnifiedPostSalePanel({ accounts, isLoading = false }: Pr
                 {/* Mediaciones */}
                 {(acc.mediations_count ?? 0) > 0 && (
                   <div
-                    className="rounded p-1.5 text-center"
+                    className="rounded p-1.5 text-center cursor-pointer transition-all hover:scale-105 hover:shadow-lg"
                     style={{
                       background: "#FF572222",
                       border: "1px solid #FF572244",
                     }}
+                    onClick={() => console.log("Clicked mediations for account:", acc.meli_user_id)}
                   >
                     <p className="text-xs font-bold" style={{ color: "#FF5722" }}>
                       {acc.mediations_count}
@@ -227,11 +229,12 @@ export default function UnifiedPostSalePanel({ accounts, isLoading = false }: Pr
                 {/* Envíos Retrasados */}
                 {(acc.delayed_shipments ?? 0) > 0 && (
                   <div
-                    className="rounded p-1.5 text-center"
+                    className="rounded p-1.5 text-center cursor-pointer transition-all hover:scale-105 hover:shadow-lg"
                     style={{
                       background: "#FFE60022",
                       border: "1px solid #FFE60044",
                     }}
+                    onClick={() => console.log("Clicked delays for account:", acc.meli_user_id)}
                   >
                     <p className="text-xs font-bold" style={{ color: "#FFE600" }}>
                       {acc.delayed_shipments}

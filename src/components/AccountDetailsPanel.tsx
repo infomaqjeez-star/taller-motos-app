@@ -191,36 +191,32 @@ export default function AccountDetailsPanel({ data }: Props) {
 
             {/* Sección 5: Acciones Rápidas - Botones */}
             <div className="grid grid-cols-2 gap-2 pt-2">
-              {/* Ver Preguntas - Link a MeLi */}
-              <a
-                href="https://www.mercadolibre.com.ar/preguntas/vendedor"
-                target="_blank"
-                rel="noopener noreferrer"
+              {/* Ver Preguntas - Link a Mensajería interna */}
+              <Link
+                href="/appjeez/mensajes"
                 className="rounded-lg px-3 py-2 text-xs font-semibold text-white transition-all hover:scale-105 active:scale-95 text-center"
                 style={{ background: "#FF5722", border: "none", textDecoration: "none" }}
               >
                 Ver Preguntas
-              </a>
+              </Link>
 
-              {/* Post Venta - Link interno al dashboard */}
+              {/* Post Venta - Link interno al dashboard con query param */}
               <Link
-                href="/appjeez/post-venta"
+                href={`/appjeez/post-venta?account=${data.account}`}
                 className="rounded-lg px-3 py-2 text-xs font-semibold text-white transition-all hover:scale-105 active:scale-95 text-center"
                 style={{ background: "#EF4444", border: "none", textDecoration: "none" }}
               >
                 Post Venta
               </Link>
 
-              {/* Imprimir Envíos - Link a MeLi */}
-              <a
-                href="https://www.mercadolibre.com.ar/vender/ventas/listado"
-                target="_blank"
-                rel="noopener noreferrer"
+              {/* Imprimir Envíos - Link a Etiquetas interna */}
+              <Link
+                href="/appjeez/etiquetas"
                 className="rounded-lg px-3 py-2 text-xs font-semibold text-white transition-all hover:scale-105 active:scale-95 text-center"
                 style={{ background: "#00E5FF", border: "none", color: "#000", textDecoration: "none" }}
               >
                 Imprimir Envíos
-              </a>
+              </Link>
 
               {/* Sincronizar - Link al menu de sincronización */}
               <Link
