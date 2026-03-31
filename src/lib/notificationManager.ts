@@ -21,7 +21,9 @@ let sseClients: Set<{
 export class NotificationManager {
   private static instance: NotificationManager;
 
-  private constructor() {}
+  private constructor() {
+    console.log("[NotificationManager] Inicializado");
+  }
 
   static getInstance(): NotificationManager {
     if (!this.instance) {
@@ -35,57 +37,55 @@ export class NotificationManager {
    */
   addClient(controller: ReadableStreamDefaultController<string>, id: string): void {
     sseClients.add({ controller, id });
-    console.log(`[SSE] Cliente ${id} conectado. Total: ${sseClients.size}`);
+    console.log(`[SSE Manager] ✅ Cliente ${id.substring(0, 20)}... agregado. Total: ${sseClients.size}`);
   }
 
   /**
    * Desregistrar un cliente SSE
    */
   removeClient(id: string): void {
+    const before = sseClients.size;
     sseClients.forEach((client) => {
       if (client.id === id) {
         sseClients.delete(client);
       }
     });
-    console.log(`[SSE] Cliente ${id} desconectado. Total: ${sseClients.size}`);
+    const after = sseClients.size;
+    if (before !== after) {
+      console.log(`[SSE Manager] 🔴 Cliente ${id.substring(0, 20)}... removido. Total: ${after}`);
+    }
   }
 
   /**
    * Enviar notificación a todos los clientes conectados
    */
   broadcast(notification: MeliNotification): void {
+    console.log(`[SSE Manager] 📢 Broadcasting a ${sseClients.size} cliente(s)...`);
+
     const event = `event: notificacion_meli\ndata: ${JSON.stringify(notification)}\n\n`;
 
-    let failedClients = 0;
+    let successCount = 0;
+    let failedCount = 0;
 
     sseClients.forEach((client) => {
       try {
         client.controller.enqueue(event);
+        successCount++;
       } catch (error) {
-        console.error(`[SSE] Error escribiendo a cliente ${client.id}:`, error);
-        failedClients++;
+        console.warn(`[SSE Manager] ⚠️ Error escribiendo a cliente ${client.id.substring(0, 20)}...:`);
+        console.warn(error);
+        failedCount++;
       }
     });
 
-    if (failedClients > 0) {
-      console.warn(
-        `[SSE] ${failedClients} cliente(s) fallaron al recibir broadcast`
-      );
-      // Limpiar clientes fallidos
-      this.cleanupFailedClients();
-    }
-
     console.log(
-      `[SSE] Broadcast enviado a ${sseClients.size - failedClients} cliente(s)`
+      `[SSE Manager] ✅ Broadcast completado - ${successCount} exitosos, ${failedCount} fallidos`
     );
-  }
 
-  /**
-   * Limpiar referencias de clientes que fallaron
-   */
-  private cleanupFailedClients(): void {
-    // Aquí podrías implementar lógica para remover clientes que fallaron
-    // Por ahora, dejamos que se reintenten
+    if (failedCount > 0) {
+      console.warn(`[SSE Manager] Limpiando ${failedCount} cliente(s) fallido(s)`);
+      // Aquí podrías implementar lógica para remover clientes que fallaron
+    }
   }
 
   /**

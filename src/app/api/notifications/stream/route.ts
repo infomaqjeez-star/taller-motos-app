@@ -13,9 +13,9 @@ export async function GET(request: NextRequest) {
 
   console.log(`[SSE] Iniciando stream para cliente: ${clientId}`);
 
-  // Crear un ReadableStream que permanecerá abierto
-  const customReadable = new ReadableStream({
-    start(controller) {
+  // Crear stream personalizado
+  const stream = new ReadableStream({
+    async start(controller) {
       const notificationManager = getNotificationManager();
 
       // Registrar cliente
@@ -23,23 +23,11 @@ export async function GET(request: NextRequest) {
 
       // Enviar comentario inicial para verificar conexión
       try {
-        controller.enqueue(": SSE stream iniciado\n\n");
+        controller.enqueue(": SSE stream conectado\n\n");
+        console.log(`[SSE] Mensaje inicial enviado a ${clientId}`);
       } catch (error) {
         console.error(`[SSE] Error enviando mensaje inicial a ${clientId}:`, error);
       }
-
-      // Manejar cierre de conexión
-      const abortHandler = () => {
-        console.log(`[SSE] Conexión cerrada por cliente: ${clientId}`);
-        notificationManager.removeClient(clientId);
-        try {
-          controller.close();
-        } catch {
-          // Ya está cerrado
-        }
-      };
-
-      request.signal.addEventListener("abort", abortHandler);
 
       // Mantener viva la conexión con heartbeat cada 30s
       const heartbeatInterval = setInterval(() => {
@@ -57,25 +45,41 @@ export async function GET(request: NextRequest) {
         }
       }, 30000); // Cada 30 segundos
 
+      // Manejar cierre de conexión
+      const handleAbort = () => {
+        console.log(`[SSE] Conexión abortada por cliente: ${clientId}`);
+        clearInterval(heartbeatInterval);
+        notificationManager.removeClient(clientId);
+        try {
+          controller.close();
+        } catch {
+          // Ya está cerrado
+        }
+      };
+
+      request.signal.addEventListener("abort", handleAbort);
+
       // Cleanup cuando se cierre el stream
       return () => {
         clearInterval(heartbeatInterval);
-        request.signal.removeEventListener("abort", abortHandler);
+        request.signal.removeEventListener("abort", handleAbort);
         notificationManager.removeClient(clientId);
+        console.log(`[SSE] Stream limpiado para cliente: ${clientId}`);
       };
     },
   });
 
-  // Retornar response con headers SSE
-  return new Response(customReadable, {
+  // Retornar response con headers SSE correctos para Next.js
+  return new Response(stream, {
     headers: {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
-      "Connection": "keep-alive",
-      "X-Accel-Buffering": "no", // Evitar buffering en proxies
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
+      "content-type": "text/event-stream; charset=utf-8",
+      "cache-control": "no-cache, no-transform",
+      "connection": "keep-alive",
+      "x-accel-buffering": "no",
+      // CORS headers
+      "access-control-allow-origin": "*",
+      "access-control-allow-methods": "GET, OPTIONS",
+      "access-control-allow-headers": "content-type, authorization",
     },
   });
 }
@@ -84,13 +88,14 @@ export async function GET(request: NextRequest) {
  * OPTIONS /api/notifications/stream
  * Manejo de CORS preflight
  */
-export async function OPTIONS() {
+export async function OPTIONS(request: NextRequest) {
   return new Response(null, {
     status: 200,
     headers: {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
+      "access-control-allow-origin": "*",
+      "access-control-allow-methods": "GET, OPTIONS",
+      "access-control-allow-headers": "content-type, authorization",
+      "access-control-max-age": "86400",
     },
   });
 }
