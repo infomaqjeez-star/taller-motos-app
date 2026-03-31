@@ -41,6 +41,14 @@ Deno.serve(async (req: Request) => {
   const SUPA_URL     = Deno.env.get("SUPABASE_URL")!;
   const SERVICE_KEY  = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
+  console.log(`[appjeez-meli-callback] FRONTEND_URL configurada: ${FRONTEND_URL}`);
+  
+  // Validar que no apunte a Vercel
+  if (FRONTEND_URL.includes("vercel")) {
+    console.error("[appjeez-meli-callback] ❌ CRÍTICO: FRONTEND_URL aún apunta a Vercel!");
+    return redirectError("config_error");
+  }
+
   const redirectOk    = (userId: number) =>
     Response.redirect(`${FRONTEND_URL}/appjeez?connected=true&user_id=${userId}`, 302);
   const redirectError = (msg: string) =>
