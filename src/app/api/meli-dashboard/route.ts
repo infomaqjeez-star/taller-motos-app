@@ -79,7 +79,29 @@ const ROMAN = ["I","II","III","IV","V","VI","VII","VIII","IX","X"];
 
 export async function GET() {
   try {
+    console.log("[meli-dashboard] Consultando cuentas activas...");
     const accounts = await getActiveAccounts();
+    console.log("[meli-dashboard] ✅ Cuentas encontradas:", accounts.length);
+    if (accounts.length === 0) {
+      console.warn("[meli-dashboard] ⚠️ getActiveAccounts() retornó vacío. Consultando tabla directamente...");
+      // Fallback: intentar consultar directamente
+      const { createClient } = await import("@supabase/supabase-js");
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      );
+      const { data, error } = await supabase
+        .from("meli_accounts")
+        .select("*")
+        .eq("status", "active");
+      if (error) {
+        console.error("[meli-dashboard] Error en fallback query:", error);
+        return NextResponse.json([]);
+      }
+      console.log("[meli-dashboard] Fallback encontró:", data?.length ?? 0, "cuentas");
+      console.log("[meli-dashboard] Datos:", JSON.stringify(data, null, 2));
+    }
+    
     if (!accounts.length) return NextResponse.json([]);
 
     const results = await Promise.all(accounts.map(processAccount));
@@ -91,6 +113,7 @@ export async function GET() {
 
     return NextResponse.json(withRoman);
   } catch (e) {
+    console.error("[meli-dashboard] ERROR:", (e as Error).message);
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
 }
