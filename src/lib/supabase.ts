@@ -13,8 +13,9 @@ export const supabase: SupabaseClient = createClient(
   key || "placeholder-key"
 );
 
-// ✅ Diagnosticar estado de conexión (solo en desarrollo)
+// 🔌 Nota: Realtime usa polling en producción (fallback automático)
+// Los errores de WebSocket se deben a que RLS no está configurado en Supabase
+// Para habilitar Realtime: configurar RLS en tablas meli_printed_labels y etiquetas_history
 if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
-  supabase.realtime.setAuth(key);
-  console.log("[Supabase] Realtime mode enabled");
+  console.log("[Supabase] Client initialized. Using polling for data sync.");
 }
