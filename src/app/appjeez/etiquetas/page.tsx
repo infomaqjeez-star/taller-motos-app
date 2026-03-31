@@ -358,20 +358,24 @@ function EtiquetasInner() {
           {statusTab === "pending" && filtered.length > 0 && (
             <button
               onClick={() => selectAll(filtered.map(s => s.shipment_id))}
-              className="p-2 rounded-lg transition-all"
-              style={{ background: "rgba(255,255,255,0.05)" }}
-              title={filtered.every(s => selectedIds.has(s.shipment_id)) ? "Deseleccionar todos" : "Seleccionar todos"}
+              className="px-3 py-2 rounded-lg transition-all text-xs font-bold flex items-center gap-2"
+              style={{
+                background: filtered.every(s => selectedIds.has(s.shipment_id)) ? "#39FF14" : "rgba(255,255,255,0.05)",
+                color: filtered.every(s => selectedIds.has(s.shipment_id)) ? "#121212" : "#fff",
+              }}
+              title={filtered.every(s => selectedIds.has(s.shipment_id)) ? "Deseleccionar todas" : "Seleccionar todas"}
             >
               <div className="w-4 h-4 rounded border-2 flex items-center justify-center" style={{
-                borderColor: filtered.every(s => selectedIds.has(s.shipment_id)) ? "#39FF14" : "rgba(255,255,255,0.3)",
-                background: filtered.every(s => selectedIds.has(s.shipment_id)) ? "#39FF14" : "transparent",
+                borderColor: filtered.every(s => selectedIds.has(s.shipment_id)) ? "#121212" : "rgba(255,255,255,0.5)",
+                background: filtered.every(s => selectedIds.has(s.shipment_id)) ? "#121212" : "transparent",
               }}>
                 {filtered.every(s => selectedIds.has(s.shipment_id)) && (
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#121212" strokeWidth="3">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
                     <polyline points="20 6 9 17 4 12"/>
                   </svg>
                 )}
               </div>
+              {filtered.every(s => selectedIds.has(s.shipment_id)) ? "Desmarcar Todas" : "Marcar Todas"}
             </button>
           )}
           <button
