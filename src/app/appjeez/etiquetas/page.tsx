@@ -45,9 +45,13 @@ const TYPE_CFG: Record<LogisticType, { color: string; label: string; icon: React
 function LabelCard({
   shipment,
   onPrinted,
+  isSelected,
+  onToggleSelection,
 }: {
   shipment: ShipmentInfo;
   onPrinted?: (id: number) => void;
+  isSelected?: boolean;
+  onToggleSelection?: (id: number) => void;
 }) {
   const cfg = TYPE_CFG[shipment.type];
   const zone = calculateZoneDistance(shipment.delivery_date);
@@ -56,9 +60,31 @@ function LabelCard({
 
   return (
     <div
-      className="rounded-2xl overflow-hidden mb-3 flex items-start gap-4 p-3"
-      style={{ background: "#1A1A1A", border: "1px solid rgba(255,255,255,0.06)" }}
+      className="rounded-2xl overflow-hidden mb-3 flex items-start gap-4 p-3 relative transition-all"
+      style={{ 
+        background: "#1A1A1A", 
+        border: isSelected ? "2px solid #39FF14" : "1px solid rgba(255,255,255,0.06)",
+        boxShadow: isSelected ? "0 0 12px rgba(57, 255, 20, 0.3)" : "none",
+      }}
     >
+      {/* Checkbox en esquina superior izquierda */}
+      {onToggleSelection && (
+        <button
+          onClick={() => onToggleSelection(shipment.shipment_id)}
+          className="absolute top-3 left-3 w-5 h-5 rounded border-2 flex items-center justify-center transition-all z-10"
+          style={{
+            borderColor: isSelected ? "#39FF14" : "rgba(255,255,255,0.3)",
+            background: isSelected ? "#39FF14" : "transparent",
+          }}
+          title="Seleccionar para imprimir"
+        >
+          {isSelected && (
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#121212" strokeWidth="3">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+          )}
+        </button>
+      )}
       {/* Imagen 100x100px */}
       <a
         href={`https://articulo.mercadolibre.com.ar/${shipment.item_id}`}
@@ -89,7 +115,7 @@ function LabelCard({
       </a>
 
       {/* Info */}
-      <div className="flex-1 min-w-0 flex flex-col justify-between">
+      <div className="flex-1 min-w-0 flex flex-col justify-between pt-2">
         <div>
           <div className="flex items-center gap-2 mb-1 flex-wrap">
             <span className="text-[10px] font-black px-2 py-0.5 rounded-full"
@@ -132,6 +158,7 @@ function EtiquetasInner() {
   const [statusTab, setStatusTab] = useState<StatusTab>("pending");
   const [logisticFilter, setLogisticFilter] = useState<LogisticType>("flex");
   const [printing, setPrinting] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -150,6 +177,30 @@ function EtiquetasInner() {
   useEffect(() => {
     load();
   }, [load]);
+
+  // Funciones para manejar selección
+  const toggleSelection = useCallback((id: number) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }, []);
+
+  const selectAll = useCallback((allIds: number[]) => {
+    setSelectedIds(prev => {
+      // Si todos están seleccionados, deseleccionar todos
+      if (allIds.every(id => prev.has(id))) {
+        return new Set();
+      }
+      // Si no, seleccionar todos
+      return new Set(allIds);
+    });
+  }, []);
 
   // Filtrar datos según pestaña de estado y logística
   const filtered = data?.shipments?.filter(s => {
@@ -204,13 +255,12 @@ function EtiquetasInner() {
   };
 
   const handlePrintAll = async () => {
-    if (filtered.length === 0) return;
+    if (selectedIds.size === 0) return;
     setPrinting(true);
     try {
-      // Obtener IDs de todas las etiquetas del filtro actual
-      const ids = filtered.map(s => s.shipment_id).join(",");
+      // Descargar PDF consolidado solo con los seleccionados
+      const ids = Array.from(selectedIds).join(",");
       
-      // Descargar PDF consolidado
       const res = await fetch(`/api/meli-labels?ids=${ids}`);
       if (!res.ok) throw new Error("Failed to generate PDF");
       
@@ -224,13 +274,13 @@ function EtiquetasInner() {
       a.remove();
       URL.revokeObjectURL(url);
 
-      // Marcar todas como impresas
+      // Marcar solo las seleccionadas como impresas
       await Promise.all(
-        filtered.map(s =>
+        Array.from(selectedIds).map(id =>
           fetch("/api/meli-labels", {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ shipment_id: s.shipment_id, status: "printed" }),
+            body: JSON.stringify({ shipment_id: id, status: "printed" }),
           })
         )
       );
@@ -239,13 +289,16 @@ function EtiquetasInner() {
       setData(prev => prev ? {
         ...prev,
         shipments: prev.shipments.map(s =>
-          filtered.some(f => f.shipment_id === s.shipment_id)
+          selectedIds.has(s.shipment_id)
             ? { ...s, printed_at: new Date().toISOString() }
             : s
         ),
       } : null);
+      
+      // Limpiar selección después de imprimir
+      setSelectedIds(new Set());
     } catch (e) {
-      console.error("Error printing all:", e);
+      console.error("Error printing selected:", e);
     } finally {
       setPrinting(false);
     }
@@ -273,14 +326,35 @@ function EtiquetasInner() {
             </h1>
           </div>
         </div>
-        <button
-          onClick={load}
-          disabled={loading}
-          className="p-2 rounded-lg transition-all"
-          style={{ background: "rgba(255,255,255,0.05)" }}
-        >
-          <RefreshCw className={`w-4 h-4 text-gray-400 ${loading ? "animate-spin" : ""}`} />
-        </button>
+        <div className="flex items-center gap-2">
+          {statusTab === "pending" && filtered.length > 0 && (
+            <button
+              onClick={() => selectAll(filtered.map(s => s.shipment_id))}
+              className="p-2 rounded-lg transition-all"
+              style={{ background: "rgba(255,255,255,0.05)" }}
+              title={filtered.every(s => selectedIds.has(s.shipment_id)) ? "Deseleccionar todos" : "Seleccionar todos"}
+            >
+              <div className="w-4 h-4 rounded border-2 flex items-center justify-center" style={{
+                borderColor: filtered.every(s => selectedIds.has(s.shipment_id)) ? "#39FF14" : "rgba(255,255,255,0.3)",
+                background: filtered.every(s => selectedIds.has(s.shipment_id)) ? "#39FF14" : "transparent",
+              }}>
+                {filtered.every(s => selectedIds.has(s.shipment_id)) && (
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#121212" strokeWidth="3">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                )}
+              </div>
+            </button>
+          )}
+          <button
+            onClick={load}
+            disabled={loading}
+            className="p-2 rounded-lg transition-all"
+            style={{ background: "rgba(255,255,255,0.05)" }}
+          >
+            <RefreshCw className={`w-4 h-4 text-gray-400 ${loading ? "animate-spin" : ""}`} />
+          </button>
+        </div>
       </div>
 
       <div className="max-w-3xl mx-auto px-4 pt-4">
@@ -366,17 +440,17 @@ function EtiquetasInner() {
               })}
             </div>
 
-            {/* Botón Imprimir Todas las Pendientes */}
+            {/* Botón Imprimir Seleccionadas */}
             {statusTab === "pending" && filtered.length > 0 && (
               <div className="mb-4 flex justify-center">
                 <button
                   onClick={handlePrintAll}
-                  disabled={printing}
+                  disabled={printing || selectedIds.size === 0}
                   className="px-6 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-2"
                   style={{
-                    background: "#39FF14",
+                    background: selectedIds.size > 0 ? "#39FF14" : "#6B7280",
                     color: "#121212",
-                    opacity: printing ? 0.6 : 1,
+                    opacity: (printing || selectedIds.size === 0) ? 0.6 : 1,
                   }}
                 >
                   {printing ? (
@@ -387,7 +461,7 @@ function EtiquetasInner() {
                   ) : (
                     <>
                       <Download className="w-4 h-4" />
-                      Imprimir Todas ({filtered.length})
+                      Imprimir Seleccionadas ({selectedIds.size})
                     </>
                   )}
                 </button>
@@ -415,6 +489,8 @@ function EtiquetasInner() {
                     key={shipment.shipment_id}
                     shipment={shipment}
                     onPrinted={handlePrinted}
+                    isSelected={selectedIds.has(shipment.shipment_id)}
+                    onToggleSelection={toggleSelection}
                   />
                 ))}
               </div>

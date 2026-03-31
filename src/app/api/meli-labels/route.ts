@@ -223,7 +223,11 @@ export async function GET(req: Request) {
           seenPending.add(sid);
 
           const info = parseOrder(order, acc);
-          if (info) allShipments.push(info);
+          if (info) {
+            // Set explicit status: pending (not yet printed)
+            info.status = "pending";
+            allShipments.push(info);
+          }
         }
 
         // Envíos ya despachados (para detectar demorados en tránsito)
@@ -235,7 +239,11 @@ export async function GET(req: Request) {
           if (seenShipped.has(sid)) continue;
           seenShipped.add(sid);
           const info = parseOrder(order, acc);
-          if (info) allInTransit.push(info);
+          if (info) {
+            // Set explicit status: pending for in-transit items
+            info.status = "pending";
+            allInTransit.push(info);
+          }
         }
 
       } catch { /* skip account */ }
@@ -377,9 +385,54 @@ export async function GET(req: Request) {
         }
       })
     );
+    
+    // Aplicar thumbnails de items
     for (const s of allToEnrich) {
       if (s.item_id && thumbnailMap.has(s.item_id)) s.thumbnail = thumbnailMap.get(s.item_id)!;
     }
+
+    // ── Fallback: Enriquecimiento desde order_items si thumbnail sigue vacío ─────
+    const missingThumbnails = allToEnrich.filter(s => !s.thumbnail && s.order_id);
+    const ordersByAccount = new Map<string, { token: string; orderIds: number[] }>();
+    for (const s of missingThumbnails) {
+      if (!ordersByAccount.has(s.meli_user_id)) {
+        const t = tokenCache.get(s.meli_user_id);
+        if (!t) continue;
+        ordersByAccount.set(s.meli_user_id, { token: t, orderIds: [] });
+      }
+      const entry = ordersByAccount.get(s.meli_user_id)!;
+      if (!entry.orderIds.includes(s.order_id!)) entry.orderIds.push(s.order_id!);
+    }
+    
+    await Promise.all(
+      Array.from(ordersByAccount.values()).map(async ({ token, orderIds }) => {
+        for (let i = 0; i < orderIds.length; i += 10) {
+          const batch = orderIds.slice(i, i + 10);
+          await Promise.all(
+            batch.map(async (orderId) => {
+              try {
+                const orderDetail = await meliGetWithRetry(`/orders/${orderId}`, token) as Record<string, unknown> | null;
+                if (!orderDetail) return;
+                
+                const items = (orderDetail.order_items as Array<{ item?: { thumbnail?: string } }> | undefined) ?? [];
+                const firstItem = items[0];
+                let thumbnail = firstItem?.item?.thumbnail as string | undefined;
+                
+                if (thumbnail) {
+                  // Ensure HTTPS
+                  thumbnail = thumbnail.replace(/^https?:\/\/https?:\/\//, "https://").replace(/^http:\/\//, "https://");
+                  
+                  // Aplicar al shipment correspondiente
+                  const shipment = missingThumbnails.find(s => s.order_id === orderId);
+                  if (shipment) shipment.thumbnail = thumbnail;
+                }
+              } catch { /* skip */ }
+            })
+          );
+          if (i + 10 < orderIds.length) await new Promise(r => setTimeout(r, 200));
+        }
+      })
+    );
 
     // ── Separación final ──────────────────────────────────────────────────────
     const urgencyOrder: Record<UrgencyType, number>   = { delayed: 0, today: 1, tomorrow: 2, week: 3, upcoming: 4 };
