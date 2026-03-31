@@ -1,0 +1,280 @@
+"use client";
+
+import { useState } from "react";
+import { Store, ChevronDown, ChevronUp, Pencil, Check, XCircle, MessageCircle, MessageSquare, Truck, Package, Star, TrendingUp, Tag } from "lucide-react";
+
+interface Reputation {
+  level_id: string | null;
+  power_seller_status: string | null;
+  transactions_total: number;
+  transactions_completed: number;
+  ratings_positive: number;
+  ratings_negative: number;
+  ratings_neutral: number;
+  delayed_handling_time: number;
+  claims: number;
+  cancellations: number;
+  immediate_payment: boolean;
+}
+
+interface AccountDash {
+  account: string;
+  meli_user_id: string;
+  unanswered_questions: number;
+  pending_messages: number;
+  ready_to_ship: number;
+  total_items: number;
+  today_orders: number;
+  today_sales_amount: number;
+  reputation: Reputation;
+  roman_index: string;
+  display_name: string;
+  error?: string;
+}
+
+interface Props {
+  data: AccountDash;
+  editingNick: string | null;
+  editNickVal: string;
+  setEditingNick: (v: string | null) => void;
+  setEditNickVal: (v: string) => void;
+  handleRenameAccount: (meliUserId: string, newName: string) => void;
+}
+
+function RepoBadge({ level }: { level: string | null }) {
+  if (!level) return <span className="text-[10px] text-gray-500">Sin datos</span>;
+
+  const LEVEL_COLORS: Record<string, string> = {
+    "1_red": "#ef4444",
+    "2_orange": "#FF5722",
+    "3_yellow": "#FFE600",
+    "4_light_green": "#7CFC00",
+    "5_green": "#39FF14",
+  };
+  const LEVEL_LABELS: Record<string, string> = {
+    "1_red": "Rojo",
+    "2_orange": "Naranja",
+    "3_yellow": "Amarillo",
+    "4_light_green": "Verde claro",
+    "5_green": "Verde",
+  };
+
+  const color = LEVEL_COLORS[level] ?? "#6B7280";
+  const label = LEVEL_LABELS[level] ?? level;
+
+  return (
+    <span
+      className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold whitespace-nowrap"
+      style={{ background: color + "22", color, border: `1px solid ${color}44` }}
+    >
+      <Star className="w-2.5 h-2.5" /> {label}
+    </span>
+  );
+}
+
+export default function CompactAccountRow({
+  data,
+  editingNick,
+  editNickVal,
+  setEditingNick,
+  setEditNickVal,
+  handleRenameAccount,
+}: Props) {
+  const [open, setOpen] = useState(false);
+  const urgentTotal = (data.unanswered_questions ?? 0) + (data.ready_to_ship ?? 0) + (data.pending_messages ?? 0);
+
+  return (
+    <div
+      className="rounded-lg overflow-hidden mb-2"
+      style={{ background: "#181818", border: "1px solid rgba(255,255,255,0.08)" }}
+    >
+      {/* Header Row - 60px */}
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full px-4 py-3 flex items-center justify-between text-left"
+        style={{ background: "linear-gradient(90deg,#1F1F1F,#1a1a1a)", height: "60px" }}
+      >
+        {/* Left: Logo + Name + Rep */}
+        <div className="flex items-center gap-2.5 flex-1 min-w-0">
+          {/* Logo */}
+          <div
+            className="w-10 h-10 rounded-lg flex items-center justify-center font-black text-sm flex-shrink-0"
+            style={{ background: "linear-gradient(135deg,#FFE600,#FF9800)" }}
+          >
+            <Store className="w-4 h-4 text-black" />
+          </div>
+
+          {/* Account Info */}
+          <div className="flex-1 min-w-0">
+            {/* Name + Edit */}
+            <div className="flex items-center gap-1 mb-0.5">
+              {data.roman_index && (
+                <span
+                  className="text-[10px] font-black px-1.5 py-0.5 rounded flex-shrink-0"
+                  style={{ background: "#FFE600", color: "#121212" }}
+                >
+                  {data.roman_index}
+                </span>
+              )}
+              {editingNick === data.meli_user_id ? (
+                <div className="flex items-center gap-0.5">
+                  <input
+                    value={editNickVal}
+                    onChange={e => setEditNickVal(e.target.value)}
+                    onKeyDown={e => e.key === "Enter" && handleRenameAccount(data.meli_user_id, editNickVal)}
+                    className="font-bold text-white text-xs bg-transparent border-b border-yellow-400 outline-none w-24"
+                    autoFocus
+                  />
+                  <button
+                    onClick={() => handleRenameAccount(data.meli_user_id, editNickVal)}
+                    className="p-0.5 rounded hover:bg-white/10"
+                  >
+                    <Check className="w-3 h-3 text-green-400" />
+                  </button>
+                  <button
+                    onClick={() => setEditingNick(null)}
+                    className="p-0.5 rounded hover:bg-white/10"
+                  >
+                    <XCircle className="w-3 h-3 text-gray-500" />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1">
+                  <p className="font-bold text-white text-xs">@{data.account}</p>
+                  <button
+                    onClick={() => {
+                      setEditingNick(data.meli_user_id);
+                      setEditNickVal(data.account);
+                    }}
+                    className="p-0.5 rounded hover:bg-white/10 flex-shrink-0"
+                  >
+                    <Pencil className="w-2.5 h-2.5 text-gray-500" />
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Rep + Items */}
+            <div className="flex items-center gap-2 text-[10px]">
+              <RepoBadge level={data.reputation?.level_id ?? null} />
+              <span style={{ color: "#6B7280" }}>{data.total_items ?? 0} pub.</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Right: Urgent Badge + Expand Icon */}
+        <div className="flex items-center gap-3 flex-shrink-0 ml-2">
+          {urgentTotal > 0 && (
+            <span
+              className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-black text-black animate-pulse flex-shrink-0"
+              style={{ background: "#FF5722" }}
+            >
+              {urgentTotal}
+            </span>
+          )}
+          {open ? (
+            <ChevronUp className="w-4 h-4 text-gray-500 flex-shrink-0" />
+          ) : (
+            <ChevronDown className="w-4 h-4 text-gray-500 flex-shrink-0" />
+          )}
+        </div>
+      </button>
+
+      {/* Expandable Content */}
+      {open && (
+        <div
+          className="px-4 py-3 space-y-3 border-t"
+          style={{ borderColor: "rgba(255,255,255,0.06)", background: "#0a0a0a" }}
+        >
+          {data.error && (
+            <div className="p-2 rounded text-xs" style={{ background: "#ef444422", color: "#ef4444" }}>
+              Error: {data.error}
+            </div>
+          )}
+
+          {/* Metric Cards - Horizontal Compact */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <MetricCardCompact
+              icon={<MessageCircle className="w-3.5 h-3.5" />}
+              label="Preguntas"
+              value={data.unanswered_questions ?? 0}
+              color="#FF5722"
+            />
+            <MetricCardCompact
+              icon={<MessageSquare className="w-3.5 h-3.5" />}
+              label="Mensajes"
+              value={data.pending_messages ?? 0}
+              color="#FF9800"
+            />
+            <MetricCardCompact
+              icon={<Truck className="w-3.5 h-3.5" />}
+              label="Envíos"
+              value={data.ready_to_ship ?? 0}
+              color="#00E5FF"
+            />
+            <MetricCardCompact
+              icon={<Package className="w-3.5 h-3.5" />}
+              label="Publicaciones"
+              value={data.total_items ?? 0}
+              color="#39FF14"
+            />
+          </div>
+
+          {/* Quick Actions */}
+          <div>
+            <p className="text-[10px] font-bold mb-2 uppercase tracking-wider" style={{ color: "#6B7280" }}>
+              Acciones
+            </p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {[
+                { label: "Preguntas", color: "#FF5722", href: `/appjeez/mensajes` },
+                { label: "Estadísticas", color: "#39FF14", href: `/appjeez/estadisticas` },
+                { label: "Etiquetas", color: "#00E5FF", href: `/appjeez/etiquetas` },
+                { label: "Publicaciones", color: "#FFE600", href: `/appjeez/publicaciones` },
+              ].map(a => (
+                <a
+                  key={a.label}
+                  href={a.href}
+                  className="py-1.5 rounded text-[10px] font-bold transition-opacity hover:opacity-80 text-center"
+                  style={{ background: a.color + "18", color: a.color, border: `1px solid ${a.color}33` }}
+                >
+                  {a.label}
+                </a>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MetricCardCompact({
+  icon,
+  label,
+  value,
+  color,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: number;
+  color: string;
+}) {
+  return (
+    <div
+      className="rounded p-2 flex flex-col gap-1"
+      style={{
+        background: value > 0 ? color + "15" : "#1F1F1F",
+        border: `1px solid ${value > 0 ? color + "33" : "rgba(255,255,255,0.07)"}`,
+      }}
+    >
+      <div className="flex items-center gap-1" style={{ color }}>
+        {icon}
+        <span className="text-[9px] font-semibold text-gray-400">{label}</span>
+      </div>
+      <p className="text-xs font-black" style={{ color: value > 0 ? color : "#6B7280" }}>
+        {value}
+      </p>
+    </div>
+  );
+}

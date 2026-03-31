@@ -10,6 +10,9 @@ import {
   Package, Clock, XCircle, BarChart2, ExternalLink,
   Bell, Store, Menu, X, Copy, Pencil, Check, Zap,
 } from "lucide-react";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import CompactAccountRow from "@/components/CompactAccountRow";
+import KpiBar from "@/components/KpiBar";
 
 interface Reputation {
   level_id: string | null;
@@ -366,9 +369,10 @@ function AppJeezInner() {
 
   useEffect(() => {
     load();
-    const interval = setInterval(load, 60_000);
-    return () => clearInterval(interval);
   }, [load]);
+
+  // Auto-refresh cada 60 segundos
+  const { isRefreshing } = useAutoRefresh(load, true, 60000);
 
   const handleRenameAccount = async (meliUserId: string, newName: string) => {
     if (!newName.trim()) return;
@@ -532,12 +536,12 @@ function AppJeezInner() {
             )}
             <button
               onClick={load}
-              disabled={loading}
+              disabled={loading || isRefreshing}
               className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold disabled:opacity-40"
               style={{ background: "#1F1F1F", color: "#00E5FF", border: "1px solid rgba(0,229,255,0.3)" }}
             >
-              <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-              <span className="hidden sm:inline">{loading ? "Actualizando..." : "Actualizar"}</span>
+              <RefreshCw className={`w-4 h-4 ${loading || isRefreshing ? "animate-spin" : ""}`} />
+              <span className="hidden sm:inline">{loading || isRefreshing ? "Actualizando..." : "Actualizar"}</span>
             </button>
           </div>
         </header>
@@ -561,22 +565,7 @@ function AppJeezInner() {
 
           {/* Global summary */}
           {!loading && accounts.length > 0 && (
-            <div className="grid grid-cols-3 gap-3 mb-5">
-              {[
-                { label: "Cuentas activas",   val: accounts.length, color: "#FFE600" },
-                { label: "Ventas hoy",        val: totalSales,      color: "#39FF14" },
-                { label: "Facturado hoy",     val: fmt(totalAmount), color: "#00E5FF" },
-              ].map(s => (
-                <div
-                  key={s.label}
-                  className="rounded-2xl p-3 sm:p-4 text-center"
-                  style={{ background: "#1F1F1F", border: "1px solid rgba(255,255,255,0.07)" }}
-                >
-                  <p className="text-xl sm:text-2xl font-black" style={{ color: s.color }}>{s.val}</p>
-                  <p className="text-[10px] sm:text-xs mt-0.5" style={{ color: "#6B7280" }}>{s.label}</p>
-                </div>
-              ))}
-            </div>
+            <KpiBar accountsCount={accounts.length} salesToday={totalSales} totalAmount={totalAmount} />
           )}
 
           {/* Error */}
@@ -630,11 +619,16 @@ function AppJeezInner() {
           )}
 
           {/* Accounts */}
-          {!loading && accounts.map((acc, i) => (
-            <AccountPanel key={acc.meli_user_id} data={acc} defaultOpen={i === 0}
-              editingNick={editingNick} editNickVal={editNickVal}
-              setEditingNick={setEditingNick} setEditNickVal={setEditNickVal}
-              handleRenameAccount={handleRenameAccount} />
+          {!loading && accounts.map((acc) => (
+            <CompactAccountRow
+              key={acc.meli_user_id}
+              data={acc}
+              editingNick={editingNick}
+              editNickVal={editNickVal}
+              setEditingNick={setEditingNick}
+              setEditNickVal={setEditNickVal}
+              handleRenameAccount={handleRenameAccount}
+            />
           ))}
         </main>
       </div>
