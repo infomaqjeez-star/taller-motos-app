@@ -34,8 +34,6 @@ interface AccountDash {
   measurement_date: string;
   metrics_period: string;
   reputation: Reputation;
-  roman_index: string;
-  display_name: string;
   error?: string;
 }
 
@@ -96,17 +94,7 @@ export default function AccountDetailsPanel({ data }: Props) {
             📦
           </div>
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-1">
-              {data.roman_index && (
-                <span
-                  className="text-[10px] font-black px-1.5 py-0.5 rounded flex-shrink-0"
-                  style={{ background: "#FFE600", color: "#121212" }}
-                >
-                  {data.roman_index}
-                </span>
-              )}
-              <p className="font-bold text-white text-xs">@{data.account}</p>
-            </div>
+            <p className="font-bold text-white text-xs">@{data.account}</p>
             <p className="text-[10px] mt-1" style={{ color: "#6B7280" }}>
               {data.total_items ?? 0} publicaciones
             </p>

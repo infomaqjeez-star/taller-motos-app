@@ -84,8 +84,6 @@ async function processAccount(acc: MeliAccount) {
   }
 }
 
-const ROMAN = ["I","II","III","IV","V","VI","VII","VIII","IX","X"];
-
 export async function GET() {
   try {
     console.log("[meli-dashboard] Consultando cuentas activas...");
@@ -114,13 +112,8 @@ export async function GET() {
     if (!accounts.length) return NextResponse.json([]);
 
     const results = await Promise.all(accounts.map(processAccount));
-    const withRoman = results.map((r, i) => ({
-      ...r,
-      roman_index: ROMAN[i] ?? String(i + 1),
-      display_name: `${ROMAN[i] ?? i + 1} — ${(r as { account: string }).account}`,
-    }));
 
-    return NextResponse.json(withRoman);
+    return NextResponse.json(results);
   } catch (e) {
     console.error("[meli-dashboard] ERROR:", (e as Error).message);
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });

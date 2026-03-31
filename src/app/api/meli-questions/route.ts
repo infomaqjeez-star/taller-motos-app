@@ -9,7 +9,6 @@ export async function GET(req: Request) {
   const logs: string[] = [];
 
   try {
-    const ROMAN = ["I","II","III","IV","V","VI","VII","VIII","IX","X"];
     const accounts = await getActiveAccounts();
     logs.push(`accounts_count:${accounts.length}`);
 
@@ -23,7 +22,6 @@ export async function GET(req: Request) {
 
     for (let accIdx = 0; accIdx < accounts.length; accIdx++) {
       const acc   = accounts[accIdx];
-      const roman = ROMAN[accIdx] ?? String(accIdx + 1);
       const alog: Record<string, unknown> = { nickname: acc.nickname, meli_user_id: acc.meli_user_id };
       try {
         const token = await getValidToken(acc);
@@ -84,7 +82,7 @@ export async function GET(req: Request) {
             date_created:     q.date_created,
             answer_text:      q.answer?.text ?? null,
             answer_date:      q.answer?.date_created ?? null,
-            meli_accounts:    { nickname: acc.nickname, roman_index: roman },
+            meli_accounts:    { nickname: acc.nickname },
           });
         }
       } catch (err) {

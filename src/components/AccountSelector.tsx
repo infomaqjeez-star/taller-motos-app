@@ -14,8 +14,6 @@ interface AccountDash {
     level_id: string | null;
     power_seller_status: string | null;
   };
-  roman_index: string;
-  display_name: string;
 }
 
 interface Props {
@@ -83,7 +81,7 @@ export default function AccountSelector({ accounts, selectedId, onSelect }: Prop
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-bold text-white truncate">
-                  {selectedAccount.roman_index} {selectedAccount.display_name}
+                  @{selectedAccount.account}
                 </p>
                 <div className="flex items-center gap-1.5 mt-0.5">
                   {selectedAccount.reputation.level_id && (
@@ -155,10 +153,10 @@ export default function AccountSelector({ accounts, selectedId, onSelect }: Prop
                     className="w-8 h-8 rounded flex items-center justify-center text-xs font-black flex-shrink-0"
                     style={{ background: repColor + "22", color: repColor }}
                   >
-                    {acc.roman_index}
+                    📦
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-bold text-white truncate">{acc.display_name}</p>
+                    <p className="text-xs font-bold text-white truncate">@{acc.account}</p>
                     <p className="text-[10px] text-gray-500">
                       {acc.account}
                     </p>

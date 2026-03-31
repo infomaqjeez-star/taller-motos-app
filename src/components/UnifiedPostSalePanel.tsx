@@ -5,7 +5,6 @@ import { AlertTriangle, Clock, Scale, TrendingDown, ExternalLink } from "lucide-
 interface CriticalMetric {
   meli_user_id: string;
   account_name: string;
-  roman_index: string;
   claims_count: number;
   claims_percent?: number;
   mediations_count?: number;
@@ -162,7 +161,7 @@ export default function UnifiedPostSalePanel({ accounts, isLoading = false }: Pr
                     className="w-6 h-6 rounded text-xs font-bold flex items-center justify-center flex-shrink-0"
                     style={{ background: risk.bg, color: risk.text }}
                   >
-                    {acc.roman_index}
+                    📦
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-bold text-white truncate">{acc.account_name}</p>

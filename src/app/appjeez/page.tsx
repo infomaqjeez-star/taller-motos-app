@@ -44,8 +44,6 @@ interface AccountDash {
   measurement_date: string;
   metrics_period: string;
   reputation: Reputation;
-  roman_index: string;
-  display_name: string;
   error?: string;
 }
 
@@ -215,12 +213,6 @@ function AccountPanel({ data, defaultOpen, editingNick, editNickVal, setEditingN
           </div>
           <div className="text-left">
             <div className="flex items-center gap-2 flex-wrap">
-              {data.roman_index && (
-                <span className="text-xs font-black px-2 py-0.5 rounded-lg"
-                  style={{ background: "#FFE600", color: "#121212" }}>
-                  {data.roman_index}
-                </span>
-              )}
               <p className="font-black text-white text-base flex items-center gap-1.5">
                 {editingNick === data.meli_user_id ? (
                   <>
@@ -460,7 +452,6 @@ function AppJeezInner() {
     return {
       meli_user_id: acc.meli_user_id,
       account_name: acc.account,
-      roman_index: acc.roman_index || "",
       claims_count: acc.claims_count ?? 0,
       claims_percent: acc.reputation?.claims ? (acc.reputation.claims * 100) : undefined,
       mediations_count: 0, // TODO: Obtener de API

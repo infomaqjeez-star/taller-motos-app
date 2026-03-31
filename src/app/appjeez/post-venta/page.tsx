@@ -11,7 +11,6 @@ import UnifiedPostSalePanel from "@/components/UnifiedPostSalePanel";
 interface AccountData {
   meli_user_id: string;
   account_name: string;
-  roman_index: string;
   claims_count: number;
   claims_percent?: number;
   mediations_count?: number;
@@ -52,7 +51,6 @@ function PostVentaContent() {
           return {
             meli_user_id: acc.meli_user_id,
             account_name: acc.account,
-            roman_index: acc.roman_index || "",
             claims_count: acc.claims_count ?? 0,
             claims_percent: acc.reputation?.claims ? (acc.reputation.claims * 100) : undefined,
             mediations_count: 0, // TODO: Obtener de API
@@ -148,7 +146,7 @@ function PostVentaContent() {
                         className="w-6 h-6 rounded text-xs font-bold flex items-center justify-center flex-shrink-0"
                         style={{ background: "#FFE600", color: "#121212" }}
                       >
-                        {acc.roman_index}
+                        📦
                       </span>
                       <span className="truncate">{acc.account_name}</span>
                     </div>
