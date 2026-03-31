@@ -20,6 +20,7 @@ interface Props {
   accounts: AccountDash[];
   selectedId: string | null;
   onSelect: (id: string) => void;
+  compact?: boolean;
 }
 
 const LEVEL_COLORS: Record<string, string> = {
@@ -44,7 +45,7 @@ const POWER_SELLER_LABELS: Record<string, string> = {
   silver: "Silver",
 };
 
-export default function AccountSelector({ accounts, selectedId, onSelect }: Props) {
+export default function AccountSelector({ accounts, selectedId, onSelect, compact }: Props) {
   const [isOpen, setIsOpen] = useState(false);
 
   const selectedAccount = accounts.find((a) => a.meli_user_id === selectedId);
@@ -59,6 +60,79 @@ export default function AccountSelector({ accounts, selectedId, onSelect }: Prop
     return total;
   };
 
+  // ===== VERSIÓN COMPACTA (para header) =====
+  if (compact) {
+    return (
+      <div className="relative inline-block">
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          className="px-2 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition-all"
+          style={{
+            background: "#FFE60022",
+            border: `1px solid ${isOpen ? "#FFE600" : "#FFE60044"}`,
+            color: "#FFE600",
+          }}
+        >
+          @{selectedAccount?.account ?? "—"}
+          <ChevronDown className="w-3 h-3" />
+        </button>
+
+        {/* Dropdown */}
+        {isOpen && (
+          <div
+            className="absolute top-full right-0 mt-1 rounded-lg shadow-2xl z-50 max-h-96 overflow-y-auto w-56"
+            style={{ background: "#181818", border: "1px solid rgba(255,255,255,0.08)" }}
+          >
+            {accounts.map((acc) => {
+              const urgency = getUrgency(acc);
+              const isSelected = acc.meli_user_id === selectedId;
+              const repColor = acc.reputation.level_id ? LEVEL_COLORS[acc.reputation.level_id] : "#6B7280";
+
+              return (
+                <button
+                  key={acc.meli_user_id}
+                  onClick={() => {
+                    onSelect(acc.meli_user_id);
+                    setIsOpen(false);
+                  }}
+                  className="w-full px-3 py-2.5 flex items-center justify-between text-left transition-all hover:bg-opacity-100 text-xs"
+                  style={{
+                    background: isSelected ? "rgba(255, 230, 0, 0.1)" : "transparent",
+                    borderBottom: "1px solid rgba(255,255,255,0.05)",
+                  }}
+                >
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <div
+                      className="w-6 h-6 rounded flex items-center justify-center text-[9px] font-black flex-shrink-0"
+                      style={{ background: repColor + "22", color: repColor }}
+                    >
+                      📦
+                    </div>
+                    <p className="font-bold text-white truncate">@{acc.account}</p>
+                  </div>
+                  {urgency > 0 && (
+                    <span className="text-[9px] font-bold flex-shrink-0 ml-1" style={{ color: "#EF4444" }}>
+                      {urgency}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Backdrop */}
+        {isOpen && (
+          <div
+            className="fixed inset-0 z-40"
+            onClick={() => setIsOpen(false)}
+          />
+        )}
+      </div>
+    );
+  }
+
+  // ===== VERSIÓN FULL (original) =====
   return (
     <div className="relative mb-4">
       {/* Trigger Button */}

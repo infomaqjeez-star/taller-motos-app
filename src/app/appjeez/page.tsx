@@ -594,6 +594,17 @@ function AppJeezInner() {
           </div>
 
           <div className="flex items-center gap-2">
+            {selectedAccount && (
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-gray-400">Cuenta:</span>
+                <AccountSelector
+                  accounts={accounts}
+                  selectedId={selectedAccountId}
+                  onSelect={setSelectedAccountId}
+                  compact={true}
+                />
+              </div>
+            )}
             {totalUrgent > 0 && (
               <div
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold"
@@ -692,21 +703,14 @@ function AppJeezInner() {
             </div>
           )}
 
-          {/* Accounts Dropdown + Details Panel */}
+          {/* Accounts Details Panel */}
           {!loading && accounts.length > 0 && (
-            <div className="space-y-4">
-              {/* Account Selector Dropdown */}
-              <AccountSelector
-                accounts={accounts}
-                selectedId={selectedAccountId}
-                onSelect={setSelectedAccountId}
-              />
-
+            <>
               {/* Account Details Panel - Mostrar solo cuenta seleccionada */}
               {selectedAccount && (
                 <AccountDetailsPanel data={selectedAccount} />
               )}
-            </div>
+            </>
           )}
         </main>
       </div>
