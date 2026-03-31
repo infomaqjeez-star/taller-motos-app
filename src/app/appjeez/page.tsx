@@ -12,7 +12,8 @@ import {
 } from "lucide-react";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import { useNotificationStream } from "@/hooks/useNotificationStream";
-import CompactAccountRow from "@/components/CompactAccountRow";
+import AccountSelector from "@/components/AccountSelector";
+import AccountDetailsPanel from "@/components/AccountDetailsPanel";
 import KpiBar from "@/components/KpiBar";
 
 interface Reputation {
@@ -363,9 +364,7 @@ function AppJeezInner() {
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [totalQuestionsAlert, setTotalQuestionsAlert] = useState(0);
-  const [editingNick, setEditingNick] = useState<string | null>(null);
-  const [editNickVal, setEditNickVal] = useState("");
-  const [openAccountId, setOpenAccountId] = useState<string | null>(null);
+  const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true); setError(null);
@@ -385,6 +384,26 @@ function AppJeezInner() {
     load();
   }, [load]);
 
+  // Inicializar selectedAccountId desde localStorage y preseleccionar primera cuenta
+  useEffect(() => {
+    if (accounts.length === 0) return;
+
+    const saved = localStorage.getItem("selectedAccountId");
+    if (saved && accounts.find(a => a.meli_user_id === saved)) {
+      setSelectedAccountId(saved);
+    } else if (accounts.length > 0) {
+      // Preseleccionar primera cuenta
+      setSelectedAccountId(accounts[0].meli_user_id);
+    }
+  }, [accounts]);
+
+  // Guardar selectedAccountId en localStorage cuando cambia
+  useEffect(() => {
+    if (selectedAccountId) {
+      localStorage.setItem("selectedAccountId", selectedAccountId);
+    }
+  }, [selectedAccountId]);
+
   // ⚠️ Polling automático DESACTIVADO - Usando SSE/Webhooks en su lugar
   const { isRefreshing, manualRefresh } = useAutoRefresh(
     load,
@@ -392,7 +411,6 @@ function AppJeezInner() {
     60000
   );
 
-  // Callback para procesar notificaciones (estable entre renders)
   const handleNotification = useCallback((notification: any) => {
     console.log("[SSE] Notificación recibida:", notification);
     // Actualizar solo la cuenta del notification.user_id
@@ -416,24 +434,8 @@ function AppJeezInner() {
     true // Enabled por defecto
   );
 
-  const handleRenameAccount = async (meliUserId: string, newName: string) => {
-    if (!newName.trim()) return;
-    const acc = accounts.find(a => a.meli_user_id === meliUserId);
-    if (!acc) return;
-    try {
-      const listRes = await fetch("/api/meli-accounts");
-      const list = await listRes.json() as Array<{ id: string; meli_user_id: string }>;
-      const match = list.find(a => String(a.meli_user_id) === meliUserId);
-      if (!match) return;
-      await fetch("/api/meli-accounts", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: match.id, nickname: newName.trim() }),
-      });
-      setEditingNick(null);
-      load();
-    } catch { /* silent */ }
-  };
+  // Obtener cuenta seleccionada
+  const selectedAccount = accounts.find(a => a.meli_user_id === selectedAccountId);
 
   const totalUrgent = accounts.reduce(
     (s, a) => s + (a.unanswered_questions ?? 0) + (a.ready_to_ship ?? 0) + (a.pending_messages ?? 0) + (a.claims_count ?? 0), 0
@@ -665,20 +667,22 @@ function AppJeezInner() {
             </div>
           )}
 
-          {/* Accounts */}
-          {!loading && accounts.map((acc) => (
-            <CompactAccountRow
-              key={acc.meli_user_id}
-              data={acc}
-              isOpen={openAccountId === acc.meli_user_id}
-              onToggle={(id) => setOpenAccountId(id === openAccountId ? null : id)}
-              editingNick={editingNick}
-              editNickVal={editNickVal}
-              setEditingNick={setEditingNick}
-              setEditNickVal={setEditNickVal}
-              handleRenameAccount={handleRenameAccount}
-            />
-          ))}
+          {/* Accounts Dropdown + Details Panel */}
+          {!loading && accounts.length > 0 && (
+            <div className="space-y-4">
+              {/* Account Selector Dropdown */}
+              <AccountSelector
+                accounts={accounts}
+                selectedId={selectedAccountId}
+                onSelect={setSelectedAccountId}
+              />
+
+              {/* Account Details Panel - Mostrar solo cuenta seleccionada */}
+              {selectedAccount && (
+                <AccountDetailsPanel data={selectedAccount} />
+              )}
+            </div>
+          )}
         </main>
       </div>
     </div>
