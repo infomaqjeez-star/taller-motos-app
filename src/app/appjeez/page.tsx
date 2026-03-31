@@ -353,6 +353,7 @@ function AppJeezInner() {
   const [totalQuestionsAlert, setTotalQuestionsAlert] = useState(0);
   const [editingNick, setEditingNick] = useState<string | null>(null);
   const [editNickVal, setEditNickVal] = useState("");
+  const [openAccountId, setOpenAccountId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true); setError(null);
@@ -657,6 +658,8 @@ function AppJeezInner() {
             <CompactAccountRow
               key={acc.meli_user_id}
               data={acc}
+              isOpen={openAccountId === acc.meli_user_id}
+              onToggle={(id) => setOpenAccountId(id === openAccountId ? null : id)}
               editingNick={editingNick}
               editNickVal={editNickVal}
               setEditingNick={setEditingNick}

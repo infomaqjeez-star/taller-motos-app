@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { Store, ChevronDown, ChevronUp, Pencil, Check, XCircle, MessageCircle, MessageSquare, Truck, Package, Star, TrendingUp, Tag } from "lucide-react";
+import { MessageCircle, MessageSquare, Truck, Package, Pencil, Check, XCircle, ChevronDown, ChevronUp } from "lucide-react";
+import { useMeliAccountData } from "@/hooks/useMeliAccountData";
+import ReputationBadge from "@/components/ReputationBadge";
+import ItemsTable from "@/components/ItemsTable";
 
 interface Reputation {
   level_id: string | null;
@@ -11,10 +13,6 @@ interface Reputation {
   ratings_positive: number;
   ratings_negative: number;
   ratings_neutral: number;
-  delayed_handling_time: number;
-  claims: number;
-  cancellations: number;
-  immediate_payment: boolean;
 }
 
 interface AccountDash {
@@ -34,6 +32,8 @@ interface AccountDash {
 
 interface Props {
   data: AccountDash;
+  isOpen: boolean;
+  onToggle: (id: string) => void;
   editingNick: string | null;
   editNickVal: string;
   setEditingNick: (v: string | null) => void;
@@ -67,21 +67,27 @@ function RepoBadge({ level }: { level: string | null }) {
       className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold whitespace-nowrap"
       style={{ background: color + "22", color, border: `1px solid ${color}44` }}
     >
-      <Star className="w-2.5 h-2.5" /> {label}
+      {label}
     </span>
   );
 }
 
 export default function CompactAccountRow({
   data,
+  isOpen,
+  onToggle,
   editingNick,
   editNickVal,
   setEditingNick,
   setEditNickVal,
   handleRenameAccount,
 }: Props) {
-  const [open, setOpen] = useState(false);
   const urgentTotal = (data.unanswered_questions ?? 0) + (data.ready_to_ship ?? 0) + (data.pending_messages ?? 0);
+
+  // Cargar datos en tiempo real si la cuenta está abierta
+  const { data: meliData, loading: dataLoading, error: dataError } = useMeliAccountData(
+    isOpen ? data.meli_user_id : null
+  );
 
   return (
     <div
@@ -90,7 +96,7 @@ export default function CompactAccountRow({
     >
       {/* Header Row - 60px */}
       <button
-        onClick={() => setOpen(o => !o)}
+        onClick={() => onToggle(data.meli_user_id)}
         className="w-full px-4 py-3 flex items-center justify-between text-left"
         style={{ background: "linear-gradient(90deg,#1F1F1F,#1a1a1a)", height: "60px" }}
       >
@@ -101,7 +107,7 @@ export default function CompactAccountRow({
             className="w-10 h-10 rounded-lg flex items-center justify-center font-black text-sm flex-shrink-0"
             style={{ background: "linear-gradient(135deg,#FFE600,#FF9800)" }}
           >
-            <Store className="w-4 h-4 text-black" />
+            📦
           </div>
 
           {/* Account Info */}
@@ -172,7 +178,7 @@ export default function CompactAccountRow({
               {urgentTotal}
             </span>
           )}
-          {open ? (
+          {isOpen ? (
             <ChevronUp className="w-4 h-4 text-gray-500 flex-shrink-0" />
           ) : (
             <ChevronDown className="w-4 h-4 text-gray-500 flex-shrink-0" />
@@ -181,7 +187,7 @@ export default function CompactAccountRow({
       </button>
 
       {/* Expandable Content */}
-      {open && (
+      {isOpen && (
         <div
           className="px-4 py-3 space-y-3 border-t"
           style={{ borderColor: "rgba(255,255,255,0.06)", background: "#0a0a0a" }}
@@ -192,56 +198,66 @@ export default function CompactAccountRow({
             </div>
           )}
 
-          {/* Metric Cards - Horizontal Compact */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            <MetricCardCompact
+          {/* Reputación en tiempo real */}
+          {dataLoading && (
+            <div className="p-2 text-xs text-gray-400 flex items-center gap-2">
+              <div className="w-4 h-4 border-2 border-gray-600 border-t-gray-400 rounded-full animate-spin" />
+              Cargando datos de reputación...
+            </div>
+          )}
+
+          {dataError && (
+            <div className="p-2 rounded text-xs" style={{ background: "#ef444422", color: "#ef4444" }}>
+              Error cargando datos: {dataError}
+            </div>
+          )}
+
+          {meliData && (
+            <>
+              {/* Reputación badges */}
+              {meliData.reputation && (
+                <div className="space-y-2">
+                  <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "#6B7280" }}>
+                    Reputación
+                  </p>
+                  <ReputationBadge
+                    levelId={meliData.reputation.level_id}
+                    levelName={meliData.reputation.level_name}
+                    powerSellerStatus={meliData.reputation.power_seller_status}
+                  />
+                </div>
+              )}
+
+              {/* Tabla de publicaciones con stock */}
+              <div className="space-y-2">
+                <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "#6B7280" }}>
+                  Publicaciones Activas
+                </p>
+                <ItemsTable items={meliData.items} stats={meliData.stats} />
+              </div>
+            </>
+          )}
+
+          {/* Métricos rápidas - Preguntas, Mensajes, Envíos */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-2">
+            <MetricCard
               icon={<MessageCircle className="w-3.5 h-3.5" />}
               label="Preguntas"
               value={data.unanswered_questions ?? 0}
               color="#FF5722"
             />
-            <MetricCardCompact
+            <MetricCard
               icon={<MessageSquare className="w-3.5 h-3.5" />}
               label="Mensajes"
               value={data.pending_messages ?? 0}
               color="#FF9800"
             />
-            <MetricCardCompact
+            <MetricCard
               icon={<Truck className="w-3.5 h-3.5" />}
               label="Envíos"
               value={data.ready_to_ship ?? 0}
               color="#00E5FF"
             />
-            <MetricCardCompact
-              icon={<Package className="w-3.5 h-3.5" />}
-              label="Publicaciones"
-              value={data.total_items ?? 0}
-              color="#39FF14"
-            />
-          </div>
-
-          {/* Quick Actions */}
-          <div>
-            <p className="text-[10px] font-bold mb-2 uppercase tracking-wider" style={{ color: "#6B7280" }}>
-              Acciones
-            </p>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {[
-                { label: "Preguntas", color: "#FF5722", href: `/appjeez/mensajes` },
-                { label: "Estadísticas", color: "#39FF14", href: `/appjeez/estadisticas` },
-                { label: "Etiquetas", color: "#00E5FF", href: `/appjeez/etiquetas` },
-                { label: "Publicaciones", color: "#FFE600", href: `/appjeez/publicaciones` },
-              ].map(a => (
-                <a
-                  key={a.label}
-                  href={a.href}
-                  className="py-1.5 rounded text-[10px] font-bold transition-opacity hover:opacity-80 text-center"
-                  style={{ background: a.color + "18", color: a.color, border: `1px solid ${a.color}33` }}
-                >
-                  {a.label}
-                </a>
-              ))}
-            </div>
           </div>
         </div>
       )}
@@ -249,7 +265,7 @@ export default function CompactAccountRow({
   );
 }
 
-function MetricCardCompact({
+function MetricCard({
   icon,
   label,
   value,
