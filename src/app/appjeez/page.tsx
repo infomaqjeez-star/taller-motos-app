@@ -273,8 +273,17 @@ function AccountPanel({ data, defaultOpen, editingNick, editNickVal, setEditingN
       {open && (
         <div className="p-4 space-y-4">
           {data.error && (
-            <div className="p-3 rounded-xl text-sm" style={{ background: "#ef444422", color: "#ef4444" }}>
-              Error al cargar: {data.error}
+            <div className="p-4 rounded-xl text-sm" style={{ background: "#ef444422", color: "#ef4444", border: "1px solid #ef444455" }}>
+              <p className="font-bold mb-1">⚠️ Error al cargar cuenta</p>
+              {data.error === "token_expired" && (
+                <p>El token de acceso ha expirado. Por favor, reconecta la cuenta en <a href="/configuracion/meli" className="underline hover:text-red-300">Configuración</a>.</p>
+              )}
+              {data.error === "http_451_blocked" && (
+                <p>MercadoLibre ha bloqueado el acceso a esta cuenta (HTTP 451). Verifica tu conexión o contacta al soporte de MeLi.</p>
+              )}
+              {!["token_expired", "http_451_blocked"].includes(data.error) && (
+                <p>{data.error}</p>
+              )}
             </div>
           )}
 

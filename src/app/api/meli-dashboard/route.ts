@@ -55,9 +55,21 @@ async function processAccount(acc: MeliAccount) {
       } : null,
     };
   } catch (err) {
+    const errMsg = (err as Error).message;
+    console.error(`[processAccount] Error para ${acc.nickname}:`, errMsg);
+    
+    // Detectar error 451 específicamente
+    if (errMsg.includes("HTTP_451_BLOCKED")) {
+      return {
+        account: acc.nickname, meli_user_id: String(acc.meli_user_id),
+        error: "http_451_blocked", unanswered_questions: 0, pending_messages: 0,
+        ready_to_ship: 0, total_items: 0, today_orders: 0, today_sales_amount: 0, reputation: null,
+      };
+    }
+
     return {
       account: acc.nickname, meli_user_id: String(acc.meli_user_id),
-      error: (err as Error).message, unanswered_questions: 0, pending_messages: 0,
+      error: errMsg, unanswered_questions: 0, pending_messages: 0,
       ready_to_ship: 0, total_items: 0, today_orders: 0, today_sales_amount: 0, reputation: null,
     };
   }

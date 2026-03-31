@@ -132,9 +132,18 @@ export async function meliGet(path: string, token: string) {
       headers: { Authorization: `Bearer ${token}` },
       signal: AbortSignal.timeout(12000),
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      console.error(`[meliGet] HTTP ${res.status} en ${path}`, await res.text().catch(() => ""));
+      if (res.status === 451) {
+        throw new Error(`HTTP_451_BLOCKED`);
+      }
+      return null;
+    }
     return res.json();
-  } catch { return null; }
+  } catch (err) {
+    if ((err as Error).message === "HTTP_451_BLOCKED") throw err;
+    return null;
+  }
 }
 
 export async function meliGetWithRetry(
