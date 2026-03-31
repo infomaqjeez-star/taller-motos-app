@@ -224,56 +224,70 @@ function QuestionCard({ q, onAnswered }: { q: Question; onAnswered: (id: number)
     <div className="rounded-2xl overflow-hidden"
       style={{ background: "#1F1F1F", border: "1px solid rgba(255,255,255,0.07)" }}>
       <button onClick={() => setOpen(o => !o)} className="w-full text-left p-4">
-        <div className="flex items-start gap-3">
-          {/* Foto del producto — clickable a la publicación */}
+        <div className="flex items-start gap-4">
+          {/* Foto del producto — 80x80px — clickable a la publicación */}
           <a
             href={`https://articulo.mercadolibre.com.ar/${q.item_id.replace(/^([A-Z]+)(\d+)$/, "$1-$2")}`}
             target="_blank"
             rel="noopener noreferrer"
             title="Ver publicación original"
             onClick={e => e.stopPropagation()}
-            className="w-14 h-14 rounded-xl overflow-hidden flex-shrink-0 cursor-pointer relative group"
-            style={{ background: "#2a2a2a", border: "1px solid rgba(255,255,255,0.08)" }}>
+            className="w-20 h-20 rounded-xl overflow-hidden flex-shrink-0 cursor-pointer relative group shadow-md"
+            style={{ background: "#2a2a2a", border: "2px solid rgba(255,230,0,0.1)" }}>
             {q.item_thumbnail ? (
               <Image
                 src={q.item_thumbnail}
                 alt={q.item_title}
-                width={56}
-                height={56}
-                className="w-full h-full object-cover transition-opacity group-hover:opacity-70"
+                width={80}
+                height={80}
+                loading="lazy"
+                className="w-full h-full object-cover transition-opacity group-hover:opacity-75"
                 unoptimized
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center">
-                <Package className="w-6 h-6 text-gray-600" />
+                <Package className="w-8 h-8 text-gray-600" />
               </div>
             )}
+            {/* Overlay al hover */}
             <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-              style={{ background: "rgba(0,0,0,0.55)" }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              style={{ background: "rgba(0,0,0,0.6)" }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
               </svg>
             </div>
           </a>
 
+          {/* Info del producto + pregunta */}
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1 flex-wrap">
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-                style={{ background: "#FFE60018", color: "#FFE600" }}>
-                @{account}
-              </span>
-            </div>
+            {/* Título del producto */}
             <a
               href={`https://articulo.mercadolibre.com.ar/${q.item_id.replace(/^([A-Z]+)(\d+)$/, "$1-$2")}`}
               target="_blank"
               rel="noopener noreferrer"
-              title="Ver publicación original"
               onClick={e => e.stopPropagation()}
-              className="text-[11px] text-gray-500 truncate mb-1 hover:text-blue-400 hover:underline block transition-colors"
-            >{q.item_title || q.item_id}</a>
+              className="text-xs font-bold text-blue-400 hover:text-blue-300 hover:underline mb-1.5 block transition-colors line-clamp-2"
+              title={q.item_title}
+            >
+              {q.item_title || q.item_id}
+            </a>
+
+            {/* Cuenta */}
+            <div className="flex items-center gap-2 mb-2 flex-wrap">
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                style={{ background: "#FFE60018", color: "#FFE600" }}>
+                @{account}
+              </span>
+              <span className="text-[10px]" style={{ color: "#6B7280" }}>
+                de {q.buyer_nickname || "Usuario"}
+              </span>
+            </div>
+
+            {/* Texto de la pregunta */}
             <p className="text-sm text-white font-medium leading-snug line-clamp-2">{q.question_text}</p>
           </div>
 
+          {/* Tiempo y chevron */}
           <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
             <span className="text-[10px]" style={{ color: "#6B7280" }}>{timeAgo(q.date_created)}</span>
             {open ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
@@ -283,7 +297,34 @@ function QuestionCard({ q, onAnswered }: { q: Question; onAnswered: (id: number)
 
       {open && (
         <div className="px-4 pb-4 space-y-3 border-t" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
-          <div className="pt-3 p-3 rounded-xl" style={{ background: "#121212" }}>
+          {/* Context del producto */}
+          <div className="pt-3 p-3 rounded-xl flex gap-3" style={{ background: "#121212" }}>
+            {q.item_thumbnail && (
+              <div className="w-16 h-16 rounded-lg flex-shrink-0 overflow-hidden"
+                style={{ background: "#2a2a2a", border: "1px solid rgba(255,255,255,0.1)" }}>
+                <Image
+                  src={q.item_thumbnail}
+                  alt={q.item_title}
+                  width={64}
+                  height={64}
+                  loading="lazy"
+                  className="w-full h-full object-cover"
+                  unoptimized
+                />
+              </div>
+            )}
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-bold" style={{ color: "#FFE600" }}>
+                Producto
+              </p>
+              <p className="text-xs text-white line-clamp-2 mb-1.5">{q.item_title}</p>
+              <p className="text-[10px]" style={{ color: "#6B7280" }}>
+                ID: {q.item_id}
+              </p>
+            </div>
+          </div>
+
+          <div className="pt-2 p-3 rounded-xl" style={{ background: "#121212" }}>
             <p className="text-xs font-semibold mb-1" style={{ color: "#6B7280" }}>Pregunta completa:</p>
             <p className="text-sm text-white">{q.question_text}</p>
           </div>
