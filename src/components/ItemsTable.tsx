@@ -28,6 +28,9 @@ interface Props {
  * Muestra indicadores visuales de disponibilidad
  */
 export default function ItemsTable({ items, stats }: Props) {
+  // Validar que items sea un array válido
+  const validItems = Array.isArray(items) ? items.filter(item => item && typeof item === 'object') : [];
+  const validStats = stats || { total_active_items: 0, items_low_stock: 0, items_out_of_stock: 0 };
   /**
    * Determinar indicador de stock
    */
@@ -63,7 +66,7 @@ export default function ItemsTable({ items, stats }: Props) {
             color: "#39FF14",
           }}
         >
-          <p className="text-xs font-bold">{stats.total_active_items}</p>
+          <p className="text-xs font-bold">{validStats.total_active_items}</p>
           <p className="text-[10px]">Activas</p>
         </div>
         <div
@@ -74,7 +77,7 @@ export default function ItemsTable({ items, stats }: Props) {
             color: "#FFE600",
           }}
         >
-          <p className="text-xs font-bold">{stats.items_low_stock}</p>
+          <p className="text-xs font-bold">{validStats.items_low_stock}</p>
           <p className="text-[10px]">Bajo Stock</p>
         </div>
         <div
@@ -85,7 +88,7 @@ export default function ItemsTable({ items, stats }: Props) {
             color: "#ef4444",
           }}
         >
-          <p className="text-xs font-bold">{stats.items_out_of_stock}</p>
+          <p className="text-xs font-bold">{validStats.items_out_of_stock}</p>
           <p className="text-[10px]">Sin Stock</p>
         </div>
       </div>
@@ -101,17 +104,19 @@ export default function ItemsTable({ items, stats }: Props) {
             </tr>
           </thead>
           <tbody>
-            {items.map((item) => {
-              const stockInfo = getStockIndicator(item.available_quantity);
+            {validItems && validItems.map((item) => {
+              if (!item || typeof item !== 'object') return null;
+              
+              const stockInfo = getStockIndicator(item.available_quantity ?? 0);
               return (
                 <tr
-                  key={item.id}
+                  key={item.id || Math.random()}
                   style={{
                     borderBottom: "1px solid rgba(255,255,255,0.05)",
                     background:
-                      item.available_quantity === 0
+                      (item.available_quantity ?? 0) === 0
                         ? "rgba(239, 68, 68, 0.05)"
-                        : item.available_quantity <= 10
+                        : (item.available_quantity ?? 0) <= 10
                           ? "rgba(255, 230, 0, 0.05)"
                           : "transparent",
                   }}
@@ -120,9 +125,9 @@ export default function ItemsTable({ items, stats }: Props) {
                   <td className="p-2">
                     <p
                       className="truncate text-gray-300"
-                      title={item.title}
+                      title={item.title || "Sin título"}
                     >
-                      {item.title.substring(0, 30)}...
+                      {(item.title || "Sin título").substring(0, 30)}...
                     </p>
                   </td>
 
@@ -134,14 +139,14 @@ export default function ItemsTable({ items, stats }: Props) {
                         style={{ color: stockInfo.color }}
                         className="font-semibold"
                       >
-                        {item.available_quantity}
+                        {item.available_quantity ?? 0}
                       </span>
                     </div>
                   </td>
 
                   {/* Precio */}
                   <td className="p-2 text-right text-gray-400">
-                    {formatPrice(item.price, item.currency_id)}
+                    {formatPrice(item.price ?? 0, item.currency_id ?? "ARS")}
                   </td>
                 </tr>
               );
@@ -149,7 +154,7 @@ export default function ItemsTable({ items, stats }: Props) {
           </tbody>
         </table>
 
-        {items.length === 0 && (
+        {validItems.length === 0 && (
           <div className="text-center py-4 text-gray-500 text-xs">
             No hay publicaciones activas
           </div>
