@@ -19,10 +19,10 @@ interface AccountData {
   reputation_risk: "low" | "medium" | "high" | "critical";
 }
 
-export default function PostVentaPage() {
+function PostVentaContent() {
   const searchParams = useSearchParams();
   const selectedAccount = searchParams.get("account");
-  
+
   const [accounts, setAccounts] = useState<AccountData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -229,5 +229,13 @@ export default function PostVentaPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function PostVentaPage() {
+  return (
+    <Suspense fallback={<div style={{ background: "#121212", minHeight: "100vh" }} />}>
+      <PostVentaContent />
+    </Suspense>
   );
 }
