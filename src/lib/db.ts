@@ -550,95 +550,59 @@ function toVentaItem(r: Record<string, unknown>): VentaItem {
 
 export const ventasDb = {
   async getAll(desde?: string, hasta?: string): Promise<VentaRepuesto[]> {
-    let q = supabase
-      .from("ventas_repuestos")
-      .select("*, ventas_items(*)")
-      .order("created_at", { ascending: false });
-    if (desde) q = q.gte("created_at", desde);
-    if (hasta) q = q.lte("created_at", hasta + "T23:59:59");
-    const { data, error } = await q;
-    if (error) throw error;
-    return (data ?? []).map((r) => {
-      const raw = r as Record<string, unknown>;
-      const items = ((raw.ventas_items as Record<string, unknown>[]) ?? []).map(toVentaItem);
-      return toVenta(raw, items);
+    const params = new URLSearchParams();
+    if (desde) params.set("desde", desde);
+    if (hasta) params.set("hasta", hasta);
+    const res = await fetch(`/api/ventas?${params}`);
+    if (!res.ok) { const e = await res.json(); throw new Error(e.error ?? "Error al obtener ventas"); }
+    const data = await res.json();
+    return (data ?? []).map((r: Record<string, unknown>) => {
+      const items = ((r.ventas_items as Record<string, unknown>[]) ?? []).map(toVentaItem);
+      return toVenta(r, items);
     });
   },
 
   async getToday(): Promise<VentaRepuesto[]> {
-    const hoy = new Date().toISOString().slice(0, 10);
-    return ventasDb.getAll(hoy, hoy);
+    const res = await fetch(`/api/ventas?action=today`);
+    if (!res.ok) { const e = await res.json(); throw new Error(e.error ?? "Error al obtener ventas"); }
+    const data = await res.json();
+    return (data ?? []).map((r: Record<string, unknown>) => {
+      const items = ((r.ventas_items as Record<string, unknown>[]) ?? []).map(toVentaItem);
+      return toVenta(r, items);
+    });
   },
 
   async create(v: VentaRepuesto): Promise<void> {
-    const { error: ve } = await supabase.from("ventas_repuestos").insert({
-      id:          v.id,
-      vendedor:    v.vendedor,
-      metodo_pago: v.metodoPago,
-      total:       v.total,
-      status:      v.status,
-      notas:       v.notas,
-      created_at:  v.createdAt,
+    const res = await fetch("/api/ventas", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(v),
     });
-    if (ve) throw ve;
-
-    if (v.items.length > 0) {
-      const { error: ie } = await supabase.from("ventas_items").insert(
-        v.items.map(i => ({
-          id:          i.id,
-          venta_id:    v.id,
-          producto:    i.producto,
-          sku:         i.sku,
-          cantidad:    i.cantidad,
-          precio_unit: i.precioUnit,
-        }))
-      );
-      if (ie) throw ie;
-    }
+    if (!res.ok) { const e = await res.json(); throw new Error(e.error ?? "Error al crear venta"); }
   },
 
   async update(v: VentaRepuesto): Promise<void> {
-    const { error: ve } = await supabase
-      .from("ventas_repuestos")
-      .update({
-        vendedor:    v.vendedor,
-        metodo_pago: v.metodoPago,
-        total:       v.total,
-        notas:       v.notas,
-      })
-      .eq("id", v.id);
-    if (ve) throw ve;
-
-    await supabase.from("ventas_items").delete().eq("venta_id", v.id);
-    if (v.items.length > 0) {
-      const { error: ie } = await supabase.from("ventas_items").insert(
-        v.items.map(i => ({
-          id:          i.id,
-          venta_id:    v.id,
-          producto:    i.producto,
-          sku:         i.sku,
-          cantidad:    i.cantidad,
-          precio_unit: i.precioUnit,
-        }))
-      );
-      if (ie) throw ie;
-    }
+    const res = await fetch("/api/ventas", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "update", venta: v }),
+    });
+    if (!res.ok) { const e = await res.json(); throw new Error(e.error ?? "Error al actualizar venta"); }
   },
 
   async cancelar(id: string): Promise<void> {
-    const { error } = await supabase
-      .from("ventas_repuestos")
-      .update({ status: "cancelada" })
-      .eq("id", id);
-    if (error) throw error;
+    const res = await fetch("/api/ventas", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "cancelar", id }),
+    });
+    if (!res.ok) { const e = await res.json(); throw new Error(e.error ?? "Error al cancelar venta"); }
   },
 
   async getStats(desde: string, hasta: string): Promise<VentasStats> {
-    const { data, error } = await supabase.rpc("get_ventas_stats", {
-      fecha_desde: desde,
-      fecha_hasta: hasta,
-    });
-    if (error) throw error;
+    const res = await fetch(`/api/ventas?action=stats&desde=${desde}&hasta=${hasta}`);
+    if (!res.ok) { const e = await res.json(); throw new Error(e.error ?? "Error al obtener stats"); }
+    const data = await res.json();
     const row = (data as Record<string, unknown>[])?.[0] ?? {};
     return {
       totalFacturado: Number(row.total_facturado ?? 0),
@@ -649,11 +613,9 @@ export const ventasDb = {
   },
 
   async getVentasPorDia(desde: string, hasta: string): Promise<VentasPorDia[]> {
-    const { data, error } = await supabase.rpc("get_ventas_por_dia", {
-      fecha_desde: desde,
-      fecha_hasta: hasta,
-    });
-    if (error) throw error;
+    const res = await fetch(`/api/ventas?action=por_dia&desde=${desde}&hasta=${hasta}`);
+    if (!res.ok) { const e = await res.json(); throw new Error(e.error ?? "Error al obtener ventas por dia"); }
+    const data = await res.json();
     return ((data as Record<string, unknown>[]) ?? []).map(r => ({
       dia:   r.dia as string,
       total: Number(r.total),
@@ -662,12 +624,9 @@ export const ventasDb = {
   },
 
   async getTopProductos(desde: string, hasta: string): Promise<TopProducto[]> {
-    const { data, error } = await supabase.rpc("get_top_productos", {
-      fecha_desde: desde,
-      fecha_hasta: hasta,
-      top_n: 5,
-    });
-    if (error) throw error;
+    const res = await fetch(`/api/ventas?action=top_productos&desde=${desde}&hasta=${hasta}`);
+    if (!res.ok) { const e = await res.json(); throw new Error(e.error ?? "Error al obtener top productos"); }
+    const data = await res.json();
     return ((data as Record<string, unknown>[]) ?? []).map(r => ({
       producto: r.producto as string,
       cantidad: Number(r.cantidad),
