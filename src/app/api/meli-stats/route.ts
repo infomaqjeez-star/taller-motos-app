@@ -61,15 +61,16 @@ function getPeriodDates(
   to.setTime(to.getTime() - offsetMs);
   
   if (period === "today") {
-    from.setUTCHours(0, 0, 0, 0);
-    to.setUTCHours(23, 59, 59, 999);
+    // Usar setHours (no setUTCHours) porque ya está ajustado con setTime()
+    from.setHours(0, 0, 0, 0);
+    to.setHours(23, 59, 59, 999);
     return { from, to, days: 1 };
   }
   
   const days = period === "30d" ? 30 : 7;
-  from.setUTCDate(from.getUTCDate() - days + 1);
-  from.setUTCHours(0, 0, 0, 0);
-  to.setUTCHours(23, 59, 59, 999);
+  from.setDate(from.getDate() - days + 1);
+  from.setHours(0, 0, 0, 0);
+  to.setHours(23, 59, 59, 999);
   return { from, to, days };
 }
 
@@ -85,6 +86,8 @@ async function processAccount(
 
   const uid     = String(acc.meli_user_id);
   const fromStr = from.toISOString().slice(0, 10);
+  
+  console.log(`[stats-acct] account=${acc.nickname}, fromStr=${fromStr}, from.ISO=${from.toISOString()}`);
 
   // ── Fetch orders ──────────────────────────────────────────────────────────
   const allOrders: Record<string, unknown>[] = [];
@@ -108,6 +111,8 @@ async function processAccount(
     const d = (o.date_created as string | undefined) ?? "";
     return d >= fromStr;
   });
+  
+  console.log(`[stats-acct] allOrders=${allOrders.length}, filtered=${orders.length}`);
 
   // ── Enrich orders with /shipments/{id} ───────────────────────────────────
   // orders/search does NOT return shipping.logistic_type — only shipping.id
@@ -258,6 +263,9 @@ export async function GET(req: NextRequest) {
     const tzOffset  = parseFloat(searchParams.get("tz_offset") ?? "0");
 
     const { from, to, days } = getPeriodDates(period, dateFrom, dateTo, tzOffset);
+    
+    // Debug logging
+    console.log(`[meli-stats] period=${period}, tzOffset=${tzOffset}, from=${from.toISOString()}, to=${to.toISOString()}, days=${days}`);
 
     const allAccounts = await getActiveAccounts();
     if (!allAccounts.length)
