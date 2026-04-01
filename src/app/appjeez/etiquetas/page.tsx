@@ -1069,6 +1069,17 @@ function EtiquetasInner() {
                   )}
 
                   {/* Proximos Envios (agrupados por fecha) */}
+                  {sortedDates.length > 0 && (
+                    <div className="flex items-center gap-2 mt-4 mb-1 px-1">
+                      <span className="text-xs font-black px-3 py-1 rounded-full"
+                        style={{ background: "#FFE600", color: "#121212" }}>
+                        PROXIMOS ENVIOS
+                      </span>
+                      <span className="text-[10px] font-bold" style={{ color: "#9CA3AF" }}>
+                        {futureShipments.length} {futureShipments.length === 1 ? "envio" : "envios"}
+                      </span>
+                    </div>
+                  )}
                   {sortedDates.map(dateStr => {
                     const items = futureByDate.get(dateStr)!;
                     return (
