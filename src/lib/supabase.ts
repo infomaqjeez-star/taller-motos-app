@@ -10,7 +10,14 @@ console.log("[Supabase Init]", {
 
 export const supabase: SupabaseClient = createClient(
   url || "https://placeholder.supabase.co",
-  key || "placeholder-key"
+  key || "placeholder-key",
+  {
+    realtime: {
+      params: {
+        eventsPerSecond: 0,
+      },
+    },
+  }
 );
 
 // 🔌 Nota: Realtime usa polling en producción (fallback automático)

@@ -1,27 +1,17 @@
-import { supabase } from "@/lib/supabase";
 import { generateThermalLabel } from "@/lib/thermal-printer";
 
 export async function POST(req: Request) {
   try {
-    const { ids } = await req.json();
+    const { ids, shipments } = await req.json();
     
     if (!Array.isArray(ids) || ids.length === 0) {
       return Response.json({ error: "No shipments provided" }, { status: 400 });
     }
 
-    // Obtener datos de las etiquetas desde Supabase
-    const { data: labels, error } = await supabase
-      .from("meli_printed_labels")
-      .select("*")
-      .in("shipment_id", ids)
-      .limit(100);
-
-    if (error) {
-      console.error("Supabase error:", error);
-      return Response.json({ error: "Failed to fetch labels" }, { status: 500 });
-    }
-
-    if (!labels || labels.length === 0) {
+    // Filtrar etiquetas del body que coincidan con IDs seleccionados
+    const labels = (shipments ?? []).filter((s: any) => ids.includes(s.shipment_id));
+    
+    if (labels.length === 0) {
       return Response.json({ error: "No labels found" }, { status: 404 });
     }
 
@@ -33,7 +23,6 @@ export async function POST(req: Request) {
     if (typeof Buffer !== "undefined") {
       base64String = Buffer.from(escposBuffer).toString("base64");
     } else {
-      // Fallback para navegador (aunque esto es backend)
       const bytes = Array.from(escposBuffer);
       base64String = btoa(String.fromCharCode(...bytes));
     }

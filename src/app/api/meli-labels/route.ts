@@ -120,6 +120,7 @@ function parseOrder(
     item?: { id?: string; title?: string; seller_sku?: string };
     quantity?: number;
     unit_price?: number;
+    variation_attributes?: Array<{ name: string; value_name?: string }>;
   }> | undefined) ?? [];
   const buyer = order.buyer as Record<string, unknown> | undefined;
   const firstItem = items[0];
@@ -132,10 +133,10 @@ function parseOrder(
   const rawStatus = (ship.status as string | undefined) ?? "ready_to_ship";
   const type = isFullByTracking ? "full" : classifyType(logistic, allTags, undefined, mode);
 
-  // Extraer atributos del producto (Ej: "Color: Negro, Talle: M")
-  const attributes = ((firstItem?.item as any)?.attributes as Array<{ name: string; values?: Array<{ name: string }> }> | undefined)
-    ?.map(attr => `${attr.name}: ${attr.values?.[0]?.name || ''}`)
-    .filter(s => s.trim() && !s.includes(': '))
+  // Extraer atributos del producto desde variation_attributes (Ej: "Color: Negro, Talle: M")
+  const attributes = firstItem?.variation_attributes
+    ?.filter(attr => attr.value_name?.trim())
+    .map(attr => `${attr.name}: ${attr.value_name}`)
     .join(', ') || null;
 
   return {
@@ -199,8 +200,9 @@ export async function GET(req: Request) {
     const accounts = await getActiveAccounts();
     if (!accounts.length) return NextResponse.json({ shipments: [], full: [], delayed_unshipped: [], delayed_in_transit: [], summary: {} });
 
-    const { data: printed } = await supabase.from("meli_printed_labels").select("shipment_id");
-    const printedSet = new Set((printed ?? []).map((p: { shipment_id: number }) => p.shipment_id));
+    const { data: printed } = await supabase.from("meli_printed_labels").select("shipment_id, printed_at");
+    const printedMap = new Map((printed ?? []).map((p: { shipment_id: number; printed_at: string }) => [p.shipment_id, p.printed_at]));
+    const printedSet = new Set(printedMap.keys());
 
     const allShipments:        ShipmentInfo[] = [];
     const allInTransit:        ShipmentInfo[] = [];
@@ -229,12 +231,15 @@ export async function GET(req: Request) {
           const ship = order.shipping as Record<string, unknown> | undefined;
           if (!ship?.id) continue;
           const sid = ship.id as number;
-          if (seenPending.has(sid) || printedSet.has(sid)) continue;
+          if (seenPending.has(sid)) continue;
           seenPending.add(sid);
 
           const info = parseOrder(order, acc);
           if (info) {
-            // Set explicit status: pending (not yet printed)
+            // Estampar printed_at si ya fue impresa
+            if (printedMap.has(sid)) {
+              info.printed_at = printedMap.get(sid)!;
+            }
             info.status = "pending";
             allShipments.push(info);
           }
@@ -315,14 +320,14 @@ export async function GET(req: Request) {
 
               // Auto-sync: si MeLi ya marcó impresa
               if (substatus === "printed" || substatus === "label_printed") {
+                // Estampar en memoria
+                if (!s.printed_at) {
+                  s.printed_at = new Date().toISOString();
+                }
+                
                 try {
-                  const { createClient } = await import("@supabase/supabase-js");
-                  const sb = createClient(
-                    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-                    process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-                  );
-                  await sb.from("meli_printed_labels").upsert(
-                    { shipment_id: s.shipment_id, printed_at: new Date().toISOString(), account: s.account, type: s.type, buyer: s.buyer, title: s.title, thumbnail: s.thumbnail },
+                  await supabase.from("meli_printed_labels").upsert(
+                    { shipment_id: s.shipment_id, printed_at: s.printed_at, account: s.account, type: s.type, buyer: s.buyer, title: s.title, thumbnail: s.thumbnail },
                     { onConflict: "shipment_id" }
                   );
                 } catch { /* ignore */ }
@@ -631,8 +636,8 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const { shipment_ids, shipments } = await req.json() as {
-      shipment_ids: number[];
+    const { shipment_ids, shipments, action } = await req.json() as {
+      shipment_ids?: number[];
       shipments?: Array<{
         shipment_id: number;
         account?: string;
@@ -643,9 +648,12 @@ export async function POST(req: Request) {
         delivery_date?: string;
         buyer_nickname?: string;
       }>;
+      action?: string;
     };
 
-    if (!shipment_ids?.length) {
+    // Manejar acción "mark-printed" (nuevo batch endpoint)
+    const ids = shipment_ids ?? [];
+    if (!ids?.length) {
       return NextResponse.json({ error: "No shipment_ids" }, { status: 400 });
     }
 
@@ -653,7 +661,7 @@ export async function POST(req: Request) {
     const now = new Date().toISOString();
 
     // Preparar filas para etiquetas_history
-    const historyRows = shipment_ids.map(id => {
+    const historyRows = ids.map(id => {
       const detail = shipments?.find(s => s.shipment_id === id);
       const zone = calculateZoneDistance(detail?.delivery_date);
 
@@ -684,7 +692,7 @@ export async function POST(req: Request) {
     }
 
     // También guardar en meli_printed_labels para compatibilidad (legacy)
-    const legacyRows = shipment_ids.map(id => {
+    const legacyRows = ids.map(id => {
       const detail = shipments?.find(s => s.shipment_id === id);
       return {
         shipment_id: id,
@@ -699,9 +707,9 @@ export async function POST(req: Request) {
 
     await supabase.from("meli_printed_labels").upsert(legacyRows, { onConflict: "shipment_id" });
 
-    console.log(`[meli-labels POST] Marked ${shipment_ids.length} shipments as printed with zone data`);
+    console.log(`[meli-labels POST] Marked ${ids.length} shipments as printed with zone data`);
 
-    return NextResponse.json({ ok: true, marked: shipment_ids.length });
+    return NextResponse.json({ ok: true, marked: ids.length });
   } catch (e) {
     console.error("[meli-labels POST] Error:", e);
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });

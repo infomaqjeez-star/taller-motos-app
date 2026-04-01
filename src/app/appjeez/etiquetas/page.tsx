@@ -284,18 +284,20 @@ function EtiquetasInner() {
     }
   };
 
-  const handlePrintAll = async () => {
+  const handlePrintAll = async (mode?: 'thermal' | 'pdf') => {
     if (selectedIds.size === 0) return;
+    const actualMode = mode || printMode;
     setPrinting(true);
     try {
       const ids = Array.from(selectedIds).join(",");
       
-      if (printMode === 'thermal') {
+      if (actualMode === 'thermal') {
         // Enviar a impresora térmica
+        const selectedShipments = data?.shipments.filter(s => selectedIds.has(s.shipment_id)) ?? [];
         const res = await fetch("/api/meli-labels/print-thermal", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ids: Array.from(selectedIds) }),
+          body: JSON.stringify({ ids: Array.from(selectedIds), shipments: selectedShipments }),
         });
         if (!res.ok) throw new Error("Failed to send to thermal printer");
       } else {
@@ -314,16 +316,26 @@ function EtiquetasInner() {
         URL.revokeObjectURL(url);
       }
 
-      // Marcar solo las seleccionadas como impresas
-      await Promise.all(
-        Array.from(selectedIds).map(id =>
-          fetch("/api/meli-labels", {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ shipment_id: id, status: "printed" }),
-          })
-        )
-      );
+      // Marcar solo las seleccionadas como impresas (batch POST)
+      const selectedShipments = data?.shipments.filter(s => selectedIds.has(s.shipment_id)) ?? [];
+      await fetch("/api/meli-labels", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "mark-printed",
+          shipment_ids: Array.from(selectedIds),
+          shipments: selectedShipments.map(s => ({
+            shipment_id: s.shipment_id,
+            account: s.account,
+            type: s.type,
+            buyer: s.buyer,
+            title: s.title,
+            thumbnail: s.thumbnail,
+            delivery_date: s.delivery_date,
+            buyer_nickname: s.buyer_nickname,
+          })),
+        }),
+      });
 
       // Actualizar estado local
       setData(prev => prev ? {
@@ -521,7 +533,7 @@ function EtiquetasInner() {
                       <button
                         onClick={() => {
                           setPrintMode('thermal');
-                          handlePrintAll();
+                          handlePrintAll('thermal');
                         }}
                         className="w-full text-left px-4 py-2 hover:bg-gray-800 text-xs font-bold text-white flex items-center gap-2 rounded-t-lg transition-colors"
                       >
@@ -532,7 +544,7 @@ function EtiquetasInner() {
                       <button
                         onClick={() => {
                           setPrintMode('pdf');
-                          handlePrintAll();
+                          handlePrintAll('pdf');
                         }}
                         className="w-full text-left px-4 py-2 hover:bg-gray-800 text-xs font-bold text-white flex items-center gap-2 rounded-b-lg transition-colors"
                       >
