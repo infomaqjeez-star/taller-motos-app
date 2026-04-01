@@ -1,0 +1,5 @@
+project_id: "ajhmajaclimccrkehsyy"
+
+functions:
+  - name: cleanup-old-labels
+    schedule: "0 0 * * *"
