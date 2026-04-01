@@ -257,17 +257,19 @@ export async function GET(req: Request) {
         if (!token) return;
         tokenCache.set(String(acc.meli_user_id), token);
 
-        const [dataReady, dataHandling, dataShipped, dataNotDelivered] = await Promise.all([
+        const [dataReady, dataHandling, dataShipped, dataNotDelivered, dataReturning] = await Promise.all([
           meliGet(`/orders/search?seller=${acc.meli_user_id}&order.status=paid&sort=date_desc&limit=50&shipping.status=ready_to_ship`, token),
           meliGet(`/orders/search?seller=${acc.meli_user_id}&order.status=paid&sort=date_desc&limit=50&shipping.status=handling`, token),
           meliGet(`/orders/search?seller=${acc.meli_user_id}&order.status=paid&sort=date_desc&limit=50&shipping.status=shipped`, token),
-          meliGet(`/orders/search?seller=${acc.meli_user_id}&order.status=paid&sort=date_desc&limit=50&shipping.status=not_delivered`, token),
+          meliGet(`/orders/search?seller=${acc.meli_user_id}&sort=date_desc&limit=50&shipping.status=not_delivered`, token),
+          meliGet(`/orders/search?seller=${acc.meli_user_id}&sort=date_desc&limit=50&shipping.substatus=returning_to_sender`, token),
         ]);
 
-        const readyResults     = ((dataReady?.results       ?? []) as Array<Record<string, unknown>>);
-        const handlingResults   = ((dataHandling?.results   ?? []) as Array<Record<string, unknown>>);
-        const shippedResults    = ((dataShipped?.results    ?? []) as Array<Record<string, unknown>>);
+        const readyResults        = ((dataReady?.results        ?? []) as Array<Record<string, unknown>>);
+        const handlingResults     = ((dataHandling?.results     ?? []) as Array<Record<string, unknown>>);
+        const shippedResults      = ((dataShipped?.results      ?? []) as Array<Record<string, unknown>>);
         const notDeliveredResults = ((dataNotDelivered?.results ?? []) as Array<Record<string, unknown>>);
+        const returningResults    = ((dataReturning?.results    ?? []) as Array<Record<string, unknown>>);
 
         const pendingOrders = [...readyResults, ...handlingResults];
         const seenPending   = new Set<number>();
@@ -306,9 +308,9 @@ export async function GET(req: Request) {
           }
         }
 
-        // Devoluciones (not_delivered)
+        // Devoluciones (not_delivered + returning_to_sender)
         const seenReturns = new Set<number>();
-        for (const order of notDeliveredResults) {
+        for (const order of [...notDeliveredResults, ...returningResults]) {
           const ship = order.shipping as Record<string, unknown> | undefined;
           if (!ship?.id) continue;
           const sid = ship.id as number;

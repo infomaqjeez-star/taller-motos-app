@@ -11,7 +11,7 @@ import { ZoneIndicator } from "@/components/ZoneIndicator";
 import { supabase } from "@/lib/supabase";
 
 type StatusTab = "pending" | "printed" | "in_transit" | "returns";
-type LogisticType = "flex" | "correo" | "turbo" | "full";
+type LogisticType = "todas" | "flex" | "correo" | "turbo" | "full";
 
 interface ShipmentInfo {
   shipment_id: number;
@@ -56,6 +56,7 @@ interface LabelData {
 }
 
 const TYPE_CFG: Record<LogisticType, { color: string; label: string; icon: React.ReactNode }> = {
+  todas: { color: "#FFE600", label: "TODAS", icon: <span className="text-xs">📦</span> },
   correo: { color: "#FF9800", label: "CORREO", icon: <Truck className="w-3.5 h-3.5" /> },
   flex: { color: "#00E5FF", label: "FLEX", icon: <Truck className="w-3.5 h-3.5" /> },
   turbo: { color: "#A855F7", label: "TURBO", icon: <Zap className="w-3.5 h-3.5" /> },
@@ -95,7 +96,7 @@ function LabelCard({
   isSelected?: boolean;
   onToggleSelection?: (id: number) => void;
 }) {
-  const cfg = TYPE_CFG[shipment.type];
+  const cfg = TYPE_CFG[shipment.type as LogisticType] || TYPE_CFG.correo;
   const zone = calculateZoneDistance(shipment.delivery_date);
   const zoneCfg = ZONE_CFG[zone];
   const thumb = (shipment.thumbnail || "").replace("http://", "https://");
@@ -314,7 +315,7 @@ function EtiquetasInner() {
   const [data, setData] = useState<LabelData | null>(null);
   const [loading, setLoading] = useState(true);
   const [statusTab, setStatusTab] = useState<StatusTab>("pending");
-  const [logisticFilter, setLogisticFilter] = useState<LogisticType>("flex");
+  const [logisticFilter, setLogisticFilter] = useState<LogisticType>("todas");
   const [printing, setPrinting] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [printMode, setPrintMode] = useState<'thermal' | 'pdf'>('thermal');
@@ -366,9 +367,10 @@ function EtiquetasInner() {
     };
   }, [load]);
 
-  // Limpiar seleccion al cambiar de pestana
+  // Limpiar seleccion y resetear filtro al cambiar de pestana
   useEffect(() => {
     setSelectedIds(new Set());
+    setLogisticFilter("todas");
   }, [statusTab]);
 
 
@@ -479,17 +481,21 @@ function EtiquetasInner() {
 
     // Seleccionar fuente según pestaña
     if (statusTab === "pending") {
-      source = logisticFilter === "full" ? (data?.full ?? []) : (data?.shipments ?? []);
+      if (logisticFilter === "full") {
+        source = data?.full ?? [];
+      } else {
+        source = data?.shipments ?? [];
+      }
     } else if (statusTab === "printed") {
-      source = logisticFilter === "full" ? [] : (data?.printed ?? []);
+      source = data?.printed ?? [];
     } else if (statusTab === "in_transit") {
-      source = logisticFilter === "full" ? [] : (data?.in_transit ?? []);
+      source = data?.in_transit ?? [];
     } else if (statusTab === "returns") {
-      source = logisticFilter === "full" ? [] : (data?.returns ?? []);
+      source = data?.returns ?? [];
     }
 
-    // Filtrar por tipo (si no es full, que ya viene filtrado)
-    if (logisticFilter !== "full") {
+    // Filtrar por tipo (excepto "todas" que muestra todo, y "full" que ya viene filtrado)
+    if (logisticFilter !== "todas" && logisticFilter !== "full") {
       return source.filter(s => s.type === logisticFilter);
     }
     return source;
@@ -502,6 +508,9 @@ function EtiquetasInner() {
     else if (status === "printed") source = data?.printed ?? [];
     else if (status === "in_transit") source = data?.in_transit ?? [];
     else if (status === "returns") source = data?.returns ?? [];
+
+    if (type === "todas") return source.length;
+    if (type === "full" && status === "pending") return (data?.full ?? []).length;
     return source.filter(s => s.type === type).length;
   }, [data]);
 
@@ -541,7 +550,7 @@ function EtiquetasInner() {
       // Buscar en el array correcto segun la pestana
       const sourceArray: ShipmentInfo[] = statusTab === "printed"
         ? (data?.printed ?? [])
-        : [...(data?.shipments ?? []), ...(data?.full ?? [])];
+        : [...(data?.shipments ?? []), ...(data?.full ?? []), ...(data?.printed ?? [])];
       const selectedShipments = sourceArray.filter(s => selectedIds.has(s.shipment_id));
       const meli_user_id = selectedShipments[0]?.meli_user_id || "";
 
@@ -849,8 +858,9 @@ function EtiquetasInner() {
 
             {/* Filtros Logísticos */}
             <div className="flex gap-2 mb-4 overflow-x-auto pb-2 -mx-1 px-1">
-              {(["flex", "correo", "turbo", "full"] as LogisticType[]).map(type => {
-                const cfg = TYPE_CFG[type];
+              {(["todas", "flex", "correo", "turbo", "full"] as LogisticType[]).map(type => {
+                const isAll = type === "todas";
+                const cfg = isAll ? { color: "#fff", icon: "📦", label: "TODAS" } : TYPE_CFG[type];
                 const count = countByType(type, statusTab);
                 const isActive = logisticFilter === type;
                 return (
@@ -860,11 +870,11 @@ function EtiquetasInner() {
                     className="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-2xl text-xs font-bold transition-all whitespace-nowrap"
                     style={
                       isActive
-                        ? { background: cfg.color, color: "#121212", border: `2px solid ${cfg.color}` }
+                        ? { background: isAll ? "#FFE600" : cfg.color, color: "#121212", border: `2px solid ${isAll ? "#FFE600" : cfg.color}` }
                         : {
                           background: "transparent",
-                          color: cfg.color,
-                          border: `2px solid ${cfg.color}40`,
+                          color: isAll ? "#9CA3AF" : cfg.color,
+                          border: `2px solid ${isAll ? "#9CA3AF" : cfg.color}40`,
                         }
                     }
                   >
