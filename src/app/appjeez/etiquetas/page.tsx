@@ -435,16 +435,51 @@ function EtiquetasInner() {
     }
   };
 
+  const savePrintHistory = async (shipments: ShipmentInfo[]) => {
+    if (!shipments || shipments.length === 0) return;
+
+    const tzOffset = -new Date().getTimezoneOffset() / 60;
+    
+    for (const shipment of shipments) {
+      try {
+        // Generar PDF de la etiqueta individual (simplificado: base64 placeholder)
+        const pdfBase64 = btoa("PDF_PLACEHOLDER"); // En producción: usar jsPDF para generar real
+
+        await fetch("/api/meli-labels/save-print", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            shipment_id: shipment.shipment_id,
+            order_id: shipment.order_id,
+            tracking_number: (shipment as any).tracking_number || null,
+            buyer_nickname: shipment.buyer_nickname || null,
+            sku: shipment.seller_sku || null,
+            variation: shipment.attributes || null,
+            quantity: shipment.quantity,
+            account_id: shipment.account,
+            meli_user_id: shipment.meli_user_id,
+            shipping_method: shipment.type,
+            pdf_base64: pdfBase64,
+            tzOffset,
+          }),
+        });
+      } catch (err) {
+        console.warn(`Failed to save history for shipment ${shipment.shipment_id}:`, err);
+        // No bloquear si falla el guardado
+      }
+    }
+  };
+
   const handlePrintAll = async (mode?: 'thermal' | 'pdf') => {
     if (selectedIds.size === 0) return;
     const actualMode = mode || printMode;
     setPrinting(true);
     try {
       const ids = Array.from(selectedIds).join(",");
+      const selectedShipments = data?.shipments.filter(s => selectedIds.has(s.shipment_id)) ?? [];
       
       if (actualMode === 'thermal') {
         // Enviar a impresora térmica
-        const selectedShipments = data?.shipments.filter(s => selectedIds.has(s.shipment_id)) ?? [];
         const res = await fetch("/api/meli-labels/print-thermal", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -468,8 +503,7 @@ function EtiquetasInner() {
         URL.revokeObjectURL(url);
       }
 
-      // Marcar solo las seleccionadas como impresas (batch POST)
-      const selectedShipments = data?.shipments.filter(s => selectedIds.has(s.shipment_id)) ?? [];
+      // Marcar como impresas (batch POST)
       await fetch("/api/meli-labels", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -488,6 +522,9 @@ function EtiquetasInner() {
           })),
         }),
       });
+
+      // Guardar en historial (background, no bloquea)
+      savePrintHistory(selectedShipments);
 
       // Actualizar estado local
       setData(prev => prev ? {
