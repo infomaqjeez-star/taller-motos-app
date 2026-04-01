@@ -39,10 +39,10 @@ const LEVEL_LABELS: Record<string, string> = {
   "5_green": "Verde",
 };
 
-const POWER_SELLER_COLORS: Record<string, string> = {
-  platinum: "#FFD700",      // Dorado
-  gold: "#C0C0C0",          // Plateado
-  silver: "#2196F3",        // Azul (MercadoLíder básico)
+const POWER_SELLER_COLORS: Record<string, { bg: string; text: string }> = {
+  platinum: { bg: "#FFD700", text: "#121212" },      // Dorado relleno
+  gold:     { bg: "#C0C0C0", text: "#121212" },      // Plateado relleno
+  silver:   { bg: "#2196F3", text: "#FFFFFF" },       // Azul relleno
 };
 
 const POWER_SELLER_LABELS: Record<string, string> = {
@@ -180,16 +180,22 @@ export default function AccountSelector({ accounts, selectedId, onSelect, compac
                     </span>
                   )}
                   {selectedAccount.reputation.power_seller_status && (
-                    <span
-                      className="text-[10px] font-bold px-1.5 py-0.5 rounded"
-                      style={{
-                        background: (POWER_SELLER_COLORS[selectedAccount.reputation.power_seller_status] ?? "#9C27B0") + "22",
-                        color: POWER_SELLER_COLORS[selectedAccount.reputation.power_seller_status] ?? "#9C27B0",
-                        border: `1px solid ${(POWER_SELLER_COLORS[selectedAccount.reputation.power_seller_status] ?? "#9C27B0")}44`,
-                      }}
-                    >
-                      {POWER_SELLER_LABELS[selectedAccount.reputation.power_seller_status] || selectedAccount.reputation.power_seller_status}
-                    </span>
+                    (() => {
+                      const ps = POWER_SELLER_COLORS[selectedAccount.reputation.power_seller_status];
+                      const c = ps ?? { bg: "#9C27B0", text: "#FFFFFF" };
+                      return (
+                        <span
+                          className="text-[10px] font-bold px-1.5 py-0.5 rounded"
+                          style={{
+                            background: c.bg,
+                            color: c.text,
+                            border: `1px solid ${c.bg}`,
+                          }}
+                        >
+                          {POWER_SELLER_LABELS[selectedAccount.reputation.power_seller_status] || selectedAccount.reputation.power_seller_status}
+                        </span>
+                      );
+                    })()
                   )}
                 </div>
               </div>

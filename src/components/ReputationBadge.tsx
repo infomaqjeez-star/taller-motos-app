@@ -47,15 +47,15 @@ export default function ReputationBadge({ levelId, levelName, powerSellerStatus 
 
   const getPowerSellerStyles = () => {
     if (powerSellerStatus === "platinum") {
-      return { bg: "#FFD70015", text: "#FFD700", border: "#FFD70033" }; // Dorado
+      return { bg: "#FFD700", text: "#121212", border: "#FFD700" }; // Dorado relleno
     }
     if (powerSellerStatus === "gold") {
-      return { bg: "#C0C0C015", text: "#C0C0C0", border: "#C0C0C033" }; // Plateado
+      return { bg: "#C0C0C0", text: "#121212", border: "#C0C0C0" }; // Plateado relleno
     }
     if (powerSellerStatus === "silver") {
-      return { bg: "#2196F315", text: "#2196F3", border: "#2196F333" }; // Azul
+      return { bg: "#2196F3", text: "#FFFFFF", border: "#2196F3" }; // Azul relleno
     }
-    return { bg: "#FFFFFF15", text: "#FFFFFF", border: "#FFFFFF33" }; // Default blanco
+    return { bg: "#FFFFFF15", text: "#FFFFFF", border: "#FFFFFF33" };
   };
 
   const icon = getPowerSellerIcon();
