@@ -39,16 +39,27 @@ const LEVEL_LABELS: Record<string, string> = {
   "5_green": "Verde",
 };
 
+const POWER_SELLER_COLORS: Record<string, string> = {
+  platinum: "#FFD700",      // Dorado
+  gold: "#C0C0C0",          // Plateado
+  silver: "#CD7F32",        // Bronce
+  mercadolider: "#2196F3",  // Azul
+};
+
 const POWER_SELLER_LABELS: Record<string, string> = {
   platinum: "Platinum",
   gold: "Gold",
   silver: "Silver",
+  mercadolider: "Mercadolider",
 };
 
 export default function AccountSelector({ accounts, selectedId, onSelect, compact }: Props) {
   const [isOpen, setIsOpen] = useState(false);
 
-  const selectedAccount = accounts.find((a) => a.meli_user_id === selectedId);
+  // Ordenar cuentas alfabéticamente por nombre
+  const sorted = [...accounts].sort((a, b) => a.account.localeCompare(b.account));
+
+  const selectedAccount = sorted.find((a) => a.meli_user_id === selectedId);
 
   if (accounts.length === 0) {
     return null;
@@ -83,7 +94,7 @@ export default function AccountSelector({ accounts, selectedId, onSelect, compac
             className="absolute top-full right-0 mt-1 rounded-lg shadow-2xl z-50 max-h-96 overflow-y-auto w-56"
             style={{ background: "#181818", border: "1px solid rgba(255,255,255,0.08)" }}
           >
-            {accounts.map((acc) => {
+            {sorted.map((acc) => {
               const urgency = getUrgency(acc);
               const isSelected = acc.meli_user_id === selectedId;
               const repColor = acc.reputation.level_id ? LEVEL_COLORS[acc.reputation.level_id] : "#6B7280";
@@ -174,9 +185,9 @@ export default function AccountSelector({ accounts, selectedId, onSelect, compac
                     <span
                       className="text-[10px] font-bold px-1.5 py-0.5 rounded"
                       style={{
-                        background: "#9C27B0" + "22",
-                        color: "#9C27B0",
-                        border: "1px solid #9C27B044",
+                        background: (POWER_SELLER_COLORS[selectedAccount.reputation.power_seller_status] ?? "#9C27B0") + "22",
+                        color: POWER_SELLER_COLORS[selectedAccount.reputation.power_seller_status] ?? "#9C27B0",
+                        border: `1px solid ${(POWER_SELLER_COLORS[selectedAccount.reputation.power_seller_status] ?? "#9C27B0")}44`,
                       }}
                     >
                       {POWER_SELLER_LABELS[selectedAccount.reputation.power_seller_status] || selectedAccount.reputation.power_seller_status}
@@ -204,7 +215,7 @@ export default function AccountSelector({ accounts, selectedId, onSelect, compac
           className="absolute top-full left-0 right-0 mt-2 rounded-lg shadow-2xl z-50 max-h-96 overflow-y-auto"
           style={{ background: "#181818", border: "1px solid rgba(255,255,255,0.08)" }}
         >
-          {accounts.map((acc) => {
+          {sorted.map((acc) => {
             const urgency = getUrgency(acc);
             const isSelected = acc.meli_user_id === selectedId;
             const repColor = acc.reputation.level_id ? LEVEL_COLORS[acc.reputation.level_id] : "#6B7280";
