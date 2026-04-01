@@ -10,7 +10,7 @@ import { calculateZoneDistance, ZONE_CFG } from "@/lib/zone-calc";
 import { ZoneIndicator } from "@/components/ZoneIndicator";
 import { supabase } from "@/lib/supabase";
 
-type StatusTab = "pending" | "printed" | "all";
+type StatusTab = "pending" | "printed" | "in_transit" | "returns";
 type LogisticType = "flex" | "correo" | "turbo" | "full";
 
 interface ShipmentInfo {
@@ -49,7 +49,10 @@ interface ShipmentInfo {
 interface LabelData {
   shipments: ShipmentInfo[];
   printed?: ShipmentInfo[];
-  summary: Record<LogisticType, number>;
+  in_transit?: ShipmentInfo[];
+  returns?: ShipmentInfo[];
+  full?: ShipmentInfo[];
+  summary: Record<string, number>;
 }
 
 const TYPE_CFG: Record<LogisticType, { color: string; label: string; icon: React.ReactNode }> = {
@@ -455,27 +458,35 @@ function EtiquetasInner() {
   }, [data?.shipments, checkForDuplicates]);
 
   // Filtrar datos según pestaña de estado y logística
-  const filtered = data?.shipments?.filter(s => {
-    const isPrinted = !!s.printed_at;
-    
-    // Filtro de estado
-    if (statusTab === "pending" && isPrinted) return false;
-    if (statusTab === "printed" && !isPrinted) return false;
-    
-    // Filtro de logística
-    if (s.type !== logisticFilter) return false;
-    
-    return true;
-  }) ?? [];
+  const filtered = useMemo(() => {
+    let source: ShipmentInfo[] = [];
+
+    // Seleccionar fuente según pestaña
+    if (statusTab === "pending") {
+      source = logisticFilter === "full" ? (data?.full ?? []) : (data?.shipments ?? []);
+    } else if (statusTab === "printed") {
+      source = logisticFilter === "full" ? [] : (data?.printed ?? []);
+    } else if (statusTab === "in_transit") {
+      source = logisticFilter === "full" ? [] : (data?.in_transit ?? []);
+    } else if (statusTab === "returns") {
+      source = logisticFilter === "full" ? [] : (data?.returns ?? []);
+    }
+
+    // Filtrar por tipo (si no es full, que ya viene filtrado)
+    if (logisticFilter !== "full") {
+      return source.filter(s => s.type === logisticFilter);
+    }
+    return source;
+  }, [data, statusTab, logisticFilter]);
 
   // Contar por tipo para cada estado
   const countByType = useCallback((type: LogisticType, status: StatusTab) => {
-    return (data?.shipments ?? []).filter(s => {
-      const isPrinted = !!s.printed_at;
-      if (status === "pending" && isPrinted) return false;
-      if (status === "printed" && !isPrinted) return false;
-      return s.type === type;
-    }).length;
+    let source: ShipmentInfo[] = [];
+    if (status === "pending") source = data?.shipments ?? [];
+    else if (status === "printed") source = data?.printed ?? [];
+    else if (status === "in_transit") source = data?.in_transit ?? [];
+    else if (status === "returns") source = data?.returns ?? [];
+    return source.filter(s => s.type === type).length;
   }, [data]);
 
   const handlePrinted = async (shipmentId: number) => {
@@ -773,15 +784,22 @@ function EtiquetasInner() {
           </div>
         ) : (
           <>
-            {/* 3 Pestañas de Estado */}
+            {/* Pestañas de Estado */}
             <div className="flex gap-2 mb-4 flex-wrap">
-              {(["pending", "printed", "all"] as StatusTab[]).map(tab => {
+              {(["pending", "printed", "in_transit", "returns"] as StatusTab[]).map(tab => {
                 const counts = {
-                  pending: data.shipments.filter(s => !s.printed_at).length,
-                  printed: data.shipments.filter(s => s.printed_at).length,
-                  all: data.shipments.length,
+                  pending:    (data?.shipments ?? []).filter(s => !s.printed_at).length,
+                  printed:    (data?.printed ?? []).length,
+                  in_transit: (data?.in_transit ?? []).length,
+                  returns:    (data?.returns ?? []).length,
                 };
                 const isActive = statusTab === tab;
+                const tabLabels: Record<StatusTab, string> = {
+                  pending: "📥 Pendientes",
+                  printed: "✅ Impresas",
+                  in_transit: "🚚 En Tránsito",
+                  returns: "↩️ Devoluciones",
+                };
                 return (
                   <button
                     key={tab}
@@ -793,9 +811,7 @@ function EtiquetasInner() {
                         : { background: "#1A1A1A", color: "#9CA3AF", border: "1px solid rgba(255,255,255,0.06)" }
                     }
                   >
-                    {tab === "pending" && "📥 Pendientes"}
-                    {tab === "printed" && "✅ Impresas"}
-                    {tab === "all" && "👁️ Todas"}
+                    {tabLabels[tab]}
                     <span
                       className="text-[10px] font-black px-1.5 py-0.5 rounded-full min-w-[20px] text-center"
                       style={
@@ -934,8 +950,9 @@ function EtiquetasInner() {
                 <p className="text-white font-bold">Sin etiquetas en este filtro</p>
                 <p className="text-xs" style={{ color: "#6B7280" }}>
                   {statusTab === "pending" && "Todas las pendientes están impresas ✓"}
-                  {statusTab === "printed" && "No hay etiquetas impresas en este tipo"}
-                  {statusTab === "all" && "Sin datos"}
+                  {statusTab === "printed" && "No hay etiquetas impresas todavia"}
+                  {statusTab === "in_transit" && "No hay envios en transito"}
+                  {statusTab === "returns" && "No hay devoluciones"}
                 </p>
               </div>
             ) : (

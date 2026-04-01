@@ -240,7 +240,7 @@ export async function GET(req: Request) {
 
   try {
     const accounts = await getActiveAccounts();
-    if (!accounts.length) return NextResponse.json({ shipments: [], full: [], delayed_unshipped: [], delayed_in_transit: [], summary: {} });
+    if (!accounts.length) return NextResponse.json({ shipments: [], full: [], in_transit: [], returns: [], delayed_unshipped: [], delayed_in_transit: [], summary: {} });
 
     const { data: printed } = await supabase.from("meli_printed_labels").select("shipment_id, printed_at");
     const printedMap = new Map((printed ?? []).map((p: { shipment_id: number; printed_at: string }) => [p.shipment_id, p.printed_at]));
@@ -248,6 +248,7 @@ export async function GET(req: Request) {
 
     const allShipments:        ShipmentInfo[] = [];
     const allInTransit:        ShipmentInfo[] = [];
+    const allReturns:          ShipmentInfo[] = [];
     const tokenCache = new Map<string, string>();
 
     await Promise.all(accounts.map(async (acc) => {
@@ -256,15 +257,17 @@ export async function GET(req: Request) {
         if (!token) return;
         tokenCache.set(String(acc.meli_user_id), token);
 
-        const [dataReady, dataHandling, dataShipped] = await Promise.all([
+        const [dataReady, dataHandling, dataShipped, dataNotDelivered] = await Promise.all([
           meliGet(`/orders/search?seller=${acc.meli_user_id}&order.status=paid&sort=date_desc&limit=50&shipping.status=ready_to_ship`, token),
           meliGet(`/orders/search?seller=${acc.meli_user_id}&order.status=paid&sort=date_desc&limit=50&shipping.status=handling`, token),
           meliGet(`/orders/search?seller=${acc.meli_user_id}&order.status=paid&sort=date_desc&limit=50&shipping.status=shipped`, token),
+          meliGet(`/orders/search?seller=${acc.meli_user_id}&order.status=paid&sort=date_desc&limit=50&shipping.status=not_delivered`, token),
         ]);
 
-        const readyResults    = ((dataReady?.results    ?? []) as Array<Record<string, unknown>>);
-        const handlingResults = ((dataHandling?.results ?? []) as Array<Record<string, unknown>>);
-        const shippedResults  = ((dataShipped?.results  ?? []) as Array<Record<string, unknown>>);
+        const readyResults     = ((dataReady?.results       ?? []) as Array<Record<string, unknown>>);
+        const handlingResults   = ((dataHandling?.results   ?? []) as Array<Record<string, unknown>>);
+        const shippedResults    = ((dataShipped?.results    ?? []) as Array<Record<string, unknown>>);
+        const notDeliveredResults = ((dataNotDelivered?.results ?? []) as Array<Record<string, unknown>>);
 
         const pendingOrders = [...readyResults, ...handlingResults];
         const seenPending   = new Set<number>();
@@ -303,11 +306,26 @@ export async function GET(req: Request) {
           }
         }
 
+        // Devoluciones (not_delivered)
+        const seenReturns = new Set<number>();
+        for (const order of notDeliveredResults) {
+          const ship = order.shipping as Record<string, unknown> | undefined;
+          if (!ship?.id) continue;
+          const sid = ship.id as number;
+          if (seenReturns.has(sid)) continue;
+          seenReturns.add(sid);
+          const info = parseOrder(order, acc);
+          if (info) {
+            info.status = "not_delivered";
+            allReturns.push(info);
+          }
+        }
+
       } catch { /* skip account */ }
     }));
 
     // ── Enrichment con /shipments/{id} ─────────────────────────────────────
-    const allToEnrich = [...allShipments, ...allInTransit];
+    const allToEnrich = [...allShipments, ...allInTransit, ...allReturns];
     const byAccountMap = new Map<string, { token: string; ids: number[] }>();
     for (const s of allToEnrich) {
       if (!byAccountMap.has(s.meli_user_id)) {
@@ -340,6 +358,7 @@ export async function GET(req: Request) {
               const trackingNumber = String(
                 (detail.tracking_number ?? detail.tracking_id ?? "") as string
               ).toUpperCase();
+              const shippingOptLt = ((detail.shipping_option as Record<string, unknown>)?.logistic_type as string | undefined) ?? "";
 
               s.substatus = substatus || null;
 
@@ -347,6 +366,7 @@ export async function GET(req: Request) {
               if (
                 trackingNumber.startsWith("INVE") ||
                 lt === "fulfillment" || lt.includes("fulfillment") ||
+                shippingOptLt === "fulfillment" || shippingOptLt.includes("fulfillment") ||
                 mode === "fulfillment" || mode.includes("fulfillment") ||
                 tags.some((t: string) => t.toLowerCase().includes("fulfillment"))
               ) {
@@ -577,6 +597,9 @@ export async function GET(req: Request) {
     // In-transit: todos los despachados no-full
     const in_transit = allInTransit.filter(s => s.type !== "full");
 
+    // Devoluciones: todas las not_delivered (no-full)
+    const returns = allReturns.filter(s => s.type !== "full");
+
     // Demorados en tránsito: ya despachados, delivery_date pasada
     const delayed_in_transit = in_transit.filter(s => isDatePast(s.delivery_date));
 
@@ -586,6 +609,7 @@ export async function GET(req: Request) {
         printed:            printedShipments,
         full:               fullItems,
         in_transit,
+        returns,
         delayed_unshipped,
         delayed_in_transit,
         summary: {
@@ -594,6 +618,7 @@ export async function GET(req: Request) {
           turbo:              pending.filter(s => s.type === "turbo").length,
           full:               fullItems.length,
           in_transit:         in_transit.length,
+          returns:            returns.length,
           delayed_unshipped:  delayed_unshipped.length,
           delayed_in_transit: delayed_in_transit.length,
           printed_total:      printedShipments.length,
