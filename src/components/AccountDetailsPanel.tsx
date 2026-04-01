@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { MessageCircle, MessageSquare, Truck, Package } from "lucide-react";
+import { MessageCircle, MessageSquare, Truck, Package, Pencil, Check, XCircle } from "lucide-react";
 import { useMeliAccountData } from "@/hooks/useMeliAccountData";
 import ReputationBadge from "@/components/ReputationBadge";
 import MetricsBar from "@/components/MetricsBar";
@@ -39,6 +39,11 @@ interface AccountDash {
 
 interface Props {
   data: AccountDash;
+  editingNick?: string | null;
+  editNickVal?: string;
+  setEditingNick?: (v: string | null) => void;
+  setEditNickVal?: (v: string) => void;
+  handleRenameAccount?: (meliUserId: string, newName: string) => void;
 }
 
 function RepoBadge({ level }: { level: string | null }) {
@@ -72,7 +77,7 @@ function RepoBadge({ level }: { level: string | null }) {
   );
 }
 
-export default function AccountDetailsPanel({ data }: Props) {
+export default function AccountDetailsPanel({ data, editingNick, editNickVal, setEditingNick, setEditNickVal, handleRenameAccount }: Props) {
   // Cargar datos en tiempo real (siempre, no conditionally)
   const { data: meliData, loading: dataLoading, error: dataError } = useMeliAccountData(data.meli_user_id);
 
@@ -94,7 +99,38 @@ export default function AccountDetailsPanel({ data }: Props) {
             📦
           </div>
           <div className="flex-1 min-w-0">
-            <p className="font-bold text-white text-xs">@{data.account}</p>
+            <div className="flex items-center gap-1.5">
+              {editingNick === data.meli_user_id && setEditNickVal && handleRenameAccount && setEditingNick ? (
+                <>
+                  <input
+                    value={editNickVal}
+                    onChange={e => setEditNickVal(e.target.value)}
+                    onKeyDown={e => e.key === "Enter" && handleRenameAccount(data.meli_user_id, editNickVal || "")}
+                    className="font-bold text-white text-xs bg-transparent border-b border-yellow-400 outline-none w-32"
+                    autoFocus
+                  />
+                  <button onClick={() => handleRenameAccount(data.meli_user_id, editNickVal || "")} className="p-0.5 rounded hover:bg-white/10">
+                    <Check className="w-3.5 h-3.5 text-green-400" />
+                  </button>
+                  <button onClick={() => setEditingNick(null)} className="p-0.5 rounded hover:bg-white/10">
+                    <XCircle className="w-3 h-3 text-gray-500" />
+                  </button>
+                </>
+              ) : (
+                <>
+                  <p className="font-bold text-white text-xs">@{data.account}</p>
+                  {setEditingNick && setEditNickVal && (
+                    <button
+                      onClick={() => { setEditingNick(data.meli_user_id); setEditNickVal(data.account); }}
+                      className="p-0.5 rounded hover:bg-white/10"
+                      title="Cambiar nombre de cuenta"
+                    >
+                      <Pencil className="w-3 h-3 text-gray-500" />
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
             <p className="text-[10px] mt-1" style={{ color: "#6B7280" }}>
               {data.total_items ?? 0} publicaciones
             </p>
