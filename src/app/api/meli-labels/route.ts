@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabase, getActiveAccounts, getValidToken, meliGet, meliGetRaw, meliGetWithRetry } from "@/lib/meli";
-import { calculateZoneDistance } from "@/lib/zone-calc";
+import { calculateZoneDistance, classifyFlexZone } from "@/lib/zone-calc";
 import { PDFDocument } from "pdf-lib";
 import { inflateRawSync } from "zlib";
 
@@ -35,6 +35,7 @@ interface ShipmentInfo {
   delivery_date: string | null;
   dispatch_date: string | null;
   delivery_address?: string | null;
+  delivery_city?: string | null;
   delivery_state?: string | null;
   delivery_zip?: string | null;
   buyer_notes?: string | null;
@@ -176,6 +177,10 @@ function parseOrder(
         return `${addr.street_name} ${addr.street_number}${addr.apartment ? `, ${addr.apartment}` : ""}`;
       }
       return null;
+    })(),
+    delivery_city: (() => {
+      const addr = (ship.receiver_address as any) ?? {};
+      return (addr.city?.name ?? addr.municipality?.name ?? addr.neighborhood?.name ?? null) as string | null;
     })(),
     delivery_state: (((ship.receiver_address as any)?.state?.name as string | undefined)) ?? null,
     delivery_zip:   (((ship.receiver_address as any)?.zip_code as string | undefined)) ?? null,
@@ -785,6 +790,7 @@ export async function POST(req: Request) {
         title?: string;
         thumbnail?: string;
         delivery_date?: string;
+        delivery_city?: string;
         buyer_nickname?: string;
       }>;
       action?: string;
@@ -802,7 +808,9 @@ export async function POST(req: Request) {
     // Preparar filas para etiquetas_history
     const historyRows = ids.map(id => {
       const detail = shipments?.find(s => s.shipment_id === id);
-      const zone = calculateZoneDistance(detail?.delivery_date);
+      const zone = detail?.type === "flex"
+        ? classifyFlexZone(detail?.delivery_city)
+        : calculateZoneDistance(detail?.delivery_date);
 
       return {
         shipment_id: id,

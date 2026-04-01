@@ -6,7 +6,7 @@ import {
   ArrowLeft, RefreshCw, Printer, Download, CheckCircle2,
   Package, Truck, Zap, AlertCircle, ChevronDown, ChevronRight, Send,
 } from "lucide-react";
-import { calculateZoneDistance, ZONE_CFG } from "@/lib/zone-calc";
+import { classifyFlexZone, ZONE_CFG } from "@/lib/zone-calc";
 import { ZoneIndicator } from "@/components/ZoneIndicator";
 import { supabase } from "@/lib/supabase";
 
@@ -29,6 +29,7 @@ interface ShipmentInfo {
   delivery_date: string | null;
   dispatch_date: string | null;
   delivery_address?: string | null;
+  delivery_city?: string | null;
   delivery_state?: string | null;
   delivery_zip?: string | null;
   buyer_notes?: string | null;
@@ -103,8 +104,12 @@ function LabelCard({
   onToggleSelection?: (id: number) => void;
 }) {
   const cfg = TYPE_CFG[shipment.type as LogisticType] || TYPE_CFG.correo;
-  const zone = calculateZoneDistance(shipment.delivery_date);
-  const zoneCfg = ZONE_CFG[zone];
+  // Para Flex: zona basada en ciudad del destinatario
+  // Para otros tipos: solo mostrar si hay datos
+  const zone = shipment.type === "flex"
+    ? classifyFlexZone(shipment.delivery_city)
+    : "desconocida";
+  const zoneCfg = ZONE_CFG[zone] || ZONE_CFG.desconocida;
   const thumb = (shipment.thumbnail || "").replace("http://", "https://");
 
   // Calcular si está demorada (dispatch_date pasó de las 00:00 del día)
@@ -194,17 +199,21 @@ function LabelCard({
                 </span>
               )}
               {/* Zona solo para Flex - prominente */}
-              {shipment.type === "flex" && (
+              {shipment.type === "flex" && zone !== "desconocida" && (
                 <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full"
                   style={{
                     background: zoneCfg.bgColor,
                     color: zoneCfg.color,
                     border: `2px solid ${zoneCfg.color}`,
                   }}>
-                  {zone === "cercana" && "📍 ZONA CERCANA"}
-                  {zone === "media" && "📍 ZONA MEDIA"}
-                  {zone === "larga" && "📍 ZONA LARGA"}
-                  {zone === "desconocida" && "📍 ZONA ?"}
+                  {zoneCfg.label}
+                </span>
+              )}
+              {/* Ciudad + CP para Flex */}
+              {shipment.type === "flex" && shipment.delivery_city && (
+                <span className="text-[10px] font-medium px-1.5 py-0.5 rounded"
+                  style={{ color: "#9CA3AF" }}>
+                  {shipment.delivery_city}{shipment.delivery_zip ? ` (${shipment.delivery_zip})` : ""}
                 </span>
               )}
               {shipment.printed_at && (
