@@ -85,9 +85,14 @@ async function processAccount(
   if (!token) return null;
 
   const uid     = String(acc.meli_user_id);
-  const fromStr = from.toISOString().slice(0, 10);
   
-  console.log(`[stats-acct] account=${acc.nickname}, fromStr=${fromStr}, from.ISO=${from.toISOString()}`);
+  // Convertir a fecha local (NO UTC) para comparación con MeLi
+  const year = from.getFullYear();
+  const month = String(from.getMonth() + 1).padStart(2, '0');
+  const date = String(from.getDate()).padStart(2, '0');
+  const fromStr = `${year}-${month}-${date}`;
+  
+  console.log(`[stats-acct] account=${acc.nickname}, fromStr=${fromStr}, from.local=${year}-${month}-${date}`);
 
   // ── Fetch orders ──────────────────────────────────────────────────────────
   const allOrders: Record<string, unknown>[] = [];
@@ -112,7 +117,7 @@ async function processAccount(
     return d >= fromStr;
   });
   
-  console.log(`[stats-acct] allOrders=${allOrders.length}, filtered=${orders.length}`);
+  console.log(`[stats-acct] allOrders=${allOrders.length}, filtered=${orders.length}, firstOrder=${allOrders[0]?.date_created}, lastOrder=${allOrders[allOrders.length - 1]?.date_created}`);
 
   // ── Enrich orders with /shipments/{id} ───────────────────────────────────
   // orders/search does NOT return shipping.logistic_type — only shipping.id
