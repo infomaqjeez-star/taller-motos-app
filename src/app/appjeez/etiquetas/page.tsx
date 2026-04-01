@@ -187,6 +187,8 @@ function EtiquetasInner() {
   const [logisticFilter, setLogisticFilter] = useState<LogisticType>("flex");
   const [printing, setPrinting] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [printMode, setPrintMode] = useState<'thermal' | 'pdf'>('thermal');
+  const [showPrintMenu, setShowPrintMenu] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -286,21 +288,31 @@ function EtiquetasInner() {
     if (selectedIds.size === 0) return;
     setPrinting(true);
     try {
-      // Descargar PDF consolidado solo con los seleccionados
       const ids = Array.from(selectedIds).join(",");
       
-      const res = await fetch(`/api/meli-labels?ids=${ids}`);
-      if (!res.ok) throw new Error("Failed to generate PDF");
-      
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `etiquetas-${new Date().toISOString().split("T")[0]}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
+      if (printMode === 'thermal') {
+        // Enviar a impresora térmica
+        const res = await fetch("/api/meli-labels/print-thermal", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ids: Array.from(selectedIds) }),
+        });
+        if (!res.ok) throw new Error("Failed to send to thermal printer");
+      } else {
+        // Descargar PDF
+        const res = await fetch(`/api/meli-labels?ids=${ids}`);
+        if (!res.ok) throw new Error("Failed to generate PDF");
+        
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `etiquetas-${new Date().toISOString().split("T")[0]}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      }
 
       // Marcar solo las seleccionadas como impresas
       await Promise.all(
@@ -325,8 +337,10 @@ function EtiquetasInner() {
       
       // Limpiar selección después de imprimir
       setSelectedIds(new Set());
+      setShowPrintMenu(false);
     } catch (e) {
       console.error("Error printing selected:", e);
+      alert(`Error: ${e instanceof Error ? e.message : 'Unknown error'}`);
     } finally {
       setPrinting(false);
     }
@@ -355,29 +369,6 @@ function EtiquetasInner() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {statusTab === "pending" && filtered.length > 0 && (
-            <button
-              onClick={() => selectAll(filtered.map(s => s.shipment_id))}
-              className="px-3 py-2 rounded-lg transition-all text-xs font-bold flex items-center gap-2"
-              style={{
-                background: filtered.every(s => selectedIds.has(s.shipment_id)) ? "#39FF14" : "rgba(255,255,255,0.05)",
-                color: filtered.every(s => selectedIds.has(s.shipment_id)) ? "#121212" : "#fff",
-              }}
-              title={filtered.every(s => selectedIds.has(s.shipment_id)) ? "Deseleccionar todas" : "Seleccionar todas"}
-            >
-              <div className="w-4 h-4 rounded border-2 flex items-center justify-center" style={{
-                borderColor: filtered.every(s => selectedIds.has(s.shipment_id)) ? "#121212" : "rgba(255,255,255,0.5)",
-                background: filtered.every(s => selectedIds.has(s.shipment_id)) ? "#121212" : "transparent",
-              }}>
-                {filtered.every(s => selectedIds.has(s.shipment_id)) && (
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                    <polyline points="20 6 9 17 4 12"/>
-                  </svg>
-                )}
-              </div>
-              {filtered.every(s => selectedIds.has(s.shipment_id)) ? "Desmarcar Todas" : "Marcar Todas"}
-            </button>
-          )}
           <button
             onClick={load}
             disabled={loading}
@@ -472,33 +463,89 @@ function EtiquetasInner() {
               })}
             </div>
 
-            {/* Botón Imprimir Seleccionadas */}
+            {/* Barra de Acciones: Marcar Todas + Imprimir (solo en tab pending) */}
             {statusTab === "pending" && filtered.length > 0 && (
-              <div className="mb-4 flex justify-center">
+              <div className="flex gap-2 mb-4">
                 <button
-                  onClick={handlePrintAll}
-                  disabled={printing || selectedIds.size === 0}
-                  className="px-6 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-2"
+                  onClick={() => selectAll(filtered.map(s => s.shipment_id))}
+                  className="px-3 py-2 rounded-lg transition-all text-xs font-bold flex items-center gap-2"
                   style={{
-                    background: selectedIds.size > 0 ? "#39FF14" : "#6B7280",
-                    color: "#121212",
-                    opacity: (printing || selectedIds.size === 0) ? 0.6 : 1,
+                    background: filtered.every(s => selectedIds.has(s.shipment_id)) ? "#39FF14" : "rgba(255,255,255,0.05)",
+                    color: filtered.every(s => selectedIds.has(s.shipment_id)) ? "#121212" : "#fff",
                   }}
+                  title={filtered.every(s => selectedIds.has(s.shipment_id)) ? "Deseleccionar todas" : "Seleccionar todas"}
                 >
-                  {printing ? (
-                    <>
-                      <RefreshCw className="w-4 h-4 animate-spin" />
-                      Procesando...
-                    </>
-                  ) : (
-                    <>
-                      <Download className="w-4 h-4" />
-                      Imprimir Seleccionadas ({selectedIds.size})
-                    </>
-                  )}
+                  <div className="w-4 h-4 rounded border-2 flex items-center justify-center" style={{
+                    borderColor: filtered.every(s => selectedIds.has(s.shipment_id)) ? "#121212" : "rgba(255,255,255,0.5)",
+                    background: filtered.every(s => selectedIds.has(s.shipment_id)) ? "#121212" : "transparent",
+                  }}>
+                    {filtered.every(s => selectedIds.has(s.shipment_id)) && (
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                        <polyline points="20 6 9 17 4 12"/>
+                      </svg>
+                    )}
+                  </div>
+                  {filtered.every(s => selectedIds.has(s.shipment_id)) ? "Desmarcar Todas" : "Marcar Todas"}
                 </button>
+
+                {/* Dropdown Imprimir */}
+                <div className="relative">
+                  <button
+                    onClick={() => setShowPrintMenu(!showPrintMenu)}
+                    disabled={printing || selectedIds.size === 0}
+                    className="px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2"
+                    style={{
+                      background: selectedIds.size > 0 ? "#39FF14" : "#6B7280",
+                      color: "#121212",
+                      opacity: (printing || selectedIds.size === 0) ? 0.6 : 1,
+                      cursor: (printing || selectedIds.size === 0) ? "not-allowed" : "pointer",
+                    }}
+                  >
+                    {printing ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        Procesando...
+                      </>
+                    ) : (
+                      <>
+                        <Download className="w-4 h-4" />
+                        Imprimir ({selectedIds.size}) ▼
+                      </>
+                    )}
+                  </button>
+
+                  {/* Menu Dropdown */}
+                  {showPrintMenu && !printing && (
+                    <div className="absolute top-full mt-1 right-0 bg-gray-900 rounded-lg shadow-lg border border-gray-700 z-50"
+                      style={{ minWidth: "200px" }}>
+                      <button
+                        onClick={() => {
+                          setPrintMode('thermal');
+                          handlePrintAll();
+                        }}
+                        className="w-full text-left px-4 py-2 hover:bg-gray-800 text-xs font-bold text-white flex items-center gap-2 rounded-t-lg transition-colors"
+                      >
+                        <Printer className="w-4 h-4" />
+                        🖨️ Impresora Térmica
+                      </button>
+                      <div style={{ height: "1px", background: "rgba(255,255,255,0.1)" }}></div>
+                      <button
+                        onClick={() => {
+                          setPrintMode('pdf');
+                          handlePrintAll();
+                        }}
+                        className="w-full text-left px-4 py-2 hover:bg-gray-800 text-xs font-bold text-white flex items-center gap-2 rounded-b-lg transition-colors"
+                      >
+                        <Download className="w-4 h-4" />
+                        📄 Descargar PDF
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
+
+            {/* Botón Imprimir Seleccionadas (versión antigua - removida) */}
 
             {/* Lista de Etiquetas */}
             {filtered.length === 0 ? (
