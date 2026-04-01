@@ -7,7 +7,7 @@ export async function GET(req: NextRequest) {
     const q = searchParams.get("q") || "";
     const accountId = searchParams.get("account_id") || "";
     const meliUserId = searchParams.get("meli_user_id") || "";
-    const field = searchParams.get("field") || "all"; // sku, tracking, buyer, all
+    const field = searchParams.get("field") || "all"; // sku, tracking, buyer, shipment_id, all
     const limit = parseInt(searchParams.get("limit") || "50");
 
     if (q.length < 2) {
@@ -34,41 +34,49 @@ export async function GET(req: NextRequest) {
       query = query.eq("account_id", accountId) as typeof query;
     }
 
-    // Buscar en campos
+    // Buscar con OR unificado (una sola query)
     const searchTerm = `%${q}%`;
-
-    let results: any[] = [];
-
-    // Buscar según el campo especificado
+    
+    // Construir filtro OR dinámicamente
+    let orFilters: string[] = [];
+    
     if (field === "sku" || field === "all") {
-      const { data: skuResults } = await (query.ilike("sku", searchTerm) as any);
-      if (skuResults) results = [...results, ...skuResults];
+      orFilters.push(`sku.ilike.${searchTerm}`);
     }
-
     if (field === "tracking" || field === "all") {
-      const { data: trackingResults } = await (query.ilike(
-        "tracking_number",
-        searchTerm
-      ) as any);
-      if (trackingResults) results = [...results, ...trackingResults];
+      orFilters.push(`tracking_number.ilike.${searchTerm}`);
     }
-
     if (field === "buyer" || field === "all") {
-      const { data: buyerResults } = await (query.ilike(
-        "buyer_nickname",
-        searchTerm
-      ) as any);
-      if (buyerResults) results = [...results, ...buyerResults];
+      orFilters.push(`buyer_nickname.ilike.${searchTerm}`);
+    }
+    if (field === "shipment_id" || field === "all") {
+      // Para shipment_id, hacer casting a text y buscar
+      orFilters.push(`shipment_id::text.ilike.${searchTerm}`);
     }
 
-    // Deduplicar por ID
-    const uniqueResults = Array.from(
-      new Map(results.map((item: any) => [item.id, item])).values()
-    ).slice(0, limit);
+    if (orFilters.length === 0) {
+      return NextResponse.json({
+        results: [],
+        total: 0,
+      });
+    }
+
+    // Aplicar OR filter de una sola vez
+    query = query.or(orFilters.join(",")) as typeof query;
+
+    const { data: results, error } = await query;
+
+    if (error) {
+      console.error("Search query error:", error);
+      return NextResponse.json(
+        { error: "Search failed", results: [] },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
-      results: uniqueResults,
-      total: uniqueResults.length,
+      results: results || [],
+      total: (results || []).length,
       query: q,
     });
   } catch (error) {
@@ -79,3 +87,4 @@ export async function GET(req: NextRequest) {
     );
   }
 }
+

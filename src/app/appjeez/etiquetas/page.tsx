@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { calculateZoneDistance, ZONE_CFG } from "@/lib/zone-calc";
 import { ZoneIndicator } from "@/components/ZoneIndicator";
+import { supabase } from "@/lib/supabase";
 
 type StatusTab = "pending" | "printed" | "all";
 type LogisticType = "flex" | "correo" | "turbo" | "full";
@@ -312,7 +313,30 @@ function EtiquetasInner() {
     load();
   }, [load]);
 
-  // Funciones para manejar selección
+  // Supabase Realtime: actualizar contadores cuando se añaden nuevas etiquetas impresas
+  useEffect(() => {
+    const channel = supabase
+      .channel("printed-labels-changes")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "printed_labels",
+        },
+        (payload: any) => {
+          // Re-fetch para actualizar contadores en vivo
+          load();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [load]);
+
+
   const toggleSelection = useCallback((id: number) => {
     setSelectedIds(prev => {
       const next = new Set(prev);
@@ -435,65 +459,62 @@ function EtiquetasInner() {
     }
   };
 
-  const savePrintHistory = async (shipments: ShipmentInfo[]) => {
-    if (!shipments || shipments.length === 0) return;
-
-    const tzOffset = -new Date().getTimezoneOffset() / 60;
-    
-    for (const shipment of shipments) {
-      try {
-        // Generar PDF de la etiqueta individual (simplificado: base64 placeholder)
-        const pdfBase64 = btoa("PDF_PLACEHOLDER"); // En producción: usar jsPDF para generar real
-
-        await fetch("/api/meli-labels/save-print", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            shipment_id: shipment.shipment_id,
-            order_id: shipment.order_id,
-            tracking_number: (shipment as any).tracking_number || null,
-            buyer_nickname: shipment.buyer_nickname || null,
-            sku: shipment.seller_sku || null,
-            variation: shipment.attributes || null,
-            quantity: shipment.quantity,
-            account_id: shipment.account,
-            meli_user_id: shipment.meli_user_id,
-            shipping_method: shipment.type,
-            pdf_base64: pdfBase64,
-            tzOffset,
-          }),
-        });
-      } catch (err) {
-        console.warn(`Failed to save history for shipment ${shipment.shipment_id}:`, err);
-        // No bloquear si falla el guardado
-      }
-    }
-  };
-
   const handlePrintAll = async (mode?: 'thermal' | 'pdf') => {
     if (selectedIds.size === 0) return;
     const actualMode = mode || printMode;
     setPrinting(true);
     try {
-      const ids = Array.from(selectedIds).join(",");
       const selectedShipments = data?.shipments.filter(s => selectedIds.has(s.shipment_id)) ?? [];
-      
-      if (actualMode === 'thermal') {
-        // Enviar a impresora térmica
-        const res = await fetch("/api/meli-labels/print-thermal", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ids: Array.from(selectedIds), shipments: selectedShipments }),
-        });
-        if (!res.ok) throw new Error("Failed to send to thermal printer");
-      } else {
-        // Descargar PDF
-        const tzOffset = -new Date().getTimezoneOffset() / 60;
-        const res = await fetch(`/api/meli-labels?ids=${ids}&tz_offset=${tzOffset}`);
-        if (!res.ok) throw new Error("Failed to generate PDF");
-        
-        const blob = await res.blob();
-        const url = URL.createObjectURL(blob);
+      const meli_user_id = selectedShipments[0]?.meli_user_id || "";
+
+      // PASO 1: Validar que los IDs seleccionados aún estén en estado ready_to_print
+      const validateRes = await fetch("/api/meli-labels/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          shipment_ids: Array.from(selectedIds),
+          meli_user_id,
+        }),
+      });
+
+      if (!validateRes.ok) {
+        throw new Error("Validation failed");
+      }
+
+      const { valid, already_printed } = (await validateRes.json()) as {
+        valid: number[];
+        already_printed: number[];
+      };
+
+      // Si hay ya impresas, avisar pero continuar con las válidas
+      if (already_printed.length > 0) {
+        const msg = `${already_printed.length} etiqueta(s) ya fueron impresa(s). Continuaré con las ${valid.length} restantes.`;
+        if (!window.confirm(msg)) {
+          setPrinting(false);
+          return;
+        }
+      }
+
+      if (valid.length === 0) {
+        alert("Todas las etiquetas seleccionadas ya fueron impresas.");
+        setPrinting(false);
+        return;
+      }
+
+      // PASO 2: Generar PDF
+      const ids = valid.join(",");
+      const tzOffset = -new Date().getTimezoneOffset() / 60;
+      const pdfRes = await fetch(`/api/meli-labels?ids=${ids}&tz_offset=${tzOffset}`);
+
+      if (!pdfRes.ok) {
+        throw new Error("Failed to generate PDF");
+      }
+
+      const pdfBlob = await pdfRes.blob();
+
+      // PASO 3: Descargar PDF inmediatamente (mejor UX)
+      if (actualMode === "pdf") {
+        const url = URL.createObjectURL(pdfBlob);
         const a = document.createElement("a");
         a.href = url;
         a.download = `etiquetas-${new Date().toISOString().split("T")[0]}.pdf`;
@@ -503,45 +524,77 @@ function EtiquetasInner() {
         URL.revokeObjectURL(url);
       }
 
-      // Marcar como impresas (batch POST)
-      await fetch("/api/meli-labels", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "mark-printed",
-          shipment_ids: Array.from(selectedIds),
-          shipments: selectedShipments.map(s => ({
+      // PASO 4: Convertir blob a base64 y guardar en historial (batch)
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const base64 = (reader.result as string).split(",")[1];
+
+        // Preparar metadata de los shipments válidos
+        const shipmentsToSave = selectedShipments
+          .filter(s => valid.includes(s.shipment_id))
+          .map(s => ({
             shipment_id: s.shipment_id,
-            account: s.account,
-            type: s.type,
-            buyer: s.buyer,
-            title: s.title,
-            thumbnail: s.thumbnail,
-            delivery_date: s.delivery_date,
-            buyer_nickname: s.buyer_nickname,
-          })),
-        }),
-      });
+            order_id: s.order_id,
+            tracking_number: (s as any).tracking_number || null,
+            buyer_nickname: s.buyer_nickname || null,
+            sku: s.seller_sku || null,
+            variation: s.attributes || null,
+            quantity: s.quantity,
+            account_id: s.account,
+            meli_user_id: s.meli_user_id,
+            shipping_method: s.type,
+          }));
 
-      // Guardar en historial (background, no bloquea)
-      savePrintHistory(selectedShipments);
+        // POST a save-print-batch
+        const saveRes = await fetch("/api/meli-labels/save-print-batch", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            shipments: shipmentsToSave,
+            pdf_base64: base64,
+            tzOffset,
+          }),
+        });
 
-      // Actualizar estado local
-      setData(prev => prev ? {
-        ...prev,
-        shipments: prev.shipments.map(s =>
-          selectedIds.has(s.shipment_id)
-            ? { ...s, printed_at: new Date().toISOString() }
-            : s
-        ),
-      } : null);
-      
-      // Limpiar selección después de imprimir
-      setSelectedIds(new Set());
-      setShowPrintMenu(false);
+        if (!saveRes.ok) {
+          const errorData = await saveRes.json();
+          throw new Error(`Failed to save to history: ${errorData.error || "Unknown error"}`);
+        }
+
+        // PASO 5: Solo después de guardar exitosamente, marcar como impresas
+        const markRes = await fetch("/api/meli-labels", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "mark-printed",
+            shipment_ids: valid,
+            shipments: shipmentsToSave.map(s => ({
+              shipment_id: s.shipment_id,
+              account: s.account_id,
+              type: s.shipping_method,
+              buyer: "", // No usado en este contexto
+              title: "",
+              thumbnail: "",
+              delivery_date: "",
+              buyer_nickname: s.buyer_nickname,
+            })),
+          }),
+        });
+
+        if (!markRes.ok) {
+          console.warn("Failed to mark as printed, but PDF was saved");
+        }
+
+        // Actualizar estado local
+        setSelectedIds(new Set());
+        load(); // Re-fetch para actualizar contadores
+      };
+
+      reader.readAsDataURL(pdfBlob);
     } catch (e) {
-      console.error("Error printing selected:", e);
-      alert(`Error: ${e instanceof Error ? e.message : 'Unknown error'}`);
+      const msg = e instanceof Error ? e.message : "Unknown error";
+      alert(`Error: ${msg}`);
+      console.error("Print error:", e);
     } finally {
       setPrinting(false);
     }

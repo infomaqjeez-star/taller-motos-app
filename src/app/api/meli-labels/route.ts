@@ -499,8 +499,15 @@ export async function GET(req: Request) {
       return ud !== 0 ? ud : typeOrder[a.type] - typeOrder[b.type];
     });
 
+    // Post-enrichment: marcar shipments impresos (substatus o already in meli_printed_labels)
+    for (const s of allShipments) {
+      const isSubstatusPrinted = s.substatus === "printed" || s.substatus === "label_printed";
+      s.is_printed = isSubstatusPrinted || !!s.printed_at;
+    }
+
     // Pending = no full, no impresos
-    const pending   = allShipments.filter(s => s.type !== "full");
+    const pending   = allShipments.filter(s => s.type !== "full" && !s.is_printed);
+    const printedShipments = allShipments.filter(s => s.type !== "full" && s.is_printed);
     const fullItems = allShipments.filter(s => s.type === "full");
 
     // Demorados sin despachar: pending con dispatch_date pasada o urgency delayed
@@ -517,6 +524,7 @@ export async function GET(req: Request) {
     if (action === "list") {
       return NextResponse.json({
         shipments:          pending,
+        printed:            printedShipments,
         full:               fullItems,
         in_transit,
         delayed_unshipped,
@@ -529,6 +537,10 @@ export async function GET(req: Request) {
           in_transit:         in_transit.length,
           delayed_unshipped:  delayed_unshipped.length,
           delayed_in_transit: delayed_in_transit.length,
+          printed_total:      printedShipments.length,
+          printed_correo:     printedShipments.filter(s => s.type === "correo").length,
+          printed_flex:       printedShipments.filter(s => s.type === "flex").length,
+          printed_turbo:      printedShipments.filter(s => s.type === "turbo").length,
         },
       });
     }
