@@ -472,12 +472,13 @@ export async function GET(req: Request) {
                 s.urgency = classifyUrgency(deliveryDate);
               }
 
+              // dispatch_date: intentar multiples campos (MeLi varía la estructura)
               const dispatchLimit =
                 (detail.shipping_option as Record<string, unknown> | undefined)?.estimated_handling_limit ??
-                detail.estimated_handling_limit;
-              if (dispatchLimit && typeof dispatchLimit === "object") {
-                s.dispatch_date = ((dispatchLimit as Record<string, unknown>).date ?? null) as string | null;
-              }
+                detail.estimated_handling_limit ??
+                (detail.shipping_option as Record<string, unknown> | undefined)?.estimated_schedule_limit ??
+                detail.estimated_schedule_limit;
+              s.dispatch_date = tryDate(dispatchLimit);
             } catch { /* skip */ }
           })
         );

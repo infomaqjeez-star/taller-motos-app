@@ -12,6 +12,7 @@ import { supabase } from "@/lib/supabase";
 
 type StatusTab = "pending" | "printed" | "in_transit" | "returns";
 type LogisticType = "todas" | "flex" | "correo" | "turbo" | "full";
+type TimeFilter = "all" | "today" | "upcoming";
 
 interface ShipmentInfo {
   shipment_id: number;
@@ -334,6 +335,7 @@ function EtiquetasInner() {
   const [loading, setLoading] = useState(true);
   const [statusTab, setStatusTab] = useState<StatusTab>("pending");
   const [logisticFilter, setLogisticFilter] = useState<LogisticType>("todas");
+  const [timeFilter, setTimeFilter] = useState<TimeFilter>("all");
   const [printing, setPrinting] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [printMode, setPrintMode] = useState<'thermal' | 'pdf'>('thermal');
@@ -385,10 +387,11 @@ function EtiquetasInner() {
     };
   }, [load]);
 
-  // Limpiar seleccion y resetear filtro al cambiar de pestana
+  // Limpiar seleccion y resetear filtros al cambiar de pestana
   useEffect(() => {
     setSelectedIds(new Set());
     setLogisticFilter("todas");
+    setTimeFilter("all");
   }, [statusTab]);
 
 
@@ -514,10 +517,28 @@ function EtiquetasInner() {
 
     // Filtrar por tipo (excepto "todas" que muestra todo, y "full" que ya viene filtrado)
     if (logisticFilter !== "todas" && logisticFilter !== "full") {
-      return source.filter(s => s.type === logisticFilter);
+      source = source.filter(s => s.type === logisticFilter);
     }
+
+    // Filtrar por tiempo (solo para pendientes)
+    if (statusTab === "pending" && timeFilter !== "all") {
+      const now = new Date();
+      const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+      if (timeFilter === "today") {
+        source = source.filter(s => {
+          if (!s.dispatch_date) return true;
+          return s.dispatch_date.split("T")[0] <= todayStr;
+        });
+      } else if (timeFilter === "upcoming") {
+        source = source.filter(s => {
+          if (!s.dispatch_date) return false;
+          return s.dispatch_date.split("T")[0] > todayStr;
+        });
+      }
+    }
+
     return source;
-  }, [data, statusTab, logisticFilter]);
+  }, [data, statusTab, logisticFilter, timeFilter]);
 
   // Contar por tipo para cada estado
   const countByType = useCallback((type: LogisticType, status: StatusTab) => {
@@ -531,6 +552,22 @@ function EtiquetasInner() {
     if (type === "full" && status === "pending") return (data?.full ?? []).length;
     return source.filter(s => s.type === type).length;
   }, [data]);
+
+  // Conteo de envios hoy vs proximos (solo pendientes)
+  const timeCounts = useMemo(() => {
+    const source = data?.shipments ?? [];
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    const today = source.filter(s => {
+      if (!s.dispatch_date) return true;
+      return s.dispatch_date.split("T")[0] <= todayStr;
+    }).length;
+    const upcoming = source.filter(s => {
+      if (!s.dispatch_date) return false;
+      return s.dispatch_date.split("T")[0] > todayStr;
+    }).length;
+    return { today, upcoming };
+  }, [data?.shipments]);
 
   const handlePrinted = async (shipmentId: number) => {
     setPrinting(true);
@@ -874,7 +911,7 @@ function EtiquetasInner() {
               })}
             </div>
 
-            {/* Filtros Logísticos */}
+            {/* Filtros Logísticos + Filtro de Tiempo */}
             <div className="flex gap-2 mb-4 overflow-x-auto pb-2 -mx-1 px-1">
               {(["todas", "flex", "correo", "turbo", "full"] as LogisticType[]).map(type => {
                 const isAll = type === "todas";
@@ -884,7 +921,7 @@ function EtiquetasInner() {
                 return (
                   <button
                     key={type}
-                    onClick={() => setLogisticFilter(type)}
+                    onClick={() => { setLogisticFilter(type); setTimeFilter("all"); }}
                     className="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-2xl text-xs font-bold transition-all whitespace-nowrap"
                     style={
                       isActive
@@ -902,6 +939,37 @@ function EtiquetasInner() {
                   </button>
                 );
               })}
+
+              {/* Separador + Filtros HOY / PROXIMOS (solo en Pendientes) */}
+              {statusTab === "pending" && (
+                <>
+                  <div className="w-px h-8 self-center" style={{ background: "rgba(255,255,255,0.15)" }} />
+                  <button
+                    onClick={() => setTimeFilter(timeFilter === "today" ? "all" : "today")}
+                    className="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-2xl text-xs font-bold transition-all whitespace-nowrap"
+                    style={
+                      timeFilter === "today"
+                        ? { background: "#FF6B6B", color: "#fff", border: "2px solid #FF6B6B" }
+                        : { background: "transparent", color: "#FF6B6B", border: "2px solid #FF6B6B40" }
+                    }
+                  >
+                    HOY
+                    <span className="text-[9px] font-black px-1">{timeCounts.today}</span>
+                  </button>
+                  <button
+                    onClick={() => setTimeFilter(timeFilter === "upcoming" ? "all" : "upcoming")}
+                    className="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-2xl text-xs font-bold transition-all whitespace-nowrap"
+                    style={
+                      timeFilter === "upcoming"
+                        ? { background: "#FFE600", color: "#121212", border: "2px solid #FFE600" }
+                        : { background: "transparent", color: "#FFE600", border: "2px solid #FFE60040" }
+                    }
+                  >
+                    PROXIMOS
+                    <span className="text-[9px] font-black px-1">{timeCounts.upcoming}</span>
+                  </button>
+                </>
+              )}
             </div>
 
             {/* Barra de Acciones: Marcar Todas + Imprimir (solo en tabs imprimibles) */}
