@@ -1,6 +1,7 @@
 /**
- * Zonas Flex basadas en localidad/ciudad del destinatario.
+ * Zonas Flex basadas en localidad/ciudad/CP del destinatario.
  * Clasificacion segun configuracion real de MeLi Flex del vendedor.
+ * Fallback por codigo postal cuando el nombre de ciudad no matchea.
  */
 
 // Localidades normalizadas a lowercase para matching
@@ -86,6 +87,55 @@ const ZONA_LEJANA: string[] = [
   "vicente lópez",
 ];
 
+// Clasificacion por CP (codigo postal numerico)
+// Rangos de CP para cada zona cuando el nombre de ciudad no matchea
+// Fuente: MeLi Flex zones + CP de Argentina
+const CP_CERCANA: Array<[number, number]> = [
+  [1802, 1804],   // Ezeiza, Tristán Suárez
+];
+
+const CP_MEDIA: Array<[number, number]> = [
+  [1838, 1838],   // Luis Guillón
+  [1842, 1842],   // Monte Grande
+  [1806, 1806],   // Canning (parte de Esteban Echeverria)
+  [1841, 1841],   // Esteban Echeverria
+  [1839, 1839],   // Luis Guillón
+];
+
+const CP_LEJANA: Array<[number, number]> = [
+  [1000, 1499],   // CABA (todos los barrios)
+  [1600, 1609],   // Olivos, Florida, Martínez, San Isidro
+  [1610, 1619],   // Boulogne, Béccar, Victoria, San Fernando
+  [1620, 1629],   // Tigre, Don Torcuato, Pacheco
+  [1630, 1639],   // San Martín, Caseros, Santos Lugares
+  [1640, 1649],   // Hurlingham, Morón, Castelar
+  [1650, 1659],   // San Justo, La Matanza
+  [1660, 1669],   // Merlo, Moreno
+  [1670, 1679],   // Merlo
+  [1680, 1689],   // Moreno
+  [1700, 1709],   // Ramos Mejía, La Matanza
+  [1710, 1719],   // Lanús, Remedios de Escalada
+  [1720, 1729],   // Avellaneda, Sarandí
+  [1740, 1749],   // Lomas de Zamora
+  [1750, 1759],   // Quilmes, Bernal
+  [1760, 1769],   // Quilmes Oeste
+  [1770, 1779],   // Berazategui
+  [1780, 1789],   // Almirante Brown
+  [1810, 1819],   // Florencio Varela
+  [1820, 1829],   // La Plata, Berisso, Ensenada
+  [1870, 1879],   // Pilar, Escobar
+  [1880, 1889],   // Del Viso, Villa Rosa
+  [1890, 1899],   // José C. Paz, San Miguel, Malvinas Argentinas
+  [1900, 1929],   // La Plata
+  [2800, 2809],   // Zárate, Campana
+  [1852, 1852],   // Guernica (Pte. Perón)
+  [1814, 1814],   // Cañuelas
+  [1835, 1835],   // San Vicente
+  [1744, 1744],   // Marcos Paz
+  [6700, 6709],   // Luján
+  [1663, 1663],   // José C. Paz
+];
+
 /**
  * Normaliza texto para comparacion: lowercase, sin acentos
  */
@@ -98,41 +148,80 @@ function normalize(text: string): string {
 }
 
 /**
+ * Extrae el numero de CP (elimina prefijo de letra y sufijo)
+ * Ej: "B1802BLV" → 1802, "1427" → 1427, "C1427" → 1427
+ */
+function extractCpNumber(zip: string): number | null {
+  const match = zip.replace(/\s/g, "").match(/[A-Z]?(\d{4})/i);
+  return match ? parseInt(match[1], 10) : null;
+}
+
+/**
+ * Clasifica zona Flex por codigo postal
+ */
+function classifyByZip(zip: string | null | undefined): string | null {
+  if (!zip) return null;
+  const cpNum = extractCpNumber(zip);
+  if (!cpNum) return null;
+
+  for (const [min, max] of CP_CERCANA) {
+    if (cpNum >= min && cpNum <= max) return "cercana";
+  }
+  for (const [min, max] of CP_MEDIA) {
+    if (cpNum >= min && cpNum <= max) return "media";
+  }
+  for (const [min, max] of CP_LEJANA) {
+    if (cpNum >= min && cpNum <= max) return "lejana";
+  }
+
+  return null;
+}
+
+/**
  * Clasifica zona Flex por nombre de ciudad/localidad.
  * Busca coincidencia parcial para cubrir variaciones de nombre.
+ * Si no matchea por nombre, intenta por codigo postal.
  */
-export function classifyFlexZone(city: string | null | undefined): string {
-  if (!city) return "desconocida";
+export function classifyFlexZone(
+  city: string | null | undefined,
+  zip?: string | null | undefined,
+): string {
+  // Primero intentar por nombre de ciudad
+  if (city) {
+    const normalized = normalize(city);
 
-  const normalized = normalize(city);
+    // Buscar en cercana primero (mas especifica)
+    for (const z of ZONA_CERCANA) {
+      if (normalized.includes(normalize(z)) || normalize(z).includes(normalized)) {
+        return "cercana";
+      }
+    }
 
-  // Buscar en cercana primero (mas especifica)
-  for (const z of ZONA_CERCANA) {
-    if (normalized.includes(normalize(z)) || normalize(z).includes(normalized)) {
-      return "cercana";
+    // Buscar en media
+    for (const z of ZONA_MEDIA) {
+      if (normalized.includes(normalize(z)) || normalize(z).includes(normalized)) {
+        return "media";
+      }
+    }
+
+    // Buscar en lejana
+    for (const z of ZONA_LEJANA) {
+      if (normalized.includes(normalize(z)) || normalize(z).includes(normalized)) {
+        return "lejana";
+      }
     }
   }
 
-  // Buscar en media
-  for (const z of ZONA_MEDIA) {
-    if (normalized.includes(normalize(z)) || normalize(z).includes(normalized)) {
-      return "media";
-    }
-  }
+  // Fallback: clasificar por codigo postal
+  const zipResult = classifyByZip(zip);
+  if (zipResult) return zipResult;
 
-  // Buscar en lejana
-  for (const z of ZONA_LEJANA) {
-    if (normalized.includes(normalize(z)) || normalize(z).includes(normalized)) {
-      return "lejana";
-    }
-  }
-
-  // Si no matchea ninguna lista, es desconocida
+  // Si no matchea ninguna lista ni CP, es desconocida
   return "desconocida";
 }
 
 /**
- * @deprecated Usar classifyFlexZone() con city name
+ * @deprecated Usar classifyFlexZone() con city name + zip
  * Mantener para compatibilidad con codigo existente
  */
 export function calculateZoneDistance(deliveryDate: string | null | undefined): string {

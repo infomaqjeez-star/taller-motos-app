@@ -57,7 +57,7 @@ export async function PATCH(req: Request) {
     const { error } = await supabase
       .from("meli_accounts")
       .update(update)
-      .eq("id", id);
+      .eq(/^\d+$/.test(id) ? "meli_user_id" : "id", id);
 
     if (error) {
       console.error("[meli-accounts PATCH] ❌ Error:", error.message);

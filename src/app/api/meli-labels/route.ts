@@ -180,7 +180,8 @@ function parseOrder(
     })(),
     delivery_city: (() => {
       const addr = (ship.receiver_address as any) ?? {};
-      return (addr.city?.name ?? addr.municipality?.name ?? addr.neighborhood?.name ?? null) as string | null;
+      // Priorizar municipality (partido) sobre city (puede ser barrio en CABA)
+      return (addr.municipality?.name ?? addr.city?.name ?? addr.neighborhood?.name ?? null) as string | null;
     })(),
     delivery_state: (((ship.receiver_address as any)?.state?.name as string | undefined)) ?? null,
     delivery_zip:   (((ship.receiver_address as any)?.zip_code as string | undefined)) ?? null,
@@ -491,7 +492,7 @@ export async function GET(req: Request) {
                 const cityObj = recvAddr.city as Record<string, unknown> | undefined;
                 const muniObj = recvAddr.municipality as Record<string, unknown> | undefined;
                 const neighObj = recvAddr.neighborhood as Record<string, unknown> | undefined;
-                const cityName = (cityObj?.name ?? muniObj?.name ?? neighObj?.name ?? null) as string | null;
+                const cityName = (muniObj?.name ?? cityObj?.name ?? neighObj?.name ?? null) as string | null;
                 if (cityName) s.delivery_city = cityName;
                 const zip = recvAddr.zip_code as string | undefined;
                 if (zip) s.delivery_zip = zip;
@@ -803,6 +804,7 @@ export async function POST(req: Request) {
         thumbnail?: string;
         delivery_date?: string;
         delivery_city?: string;
+        delivery_zip?: string;
         buyer_nickname?: string;
       }>;
       action?: string;
@@ -821,7 +823,7 @@ export async function POST(req: Request) {
     const historyRows = ids.map(id => {
       const detail = shipments?.find(s => s.shipment_id === id);
       const zone = detail?.type === "flex"
-        ? classifyFlexZone(detail?.delivery_city)
+        ? classifyFlexZone(detail?.delivery_city, detail?.delivery_zip)
         : calculateZoneDistance(detail?.delivery_date);
 
       return {

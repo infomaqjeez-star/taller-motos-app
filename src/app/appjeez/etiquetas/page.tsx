@@ -108,7 +108,7 @@ function LabelCard({
   // Para Flex: zona basada en ciudad del destinatario
   // Para otros tipos: solo mostrar si hay datos
   const zone = shipment.type === "flex"
-    ? classifyFlexZone(shipment.delivery_city)
+    ? classifyFlexZone(shipment.delivery_city, shipment.delivery_zip)
     : "desconocida";
   const zoneCfg = ZONE_CFG[zone] || ZONE_CFG.desconocida;
   const thumb = (shipment.thumbnail || "").replace("http://", "https://");
@@ -563,7 +563,7 @@ function EtiquetasInner() {
     // Filtrar por zona Flex
     if (zoneFilter !== "all") {
       source = source.filter(s => {
-        const zone = classifyFlexZone(s.delivery_city);
+        const zone = classifyFlexZone(s.delivery_city, s.delivery_zip);
         return zone === zoneFilter;
       });
     }
@@ -636,7 +636,7 @@ function EtiquetasInner() {
     const flexOnly = source.filter(s => s.type === "flex");
     const counts: Record<string, number> = { cercana: 0, media: 0, lejana: 0, desconocida: 0 };
     flexOnly.forEach(s => {
-      const z = classifyFlexZone(s.delivery_city);
+      const z = classifyFlexZone(s.delivery_city, s.delivery_zip);
       if (counts[z] !== undefined) counts[z]++;
     });
     return { cercana: counts.cercana, media: counts.media, lejana: counts.lejana, desconocida: counts.desconocida, total: flexOnly.length };
