@@ -1005,8 +1005,13 @@ function EtiquetasInner() {
               </div>
             ) : statusTab === "pending" ? (() => {
               // Agrupar pendientes en "Envios de hoy" vs "Proximos envios"
+              // Usar hora local Argentina (no UTC)
               const now = new Date();
-              const todayStr = now.toISOString().split("T")[0];
+              const localYear = now.getFullYear();
+              const localMonth = String(now.getMonth() + 1).padStart(2, "0");
+              const localDay = String(now.getDate()).padStart(2, "0");
+              const todayStr = `${localYear}-${localMonth}-${localDay}`;
+
               const todayShipments = filtered.filter(s => {
                 if (!s.dispatch_date) return true; // Sin fecha = asumir hoy
                 const d = s.dispatch_date.split("T")[0];
