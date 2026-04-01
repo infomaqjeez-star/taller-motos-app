@@ -84,11 +84,13 @@ const getAccountColor = (meli_user_id: string, accountName: string): { bg: strin
 
 function LabelCard({
   shipment,
+  tabContext,
   onPrinted,
   isSelected,
   onToggleSelection,
 }: {
   shipment: ShipmentInfo;
+  tabContext: "pending" | "printed" | "in_transit" | "returns";
   onPrinted?: (id: number) => void;
   isSelected?: boolean;
   onToggleSelection?: (id: number) => void;
@@ -108,7 +110,7 @@ function LabelCard({
       }}
     >
       {/* Checkbox en esquina superior izquierda */}
-      {onToggleSelection && (
+      {(tabContext === "pending" || tabContext === "printed") && onToggleSelection && (
         <button
           onClick={() => onToggleSelection(shipment.shipment_id)}
           className="absolute top-3 left-3 w-5 h-5 rounded border-2 flex items-center justify-center transition-all z-10"
@@ -280,15 +282,29 @@ function LabelCard({
 
       {/* Botones */}
       <div className="flex flex-col gap-1.5 flex-shrink-0">
-        <button
-          onClick={() => onPrinted?.(shipment.shipment_id)}
-          className="px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1 transition-all"
-          style={{ background: cfg.color, color: "#121212" }}
-          title="Imprimir y marcar como impresa"
-        >
-          <Printer className="w-3.5 h-3.5" />
-          <span>Imprimir</span>
-        </button>
+        {tabContext === "pending" && (
+          <button
+            onClick={() => onPrinted?.(shipment.shipment_id)}
+            className="px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1 transition-all"
+            style={{ background: cfg.color, color: "#121212" }}
+            title="Imprimir y marcar como impresa"
+          >
+            <Printer className="w-3.5 h-3.5" />
+            <span>Imprimir</span>
+          </button>
+        )}
+        {tabContext === "printed" && (
+          <button
+            onClick={() => onPrinted?.(shipment.shipment_id)}
+            className="px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1 transition-all"
+            style={{ background: "#10B981", color: "#fff" }}
+            title="Re-imprimir etiqueta"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            <span>Re-imprimir</span>
+          </button>
+        )}
+        {/* in_transit y returns no tienen botón de impresión */}
       </div>
     </div>
   );
@@ -314,17 +330,8 @@ function EtiquetasInner() {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const d: LabelData = await res.json();
       
-      // Combinar shipments pending + printed en un solo array
-      // Marcar los impresos con printed_at
-      const combined = [
-        ...(d.shipments ?? []),
-        ...(d.printed ?? []).map((s: ShipmentInfo) => ({
-          ...s,
-          printed_at: new Date().toISOString(), // Marcar como impreso
-        })),
-      ] as ShipmentInfo[];
-      
-      setData({ ...d, shipments: combined });
+      // No combinar arrays - la API ya separa correctamente pending/printed/in_transit/returns
+      setData(d);
     } catch (e) {
       console.error("Error loading labels:", e);
     } finally {
@@ -358,6 +365,11 @@ function EtiquetasInner() {
       supabase.removeChannel(channel);
     };
   }, [load]);
+
+  // Limpiar seleccion al cambiar de pestana
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [statusTab]);
 
 
   const toggleSelection = useCallback((id: number) => {
@@ -402,26 +414,30 @@ function EtiquetasInner() {
     return duplicates.length === 0;
   }, [data?.shipments]);
 
-  // FASE 5: Summary por Cuenta
+  // Summary por Cuenta (usa arrays separados: shipments=pending, printed=impresas)
   const summaryByAccount = useMemo(() => {
     const map = new Map<string, { pending: number; printed: number; account_name: string; meli_user_id: string }>();
     
+    // Pending viene en shipments
     (data?.shipments ?? []).forEach(s => {
       const key = s.account;
       if (!map.has(key)) {
         map.set(key, { pending: 0, printed: 0, account_name: s.account, meli_user_id: s.meli_user_id });
       }
-      
-      const entry = map.get(key)!;
-      if (s.printed_at) {
-        entry.printed++;
-      } else {
-        entry.pending++;
+      map.get(key)!.pending++;
+    });
+    
+    // Impresas viene en printed
+    (data?.printed ?? []).forEach(s => {
+      const key = s.account;
+      if (!map.has(key)) {
+        map.set(key, { pending: 0, printed: 0, account_name: s.account, meli_user_id: s.meli_user_id });
       }
+      map.get(key)!.printed++;
     });
     
     return map;
-  }, [data?.shipments]);
+  }, [data?.shipments, data?.printed]);
 
   // Handler para imprimir etiqueta de prueba (sandbox)
   const handlePrintTest = async () => {
@@ -522,7 +538,11 @@ function EtiquetasInner() {
     const actualMode = mode || printMode;
     setPrinting(true);
     try {
-      const selectedShipments = data?.shipments.filter(s => selectedIds.has(s.shipment_id)) ?? [];
+      // Buscar en el array correcto segun la pestana
+      const sourceArray: ShipmentInfo[] = statusTab === "printed"
+        ? (data?.printed ?? [])
+        : [...(data?.shipments ?? []), ...(data?.full ?? [])];
+      const selectedShipments = sourceArray.filter(s => selectedIds.has(s.shipment_id));
       const meli_user_id = selectedShipments[0]?.meli_user_id || "";
 
       // PASO 1: Validar que los IDs seleccionados aún estén en estado ready_to_print
@@ -694,7 +714,7 @@ function EtiquetasInner() {
             {/* Summary por Cuenta */}
             {data && summaryByAccount.size > 0 && (
               <p className="text-[10px] text-gray-400 mt-1">
-                Total {data.shipments.length} etiquetas:&nbsp;
+                Total {(data.shipments?.length ?? 0) + (data.printed?.length ?? 0)} etiquetas:&nbsp;
                 {Array.from(summaryByAccount.entries()).map(([account, stats], idx) => (
                   <span key={account}>
                     {idx > 0 ? " | " : ""}
@@ -788,7 +808,7 @@ function EtiquetasInner() {
             <div className="flex gap-2 mb-4 flex-wrap">
               {(["pending", "printed", "in_transit", "returns"] as StatusTab[]).map(tab => {
                 const counts = {
-                  pending:    (data?.shipments ?? []).filter(s => !s.printed_at).length,
+                  pending:    (data?.shipments ?? []).length,
                   printed:    (data?.printed ?? []).length,
                   in_transit: (data?.in_transit ?? []).length,
                   returns:    (data?.returns ?? []).length,
@@ -856,8 +876,8 @@ function EtiquetasInner() {
               })}
             </div>
 
-            {/* Barra de Acciones: Marcar Todas + Imprimir (solo en tab pending) */}
-            {statusTab === "pending" && filtered.length > 0 && (
+            {/* Barra de Acciones: Marcar Todas + Imprimir (solo en tabs imprimibles) */}
+            {(statusTab === "pending" || statusTab === "printed") && filtered.length > 0 && (
               <div className="flex gap-2 mb-4">
                 <button
                   onClick={() => selectAll(filtered.map(s => s.shipment_id))}
@@ -888,7 +908,7 @@ function EtiquetasInner() {
                     disabled={printing || selectedIds.size === 0}
                     className="px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2"
                     style={{
-                      background: selectedIds.size > 0 ? "#39FF14" : "#6B7280",
+                      background: statusTab === "printed" ? "#10B981" : (selectedIds.size > 0 ? "#39FF14" : "#6B7280"),
                       color: "#121212",
                       opacity: (printing || selectedIds.size === 0) ? 0.6 : 1,
                       cursor: (printing || selectedIds.size === 0) ? "not-allowed" : "pointer",
@@ -902,7 +922,7 @@ function EtiquetasInner() {
                     ) : (
                       <>
                         <Download className="w-4 h-4" />
-                        Imprimir ({selectedIds.size}) ▼
+                        {statusTab === "printed" ? "Re-imprimir" : "Imprimir"} ({selectedIds.size}) ▼
                       </>
                     )}
                   </button>
@@ -919,7 +939,7 @@ function EtiquetasInner() {
                         className="w-full text-left px-4 py-2 hover:bg-gray-800 text-xs font-bold text-white flex items-center gap-2 rounded-t-lg transition-colors"
                       >
                         <Printer className="w-4 h-4" />
-                        🖨️ Impresora Térmica
+                        🖨️ {statusTab === "printed" ? "Re-imprimir" : "Imprimir"} Térmica
                       </button>
                       <div style={{ height: "1px", background: "rgba(255,255,255,0.1)" }}></div>
                       <button
@@ -930,7 +950,7 @@ function EtiquetasInner() {
                         className="w-full text-left px-4 py-2 hover:bg-gray-800 text-xs font-bold text-white flex items-center gap-2 rounded-b-lg transition-colors"
                       >
                         <Download className="w-4 h-4" />
-                        📄 Descargar PDF
+                        📄 {statusTab === "printed" ? "Re-descargar" : "Descargar"} PDF
                       </button>
                     </div>
                   )}
@@ -961,9 +981,10 @@ function EtiquetasInner() {
                   <LabelCard
                     key={shipment.shipment_id}
                     shipment={shipment}
-                    onPrinted={handlePrinted}
+                    tabContext={statusTab}
+                    onPrinted={(statusTab === "pending" || statusTab === "printed") ? handlePrinted : undefined}
                     isSelected={selectedIds.has(shipment.shipment_id)}
-                    onToggleSelection={toggleSelection}
+                    onToggleSelection={(statusTab === "pending" || statusTab === "printed") ? toggleSelection : undefined}
                   />
                 ))}
               </div>
