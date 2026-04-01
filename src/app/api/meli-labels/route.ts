@@ -360,7 +360,7 @@ export async function GET(req: Request) {
               if (shipStatus) s.status = shipStatus;
               s.status_label = statusLabel(s.status, s.type);
 
-              // Auto-sync: si MeLi ya marcó impresa
+              // Auto-sync: si MeLi ya marcó impresa, guardar también en printed_labels (historial)
               if (substatus === "printed" || substatus === "label_printed") {
                 // Estampar en memoria
                 if (!s.printed_at) {
@@ -372,7 +372,66 @@ export async function GET(req: Request) {
                     { shipment_id: s.shipment_id, printed_at: s.printed_at, account: s.account, type: s.type, buyer: s.buyer, title: s.title, thumbnail: s.thumbnail },
                     { onConflict: "shipment_id" }
                   );
-                } catch { /* ignore */ }
+
+                  // Sync a printed_labels (historial): solo si no existe ya
+                  const { data: existing } = await supabase
+                    .from("printed_labels")
+                    .select("id")
+                    .eq("shipment_id", s.shipment_id)
+                    .eq("meli_user_id", s.meli_user_id)
+                    .maybeSingle();
+
+                  if (!existing) {
+                    // Intentar descargar el PDF de MeLi y guardarlo en Storage
+                    let filePath = "";
+                    try {
+                      const token = tokenCache.get(String(s.meli_user_id));
+                      if (token) {
+                        const pdfBuffer = await meliGetRaw(
+                          `/shipment_labels?shipment_ids=${s.shipment_id}&response_type=pdf`,
+                          token
+                        );
+                        if (pdfBuffer) {
+                          const today = new Date().toISOString().split("T")[0];
+                          const storagePath = `etiquetas/${today}/sync-${s.shipment_id}.pdf`;
+                          
+                          const { error: uploadErr } = await supabase.storage
+                            .from("meli-labels")
+                            .upload(storagePath, new Uint8Array(pdfBuffer), {
+                              contentType: "application/pdf",
+                              upsert: true,
+                            });
+                          
+                          if (!uploadErr) {
+                            const { data: pubData } = supabase.storage
+                              .from("meli-labels")
+                              .getPublicUrl(storagePath);
+                            filePath = pubData?.publicUrl || storagePath;
+                          }
+                        }
+                      }
+                    } catch { /* PDF download failed, still save record */ }
+
+                    // Insertar en printed_labels (historial) aunque no tengamos el PDF
+                    await supabase.from("printed_labels").upsert(
+                      {
+                        shipment_id: s.shipment_id,
+                        order_id: s.order_id,
+                        tracking_number: null,
+                        buyer_nickname: s.buyer_nickname || s.buyer,
+                        sku: s.seller_sku || null,
+                        variation: s.attributes || null,
+                        quantity: s.quantity || 1,
+                        account_id: s.account,
+                        meli_user_id: s.meli_user_id,
+                        shipping_method: s.type,
+                        file_path: filePath,
+                        print_date: s.printed_at,
+                      },
+                      { onConflict: "shipment_id,meli_user_id" }
+                    );
+                  }
+                } catch { /* ignore sync errors */ }
               }
 
               // Fechas
