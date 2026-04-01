@@ -13,12 +13,17 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Validar permisos: obtener registros del usuario
-    const { data: records, error: dbError } = await supabase
+    // Validar permisos: obtener registros
+    let query = supabase
       .from("printed_labels")
       .select("*")
-      .in("id", ids)
-      .eq("meli_user_id", meli_user_id);
+      .in("id", ids);
+
+    if (meli_user_id) {
+      query = query.eq("meli_user_id", meli_user_id) as typeof query;
+    }
+
+    const { data: records, error: dbError } = await query;
 
     if (dbError || !records || records.length === 0) {
       return NextResponse.json(
