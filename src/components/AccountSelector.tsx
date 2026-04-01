@@ -118,6 +118,17 @@ export default function AccountSelector({ accounts, selectedId, onSelect, compac
                       📦
                     </div>
                     <p className="font-bold text-white truncate">@{acc.account}</p>
+                    {acc.reputation.power_seller_status && POWER_SELLER_COLORS[acc.reputation.power_seller_status] && (
+                      <span
+                        className="text-[8px] font-black px-1.5 py-0.5 rounded flex-shrink-0"
+                        style={{
+                          background: POWER_SELLER_COLORS[acc.reputation.power_seller_status].bg,
+                          color: POWER_SELLER_COLORS[acc.reputation.power_seller_status].text,
+                        }}
+                      >
+                        {POWER_SELLER_LABELS[acc.reputation.power_seller_status]}
+                      </span>
+                    )}
                   </div>
                   {urgency > 0 && (
                     <span className="text-[9px] font-bold flex-shrink-0 ml-1" style={{ color: "#EF4444" }}>
