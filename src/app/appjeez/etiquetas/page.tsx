@@ -585,6 +585,17 @@ function EtiquetasInner() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <Link
+            href="/appjeez/historial-etiquetas"
+            className="px-3 py-2 rounded-lg text-xs font-semibold transition-all"
+            style={{
+              background: "rgba(57,255,20,0.1)",
+              color: "#39FF14",
+              border: "1px solid rgba(57,255,20,0.3)"
+            }}
+          >
+            📋 Historial
+          </Link>
           <button
             onClick={load}
             disabled={loading}
