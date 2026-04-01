@@ -147,11 +147,23 @@ export default function EstadisticasPage() {
   const [loading,        setLoading]        = useState(true);
   const [visibleAccounts, setVisibleAccounts] = useState<Record<string, boolean>>({});
   const [error,          setError]          = useState<string | null>(null);
-  const [period,         setPeriod]         = useState("7d");
+  const [period,         setPeriod]         = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('stats_period') || "7d";
+    }
+    return "7d";
+  });
   const [accountId,      setAccountId]      = useState("all");
   const [accounts,       setAccounts]       = useState<AccountOption[]>([]);
   const [showRepDetail,  setShowRepDetail]  = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Guardar período seleccionado en localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('stats_period', period);
+    }
+  }, [period]);
 
   const load = useCallback(async () => {
     setLoading(true); setError(null);
