@@ -879,7 +879,7 @@ function EtiquetasInner() {
         </div>
       </div>
 
-      <div className="max-w-3xl mx-auto px-4 pt-4">
+      <div className="max-w-6xl mx-auto px-4 pt-4">
         {loading ? (
           <div className="rounded-2xl p-10 text-center" style={{ background: "#1A1A1A" }}>
             <RefreshCw className="w-8 h-8 mx-auto animate-spin mb-3" style={{ color: "#FFE600" }} />
@@ -939,11 +939,11 @@ function EtiquetasInner() {
             </div>
 
             {/* Filtros Logísticos + Filtro de Tiempo */}
-            <div className="flex gap-2 mb-4 overflow-x-auto pb-2 -mx-1 px-1">
+            <div className="flex gap-2 mb-4 flex-wrap pb-2">
               {/* Botón TODAS */}
               <button
                 onClick={() => { setLogisticFilter("todas"); setTimeFilter("all"); }}
-                className="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-2xl text-xs font-bold transition-all whitespace-nowrap"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-2xl text-xs font-bold transition-all whitespace-nowrap"
                 style={
                   logisticFilter === "todas" && timeFilter === "all"
                     ? { background: "#FFE600", color: "#121212", border: "2px solid #FFE600" }
@@ -960,7 +960,7 @@ function EtiquetasInner() {
                 <>
                   <button
                     onClick={() => { setTimeFilter(timeFilter === "today" ? "all" : "today"); setLogisticFilter("todas"); }}
-                    className="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-2xl text-xs font-bold transition-all whitespace-nowrap"
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-2xl text-xs font-bold transition-all whitespace-nowrap"
                     style={
                       timeFilter === "today"
                         ? { background: "#FF6B6B", color: "#fff", border: "2px solid #FF6B6B" }
@@ -972,7 +972,7 @@ function EtiquetasInner() {
                   </button>
                   <button
                     onClick={() => { setTimeFilter(timeFilter === "upcoming" ? "all" : "upcoming"); setLogisticFilter("todas"); }}
-                    className="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-2xl text-xs font-bold transition-all whitespace-nowrap"
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-2xl text-xs font-bold transition-all whitespace-nowrap"
                     style={
                       timeFilter === "upcoming"
                         ? { background: "#FFE600", color: "#121212", border: "2px solid #FFE600" }
@@ -997,7 +997,7 @@ function EtiquetasInner() {
                   <button
                     key={type}
                     onClick={() => { setLogisticFilter(type); setTimeFilter("all"); }}
-                    className="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-2xl text-xs font-bold transition-all whitespace-nowrap"
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-2xl text-xs font-bold transition-all whitespace-nowrap"
                     style={
                       isActive
                         ? { background: cfg.color, color: "#121212", border: `2px solid ${cfg.color}` }
