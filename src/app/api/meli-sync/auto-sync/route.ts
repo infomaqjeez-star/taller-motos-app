@@ -2,7 +2,7 @@ import { getSupabase, getValidToken, meliGet, MeliAccount } from "@/lib/meli";
 import { humanizeError, extractErrorCode } from "@/lib/sync-error-messages";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 300; // 5 minutos (requiere Vercel Pro o Hobby con límite)
+export const maxDuration = 300; // 5 minutos (Railway no tiene limite como Vercel)
 
 interface AutoSyncRequest {
   origin_id?: string;
@@ -31,7 +31,7 @@ export async function POST(req: Request) {
         } catch { /* stream closed */ }
       };
 
-      // Keep-alive ping every 25s to prevent Vercel from closing idle connections
+      // Keep-alive ping every 25s to prevent idle connection timeout
       const pingInterval = setInterval(() => {
         if (cancelled) return;
         try { controller.enqueue(enc.encode(`: ping\n\n`)); } catch { /* ignored */ }

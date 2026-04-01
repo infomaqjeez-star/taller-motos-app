@@ -358,6 +358,8 @@ function AppJeezInner() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [totalQuestionsAlert, setTotalQuestionsAlert] = useState(0);
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
+  const [editingNick, setEditingNick] = useState<string | null>(null);
+  const [editNickVal, setEditNickVal] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true); setError(null);
@@ -426,6 +428,25 @@ function AppJeezInner() {
     handleNotification,
     true // Enabled por defecto
   );
+
+  // Handler para renombrar cuenta
+  const handleRenameAccount = useCallback(async (meliUserId: string, newName: string) => {
+    if (!newName.trim()) return;
+    try {
+      const res = await fetch("/api/meli-accounts", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: meliUserId, nickname: newName.trim() }),
+      });
+      if (!res.ok) throw new Error("Error al renombrar");
+      setAccounts(prev => prev.map(a =>
+        a.meli_user_id === meliUserId ? { ...a, account: newName.trim() } : a
+      ));
+      setEditingNick(null);
+    } catch (e) {
+      console.error("Rename error:", e);
+    }
+  }, []);
 
   // Obtener cuenta seleccionada
   const selectedAccount = accounts.find(a => a.meli_user_id === selectedAccountId);
@@ -708,7 +729,14 @@ function AppJeezInner() {
             <>
               {/* Account Details Panel - Mostrar solo cuenta seleccionada */}
               {selectedAccount && (
-                <AccountDetailsPanel data={selectedAccount} />
+                <AccountDetailsPanel
+                  data={selectedAccount}
+                  editingNick={editingNick}
+                  editNickVal={editNickVal}
+                  setEditingNick={setEditingNick}
+                  setEditNickVal={setEditNickVal}
+                  handleRenameAccount={handleRenameAccount}
+                />
               )}
             </>
           )}

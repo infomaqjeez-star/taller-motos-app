@@ -285,7 +285,7 @@ export async function GET(req: NextRequest) {
     if (!accounts.length)
       return NextResponse.json({ error: "Cuenta no encontrada" }, { status: 404 });
 
-    // Shared deadline: 50s from now (leaves 10s safety margin before Vercel's 60s limit)
+    // Shared deadline: 50s from now (safety margin for request timeout)
     const deadline = Date.now() + 50_000;
 
     const results = await Promise.all(

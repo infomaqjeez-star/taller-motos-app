@@ -484,6 +484,18 @@ export async function GET(req: Request) {
                 (detail.shipping_option as Record<string, unknown> | undefined)?.estimated_schedule_limit ??
                 detail.estimated_schedule_limit;
               s.dispatch_date = tryDate(dispatchLimit);
+
+              // Ciudad y CP del destinatario (más confiable desde /shipments/{id})
+              const recvAddr = detail.receiver_address as Record<string, unknown> | undefined;
+              if (recvAddr) {
+                const cityObj = recvAddr.city as Record<string, unknown> | undefined;
+                const muniObj = recvAddr.municipality as Record<string, unknown> | undefined;
+                const neighObj = recvAddr.neighborhood as Record<string, unknown> | undefined;
+                const cityName = (cityObj?.name ?? muniObj?.name ?? neighObj?.name ?? null) as string | null;
+                if (cityName) s.delivery_city = cityName;
+                const zip = recvAddr.zip_code as string | undefined;
+                if (zip) s.delivery_zip = zip;
+              }
             } catch { /* skip */ }
           })
         );

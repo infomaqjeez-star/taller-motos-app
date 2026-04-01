@@ -13,6 +13,7 @@ import { supabase } from "@/lib/supabase";
 type StatusTab = "pending" | "printed" | "in_transit" | "returns";
 type LogisticType = "todas" | "flex" | "correo" | "turbo" | "full";
 type TimeFilter = "all" | "today" | "upcoming";
+type ZoneFilter = "all" | "cercana" | "media" | "lejana" | "desconocida";
 
 interface ShipmentInfo {
   shipment_id: number;
@@ -198,8 +199,8 @@ function LabelCard({
                   DEMORADA {delayDays > 0 ? `${delayDays}d` : ""}
                 </span>
               )}
-              {/* Zona solo para Flex - prominente */}
-              {shipment.type === "flex" && zone !== "desconocida" && (
+              {/* Zona para Flex - siempre visible */}
+              {shipment.type === "flex" && (
                 <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full"
                   style={{
                     background: zoneCfg.bgColor,
@@ -212,7 +213,7 @@ function LabelCard({
               {/* Ciudad + CP para Flex */}
               {shipment.type === "flex" && shipment.delivery_city && (
                 <span className="text-[10px] font-medium px-1.5 py-0.5 rounded"
-                  style={{ color: "#9CA3AF" }}>
+                  style={{ color: "#D1D5DB", background: "rgba(255,255,255,0.05)" }}>
                   {shipment.delivery_city}{shipment.delivery_zip ? ` (${shipment.delivery_zip})` : ""}
                 </span>
               )}
@@ -321,11 +322,20 @@ function LabelCard({
           )}
         </div>
 
-        {shipment.dispatch_date && (
-          <p className="text-[10px]" style={{ color: "#FF9800" }}>
-            📦 Despachar antes del {new Date(shipment.dispatch_date).toLocaleDateString("es-AR", { weekday: "long", day: "numeric" })}
-          </p>
-        )}
+        {shipment.dispatch_date && (() => {
+          try {
+            const clean = shipment.dispatch_date!.split("T")[0];
+            const [y, m, d] = clean.split("-").map(Number);
+            if (!y || !m || !d) return null;
+            const dt = new Date(y, m - 1, d, 12, 0, 0);
+            if (isNaN(dt.getTime())) return null;
+            return (
+              <p className="text-[10px]" style={{ color: "#FF9800" }}>
+                {"📦"} Despachar antes del {dt.toLocaleDateString("es-AR", { weekday: "long", day: "numeric" })}
+              </p>
+            );
+          } catch { return null; }
+        })()}
       </div>
 
       {/* Botones */}
@@ -366,6 +376,7 @@ function EtiquetasInner() {
   const [timeFilter, setTimeFilter] = useState<TimeFilter>("all");
   const [printing, setPrinting] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [zoneFilter, setZoneFilter] = useState<ZoneFilter>("all");
   const [printMode, setPrintMode] = useState<'thermal' | 'pdf'>('thermal');
   const [showPrintMenu, setShowPrintMenu] = useState(false);
   const [testMode, setTestMode] = useState(false);
@@ -420,6 +431,7 @@ function EtiquetasInner() {
     setSelectedIds(new Set());
     setLogisticFilter("todas");
     setTimeFilter("all");
+    setZoneFilter("all");
   }, [statusTab]);
 
 
@@ -548,6 +560,14 @@ function EtiquetasInner() {
       source = source.filter(s => s.type === logisticFilter);
     }
 
+    // Filtrar por zona Flex
+    if (zoneFilter !== "all") {
+      source = source.filter(s => {
+        const zone = classifyFlexZone(s.delivery_city);
+        return zone === zoneFilter;
+      });
+    }
+
     // Filtrar por tiempo (solo para pendientes)
     // Regla: después de las 13:00, los envíos de "hoy" pasan a "próximos"
     if (statusTab === "pending" && timeFilter !== "all") {
@@ -570,7 +590,7 @@ function EtiquetasInner() {
     }
 
     return source;
-  }, [data, statusTab, logisticFilter, timeFilter]);
+  }, [data, statusTab, logisticFilter, timeFilter, zoneFilter]);
 
   // Contar por tipo para cada estado
   const countByType = useCallback((type: LogisticType, status: StatusTab) => {
@@ -604,6 +624,23 @@ function EtiquetasInner() {
     }).length;
     return { today, upcoming };
   }, [data?.shipments]);
+
+  // Conteo por zona Flex (solo envios Flex del tab actual)
+  const zoneCounts = useMemo(() => {
+    let source: ShipmentInfo[] = [];
+    if (statusTab === "pending") source = data?.shipments ?? [];
+    else if (statusTab === "printed") source = data?.printed ?? [];
+    else if (statusTab === "in_transit") source = data?.in_transit ?? [];
+    else if (statusTab === "returns") source = data?.returns ?? [];
+
+    const flexOnly = source.filter(s => s.type === "flex");
+    const counts: Record<string, number> = { cercana: 0, media: 0, lejana: 0, desconocida: 0 };
+    flexOnly.forEach(s => {
+      const z = classifyFlexZone(s.delivery_city);
+      if (counts[z] !== undefined) counts[z]++;
+    });
+    return { cercana: counts.cercana, media: counts.media, lejana: counts.lejana, desconocida: counts.desconocida, total: flexOnly.length };
+  }, [data, statusTab]);
 
   const handlePrinted = async (shipmentId: number) => {
     setPrinting(true);
@@ -951,7 +988,7 @@ function EtiquetasInner() {
             <div className="flex gap-2 mb-4 flex-wrap pb-2">
               {/* Botón TODAS */}
               <button
-                onClick={() => { setLogisticFilter("todas"); setTimeFilter("all"); }}
+                onClick={() => { setLogisticFilter("todas"); setTimeFilter("all"); setZoneFilter("all"); }}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-2xl text-xs font-bold transition-all whitespace-nowrap"
                 style={
                   logisticFilter === "todas" && timeFilter === "all"
@@ -1005,7 +1042,7 @@ function EtiquetasInner() {
                 return (
                   <button
                     key={type}
-                    onClick={() => { setLogisticFilter(type); setTimeFilter("all"); }}
+                    onClick={() => { setLogisticFilter(type); setTimeFilter("all"); setZoneFilter("all"); }}
                     className="flex items-center gap-1.5 px-3 py-2 rounded-2xl text-xs font-bold transition-all whitespace-nowrap"
                     style={
                       isActive
@@ -1020,6 +1057,60 @@ function EtiquetasInner() {
                 );
               })}
             </div>
+
+            {/* Filtros de Zona Flex (solo cuando se filtra por Flex) */}
+            {logisticFilter === "flex" && zoneCounts.total > 0 && (
+              <div className="flex gap-2 mb-4 flex-wrap">
+                <span className="text-[10px] font-bold self-center mr-1" style={{ color: "#9CA3AF" }}>ZONA:</span>
+                <button
+                  onClick={() => setZoneFilter("all")}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl text-[11px] font-bold transition-all whitespace-nowrap"
+                  style={
+                    zoneFilter === "all"
+                      ? { background: "#00E5FF", color: "#121212", border: "2px solid #00E5FF" }
+                      : { background: "transparent", color: "#00E5FF", border: "2px solid #00E5FF40" }
+                  }
+                >
+                  TODAS
+                  <span className="text-[9px] font-black px-1">{zoneCounts.total}</span>
+                </button>
+                {(["cercana", "media", "lejana"] as const).map(z => {
+                  const zCfg = ZONE_CFG[z];
+                  const count = zoneCounts[z] || 0;
+                  if (count === 0) return null;
+                  const isActive = zoneFilter === z;
+                  return (
+                    <button
+                      key={z}
+                      onClick={() => setZoneFilter(isActive ? "all" : z)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl text-[11px] font-bold transition-all whitespace-nowrap"
+                      style={
+                        isActive
+                          ? { background: zCfg.color, color: "#121212", border: `2px solid ${zCfg.color}` }
+                          : { background: zCfg.bgColor, color: zCfg.color, border: `2px solid ${zCfg.color}40` }
+                      }
+                    >
+                      {zCfg.label}
+                      <span className="text-[9px] font-black px-1">{count}</span>
+                    </button>
+                  );
+                })}
+                {zoneCounts.desconocida > 0 && (
+                  <button
+                    onClick={() => setZoneFilter(zoneFilter === "desconocida" ? "all" : "desconocida")}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl text-[11px] font-bold transition-all whitespace-nowrap"
+                    style={
+                      zoneFilter === "desconocida"
+                        ? { background: "#9CA3AF", color: "#121212", border: "2px solid #9CA3AF" }
+                        : { background: "transparent", color: "#9CA3AF", border: "2px solid #9CA3AF40" }
+                    }
+                  >
+                    SIN ZONA
+                    <span className="text-[9px] font-black px-1">{zoneCounts.desconocida}</span>
+                  </button>
+                )}
+              </div>
+            )}
 
             {/* Barra de Acciones: Marcar Todas + Imprimir (solo en tabs imprimibles) */}
             {(statusTab === "pending" || statusTab === "printed") && filtered.length > 0 && (
@@ -1156,17 +1247,32 @@ function EtiquetasInner() {
               // Agrupar futuros por fecha
               const futureByDate = new Map<string, ShipmentInfo[]>();
               futureShipments.forEach(s => {
-                const d = (s.dispatch_date || "").split("T")[0];
+                const d = s.dispatch_date ? s.dispatch_date.split("T")[0] : "sin-fecha";
                 if (!futureByDate.has(d)) futureByDate.set(d, []);
                 futureByDate.get(d)!.push(s);
               });
-              const sortedDates = Array.from(futureByDate.keys()).sort();
+              const sortedDates = Array.from(futureByDate.keys()).sort((a, b) => {
+                if (a === "sin-fecha") return 1;
+                if (b === "sin-fecha") return -1;
+                return a.localeCompare(b);
+              });
 
               const formatDate = (dateStr: string) => {
-                const date = new Date(dateStr + "T12:00:00");
-                const dias = ["Dom", "Lun", "Mar", "Mie", "Jue", "Vie", "Sab"];
-                const meses = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
-                return `${dias[date.getDay()]} ${date.getDate()} ${meses[date.getMonth()]}`;
+                try {
+                  if (!dateStr || dateStr === "sin-fecha") return "Fecha por confirmar";
+                  // Asegurar formato YYYY-MM-DD
+                  const clean = dateStr.split("T")[0];
+                  if (!/^\d{4}-\d{2}-\d{2}$/.test(clean)) return "Fecha por confirmar";
+                  const [y, m, d] = clean.split("-").map(Number);
+                  if (!y || !m || !d || isNaN(y) || isNaN(m) || isNaN(d)) return "Fecha por confirmar";
+                  const date = new Date(y, m - 1, d, 12, 0, 0);
+                  if (isNaN(date.getTime())) return "Fecha por confirmar";
+                  const dias = ["Dom", "Lun", "Mar", "Mie", "Jue", "Vie", "Sab"];
+                  const meses = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+                  return `${dias[date.getDay()]} ${date.getDate()} ${meses[date.getMonth()]}`;
+                } catch {
+                  return "Fecha por confirmar";
+                }
               };
 
               return (
