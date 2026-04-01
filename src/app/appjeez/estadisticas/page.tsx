@@ -156,7 +156,9 @@ export default function EstadisticasPage() {
   const load = useCallback(async () => {
     setLoading(true); setError(null);
     try {
-      const res = await fetch(`/api/meli-stats?period=${period}&account_id=${accountId}`);
+      // Detectar zona horaria del cliente y enviar al backend
+      const tzOffset = -new Date().getTimezoneOffset() / 60;
+      const res = await fetch(`/api/meli-stats?period=${period}&account_id=${accountId}&tz_offset=${tzOffset}`);
       if (!res.ok) throw new Error((await res.json()).error ?? "Error al cargar estadísticas");
       const json: StatsData = await res.json();
       setData(json);

@@ -42,7 +42,8 @@ function classifyLogistic(
 function getPeriodDates(
   period: string,
   dateFrom?: string | null,
-  dateTo?: string | null
+  dateTo?: string | null,
+  tzOffset: number = 0
 ): { from: Date; to: Date; days: number } {
   if (dateFrom && dateTo) {
     const from = new Date(dateFrom + "T00:00:00");
@@ -50,15 +51,25 @@ function getPeriodDates(
     const days = Math.max(1, Math.ceil((to.getTime() - from.getTime()) / 86400000));
     return { from, to, days };
   }
+  
   const to   = new Date();
   const from = new Date();
+  
+  // Ajustar a zona horaria local del usuario
+  const offsetMs = tzOffset * 3600000; // Convertir horas a ms
+  from.setTime(from.getTime() - offsetMs);
+  to.setTime(to.getTime() - offsetMs);
+  
   if (period === "today") {
-    from.setHours(0, 0, 0, 0);
+    from.setUTCHours(0, 0, 0, 0);
+    to.setUTCHours(23, 59, 59, 999);
     return { from, to, days: 1 };
   }
+  
   const days = period === "30d" ? 30 : 7;
-  from.setDate(from.getDate() - days + 1);
-  from.setHours(0, 0, 0, 0);
+  from.setUTCDate(from.getUTCDate() - days + 1);
+  from.setUTCHours(0, 0, 0, 0);
+  to.setUTCHours(23, 59, 59, 999);
   return { from, to, days };
 }
 
@@ -244,8 +255,9 @@ export async function GET(req: NextRequest) {
     const accountId = searchParams.get("account_id") ?? "all";
     const dateFrom  = searchParams.get("date_from");
     const dateTo    = searchParams.get("date_to");
+    const tzOffset  = parseFloat(searchParams.get("tz_offset") ?? "0");
 
-    const { from, to, days } = getPeriodDates(period, dateFrom, dateTo);
+    const { from, to, days } = getPeriodDates(period, dateFrom, dateTo, tzOffset);
 
     const allAccounts = await getActiveAccounts();
     if (!allAccounts.length)
