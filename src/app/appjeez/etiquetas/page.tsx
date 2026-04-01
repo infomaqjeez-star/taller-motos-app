@@ -232,7 +232,7 @@ function LabelCard({
         <div className="text-[10px] space-y-1">
           {shipment.buyer_notes && (
             <p style={{ color: "#D1D5DB" }}>
-              📝 <span style={{ color: "#9CA3AF" }}>Notas:</span> "{shipment.buyer_notes}"
+              📝 <span style={{ color: "#9CA3AF" }}>Notas:</span> &quot;{shipment.buyer_notes}&quot;
             </p>
           )}
           {shipment.coupon_code && (
