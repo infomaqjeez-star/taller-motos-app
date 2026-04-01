@@ -185,6 +185,11 @@ export default function EstadisticasPage() {
     load();
   }, [cache, load]);
 
+  // Cargar datos cuando cambia period o accountId
+  useEffect(() => { 
+    load(); 
+  }, [load]);
+
   const navItems = [
     { label: "Dashboard",     icon: <BarChart2 className="w-4 h-4" />,   href: "/appjeez"                },
     { label: "Estadísticas",  icon: <TrendingUp className="w-4 h-4" />,  href: "/appjeez/estadisticas"   },
