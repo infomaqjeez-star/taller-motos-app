@@ -1,11 +1,23 @@
 // ============================================================
-// CAPA DE DATOS — Supabase (producción) con fallback a localStorage
+// CAPA DE DATOS — API Routes server-side (Railway + Supabase)
 // ============================================================
 
-import { supabase } from "./supabase";
 import { WorkOrder, StockItem, PartToOrder, Pago, PlantillaWhatsApp, AgendaCliente, HistorialReparacion, FlexEnvio, VentaRepuesto, VentaItem, VentasStats, VentasPorDia, TopProducto } from "./types";
 
-// ─── Helpers de mapeo (snake_case DB ↔ camelCase app) ────────
+// ─── Helper genérico para llamar a /api/db ────────────────────
+
+async function dbCall(body: Record<string, unknown>): Promise<Record<string, unknown>> {
+  const res = await fetch("/api/db", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error ?? "Error de base de datos");
+  return json;
+}
+
+// ─── Helpers de mapeo (snake_case DB → camelCase app) ─────────
 
 function toOrder(r: Record<string, unknown>): WorkOrder {
   return {
@@ -115,34 +127,25 @@ function fromPart(p: PartToOrder) {
 
 export const ordersDb = {
   async getAll(): Promise<WorkOrder[]> {
-    const { data, error } = await supabase
-      .from("reparaciones")
-      .select("*")
-      .order("entry_date", { ascending: false });
-    if (error) throw error;
-    return (data ?? []).map((r) => toOrder(r as Record<string, unknown>));
+    const { data } = await dbCall({
+      action: "select", table: "reparaciones",
+      order: { col: "entry_date", asc: false },
+    });
+    return ((data as Record<string, unknown>[]) ?? []).map(toOrder);
   },
 
   async getById(id: string): Promise<WorkOrder | undefined> {
-    const { data, error } = await supabase
-      .from("reparaciones")
-      .select("*")
-      .eq("id", id)
-      .single();
-    if (error) return undefined;
-    return toOrder(data as Record<string, unknown>);
+    try {
+      const { data } = await dbCall({
+        action: "selectSingle", table: "reparaciones",
+        filters: [{ col: "id", op: "eq", val: id }],
+      });
+      return data ? toOrder(data as Record<string, unknown>) : undefined;
+    } catch { return undefined; }
   },
 
   async create(order: WorkOrder): Promise<void> {
-    const payload = fromOrder(order);
-    console.log("[DB] Insertando en reparaciones:", payload);
-    const { error } = await supabase
-      .from("reparaciones")
-      .insert(payload);
-    if (error) {
-      console.error("[DB] Error Supabase:", error.message, error.details, error.hint);
-      throw new Error(error.message ?? error.details ?? JSON.stringify(error));
-    }
+    await dbCall({ action: "insert", table: "reparaciones", data: fromOrder(order) });
   },
 
   async update(id: string, updates: Partial<WorkOrder>): Promise<void> {
@@ -167,13 +170,11 @@ export const ordersDb = {
     if (updates.machineTypeOther   !== undefined) mapped.machine_type_other  = updates.machineTypeOther;
     if (updates.deposit            !== undefined) mapped.deposit             = updates.deposit;
     if (updates.totalPaid          !== undefined) mapped.total_paid          = updates.totalPaid;
-    const { error } = await supabase.from("reparaciones").update(mapped).eq("id", id);
-    if (error) throw error;
+    await dbCall({ action: "update", table: "reparaciones", data: mapped, id });
   },
 
   async delete(id: string): Promise<void> {
-    const { error } = await supabase.from("reparaciones").delete().eq("id", id);
-    if (error) throw error;
+    await dbCall({ action: "delete", table: "reparaciones", id });
   },
 };
 
@@ -181,17 +182,15 @@ export const ordersDb = {
 
 export const stockDb = {
   async getAll(): Promise<StockItem[]> {
-    const { data, error } = await supabase
-      .from("stock")
-      .select("*")
-      .order("created_at", { ascending: false });
-    if (error) throw error;
-    return (data ?? []).map((r) => toStock(r as Record<string, unknown>));
+    const { data } = await dbCall({
+      action: "select", table: "stock",
+      order: { col: "created_at", asc: false },
+    });
+    return ((data as Record<string, unknown>[]) ?? []).map(toStock);
   },
 
   async create(item: StockItem): Promise<void> {
-    const { error } = await supabase.from("stock").insert(fromStock(item));
-    if (error) throw error;
+    await dbCall({ action: "insert", table: "stock", data: fromStock(item) });
   },
 
   async update(id: string, updates: Partial<StockItem>): Promise<void> {
@@ -201,13 +200,11 @@ export const stockDb = {
     if (updates.location    !== undefined) mapped.location     = updates.location;
     if (updates.minQuantity !== undefined) mapped.min_quantity = updates.minQuantity;
     if (updates.notes       !== undefined) mapped.notes        = updates.notes;
-    const { error } = await supabase.from("stock").update(mapped).eq("id", id);
-    if (error) throw error;
+    await dbCall({ action: "update", table: "stock", data: mapped, id });
   },
 
   async delete(id: string): Promise<void> {
-    const { error } = await supabase.from("stock").delete().eq("id", id);
-    if (error) throw error;
+    await dbCall({ action: "delete", table: "stock", id });
   },
 };
 
@@ -215,17 +212,15 @@ export const stockDb = {
 
 export const partsToOrderDb = {
   async getAll(): Promise<PartToOrder[]> {
-    const { data, error } = await supabase
-      .from("repuestos_a_pedir")
-      .select("*")
-      .order("created_at", { ascending: false });
-    if (error) throw error;
-    return (data ?? []).map((r) => toPart(r as Record<string, unknown>));
+    const { data } = await dbCall({
+      action: "select", table: "repuestos_a_pedir",
+      order: { col: "created_at", asc: false },
+    });
+    return ((data as Record<string, unknown>[]) ?? []).map(toPart);
   },
 
   async create(part: PartToOrder): Promise<void> {
-    const { error } = await supabase.from("repuestos_a_pedir").insert(fromPart(part));
-    if (error) throw error;
+    await dbCall({ action: "insert", table: "repuestos_a_pedir", data: fromPart(part) });
   },
 
   async update(id: string, updates: Partial<PartToOrder>): Promise<void> {
@@ -237,13 +232,11 @@ export const partsToOrderDb = {
     if (updates.supplier         !== undefined) mapped.supplier           = updates.supplier;
     if (updates.status           !== undefined) mapped.status             = updates.status;
     if (updates.notes            !== undefined) mapped.notes              = updates.notes;
-    const { error } = await supabase.from("repuestos_a_pedir").update(mapped).eq("id", id);
-    if (error) throw error;
+    await dbCall({ action: "update", table: "repuestos_a_pedir", data: mapped, id });
   },
 
   async delete(id: string): Promise<void> {
-    const { error } = await supabase.from("repuestos_a_pedir").delete().eq("id", id);
-    if (error) throw error;
+    await dbCall({ action: "delete", table: "repuestos_a_pedir", id });
   },
 };
 
@@ -251,13 +244,12 @@ export const partsToOrderDb = {
 
 export const pagosDb = {
   async getByOrder(orderId: string): Promise<Pago[]> {
-    const { data, error } = await supabase
-      .from("pagos")
-      .select("*")
-      .eq("order_id", orderId)
-      .order("paid_at", { ascending: false });
-    if (error) throw error;
-    return (data ?? []).map((r) => ({
+    const { data } = await dbCall({
+      action: "select", table: "pagos",
+      filters: [{ col: "order_id", op: "eq", val: orderId }],
+      order: { col: "paid_at", asc: false },
+    });
+    return ((data as Record<string, unknown>[]) ?? []).map((r) => ({
       id:      r.id as string,
       orderId: r.order_id as string,
       amount:  r.amount as number,
@@ -267,15 +259,13 @@ export const pagosDb = {
     }));
   },
   async create(p: Pago): Promise<void> {
-    const { error } = await supabase.from("pagos").insert({
-      id: p.id, order_id: p.orderId, amount: p.amount,
-      method: p.method, notes: p.notes, paid_at: p.paidAt,
+    await dbCall({
+      action: "insert", table: "pagos",
+      data: { id: p.id, order_id: p.orderId, amount: p.amount, method: p.method, notes: p.notes, paid_at: p.paidAt },
     });
-    if (error) throw error;
   },
   async delete(id: string): Promise<void> {
-    const { error } = await supabase.from("pagos").delete().eq("id", id);
-    if (error) throw error;
+    await dbCall({ action: "delete", table: "pagos", id });
   },
 };
 
@@ -283,12 +273,11 @@ export const pagosDb = {
 
 export const plantillasDb = {
   async getAll(): Promise<PlantillaWhatsApp[]> {
-    const { data, error } = await supabase
-      .from("plantillas_whatsapp")
-      .select("*")
-      .order("created_at", { ascending: false });
-    if (error) throw error;
-    return (data ?? []).map((r) => ({
+    const { data } = await dbCall({
+      action: "select", table: "plantillas_whatsapp",
+      order: { col: "created_at", asc: false },
+    });
+    return ((data as Record<string, unknown>[]) ?? []).map((r) => ({
       id:        r.id as string,
       name:      r.name as string,
       message:   r.message as string,
@@ -296,21 +285,19 @@ export const plantillasDb = {
     }));
   },
   async create(t: PlantillaWhatsApp): Promise<void> {
-    const { error } = await supabase.from("plantillas_whatsapp").insert({
-      id: t.id, name: t.name, message: t.message, created_at: t.createdAt,
+    await dbCall({
+      action: "insert", table: "plantillas_whatsapp",
+      data: { id: t.id, name: t.name, message: t.message, created_at: t.createdAt },
     });
-    if (error) throw error;
   },
   async update(id: string, updates: Partial<PlantillaWhatsApp>): Promise<void> {
     const mapped: Record<string, unknown> = {};
     if (updates.name    !== undefined) mapped.name    = updates.name;
     if (updates.message !== undefined) mapped.message = updates.message;
-    const { error } = await supabase.from("plantillas_whatsapp").update(mapped).eq("id", id);
-    if (error) throw error;
+    await dbCall({ action: "update", table: "plantillas_whatsapp", data: mapped, id });
   },
   async delete(id: string): Promise<void> {
-    const { error } = await supabase.from("plantillas_whatsapp").delete().eq("id", id);
-    if (error) throw error;
+    await dbCall({ action: "delete", table: "plantillas_whatsapp", id });
   },
 };
 
@@ -318,12 +305,11 @@ export const plantillasDb = {
 
 export const agendaDb = {
   async getAll(): Promise<AgendaCliente[]> {
-    const { data, error } = await supabase
-      .from("agenda_clientes")
-      .select("*")
-      .order("nombre", { ascending: true });
-    if (error) throw error;
-    return (data ?? []).map((r) => ({
+    const { data } = await dbCall({
+      action: "select", table: "agenda_clientes",
+      order: { col: "nombre", asc: true },
+    });
+    return ((data as Record<string, unknown>[]) ?? []).map((r) => ({
       id:        r.id as string,
       nombre:    r.nombre as string,
       telefono:  r.telefono as string,
@@ -334,44 +320,51 @@ export const agendaDb = {
   async upsertByPhone(nombre: string, telefono: string): Promise<void> {
     const phone = telefono.trim();
     if (!phone) return;
-    const { data } = await supabase
-      .from("agenda_clientes")
-      .select("id")
-      .eq("telefono", phone)
-      .maybeSingle();
+    const { data } = await dbCall({
+      action: "select", table: "agenda_clientes",
+      filters: [
+        { col: "telefono", op: "eq", val: phone },
+        { col: "telefono", op: "maybeSingle", val: null },
+      ],
+    });
     if (data) {
-      // Cliente existe: actualizar nombre por si cambió
-      await supabase
-        .from("agenda_clientes")
-        .update({ nombre: nombre.trim() })
-        .eq("telefono", phone);
+      await dbCall({
+        action: "update", table: "agenda_clientes",
+        data: { nombre: nombre.trim() },
+        id: (data as Record<string, unknown>).id as string,
+      });
     } else {
-      // Cliente nuevo
-      await supabase.from("agenda_clientes").insert({
-        nombre: nombre.trim(),
-        telefono: phone,
+      await dbCall({
+        action: "insert", table: "agenda_clientes",
+        data: { nombre: nombre.trim(), telefono: phone },
       });
     }
   },
 
   async syncFromOrders(): Promise<number> {
-    const { data: orders } = await supabase
-      .from("reparaciones")
-      .select("client_name, client_phone")
-      .not("client_phone", "is", null);
+    const { data: orders } = await dbCall({
+      action: "select", table: "reparaciones",
+      select: "client_name, client_phone",
+      filters: [{ col: "client_phone", op: "not.is", val: null }],
+    });
     if (!orders) return 0;
     const seen = new Set<string>();
     let count = 0;
-    for (const o of orders) {
+    for (const o of (orders as Record<string, unknown>[])) {
       const phone = (o.client_phone as string)?.trim();
       if (!phone || seen.has(phone)) continue;
       seen.add(phone);
-      const { data: existing } = await supabase
-        .from("agenda_clientes").select("id").eq("telefono", phone).maybeSingle();
+      const { data: existing } = await dbCall({
+        action: "select", table: "agenda_clientes",
+        filters: [
+          { col: "telefono", op: "eq", val: phone },
+          { col: "telefono", op: "maybeSingle", val: null },
+        ],
+      });
       if (!existing) {
-        await supabase.from("agenda_clientes").insert({
-          nombre: (o.client_name as string)?.trim() || "Sin nombre",
-          telefono: phone,
+        await dbCall({
+          action: "insert", table: "agenda_clientes",
+          data: { nombre: (o.client_name as string)?.trim() || "Sin nombre", telefono: phone },
         });
         count++;
       }
@@ -380,12 +373,13 @@ export const agendaDb = {
   },
 
   async delete(id: string): Promise<void> {
-    // Intentar borrar historial primero (ignorar error si la tabla no existe aún)
     try {
-      await supabase.from("historial_reparaciones").delete().eq("cliente_id", id);
-    } catch (_) { /* ignorar */ }
-    const { error } = await supabase.from("agenda_clientes").delete().eq("id", id);
-    if (error) throw error;
+      await dbCall({
+        action: "deleteWhere", table: "historial_reparaciones",
+        filters: [{ col: "cliente_id", op: "eq", val: id }],
+      });
+    } catch { /* ignorar si no existe */ }
+    await dbCall({ action: "delete", table: "agenda_clientes", id });
   },
 };
 
@@ -393,13 +387,12 @@ export const agendaDb = {
 
 export const historialDb = {
   async getByCliente(clienteId: string): Promise<HistorialReparacion[]> {
-    const { data, error } = await supabase
-      .from("historial_reparaciones")
-      .select("*")
-      .eq("cliente_id", clienteId)
-      .order("fecha_ingreso", { ascending: false });
-    if (error) throw error;
-    return (data ?? []).map(r => ({
+    const { data } = await dbCall({
+      action: "select", table: "historial_reparaciones",
+      filters: [{ col: "cliente_id", op: "eq", val: clienteId }],
+      order: { col: "fecha_ingreso", asc: false },
+    });
+    return ((data as Record<string, unknown>[]) ?? []).map(r => ({
       id:           r.id as string,
       clienteId:    r.cliente_id as string,
       ordenId:      r.orden_id as string | null,
@@ -432,10 +425,7 @@ export const historialDb = {
       photo_urls:    order.photoUrls ?? [],
       updated_at:    new Date().toISOString(),
     };
-    const { error } = await supabase
-      .from("historial_reparaciones")
-      .upsert(record, { onConflict: "id" });
-    if (error) throw error;
+    await dbCall({ action: "upsert", table: "historial_reparaciones", data: record, onConflict: "id" });
   },
 };
 
@@ -464,12 +454,11 @@ function toFlex(r: Record<string, unknown>): FlexEnvio {
 
 export const flexDb = {
   async getAll(): Promise<FlexEnvio[]> {
-    const { data, error } = await supabase
-      .from("flex_envios")
-      .select("*")
-      .order("fecha", { ascending: false });
-    if (error) throw error;
-    return (data ?? []).map(r => toFlex(r as Record<string, unknown>));
+    const { data } = await dbCall({
+      action: "select", table: "flex_envios",
+      order: { col: "fecha", asc: false },
+    });
+    return ((data as Record<string, unknown>[]) ?? []).map(toFlex);
   },
 
   async create(e: FlexEnvio): Promise<{ duplicado: boolean }> {
@@ -492,32 +481,27 @@ export const flexDb = {
       created_at:          e.createdAt,
     };
 
-    // Si tiene nro_seguimiento, usar UPSERT para evitar duplicados
-    // Si no tiene ID, usar INSERT simple (cada paquete sin ID es único)
     if (e.nroSeguimiento) {
-      const { error } = await supabase.from("flex_envios").upsert(row, {
-        onConflict: "nro_seguimiento",
-        ignoreDuplicates: false,
+      await dbCall({
+        action: "upsert", table: "flex_envios", data: row,
+        onConflict: "nro_seguimiento", ignoreDuplicates: false,
       });
-      if (error) throw error;
     } else {
-      const { error } = await supabase.from("flex_envios").insert(row);
-      if (error) throw error;
+      await dbCall({ action: "insert", table: "flex_envios", data: row });
     }
     return { duplicado: false };
   },
 
   async delete(id: string): Promise<void> {
-    const { error } = await supabase.from("flex_envios").delete().eq("id", id);
-    if (error) throw error;
+    await dbCall({ action: "delete", table: "flex_envios", id });
   },
 
   async updateTarifa(zona: string, nuevoPrecio: number): Promise<void> {
-    const { error } = await supabase
-      .from("flex_tarifas")
-      .update({ precio: nuevoPrecio })
-      .eq("zona", zona);
-    if (error) throw error;
+    await dbCall({
+      action: "update", table: "flex_tarifas",
+      data: { precio: nuevoPrecio },
+      id: zona, idCol: "zona",
+    });
   },
 };
 
