@@ -1,45 +1,123 @@
 "use client";
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { useSearchPrintedLabels, type PrintedLabel } from "@/hooks/useSearchPrintedLabels";
+import { supabase } from "@/lib/supabase";
 import Link from "next/link";
-import { ArrowLeft, Download, Search, Loader2 } from "lucide-react";
+import { ArrowLeft, Download, Search, Loader2, RefreshCw } from "lucide-react";
 
 type ShippingMethod = "todas" | "correo" | "flex" | "turbo";
 
+interface PrintedLabel {
+  id: string;
+  shipment_id: number;
+  order_id: number | null;
+  tracking_number: string | null;
+  buyer_nickname: string | null;
+  sku: string | null;
+  variation: string | null;
+  quantity: number | null;
+  account_id: string | null;
+  shipping_method: string | null;
+  file_path: string;
+  print_date: string;
+  meli_user_id: string;
+}
+
 export default function HistorialEtiquetasPage() {
-  const [meliUserId, setMeliUserId] = useState<string>("");
+  const [allLabels, setAllLabels] = useState<PrintedLabel[]>([]);
+  const [query, setQuery] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [downloading, setDownloading] = useState(false);
   const [activeTab, setActiveTab] = useState<ShippingMethod>("todas");
 
-  const { query, setQuery, results, loading, error } = useSearchPrintedLabels(
-    undefined,
-    meliUserId
-  );
+  // Cargar todas las etiquetas recientes al montar
+  const loadLabels = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const { data, error: dbError } = await supabase
+        .from("printed_labels")
+        .select("*")
+        .order("print_date", { ascending: false })
+        .limit(200);
 
-  // Obtener meli_user_id del usuario (simplificado, en producción usar auth)
-  useEffect(() => {
-    const storedId = localStorage.getItem("meli_user_id");
-    if (storedId) setMeliUserId(storedId);
+      if (dbError) throw new Error(dbError.message);
+      setAllLabels((data as PrintedLabel[]) || []);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  // Filtrar resultados por tipo de envío
+  useEffect(() => {
+    loadLabels();
+  }, [loadLabels]);
+
+  // Realtime: escuchar nuevas inserciones
+  useEffect(() => {
+    const channel = supabase
+      .channel("historial-labels-realtime")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "printed_labels" },
+        () => {
+          loadLabels();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [loadLabels]);
+
+  // Filtrar por búsqueda y tipo
   const filteredResults = useMemo(() => {
-    return results.filter((r) => {
-      if (activeTab === "todas") return true;
-      return r.shipping_method === activeTab;
-    });
-  }, [results, activeTab]);
+    let filtered = allLabels;
+
+    // Filtro de búsqueda
+    if (query.length >= 2) {
+      const q = query.toLowerCase();
+      filtered = filtered.filter((r) =>
+        String(r.shipment_id).toLowerCase().includes(q) ||
+        (r.sku || "").toLowerCase().includes(q) ||
+        (r.buyer_nickname || "").toLowerCase().includes(q) ||
+        (r.tracking_number || "").toLowerCase().includes(q) ||
+        (r.account_id || "").toLowerCase().includes(q)
+      );
+    }
+
+    // Filtro por tipo de envío
+    if (activeTab !== "todas") {
+      filtered = filtered.filter((r) => r.shipping_method === activeTab);
+    }
+
+    return filtered;
+  }, [allLabels, query, activeTab]);
 
   // Contar por tipo
   const typeCounts = useMemo(() => {
+    const base = query.length >= 2
+      ? allLabels.filter((r) => {
+          const q = query.toLowerCase();
+          return (
+            String(r.shipment_id).toLowerCase().includes(q) ||
+            (r.sku || "").toLowerCase().includes(q) ||
+            (r.buyer_nickname || "").toLowerCase().includes(q) ||
+            (r.tracking_number || "").toLowerCase().includes(q)
+          );
+        })
+      : allLabels;
+
     return {
-      todas: results.length,
-      correo: results.filter((r) => r.shipping_method === "correo").length,
-      flex: results.filter((r) => r.shipping_method === "flex").length,
-      turbo: results.filter((r) => r.shipping_method === "turbo").length,
+      todas: base.length,
+      correo: base.filter((r) => r.shipping_method === "correo").length,
+      flex: base.filter((r) => r.shipping_method === "flex").length,
+      turbo: base.filter((r) => r.shipping_method === "turbo").length,
     };
-  }, [results]);
+  }, [allLabels, query]);
 
   const toggleSelection = (id: string) => {
     const newSelection = new Set(selectedIds);
@@ -68,7 +146,7 @@ export default function HistorialEtiquetasPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ids: Array.from(selectedIds),
-          meli_user_id: meliUserId,
+          meli_user_id: "",
         }),
       });
 
@@ -93,12 +171,7 @@ export default function HistorialEtiquetasPage() {
   };
 
   const downloadIndividual = (filePath: string) => {
-    const a = document.createElement("a");
-    a.href = filePath;
-    a.download = `etiqueta-${Date.now()}.pdf`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
+    window.open(filePath, "_blank");
   };
 
   return (
@@ -115,7 +188,15 @@ export default function HistorialEtiquetasPage() {
         >
           <ArrowLeft className="w-4 h-4" />
         </Link>
-        <h1 className="font-black text-white">Historial de Etiquetas</h1>
+        <h1 className="font-black text-white flex-1">Historial de Etiquetas</h1>
+        <button
+          onClick={loadLabels}
+          disabled={loading}
+          className="p-2 rounded-lg transition-all"
+          style={{ background: "rgba(255,255,255,0.05)" }}
+        >
+          <RefreshCw className={`w-4 h-4 text-gray-400 ${loading ? "animate-spin" : ""}`} />
+        </button>
       </div>
 
       {/* Main */}
@@ -134,9 +215,9 @@ export default function HistorialEtiquetasPage() {
               }}
             >
               {tab === "todas" && "Todas"}
-              {tab === "correo" && "📮 Correo"}
-              {tab === "flex" && "🚚 Flex"}
-              {tab === "turbo" && "⚡ Turbo"}
+              {tab === "correo" && "Correo"}
+              {tab === "flex" && "Flex"}
+              {tab === "turbo" && "Turbo"}
               <span className="ml-2 text-xs opacity-75">({typeCounts[tab]})</span>
             </button>
           ))}
@@ -148,7 +229,7 @@ export default function HistorialEtiquetasPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
             <input
               type="text"
-              placeholder="Buscar por SKU, tracking, comprador..."
+              placeholder="Buscar por SKU, tracking, comprador, shipment..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2 rounded-lg text-sm"
@@ -184,32 +265,28 @@ export default function HistorialEtiquetasPage() {
           )}
         </div>
 
-        {/* Results */}
-        {loading && query.length >= 2 && (
+        {/* Loading */}
+        {loading && (
           <div className="text-center py-12">
             <Loader2 className="w-8 h-8 animate-spin mx-auto text-gray-500" />
-            <p className="text-sm text-gray-500 mt-2">Buscando...</p>
+            <p className="text-sm text-gray-500 mt-2">Cargando historial...</p>
           </div>
         )}
 
+        {/* Error */}
         {error && (
           <div className="p-4 rounded-lg" style={{ background: "#FF6B6B20", borderLeft: "2px solid #FF6B6B" }}>
             <p className="text-sm text-red-400">Error: {error}</p>
           </div>
         )}
 
-        {query.length < 2 && (
+        {/* Empty state */}
+        {!loading && filteredResults.length === 0 && (
           <div className="text-center py-12">
             <p className="text-sm" style={{ color: "#6B7280" }}>
-              Ingresa al menos 2 caracteres para buscar
-            </p>
-          </div>
-        )}
-
-        {query.length >= 2 && !loading && results.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-sm" style={{ color: "#6B7280" }}>
-              No se encontraron resultados
+              {allLabels.length === 0
+                ? "No hay etiquetas en el historial"
+                : "No se encontraron resultados para la busqueda"}
             </p>
           </div>
         )}
@@ -229,7 +306,7 @@ export default function HistorialEtiquetasPage() {
                     />
                   </th>
                   <th className="px-4 py-3 text-left" style={{ color: "#9CA3AF" }}>
-                    Envío
+                    Envio
                   </th>
                   <th className="px-4 py-3 text-left" style={{ color: "#9CA3AF" }}>
                     SKU
@@ -238,13 +315,13 @@ export default function HistorialEtiquetasPage() {
                     Comprador
                   </th>
                   <th className="px-4 py-3 text-left" style={{ color: "#9CA3AF" }}>
-                    Método
+                    Metodo
                   </th>
                   <th className="px-4 py-3 text-left" style={{ color: "#9CA3AF" }}>
                     Fecha
                   </th>
                   <th className="px-4 py-3 text-center" style={{ color: "#9CA3AF" }}>
-                    Acción
+                    Accion
                   </th>
                 </tr>
               </thead>
@@ -268,10 +345,10 @@ export default function HistorialEtiquetasPage() {
                     <td className="px-4 py-3 text-white">
                       {label.buyer_nickname === "USUARIO_TEST" && (
                         <span
-                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-bold mr-2 mb-1"
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-bold mr-2"
                           style={{ background: "rgba(57,255,20,0.2)", color: "#39FF14" }}
                         >
-                          🧪 TEST
+                          TEST
                         </span>
                       )}
                       {label.shipment_id}
@@ -291,12 +368,16 @@ export default function HistorialEtiquetasPage() {
                               ? "#0EA5E920"
                               : label.shipping_method === "correo"
                               ? "#F59E0B20"
+                              : label.shipping_method === "turbo"
+                              ? "#A855F720"
                               : "#6B728020",
                           color:
                             label.shipping_method === "flex"
                               ? "#0EA5E9"
                               : label.shipping_method === "correo"
                               ? "#F59E0B"
+                              : label.shipping_method === "turbo"
+                              ? "#A855F7"
                               : "#9CA3AF",
                         }}
                       >
