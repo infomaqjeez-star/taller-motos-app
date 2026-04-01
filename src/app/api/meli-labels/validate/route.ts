@@ -16,12 +16,19 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Consultar meli_printed_labels para ver cuáles ya fueron impresas
-    const { data: alreadyPrinted, error } = await supabase
-      .from("meli_printed_labels")
+    // Consultar printed_labels para ver cuáles ya fueron impresas
+    // (usamos printed_labels en lugar de meli_printed_labels para consistencia)
+    let query = supabase
+      .from("printed_labels")
       .select("shipment_id")
-      .in("shipment_id", shipment_ids)
-      .eq("account", meli_user_id || "");
+      .in("shipment_id", shipment_ids);
+
+    // Si hay meli_user_id, filtrar por eso para más precisión
+    if (meli_user_id) {
+      query = query.eq("meli_user_id", meli_user_id);
+    }
+
+    const { data: alreadyPrinted, error } = await query;
 
     if (error) {
       console.error("Error checking printed status:", error);
@@ -51,3 +58,4 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
