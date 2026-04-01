@@ -86,13 +86,14 @@ async function processAccount(
 
   const uid     = String(acc.meli_user_id);
   
-  // Convertir a fecha local (NO UTC) para comparación con MeLi
-  const year = from.getFullYear();
-  const month = String(from.getMonth() + 1).padStart(2, '0');
-  const date = String(from.getDate()).padStart(2, '0');
+  // Convertir a fecha local usando getUTC methods en la fecha ajustada
+  // from ya está ajustado a la zona horaria local via setTime()
+  const year = from.getUTCFullYear();
+  const month = String(from.getUTCMonth() + 1).padStart(2, '0');
+  const date = String(from.getUTCDate()).padStart(2, '0');
   const fromStr = `${year}-${month}-${date}`;
   
-  console.log(`[stats-acct] account=${acc.nickname}, fromStr=${fromStr}, from.local=${year}-${month}-${date}`);
+  console.log(`[stats-acct] account=${acc.nickname}, fromStr=${fromStr}, from.UTC=${year}-${month}-${date}`);
 
   // ── Fetch orders ──────────────────────────────────────────────────────────
   const allOrders: Record<string, unknown>[] = [];
@@ -335,8 +336,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       period,
       account_id:     accountId,
-      date_from:      from.toISOString().slice(0, 10),
-      date_to:        to.toISOString().slice(0, 10),
+      date_from:      `${from.getUTCFullYear()}-${String(from.getUTCMonth() + 1).padStart(2, '0')}-${String(from.getUTCDate()).padStart(2, '0')}`,
+      date_to:        `${to.getUTCFullYear()}-${String(to.getUTCMonth() + 1).padStart(2, '0')}-${String(to.getUTCDate()).padStart(2, '0')}`,
       accounts_count: valid.length,
       sales_by_day:   Array.from(salesByDayMap.values()).sort((a, b) => a.date.localeCompare(b.date)),
       sales_by_logistic: salesByLogisticAgg,
