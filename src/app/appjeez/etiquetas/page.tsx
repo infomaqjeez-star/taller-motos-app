@@ -296,7 +296,8 @@ function EtiquetasInner() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/meli-labels?action=list");
+      const tzOffset = -new Date().getTimezoneOffset() / 60;
+      const res = await fetch(`/api/meli-labels?action=list&tz_offset=${tzOffset}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const d: LabelData = await res.json();
       setData(d);
@@ -452,7 +453,8 @@ function EtiquetasInner() {
         if (!res.ok) throw new Error("Failed to send to thermal printer");
       } else {
         // Descargar PDF
-        const res = await fetch(`/api/meli-labels?ids=${ids}`);
+        const tzOffset = -new Date().getTimezoneOffset() / 60;
+        const res = await fetch(`/api/meli-labels?ids=${ids}&tz_offset=${tzOffset}`);
         if (!res.ok) throw new Error("Failed to generate PDF");
         
         const blob = await res.blob();

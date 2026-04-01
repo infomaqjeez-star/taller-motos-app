@@ -193,7 +193,25 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const action = searchParams.get("action") ?? "list";
   const format = searchParams.get("format") ?? "pdf";
+  const tzOffset = parseFloat(searchParams.get("tz_offset") ?? "0");
   const supabase = getSupabase();
+
+  // Función helper para ajustar fechas a zona horaria local
+  const adjustDateToZone = (offset: number): { today: Date; yesterday: Date; weekAgo: Date } => {
+    const offsetMs = offset * 3600000;
+    
+    const today = new Date();
+    today.setTime(today.getTime() + offsetMs);
+    today.setUTCHours(0, 0, 0, 0);
+    
+    const yesterday = new Date(today);
+    yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+    
+    const weekAgo = new Date(today);
+    weekAgo.setUTCDate(weekAgo.getUTCDate() - 7);
+    
+    return { today, yesterday, weekAgo };
+  };
 
   // ── Historial de impresas ──────────────────────────────────────────────────
   if (action === "history") {
@@ -204,16 +222,16 @@ export async function GET(req: Request) {
       .order("printed_at", { ascending: false })
       .limit(200);
 
+    const { today, yesterday, weekAgo } = adjustDateToZone(tzOffset);
+
     if (period === "today") {
-      const s = new Date(); s.setHours(0, 0, 0, 0);
-      query = query.gte("printed_at", s.toISOString()) as typeof query;
+      const tomorrow = new Date(today);
+      tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+      query = query.gte("printed_at", today.toISOString()).lt("printed_at", tomorrow.toISOString()) as typeof query;
     } else if (period === "yesterday") {
-      const s = new Date(); s.setDate(s.getDate() - 1); s.setHours(0, 0, 0, 0);
-      const e = new Date(); e.setHours(0, 0, 0, 0);
-      query = query.gte("printed_at", s.toISOString()).lt("printed_at", e.toISOString()) as typeof query;
+      query = query.gte("printed_at", yesterday.toISOString()).lt("printed_at", today.toISOString()) as typeof query;
     } else if (period === "week") {
-      const s = new Date(); s.setDate(s.getDate() - 7); s.setHours(0, 0, 0, 0);
-      query = query.gte("printed_at", s.toISOString()) as typeof query;
+      query = query.gte("printed_at", weekAgo.toISOString()) as typeof query;
     }
 
     const { data } = await query;
