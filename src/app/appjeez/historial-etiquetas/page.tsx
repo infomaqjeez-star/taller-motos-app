@@ -1,13 +1,16 @@
 "use client";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useSearchPrintedLabels, type PrintedLabel } from "@/hooks/useSearchPrintedLabels";
 import Link from "next/link";
 import { ArrowLeft, Download, Search, Loader2 } from "lucide-react";
+
+type ShippingMethod = "todas" | "correo" | "flex" | "turbo";
 
 export default function HistorialEtiquetasPage() {
   const [meliUserId, setMeliUserId] = useState<string>("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [downloading, setDownloading] = useState(false);
+  const [activeTab, setActiveTab] = useState<ShippingMethod>("todas");
 
   const { query, setQuery, results, loading, error } = useSearchPrintedLabels(
     undefined,
@@ -20,6 +23,24 @@ export default function HistorialEtiquetasPage() {
     if (storedId) setMeliUserId(storedId);
   }, []);
 
+  // Filtrar resultados por tipo de envío
+  const filteredResults = useMemo(() => {
+    return results.filter((r) => {
+      if (activeTab === "todas") return true;
+      return r.shipping_method === activeTab;
+    });
+  }, [results, activeTab]);
+
+  // Contar por tipo
+  const typeCounts = useMemo(() => {
+    return {
+      todas: results.length,
+      correo: results.filter((r) => r.shipping_method === "correo").length,
+      flex: results.filter((r) => r.shipping_method === "flex").length,
+      turbo: results.filter((r) => r.shipping_method === "turbo").length,
+    };
+  }, [results]);
+
   const toggleSelection = (id: string) => {
     const newSelection = new Set(selectedIds);
     if (newSelection.has(id)) {
@@ -31,10 +52,10 @@ export default function HistorialEtiquetasPage() {
   };
 
   const selectAll = () => {
-    if (selectedIds.size === results.length) {
+    if (selectedIds.size === filteredResults.length) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(results.map((r) => r.id)));
+      setSelectedIds(new Set(filteredResults.map((r) => r.id)));
     }
   };
 
@@ -99,6 +120,28 @@ export default function HistorialEtiquetasPage() {
 
       {/* Main */}
       <div className="max-w-7xl mx-auto p-4 space-y-4">
+        {/* Tabs por Tipo de Envío */}
+        <div className="flex gap-2 flex-wrap">
+          {(["todas", "correo", "flex", "turbo"] as ShippingMethod[]).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className="px-4 py-2 rounded-lg text-sm font-semibold transition-all"
+              style={{
+                background: activeTab === tab ? "#39FF14" : "rgba(255,255,255,0.05)",
+                color: activeTab === tab ? "#121212" : "#9CA3AF",
+                border: activeTab === tab ? "1px solid #39FF14" : "1px solid rgba(255,255,255,0.1)",
+              }}
+            >
+              {tab === "todas" && "Todas"}
+              {tab === "correo" && "📮 Correo"}
+              {tab === "flex" && "🚚 Flex"}
+              {tab === "turbo" && "⚡ Turbo"}
+              <span className="ml-2 text-xs opacity-75">({typeCounts[tab]})</span>
+            </button>
+          ))}
+        </div>
+
         {/* Search Bar */}
         <div className="flex gap-2">
           <div className="flex-1 relative">
@@ -172,7 +215,7 @@ export default function HistorialEtiquetasPage() {
         )}
 
         {/* Table */}
-        {results.length > 0 && (
+        {filteredResults.length > 0 && (
           <div className="overflow-x-auto rounded-lg border" style={{ borderColor: "rgba(255,255,255,0.1)" }}>
             <table className="w-full text-sm">
               <thead style={{ background: "#1F1F1F" }}>
@@ -180,7 +223,7 @@ export default function HistorialEtiquetasPage() {
                   <th className="px-4 py-3 text-left">
                     <input
                       type="checkbox"
-                      checked={selectedIds.size === results.length && results.length > 0}
+                      checked={selectedIds.size === filteredResults.length && filteredResults.length > 0}
                       onChange={selectAll}
                       className="w-4 h-4"
                     />
@@ -206,7 +249,7 @@ export default function HistorialEtiquetasPage() {
                 </tr>
               </thead>
               <tbody>
-                {results.map((label, idx) => (
+                {filteredResults.map((label, idx) => (
                   <tr
                     key={label.id}
                     style={{
