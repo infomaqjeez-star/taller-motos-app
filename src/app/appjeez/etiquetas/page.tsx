@@ -48,6 +48,7 @@ interface ShipmentInfo {
 
 interface LabelData {
   shipments: ShipmentInfo[];
+  printed?: ShipmentInfo[];
   summary: Record<LogisticType, number>;
 }
 
@@ -162,6 +163,12 @@ function LabelCard({
                 {cfg.label}
               </span>
               <ZoneIndicator zone={zone} />
+              {shipment.printed_at && (
+                <span className="text-[10px] font-black px-2 py-0.5 rounded-full"
+                  style={{ background: "#10B981", color: "#fff" }}>
+                  ✅ Impresa
+                </span>
+              )}
             </div>
             <p className="text-xs font-bold text-white line-clamp-2">
               {shipment.title}
@@ -301,7 +308,18 @@ function EtiquetasInner() {
       const res = await fetch(`/api/meli-labels?action=list&tz_offset=${tzOffset}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const d: LabelData = await res.json();
-      setData(d);
+      
+      // Combinar shipments pending + printed en un solo array
+      // Marcar los impresos con printed_at
+      const combined = [
+        ...(d.shipments ?? []),
+        ...(d.printed ?? []).map((s: ShipmentInfo) => ({
+          ...s,
+          printed_at: new Date().toISOString(), // Marcar como impreso
+        })),
+      ] as ShipmentInfo[];
+      
+      setData({ ...d, shipments: combined });
     } catch (e) {
       console.error("Error loading labels:", e);
     } finally {
