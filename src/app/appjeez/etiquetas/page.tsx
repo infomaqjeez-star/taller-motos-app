@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useCallback, Suspense } from "react";
+import { useEffect, useState, useCallback, useMemo, Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -19,11 +19,20 @@ interface ShipmentInfo {
   type: LogisticType;
   buyer: string;
   buyer_nickname: string | null;
+  buyer_phone?: string | null;
+  buyer_email?: string | null;
   title: string;
   quantity: number;
   thumbnail: string | null;
   delivery_date: string | null;
   dispatch_date: string | null;
+  delivery_address?: string | null;
+  delivery_state?: string | null;
+  delivery_zip?: string | null;
+  buyer_notes?: string | null;
+  total_price?: number | null;
+  shipping_cost?: number | null;
+  coupon_code?: string | null;
   printed_at?: string | null;
   item_id: string | null;
   purchase_url?: string | null;
@@ -32,6 +41,8 @@ interface ShipmentInfo {
   urgency: "delayed" | "today" | "tomorrow" | "week" | "upcoming";
   status: string;
   status_label: string | null;
+  meli_user_id: string;
+  unit_price?: number | null;
 }
 
 interface LabelData {
@@ -44,6 +55,26 @@ const TYPE_CFG: Record<LogisticType, { color: string; label: string; icon: React
   flex: { color: "#00E5FF", label: "FLEX", icon: <Truck className="w-3.5 h-3.5" /> },
   turbo: { color: "#A855F7", label: "TURBO", icon: <Zap className="w-3.5 h-3.5" /> },
   full: { color: "#FFE600", label: "FULL", icon: <span className="text-xs">⚡</span> },
+};
+
+// Mapeo de cuentas a colores
+const getAccountColor = (meli_user_id: string, accountName: string): { bg: string; text: string; border: string } => {
+  const colors = [
+    { bg: "#FF6B6B", text: "#fff", border: "#ff5252" },      // Rojo
+    { bg: "#4ECDC4", text: "#fff", border: "#45b7a8" },      // Turquesa
+    { bg: "#45B7D1", text: "#fff", border: "#3da5b8" },      // Azul
+    { bg: "#FFA07A", text: "#fff", border: "#ff8c6a" },      // Naranja
+    { bg: "#98D8C8", text: "#fff", border: "#82c5b7" },      // Verde menta
+    { bg: "#F7DC6F", text: "#333", border: "#e6c900" },      // Amarillo
+    { bg: "#BB8FCE", text: "#fff", border: "#a878b5" },      // Púrpura
+    { bg: "#85C1E2", text: "#fff", border: "#6fb3d5" },      // Azul claro
+  ];
+  
+  // Usar hash del meli_user_id para asignar color consistente
+  const hash = meli_user_id.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const colorIndex = hash % colors.length;
+  
+  return colors[colorIndex];
 };
 
 function LabelCard({
@@ -119,49 +150,121 @@ function LabelCard({
         </div>
       </a>
 
-      {/* Info */}
-      <div className="flex-1 min-w-0 flex flex-col justify-between pt-2">
-        <div>
-          <div className="flex items-center gap-2 mb-1 flex-wrap">
-            <span className="text-[10px] font-black px-2 py-0.5 rounded-full"
-              style={{ background: cfg.color, color: "#121212" }}>
-              {cfg.label}
-            </span>
-            <ZoneIndicator zone={zone} />
-          </div>
-          <p className="text-xs font-bold text-white line-clamp-2 mb-1">
-            {shipment.title}
-            {shipment.attributes && (
-              <span className="text-gray-400 text-[11px] font-normal"> • {shipment.attributes}</span>
-            )}
-          </p>
-          <p className="text-[10px]" style={{ color: "#6B7280" }}>
-            {shipment.buyer}{shipment.buyer_nickname ? ` (@${shipment.buyer_nickname})` : ""}
-          </p>
-          
-          {/* Detalles: Unidades + SKU */}
-          <div className="flex items-center gap-2 text-[10px] mt-2 p-1.5 rounded"
-            style={{ background: "rgba(255,255,255,0.05)" }}>
-            <div>
-              <span style={{ color: "#9CA3AF" }}>Unidades:</span>
-              <span className="ml-1 font-bold text-white">{shipment.quantity}</span>
+      {/* Info completa */}
+      <div className="flex-1 min-w-0 flex flex-col justify-between pt-2 gap-2">
+        {/* Encabezado + Badge de Cuenta */}
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
+              <span className="text-[10px] font-black px-2 py-0.5 rounded-full"
+                style={{ background: cfg.color, color: "#121212" }}>
+                {cfg.label}
+              </span>
+              <ZoneIndicator zone={zone} />
             </div>
-            {shipment.seller_sku && (
-              <>
-                <div style={{ width: "1px", height: "14px", background: "rgba(255,255,255,0.2)" }}></div>
-                <div className="truncate">
-                  <span style={{ color: "#9CA3AF" }}>SKU:</span>
-                  <span className="ml-1 font-bold text-white truncate">{shipment.seller_sku}</span>
-                </div>
-              </>
-            )}
+            <p className="text-xs font-bold text-white line-clamp-2">
+              {shipment.title}
+              {shipment.attributes && (
+                <span className="text-gray-400 text-[11px] font-normal"> • {shipment.attributes}</span>
+              )}
+            </p>
           </div>
-          {shipment.dispatch_date && (
-            <p className="text-[10px] mt-1" style={{ color: "#FF9800" }}>
-              📦 Despachar antes del {new Date(shipment.dispatch_date).toLocaleDateString("es-AR", { weekday: "long", day: "numeric" })}
+          
+          {/* Badge Cuenta en esquina derecha */}
+          <div style={{
+            background: getAccountColor(shipment.meli_user_id, shipment.account).bg,
+            color: getAccountColor(shipment.meli_user_id, shipment.account).text,
+            border: `1px solid ${getAccountColor(shipment.meli_user_id, shipment.account).border}`,
+            padding: "0.25rem 0.5rem",
+            borderRadius: "0.375rem",
+            fontSize: "0.75rem",
+            fontWeight: "bold",
+            whiteSpace: "nowrap",
+          }}>
+            {shipment.account}
+          </div>
+        </div>
+
+        {/* Comprador + Contacto */}
+        <div className="text-[10px] space-y-1">
+          <p style={{ color: "#D1D5DB" }}>
+            <span style={{ color: "#9CA3AF" }}>👤</span> {shipment.buyer}{shipment.buyer_nickname ? ` (@${shipment.buyer_nickname})` : ""}
+          </p>
+          {(shipment.buyer_email || shipment.buyer_phone) && (
+            <p style={{ color: "#D1D5DB" }}>
+              {shipment.buyer_email && <span>📧 {shipment.buyer_email}</span>}
+              {shipment.buyer_email && shipment.buyer_phone && <span> | </span>}
+              {shipment.buyer_phone && <span>☎️ {shipment.buyer_phone}</span>}
             </p>
           )}
         </div>
+
+        {/* Dirección */}
+        {(shipment.delivery_address || shipment.delivery_state || shipment.delivery_zip) && (
+          <div className="text-[10px] p-1.5 rounded" style={{ background: "rgba(255,255,255,0.05)" }}>
+            <p style={{ color: "#9CA3AF" }} className="font-bold">📍 ENTREGA:</p>
+            {shipment.delivery_address && <p style={{ color: "#D1D5DB" }}>{shipment.delivery_address}</p>}
+            {(shipment.delivery_state || shipment.delivery_zip) && (
+              <p style={{ color: "#D1D5DB" }}>
+                {shipment.delivery_state}{shipment.delivery_state && shipment.delivery_zip ? `, ${shipment.delivery_zip}` : shipment.delivery_zip ? shipment.delivery_zip : ""}
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Precios */}
+        {(shipment.unit_price || shipment.total_price || shipment.shipping_cost) && (
+          <div className="text-[10px] p-1.5 rounded" style={{ background: "rgba(255,255,255,0.05)" }}>
+            <p style={{ color: "#9CA3AF" }} className="font-bold">💰 VALORES:</p>
+            {shipment.unit_price && (
+              <p style={{ color: "#D1D5DB" }}>Producto: ${shipment.unit_price?.toLocaleString("es-AR")} x{shipment.quantity} = ${(shipment.unit_price * shipment.quantity).toLocaleString("es-AR")}</p>
+            )}
+            {shipment.shipping_cost !== undefined && (
+              <p style={{ color: "#D1D5DB" }}>Envío: ${shipment.shipping_cost?.toLocaleString("es-AR") ?? "0"}</p>
+            )}
+            {shipment.total_price && (
+              <p style={{ color: "#39FF14", fontWeight: "bold" }}>Total: ${shipment.total_price?.toLocaleString("es-AR")}</p>
+            )}
+          </div>
+        )}
+
+        {/* Notas + Cupón */}
+        <div className="text-[10px] space-y-1">
+          {shipment.buyer_notes && (
+            <p style={{ color: "#D1D5DB" }}>
+              📝 <span style={{ color: "#9CA3AF" }}>Notas:</span> "{shipment.buyer_notes}"
+            </p>
+          )}
+          {shipment.coupon_code && (
+            <p style={{ color: "#D1D5DB" }}>
+              🛒 <span style={{ color: "#9CA3AF" }}>Cupón:</span> {shipment.coupon_code}
+            </p>
+          )}
+        </div>
+
+        {/* Detalles: Unidades + SKU */}
+        <div className="flex items-center gap-2 text-[10px] p-1.5 rounded"
+          style={{ background: "rgba(255,255,255,0.05)" }}>
+          <div>
+            <span style={{ color: "#9CA3AF" }}>Unidades:</span>
+            <span className="ml-1 font-bold text-white">{shipment.quantity}</span>
+          </div>
+          {shipment.seller_sku && (
+            <>
+              <div style={{ width: "1px", height: "14px", background: "rgba(255,255,255,0.2)" }}></div>
+              <div className="truncate">
+                <span style={{ color: "#9CA3AF" }}>SKU:</span>
+                <span className="ml-1 font-bold text-white truncate">{shipment.seller_sku}</span>
+              </div>
+            </>
+          )}
+        </div>
+
+        {shipment.dispatch_date && (
+          <p className="text-[10px]" style={{ color: "#FF9800" }}>
+            📦 Despachar antes del {new Date(shipment.dispatch_date).toLocaleDateString("es-AR", { weekday: "long", day: "numeric" })}
+          </p>
+        )}
       </div>
 
       {/* Botones */}
@@ -231,6 +334,53 @@ function EtiquetasInner() {
       return new Set(allIds);
     });
   }, []);
+
+  // FASE 4: Verificación de Duplicados
+  const checkForDuplicates = useCallback(() => {
+    const shipmentIds = new Set<number>();
+    const duplicates: number[] = [];
+    
+    (data?.shipments ?? []).forEach(s => {
+      if (shipmentIds.has(s.shipment_id)) {
+        duplicates.push(s.shipment_id);
+      }
+      shipmentIds.add(s.shipment_id);
+    });
+    
+    if (duplicates.length > 0) {
+      console.warn(`[DEBUG] Shipments duplicados encontrados: ${duplicates.join(", ")}`);
+    }
+    
+    return duplicates.length === 0;
+  }, [data?.shipments]);
+
+  // FASE 5: Summary por Cuenta
+  const summaryByAccount = useMemo(() => {
+    const map = new Map<string, { pending: number; printed: number; account_name: string; meli_user_id: string }>();
+    
+    (data?.shipments ?? []).forEach(s => {
+      const key = s.account;
+      if (!map.has(key)) {
+        map.set(key, { pending: 0, printed: 0, account_name: s.account, meli_user_id: s.meli_user_id });
+      }
+      
+      const entry = map.get(key)!;
+      if (s.printed_at) {
+        entry.printed++;
+      } else {
+        entry.pending++;
+      }
+    });
+    
+    return map;
+  }, [data?.shipments]);
+
+  // Verificar duplicados al cargar
+  useEffect(() => {
+    if (data?.shipments) {
+      checkForDuplicates();
+    }
+  }, [data?.shipments, checkForDuplicates]);
 
   // Filtrar datos según pestaña de estado y logística
   const filtered = data?.shipments?.filter(s => {
@@ -378,6 +528,21 @@ function EtiquetasInner() {
               <Printer className="w-5 h-5" style={{ color: "#FFE600" }} />
               Gestor de Expedición
             </h1>
+            {/* Summary por Cuenta */}
+            {data && summaryByAccount.size > 0 && (
+              <p className="text-[10px] text-gray-400 mt-1">
+                Total {data.shipments.length} etiquetas:&nbsp;
+                {Array.from(summaryByAccount.entries()).map(([account, stats], idx) => (
+                  <span key={account}>
+                    {idx > 0 ? " | " : ""}
+                    <span style={{ color: getAccountColor(stats.meli_user_id, stats.account_name).text }}>
+                      {stats.account_name}
+                    </span>
+                    {" "}({stats.pending}P + {stats.printed}I)
+                  </span>
+                ))}
+              </p>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-2">

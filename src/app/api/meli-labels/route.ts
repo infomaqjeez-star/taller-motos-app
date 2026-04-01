@@ -21,6 +21,8 @@ interface ShipmentInfo {
   type: LogisticType;
   buyer: string;
   buyer_nickname: string | null;
+  buyer_phone?: string | null;
+  buyer_email?: string | null;
   title: string;
   quantity: number;
   unit_price: number | null;
@@ -32,6 +34,13 @@ interface ShipmentInfo {
   urgency: UrgencyType;
   delivery_date: string | null;
   dispatch_date: string | null;
+  delivery_address?: string | null;
+  delivery_state?: string | null;
+  delivery_zip?: string | null;
+  buyer_notes?: string | null;
+  total_price?: number | null;
+  shipping_cost?: number | null;
+  coupon_code?: string | null;
   thumbnail: string | null;
   item_id: string | null;
   purchase_url?: string | null;  // URL a la compra específica en MeLi
@@ -148,6 +157,8 @@ function parseOrder(
     type,
     buyer:          `${(buyer?.first_name as string | undefined) ?? ""} ${(buyer?.last_name as string | undefined) ?? ""}`.trim(),
     buyer_nickname: (buyer?.nickname as string | undefined) ?? null,
+    buyer_phone:    (buyer?.phone as string | undefined) ?? null,
+    buyer_email:    (buyer?.email as string | undefined) ?? null,
     title:          firstItem?.item?.title ?? "Producto",
     quantity:       firstItem?.quantity ?? 1,
     unit_price:     firstItem?.unit_price ?? null,
@@ -159,6 +170,19 @@ function parseOrder(
     urgency:        classifyUrgency(deliveryDate),
     delivery_date:  deliveryDate,
     dispatch_date:  null,
+    delivery_address: (() => {
+      const addr = (ship.receiver_address as any) ?? {};
+      if (addr.street_name && addr.street_number) {
+        return `${addr.street_name} ${addr.street_number}${addr.apartment ? `, ${addr.apartment}` : ""}`;
+      }
+      return null;
+    })(),
+    delivery_state: (((ship.receiver_address as any)?.state?.name as string | undefined)) ?? null,
+    delivery_zip:   (((ship.receiver_address as any)?.zip_code as string | undefined)) ?? null,
+    buyer_notes:    (order.buyer_notes as string | undefined) ?? null,
+    total_price:    (order.total_amount as number | undefined) ?? null,
+    shipping_cost:  (order.shipping_amount as number | undefined) ?? null,
+    coupon_code:    (((order.coupon as any)?.code as string | undefined)) ?? null,
     thumbnail:      null,
     item_id:        firstItem?.item?.id ?? null,
     purchase_url:   (order.id as number | undefined) ? `https://www.mercadolibre.com.ar/compras/${order.id}` : null,
