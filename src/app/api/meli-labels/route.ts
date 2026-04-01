@@ -745,23 +745,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: historyError.message }, { status: 500 });
     }
 
-    // También guardar en meli_printed_labels para compatibilidad (legacy)
-    const legacyRows = ids.map(id => {
-      const detail = shipments?.find(s => s.shipment_id === id);
-      return {
-        shipment_id: id,
-        account: detail?.account ?? null,
-        type: detail?.type ?? null,
-        buyer: detail?.buyer ?? null,
-        title: detail?.title ?? null,
-        thumbnail: detail?.thumbnail ?? null,
-        printed_at: now,
-      };
-    });
-
-    await supabase.from("meli_printed_labels").upsert(legacyRows, { onConflict: "shipment_id" });
-
-    console.log(`[meli-labels POST] Marked ${ids.length} shipments as printed with zone data`);
+    // Solo guardar en printed_labels (meli_printed_labels es legacy y tiene problemas de tipo)
+    console.log(`[meli-labels POST] Marked ${ids.length} shipments as printed`);
 
     return NextResponse.json({ ok: true, marked: ids.length });
   } catch (e) {
