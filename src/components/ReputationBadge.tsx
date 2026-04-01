@@ -32,7 +32,7 @@ export default function ReputationBadge({ levelId, levelName, powerSellerStatus 
     if (powerSellerStatus === "gold") {
       return <Star className="w-3 h-3" />;
     }
-    if (powerSellerStatus === "mercadolider") {
+    if (powerSellerStatus === "silver") {
       return <Crown className="w-3 h-3" />;
     }
     return null;
@@ -41,7 +41,7 @@ export default function ReputationBadge({ levelId, levelName, powerSellerStatus 
   const getPowerSellerLabel = () => {
     if (powerSellerStatus === "platinum") return "Platinum";
     if (powerSellerStatus === "gold") return "Gold";
-    if (powerSellerStatus === "mercadolider") return "Mercadolíder";
+    if (powerSellerStatus === "silver") return "MercadoLíder";
     return null;
   };
 
@@ -52,7 +52,7 @@ export default function ReputationBadge({ levelId, levelName, powerSellerStatus 
     if (powerSellerStatus === "gold") {
       return { bg: "#C0C0C015", text: "#C0C0C0", border: "#C0C0C033" }; // Plateado
     }
-    if (powerSellerStatus === "mercadolider") {
+    if (powerSellerStatus === "silver") {
       return { bg: "#2196F315", text: "#2196F3", border: "#2196F333" }; // Azul
     }
     return { bg: "#FFFFFF15", text: "#FFFFFF", border: "#FFFFFF33" }; // Default blanco

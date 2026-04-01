@@ -42,15 +42,13 @@ const LEVEL_LABELS: Record<string, string> = {
 const POWER_SELLER_COLORS: Record<string, string> = {
   platinum: "#FFD700",      // Dorado
   gold: "#C0C0C0",          // Plateado
-  silver: "#CD7F32",        // Bronce
-  mercadolider: "#2196F3",  // Azul
+  silver: "#2196F3",        // Azul (MercadoLíder básico)
 };
 
 const POWER_SELLER_LABELS: Record<string, string> = {
   platinum: "Platinum",
   gold: "Gold",
-  silver: "Silver",
-  mercadolider: "Mercadolider",
+  silver: "MercadoLíder",
 };
 
 export default function AccountSelector({ accounts, selectedId, onSelect, compact }: Props) {
