@@ -361,6 +361,10 @@ export async function GET(req: NextRequest) {
         sales_by_logistic: a.sales_by_logistic,
         sales_by_day:  a.sales_by_day,
       })),
+    }, {
+      headers: {
+        'Cache-Control': 'public, max-age=300', // 5 minutos
+      },
     });
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });

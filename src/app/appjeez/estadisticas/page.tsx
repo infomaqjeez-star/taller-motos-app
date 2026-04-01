@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
+import { useCachedStats, type StatsData, type SalesByDay, type TopProduct, type ShipBreak, type Reputation, type PerAccount } from "@/hooks/useCachedStats";
 import Link from "next/link";
 import {
   TrendingUp, RefreshCw, AlertTriangle, ChevronDown, ChevronUp,
@@ -12,27 +13,6 @@ import {
 } from "recharts";
 
 // ── Types ──────────────────────────────────────────────────────────────────
-interface SalesByDay  { date: string; orders: number; amount: number }
-interface TopProduct  { title: string; sku: string; qty: number; revenue: number }
-interface ShipBreak   { correo: number; flex: number; turbo: number; full: number; other: number }
-interface Reputation  {
-  account: string; meli_user_id: string; level_id: string;
-  power_seller_status: string | null;
-  claims_rate: number; cancellations_rate: number; delayed_rate: number;
-  transactions_total: number; transactions_completed: number;
-  ratings_positive: number; ratings_negative: number;
-}
-interface PerAccount  { account: string; meli_user_id: string; total_orders: number; total_amount: number; sales_by_day?: SalesByDay[] }
-interface StatsData {
-  period: string; account_id: string; accounts_count: number;
-  sales_by_day: SalesByDay[];
-  sales_by_logistic: Record<string, { qty: number; amount: number }>;
-  top_products: TopProduct[];
-  shipping_breakdown: ShipBreak;
-  reputation: Reputation[];
-  totals: { total_orders: number; total_amount: number; avg_ticket: number; cancellation_count: number };
-  per_account: PerAccount[];
-}
 interface AccountOption { nickname: string; meli_user_id: string }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -143,6 +123,7 @@ function SalesTooltip({ active, payload, label }: { active?: boolean; payload?: 
 
 // ── Main Component ─────────────────────────────────────────────────────────
 export default function EstadisticasPage() {
+  const cache = useCachedStats();
   const [data,           setData]           = useState<StatsData | null>(null);
   const [loading,        setLoading]        = useState(true);
   const [visibleAccounts, setVisibleAccounts] = useState<Record<string, boolean>>({});
@@ -170,21 +151,39 @@ export default function EstadisticasPage() {
     try {
       // Detectar zona horaria del cliente y enviar al backend
       const tzOffset = -new Date().getTimezoneOffset() / 60;
-      const res = await fetch(`/api/meli-stats?period=${period}&account_id=${accountId}&tz_offset=${tzOffset}`);
-      if (!res.ok) throw new Error((await res.json()).error ?? "Error al cargar estadísticas");
-      const json: StatsData = await res.json();
+      const json: StatsData = await cache.getOrFetch(period, accountId, tzOffset);
       setData(json);
       if (json.per_account?.length > 0 && accounts.length === 0) {
         setAccounts(json.per_account.map(a => ({ nickname: a.account, meli_user_id: a.meli_user_id })));
       }
     } catch (e) {
-      setError((e as Error).message);
+      // Ignorar AbortError (cuando se cancela una request)
+      if (e instanceof Error && e.name !== 'AbortError') {
+        setError((e as Error).message);
+      }
     } finally {
       setLoading(false);
     }
-  }, [period, accountId, accounts.length]);
+  }, [period, accountId, accounts.length, cache]);
 
-  useEffect(() => { load(); }, [load]);
+  // Precarga paralela al montar (de los 3 períodos)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const tzOffset = -new Date().getTimezoneOffset() / 60;
+      
+      // Precarga en paralelo sin esperar
+      Promise.all([
+        cache.getOrFetch('today', accountId, tzOffset),
+        cache.getOrFetch('7d', accountId, tzOffset),
+        cache.getOrFetch('30d', accountId, tzOffset),
+      ]).catch(() => {}); // No-op, solo precarga
+    }
+  }, [accountId, cache]);
+
+  const handleRefresh = useCallback(() => {
+    cache.invalidateAll();
+    load();
+  }, [cache, load]);
 
   const navItems = [
     { label: "Dashboard",     icon: <BarChart2 className="w-4 h-4" />,   href: "/appjeez"                },
@@ -250,7 +249,7 @@ export default function EstadisticasPage() {
               <p>{new Date().toLocaleDateString("es-AR", { weekday: "short", day: "2-digit", month: "short" })}</p>
               <p style={{ color: "#6B7280" }}>{new Date().toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}</p>
             </div>
-            <button onClick={load} disabled={loading}
+            <button onClick={handleRefresh} disabled={loading}
               className="p-2 rounded-xl transition-all" style={{ background: "#1F1F1F" }}>
               <RefreshCw className={`w-4 h-4 text-gray-400 ${loading ? "animate-spin" : ""}`} />
             </button>
