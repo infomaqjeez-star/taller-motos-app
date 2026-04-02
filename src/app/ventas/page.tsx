@@ -415,7 +415,7 @@ export default function VentasPage() {
         total:      valid.reduce((s, i) => s + i.subtotal, 0),
         status:     "activa",
         notas,
-        createdAt:  new Date().toISOString(),
+        createdAt:  new Date().toLocaleString("sv-SE", { timeZone: "America/Argentina/Buenos_Aires" }).replace(" ", "T"),
         items:      valid.map(i => ({ ...i, ventaId: "" })),
       };
       await ventasDb.create(venta);

@@ -59,7 +59,11 @@ export async function GET(req: Request) {
       .order("created_at", { ascending: false });
 
     if (action === "today") {
-      const hoy = new Date().toISOString().slice(0, 10);
+      // Usar fecha del cliente (evita desfase UTC vs Argentina)
+      const fecha = searchParams.get("fecha");
+      const hoy = fecha && /^\d{4}-\d{2}-\d{2}$/.test(fecha)
+        ? fecha
+        : new Date().toISOString().slice(0, 10);
       q = q.gte("created_at", hoy).lte("created_at", hoy + "T23:59:59");
     } else {
       if (desde) q = q.gte("created_at", desde);

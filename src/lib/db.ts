@@ -547,7 +547,10 @@ export const ventasDb = {
   },
 
   async getToday(): Promise<VentaRepuesto[]> {
-    const res = await fetch(`/api/ventas?action=today`);
+    // Usar fecha local del cliente (Argentina) para evitar desfase UTC
+    const now = new Date();
+    const localDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    const res = await fetch(`/api/ventas?action=today&fecha=${localDate}`);
     if (!res.ok) { const e = await res.json(); throw new Error(e.error ?? "Error al obtener ventas"); }
     const data = await res.json();
     return (data ?? []).map((r: Record<string, unknown>) => {
