@@ -3,7 +3,6 @@
 import { useState, useEffect, useMemo } from "react";
 import Navbar from "@/components/Navbar";
 import BottomNav from "@/components/BottomNav";
-import OCRScanner, { PaqueteOCR } from "@/components/OCRScanner";
 import { flexDb } from "@/lib/db";
 import {
   FlexEnvio, FlexZona,
@@ -11,7 +10,7 @@ import {
 } from "@/lib/types";
 import {
   Truck, Trash2, TrendingUp, DollarSign,
-  MapPin, Package, Camera, BarChart2, Settings, Calendar,
+  MapPin, Package, BarChart2, Settings, Calendar,
 } from "lucide-react";
 
 const fmt = (n: number) =>
@@ -80,7 +79,6 @@ export default function FlexPage() {
   const [envios, setEnvios]           = useState<FlexEnvio[]>([]);
   const [loading, setLoading]         = useState(true);
   const [showSettings, setShowSettings] = useState(false);
-  const [showOCR, setShowOCR]         = useState(false);
   const { tarifas, update: updateTarifa } = useTarifas();
   const [settingEdit, setSettingEdit] = useState<Record<FlexZona, string>>({
     cercana: "4490", media: "6490", lejana: "8490",
@@ -100,65 +98,6 @@ export default function FlexPage() {
     if (!confirm("¿Eliminar este envío?")) return;
     await flexDb.delete(id);
     await load();
-  };
-
-  const handleOCRFinish = async (paquetes: PaqueteOCR[]) => {
-    setShowOCR(false);
-    const hoy = new Date().toISOString().slice(0, 10);
-    const validos = paquetes.filter(p => p.localidad && p.estado === "ok");
-
-    if (validos.length === 0) {
-      alert("No se detectaron zonas válidas en las fotos.");
-      return;
-    }
-
-    let guardados = 0;
-    let duplicados = 0;
-    const errores: string[] = [];
-
-    for (const p of validos) {
-      try {
-        await flexDb.create({
-          id:                 generateId(),
-          fecha:              hoy,
-          localidad:          p.localidad!,
-          zona:               p.zona ?? "lejana",
-          precioML:           p.precioML,
-          pagoFlete:          p.pagoFlete,
-          ganancia:           p.ganancia,
-          descripcion:        "",
-          nroSeguimiento:     p.envioId ?? "",
-          usuarioML:          p.usuarioML ?? "",
-          nombreDestinatario: p.nombreDestinatario ?? "",
-          direccion:          p.direccion ?? "",
-          codigoPostal:       p.codigoPostal ?? "",
-          productoSku:        p.productoSku ?? "",
-          packId:             p.packId ?? "",
-          createdAt:          new Date().toISOString(),
-        });
-        guardados++;
-      } catch (err: unknown) {
-        const msg = err instanceof Error
-          ? err.message
-          : (err as { message?: string })?.message ?? JSON.stringify(err);
-        if (msg.includes("unique") || msg.includes("duplicate") || msg.includes("23505")) {
-          duplicados++;
-        } else {
-          errores.push(msg);
-        }
-      }
-    }
-    await load();
-    if (errores.length > 0) {
-      alert(`ERROR al guardar:\n${errores[0]}`);
-    } else if (validos.length > 0) {
-      const resumen = duplicados > 0
-        ? `✓ ${guardados} guardados — ⚠ ${duplicados} duplicados rechazados`
-        : `✓ ${guardados} envíos guardados correctamente`;
-      alert(resumen);
-    } else {
-      alert("No se detectaron zonas válidas en las fotos.");
-    }
   };
 
   // ── Stats generales ──
@@ -223,12 +162,6 @@ export default function FlexPage() {
               className="p-2.5 rounded-xl bg-gray-800 text-gray-400 hover:text-white border border-gray-700 transition-colors"
             >
               <Settings className="w-5 h-5" />
-            </button>
-            <button
-              onClick={() => setShowOCR(true)}
-              className="flex items-center gap-1.5 bg-purple-600 hover:bg-purple-500 text-white font-bold px-4 py-2.5 rounded-xl transition-colors"
-            >
-              <Camera className="w-4 h-4" /> Escanear
             </button>
           </div>
         </div>
@@ -509,15 +442,6 @@ export default function FlexPage() {
           )}
         </div>
       </main>
-
-      {/* ══ OCR Scanner ══ */}
-      {showOCR && (
-        <OCRScanner
-          tarifas={tarifas}
-          onFinish={handleOCRFinish}
-          onClose={() => setShowOCR(false)}
-        />
-      )}
 
       <BottomNav />
     </>
