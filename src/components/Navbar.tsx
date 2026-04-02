@@ -26,7 +26,6 @@ export default function Navbar({
 
   const links = [
     { href: "/taller",       label: "Taller",       icon: LayoutDashboard, badge: overdueCount,  badgeColor: "bg-red-500" },
-    { href: "/inventario",   label: "Inventario",   icon: Package,         badge: lowStockCount, badgeColor: "bg-red-500" },
     { href: "/ventas",       label: "Vender",       icon: ShoppingCart,    badge: 0,             badgeColor: "" },
     { href: "/estadisticas", label: "Estadísticas", icon: BarChart2,       badge: 0,             badgeColor: "" },
     { href: "/agenda",       label: "Agenda",       icon: Users,           badge: 0,             badgeColor: "" },
