@@ -33,7 +33,7 @@ export default function Navbar({
 
   return (
     <header className="bg-[#FDB71A] border-b border-[#E09A00] sticky top-0 z-50 shadow-lg">
-      <div className="w-full px-4">
+      <div className="max-w-3xl mx-auto px-4">
         <div className="flex items-center justify-between h-14">
 
           {/* Logo — clic lleva al inicio */}
