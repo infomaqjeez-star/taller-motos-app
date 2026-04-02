@@ -298,12 +298,12 @@ export default function EstadisticasPage() {
     try {
       const tzOffset = -new Date().getTimezoneOffset() / 60;
       
-      // Convertir fechas a formato para API
+      // Convertir fechas a formato YYYY-MM-DD para API
       const dateFrom = periodDates.from.toISOString().split("T")[0];
       const dateTo = periodDates.to.toISOString().split("T")[0];
       
       // Usar el hook con parámetros de fecha personalizados
-      const stats = await getOrFetch("custom", "all", tzOffset);
+      const stats = await getOrFetch("custom", "all", tzOffset, dateFrom, dateTo);
       setData(stats);
     } catch (e) {
       setError((e as Error).message);

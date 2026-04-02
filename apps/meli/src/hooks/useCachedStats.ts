@@ -50,9 +50,14 @@ export const useCachedStats = () => {
     async (
       period: string,
       accountId: string,
-      tzOffset: number
+      tzOffset: number,
+      dateFrom?: string,
+      dateTo?: string
     ): Promise<StatsData> => {
-      const key = generateCacheKey(period, accountId);
+      // Generar key incluyendo fechas si existen
+      const key = dateFrom && dateTo 
+        ? `${period}:${accountId}:${dateFrom}:${dateTo}`
+        : generateCacheKey(period, accountId);
       const cached = cacheRef.current.get(key);
 
       // SWR: Si existe en cache y no está expirado, retorna inmediatamente
@@ -61,7 +66,7 @@ export const useCachedStats = () => {
       }
 
       // Si expiró, fetch datos frescos
-      return fetchStats(key, period, accountId, tzOffset);
+      return fetchStats(key, period, accountId, tzOffset, dateFrom, dateTo);
     },
     []
   );
@@ -70,7 +75,9 @@ export const useCachedStats = () => {
     key: string,
     period: string,
     accountId: string,
-    tzOffset: number
+    tzOffset: number,
+    dateFrom?: string,
+    dateTo?: string
   ): Promise<StatsData> => {
     // Abort anterior si existe
     const oldController = abortControllersRef.current.get(key);
@@ -81,10 +88,12 @@ export const useCachedStats = () => {
     abortControllersRef.current.set(key, controller);
 
     try {
-      const res = await fetch(
-        `/api/meli-stats?period=${period}&account_id=${accountId}&tz_offset=${tzOffset}`,
-        { signal: controller.signal }
-      );
+      // Construir URL con parámetros opcionales de fecha
+      let url = `/api/meli-stats?period=${period}&account_id=${accountId}&tz_offset=${tzOffset}`;
+      if (dateFrom) url += `&date_from=${dateFrom}`;
+      if (dateTo) url += `&date_to=${dateTo}`;
+      
+      const res = await fetch(url, { signal: controller.signal });
 
       if (!res.ok) {
         throw new Error(`HTTP ${res.status}`);
