@@ -134,13 +134,13 @@ function ConfigMeliContent() {
           <h1 className="text-base font-black text-white">Configuración MeLi</h1>
           <p className="text-xs text-gray-500">Cuentas de Mercado Libre conectadas</p>
         </div>
-        <Link
-          href="/appjeez"
+        <a
+          href="https://web-production-86c137.up.railway.app/"
           className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold"
           style={{ background: "#FF572222", color: "#FF5722", border: "1px solid #FF572244" }}
         >
           Ir al Panel →
-        </Link>
+        </a>
       </div>
 
       <div className="px-4 py-6 max-w-lg mx-auto space-y-6">
@@ -324,13 +324,13 @@ function ConfigMeliContent() {
         </div>
 
         {/* Botón volver al panel */}
-        <Link
-          href="/appjeez"
+        <a
+          href="https://web-production-86c137.up.railway.app/"
           className="flex items-center justify-center gap-2 text-sm font-bold px-4 py-3 rounded-2xl w-full transition-opacity hover:opacity-80"
           style={{ background: "#FFE60018", color: "#FFE600", border: "1px solid #FFE60033" }}
         >
           🏠 Inicio Maqjeez
-        </Link>
+        </a>
 
         {/* Info de seguridad */}
         <div className="rounded-2xl border border-white/5 p-4"
