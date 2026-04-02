@@ -342,17 +342,20 @@ export default function EstadisticasPage() {
     
     switch (period) {
       case "year": {
-        // Agrupar por mes
+        // Agrupar por mes - últimos 12 meses
         const months = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
         const byMonth = new Map<number, { label: string; amount: number; orders: number }>();
         
         sales.forEach((day) => {
           const date = new Date(day.date);
           const month = date.getMonth();
-          const existing = byMonth.get(month) || { label: months[month], amount: 0, orders: 0 };
+          const year = date.getFullYear();
+          const key = month; // Solo agrupamos por mes, no por año
+          const label = months[month];
+          const existing = byMonth.get(key) || { label, amount: 0, orders: 0 };
           existing.amount += day.amount;
           existing.orders += day.orders;
-          byMonth.set(month, existing);
+          byMonth.set(key, existing);
         });
         
         return Array.from(byMonth.entries())
@@ -386,11 +389,69 @@ export default function EstadisticasPage() {
           .map(([_, data]) => data);
       }
       
-      case "week":
-      case "day":
-      case "custom":
+      case "week": {
+        // Semana completa como un solo valor
+        const totalAmount = sales.reduce((sum, day) => sum + day.amount, 0);
+        const totalOrders = sales.reduce((sum, day) => sum + day.orders, 0);
+        
+        return [{
+          label: "Semana",
+          amount: totalAmount,
+          orders: totalOrders,
+        }];
+      }
+      
+      case "day": {
+        // Día actual
+        const totalAmount = sales.reduce((sum, day) => sum + day.amount, 0);
+        const totalOrders = sales.reduce((sum, day) => sum + day.orders, 0);
+        
+        return [{
+          label: "Hoy",
+          amount: totalAmount,
+          orders: totalOrders,
+        }];
+      }
+      
+      case "custom": {
+        // Personalizado: agrupar por semanas si el rango es grande, o por días si es corto
+        const daysDiff = Math.ceil((periodDates.to.getTime() - periodDates.from.getTime()) / (1000 * 60 * 60 * 24));
+        
+        if (daysDiff > 31) {
+          // Agrupar por semanas
+          const byWeek = new Map<number, { label: string; amount: number; orders: number }>();
+          
+          sales.forEach((day) => {
+            const date = new Date(day.date);
+            const weekStart = new Date(date);
+            weekStart.setDate(date.getDate() - date.getDay());
+            const weekKey = weekStart.getTime();
+            const weekLabel = `${weekStart.getDate()}/${weekStart.getMonth() + 1}`;
+            
+            const existing = byWeek.get(weekKey) || { label: weekLabel, amount: 0, orders: 0 };
+            existing.amount += day.amount;
+            existing.orders += day.orders;
+            byWeek.set(weekKey, existing);
+          });
+          
+          return Array.from(byWeek.entries())
+            .sort((a, b) => a[0] - b[0])
+            .map(([_, data]) => data);
+        } else {
+          // Mostrar por día
+          return sales.map((day) => ({
+            label: new Date(day.date).toLocaleDateString("es-AR", {
+              day: "2-digit",
+              month: "2-digit",
+            }),
+            amount: day.amount,
+            orders: day.orders,
+          }));
+        }
+      }
+      
       default: {
-        // Mostrar por día
+        // Por defecto: mostrar por día
         return sales.map((day) => ({
           label: new Date(day.date).toLocaleDateString("es-AR", {
             day: "2-digit",
@@ -406,9 +467,12 @@ export default function EstadisticasPage() {
   // Título del gráfico según período
   const chartTitle = useMemo(() => {
     switch (period) {
-      case "year": return "Ventas por mes";
-      case "month": return "Ventas por día";
-      default: return "Ventas por día";
+      case "year": return "Ventas por mes (últimos 12 meses)";
+      case "month": return "Ventas por día del mes";
+      case "week": return "Ventas de la semana";
+      case "day": return "Ventas de hoy";
+      case "custom": return "Ventas personalizadas";
+      default: return "Ventas";
     }
   }, [period]);
 
