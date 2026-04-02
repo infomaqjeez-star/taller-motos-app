@@ -71,23 +71,30 @@ export default function QuestionAlertGlobal() {
     localStorage.setItem(ALERT_MODE_STORAGE_KEY, alertMode);
   }, [alertMode]);
 
+  // Ref para mantener el modo actual siempre accesible
+  const alertModeRef = useRef<AlertMode>(alertMode);
+  useEffect(() => {
+    alertModeRef.current = alertMode;
+  }, [alertMode]);
+
   // Función para reproducir sonido de alerta usando PRELOAD
-  const playAlertSound = useCallback((mode: AlertMode) => {
+  const playAlertSound = useCallback((mode?: AlertMode) => {
     try {
+      const modeToPlay = mode ?? alertModeRef.current;
       const audios = (window as any).preloadedAudios;
-      if (!audios || !audios[mode]) {
-        console.error("❌ Audio no precargado:", mode, "Audios disponibles:", Object.keys(audios || {}));
+      if (!audios || !audios[modeToPlay]) {
+        console.error("❌ Audio no precargado:", modeToPlay, "Audios disponibles:", Object.keys(audios || {}));
         return;
       }
 
-      const audio = audios[mode];
-      console.log(`[AUDIO] Reproduciendo ${mode}:`, audio.src);
+      const audio = audios[modeToPlay];
+      console.log(`[AUDIO] Reproduciendo ${modeToPlay}:`, audio.src);
       audio.currentTime = 0;
       audio.play().catch((e: Error) => {
         console.error("❌ Error reproduciendo audio:", e);
       });
 
-      console.log(`✅ Sonido ${mode} reproducido (preload)`, new Date().toISOString());
+      console.log(`✅ Sonido ${modeToPlay} reproducido (preload)`, new Date().toISOString());
     } catch (error) {
       console.error("❌ Error en playAlertSound:", error);
     }
@@ -132,7 +139,7 @@ export default function QuestionAlertGlobal() {
 
       if (newQuestions > 0) {
         setNewCount(prev => prev + newQuestions);
-        playAlertSound(alertMode);
+        playAlertSound(); // Usa el modo actual del ref
         const modeConfig = ALERT_MODES[alertMode];
         setToast(`${newQuestions} pregunta${newQuestions > 1 ? "s" : ""} nueva${newQuestions > 1 ? "s" : ""} de ${newAccounts.join(", ")}`);
         setTimeout(() => setToast(null), modeConfig.duration);
@@ -169,7 +176,7 @@ export default function QuestionAlertGlobal() {
         (payload) => {
           // 🔥 PRIMERA: reproducir sonido INMEDIATAMENTE (antes de setState)
           console.log("[REALTIME] Nueva pregunta detectada:", payload.new.meli_question_id);
-          playAlertSound(alertMode);
+          playAlertSound(); // Usa el modo actual del ref
 
           // LUEGO: actualizar estado y UI
           loadRef.current?.();
