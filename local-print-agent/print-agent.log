@@ -73,3 +73,5 @@
 [2026-03-30T11:55:50.719Z] OK: impreso en "4BARCODE 4B-2054K"
 [2026-03-31T18:05:18.629Z] === Print Agent v1.0.0 escuchando en http://127.0.0.1:7070 ===
 [2026-03-31T18:05:22.749Z] Impresora encontrada: "4BARCODE 4B-2054K"
+[2026-04-02T18:42:13.219Z] === Print Agent v1.0.0 escuchando en http://127.0.0.1:7070 ===
+[2026-04-02T18:42:15.697Z] Impresora encontrada: "4BARCODE 4B-2054K"
