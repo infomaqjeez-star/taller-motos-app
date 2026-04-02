@@ -31,7 +31,6 @@ export default function Navbar({
     { href: "/estadisticas", label: "Estadísticas", icon: BarChart2,       badge: 0,             badgeColor: "" },
     { href: "/agenda",       label: "Agenda",       icon: Users,           badge: 0,             badgeColor: "" },
     { href: "/flex",         label: "Flex",         icon: Truck,           badge: 0,             badgeColor: "" },
-    { href: "/reportes",     label: "Reportes",     icon: BarChart2,       badge: 0,             badgeColor: "" },
   ];
 
   return (
