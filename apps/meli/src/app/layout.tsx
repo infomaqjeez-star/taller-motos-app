@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import QuestionAlertGlobal from "@/components/QuestionAlertGlobal";
 
 export const metadata: Metadata = {
   title: "AppJeez - MercadoLibre",
@@ -18,6 +19,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="es">
       <body className="min-h-screen" style={{ background: "#121212", color: "#FFFFFF" }}>
         {children}
+        <QuestionAlertGlobal />
       </body>
     </html>
   );
