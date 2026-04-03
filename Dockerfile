@@ -1,4 +1,4 @@
-# Dockerfile para Railway - Next.js App Router
+# Dockerfile para Railway - Next.js App Router (apps/meli)
 FROM node:20-alpine AS base
 
 # Instalar dependencias
@@ -6,14 +6,18 @@ FROM base AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-COPY package.json package-lock.json* ./
+# Copiar package.json de meli
+COPY apps/meli/package.json ./package.json
+COPY apps/meli/package-lock.json* ./package-lock.json
 RUN npm ci
 
 # Build
 FROM base AS builder
 WORKDIR /app
+
+# Copiar node_modules y código fuente de meli
 COPY --from=deps /app/node_modules ./node_modules
-COPY . .
+COPY apps/meli .
 
 RUN npm run build
 
