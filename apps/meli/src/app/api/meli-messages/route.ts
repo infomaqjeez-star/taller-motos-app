@@ -82,7 +82,7 @@ export async function GET(req: Request) {
         const searchData = await meliGet(
           `/users/${meliUserId}/questions/search?status=UNANSWERED&limit=50`,
           token
-        ) as { questions?: Array<{ id: string; item_id: string; status: string; text: string; date_created: string; from?: { nickname: string } }> > | null;
+        ) as { questions?: Array<{ id: string; item_id: string; status: string; text: string; date_created: string; from?: { nickname: string } }> | null;
 
         const questionIds = searchData?.questions?.map(q => q.id) || [];
 
