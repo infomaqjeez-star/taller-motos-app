@@ -149,7 +149,7 @@ export default function UnifiedPostSalePanel({ accounts, isLoading = false }: Pr
       {/* Critical Accounts List */}
       <div className="divide-y" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
         {problematicAccounts.map((acc) => {
-          const risk = RISK_COLORS[acc.reputation_risk];
+          const risk = acc.reputation_risk ? RISK_COLORS[acc.reputation_risk] : RISK_COLORS["low"];
           const maxIssues = Math.max(acc.claims_count ?? 0, acc.mediations_count ?? 0, acc.delayed_shipments ?? 0);
 
           return (
