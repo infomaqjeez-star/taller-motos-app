@@ -11,7 +11,7 @@ const nextConfig = {
       { protocol: "https", hostname: "**.mercadolibre.com" },
     ],
   },
-  // 🔒 CSP Headers para permitir WebSocket a Supabase (Fase 2)
+  // Force rebuild timestamp: 1775233000
   async headers() {
     return [
       {
