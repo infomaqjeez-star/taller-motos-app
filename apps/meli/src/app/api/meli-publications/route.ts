@@ -10,11 +10,13 @@ export async function GET(req: Request) {
   const accountId = searchParams.get("account_id");
   const limit = parseInt(searchParams.get("limit") ?? "50", 10);
   const offset = parseInt(searchParams.get("offset") ?? "0", 10);
+  const format = searchParams.get("format") ?? "detailed"; // "simple" o "detailed"
 
   try {
     let accounts = await getActiveAccounts();
-    if (accountId) accounts = accounts.filter(a => a.id === accountId);
-    if (!accounts.length) return NextResponse.json([]);
+    // Filtrar por meli_user_id (no por id interno)
+    if (accountId) accounts = accounts.filter(a => String(a.meli_user_id) === accountId);
+    if (!accounts.length) return NextResponse.json({ ok: false, error: "Cuenta no encontrada" }, { status: 404 });
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -39,7 +41,7 @@ export async function GET(req: Request) {
             .order("last_updated", { ascending: false })
             .range(offset, offset + limit - 1);
 
-          if (!error && data) {
+          if (!error && data && data.length > 0) {
             items = data;
             // Obtener el total sin limit
             const { count } = await supabase
@@ -48,10 +50,6 @@ export async function GET(req: Request) {
               .eq("meli_user_id", uid);
             total = count ?? 0;
             cached_at = new Date().toISOString();
-          } else {
-            // Si hay error en Supabase, intentar fallback a MeLi
-            console.warn(`[meli-publications] Supabase read failed for ${acc.nickname}, falling back to MeLi`);
-            items = [];
           }
         }
 
@@ -143,6 +141,23 @@ export async function GET(req: Request) {
           }
         }
 
+        // Formato simple para el selector de publicaciones
+        if (format === "simple") {
+          return {
+            ok: true,
+            publications: items.map((item: any) => ({
+              id: item.id,
+              title: item.title,
+              price: item.price,
+              permalink: item.permalink,
+              status: item.status,
+              thumbnail: item.thumbnail,
+            })),
+            total: total,
+            account: acc.nickname,
+          };
+        }
+
         return {
           account:      acc.nickname,
           meli_user_id: uid,
@@ -160,6 +175,11 @@ export async function GET(req: Request) {
         };
       }
     }));
+
+    // Si es formato simple y hay un solo resultado, devolver directamente
+    if (format === "simple" && results.length === 1) {
+      return NextResponse.json(results[0]);
+    }
 
     return NextResponse.json(results);
   } catch (e) {
