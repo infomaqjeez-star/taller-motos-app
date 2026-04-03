@@ -21,8 +21,8 @@ async function getAccounts(): Promise<Array<{
   expires_at: string;
 }>> {
   const { data, error } = await supabaseAdmin
-    ?.from("linked_meli_accounts")
-    .select("id, meli_user_id, nickname, access_token_enc, refresh_token_enc, token_expiry_date")
+    ?.from("meli_accounts")
+    .select("id, meli_user_id, nickname, access_token_enc, refresh_token_enc, expires_at")
     .eq("status", "active")
     .order("nickname", { ascending: true }) || { data: null, error: null };
 
@@ -37,7 +37,7 @@ async function getAccounts(): Promise<Array<{
     nickname: a.nickname,
     access_token_enc: a.access_token_enc,
     refresh_token_enc: a.refresh_token_enc,
-    expires_at: a.token_expiry_date,
+    expires_at: a.expires_at,
   }));
 }
 
@@ -60,7 +60,7 @@ export async function GET(req: Request) {
 
     // Obtener user_id de la primera cuenta (todas pertenecen al mismo usuario)
     const { data: accountData } = await supabaseAdmin
-      ?.from("linked_meli_accounts")
+      ?.from("meli_accounts")
       .select("user_id")
       .eq("id", accounts[0].id)
       .single() || { data: null };
