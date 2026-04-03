@@ -41,6 +41,12 @@ function monthRange(): [string, string] {
   const to = last.toISOString().slice(0, 10);
   return [from, to];
 }
+function yearRange(): [string, string] {
+  const d = new Date();
+  const from = `${d.getFullYear()}-01-01`;
+  const to = `${d.getFullYear()}-12-31`;
+  return [from, to];
+}
 
 const METODO_COLORS: Record<MetodoPago, string> = {
   efectivo:      "#39FF14",
@@ -350,6 +356,7 @@ function MetricCard({ label, value, sub, color }: {
 
 type Tab = "nueva" | "movimientos" | "estadisticas";
 type RangoStats = "hoy" | "semana" | "mes" | "custom";
+type RangoMovimientos = "hoy" | "semana" | "mes" | "anio" | "personalizado";
 
 function newItem(): VentaItem {
   return { id: generateId(), ventaId: "", producto: "", sku: "", cantidad: 1, precioUnit: 0, subtotal: 0 };
@@ -374,6 +381,11 @@ export default function VentasPage() {
   const [loadingHoy, setLoadingHoy] = useState(false);
   const [editVenta, setEditVenta] = useState<VentaRepuesto | null>(null);
   const [ticketModal, setTicketModal] = useState<{ isOpen: boolean; ventaId?: string }>({ isOpen: false });
+
+  // ── Filtros de movimientos
+  const [rangoMovimientos, setRangoMovimientos] = useState<RangoMovimientos>("hoy");
+  const [movDesde, setMovDesde] = useState(todayStr());
+  const [movHasta, setMovHasta] = useState(todayStr());
 
   // ── Estadísticas
   const [rango, setRango] = useState<RangoStats>("hoy");
@@ -436,15 +448,31 @@ export default function VentasPage() {
 
   const loadVentasHoy = useCallback(async () => {
     setLoadingHoy(true);
-    try { setVentasHoy(await ventasDb.getToday()); }
-    catch { /* no-op */ }
+    try {
+      if (rangoMovimientos === "hoy") {
+        setVentasHoy(await ventasDb.getToday());
+      } else {
+        const [desde, hasta] = getRangoMovimientos();
+        setVentasHoy(await ventasDb.getAll(desde, hasta));
+      }
+    } catch { /* no-op */ }
     finally { setLoadingHoy(false); }
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rangoMovimientos, movDesde, movHasta]);
 
   const handleCancelar = async (id: string) => {
     await ventasDb.cancelar(id);
     loadVentasHoy();
   };
+
+  // Rango de movimientos
+  function getRangoMovimientos(): [string, string] {
+    if (rangoMovimientos === "hoy") return [todayStr(), todayStr()];
+    if (rangoMovimientos === "semana") return weekRange();
+    if (rangoMovimientos === "mes") return monthRange();
+    if (rangoMovimientos === "anio") return yearRange();
+    return [movDesde, movHasta];
+  }
 
   const handleEditarVenta = async (v: VentaRepuesto) => {
     try {
@@ -643,13 +671,59 @@ export default function VentasPage() {
         {/* ══════════════════ MOVIMIENTOS ══════════════════ */}
         {tab === "movimientos" && (
           <div className="space-y-4">
-            {/* Resumen del día */}
+            {/* Selector de rango de movimientos */}
+            <div className="card border border-white/10">
+              <div className="flex gap-2 flex-wrap">
+                {([
+                  { id: "hoy",           label: "Hoy" },
+                  { id: "semana",        label: "Semana" },
+                  { id: "mes",           label: "Mes" },
+                  { id: "anio",          label: "Año" },
+                  { id: "personalizado", label: "Personalizado" },
+                ] as { id: RangoMovimientos; label: string }[]).map(r => (
+                  <button
+                    key={r.id}
+                    onClick={() => setRangoMovimientos(r.id)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all
+                      ${rangoMovimientos === r.id
+                        ? "border-[#FDB71A] text-[#FDB71A] bg-[#FDB71A]/10"
+                        : "border-white/10 text-gray-500 hover:border-white/20 hover:text-gray-300"}`}
+                  >
+                    {r.label}
+                  </button>
+                ))}
+              </div>
+
+              {rangoMovimientos === "personalizado" && (
+                <div className="grid grid-cols-2 gap-3 mt-3">
+                  <div>
+                    <label className="label text-xs">Desde</label>
+                    <input type="date" className="input input-sm" value={movDesde} onChange={e => setMovDesde(e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="label text-xs">Hasta</label>
+                    <input type="date" className="input input-sm" value={movHasta} onChange={e => setMovHasta(e.target.value)} />
+                  </div>
+                </div>
+              )}
+
+              <button onClick={loadVentasHoy} className="btn-secondary btn-sm mt-3">
+                <TrendingUp className="w-4 h-4" /> Cargar movimientos
+              </button>
+            </div>
+
+            {/* Resumen del período */}
             <div className="card border border-[#FDB71A]/30"
               style={{ background: "rgba(253,183,26,0.05)" }}>
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs text-gray-500 font-semibold uppercase flex items-center gap-1">
-                    <Calendar className="w-3.5 h-3.5" /> Hoy — {new Date().toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" })}
+                    <Calendar className="w-3.5 h-3.5" />
+                    {rangoMovimientos === "hoy" && "Hoy — " + new Date().toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" })}
+                    {rangoMovimientos === "semana" && "Esta semana"}
+                    {rangoMovimientos === "mes" && "Este mes"}
+                    {rangoMovimientos === "anio" && "Este año"}
+                    {rangoMovimientos === "personalizado" && `${movDesde} → ${movHasta}`}
                   </p>
                   <p className="text-3xl font-black text-[#FDB71A] mt-1"
                     style={{ textShadow: "0 0 10px rgba(253,183,26,0.50)" }}>
@@ -672,7 +746,7 @@ export default function VentasPage() {
             ) : ventasHoy.length === 0 ? (
               <div className="card flex flex-col items-center py-14 text-center">
                 <ShoppingCart className="w-10 h-10 text-gray-700 mb-3" />
-                <p className="text-gray-400 font-semibold">No hay ventas registradas hoy</p>
+                <p className="text-gray-400 font-semibold">No hay ventas registradas en este período</p>
                 <p className="text-gray-600 text-sm mt-1">Las ventas que registres aparecerán aquí</p>
               </div>
             ) : (

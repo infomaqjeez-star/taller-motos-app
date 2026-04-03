@@ -78,9 +78,8 @@ function ConfigMeliContent() {
       if (user) {
         setCurrentUserId(user.id);
       } else {
-        // Fallback: usar un ID de demo si no hay sesión
-        // En producción, esto debería redirigir al login
-        setCurrentUserId("demo-user-id");
+        // Redirigir al login si no hay sesión
+        window.location.href = "/login?redirect=/configuracion/meli";
       }
     };
     getUser();

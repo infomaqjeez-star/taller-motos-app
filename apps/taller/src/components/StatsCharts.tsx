@@ -8,7 +8,8 @@ import {
 import { WorkOrder, REPAIR_STATUS_LABELS, MotorType } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
 
-const COLORS = ["#f97316","#3b82f6","#22c55e","#eab308","#a855f7","#ec4899"];
+const COLORS = ["#f97316","#3b82f6","#22c55e","#eab308","#a855f7","#ec4899","#06b6d4","#f43f5e","#8b5cf6","#10b981","#f59e0b","#6366f1"];
+const BRAND_COLORS = ["#f97316","#3b82f6","#22c55e","#eab308","#a855f7","#ec4899","#06b6d4","#f43f5e"];
 
 interface Props { orders: WorkOrder[]; }
 
@@ -35,7 +36,7 @@ export default function StatsCharts({ orders }: Props) {
     return Object.entries(map)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 8)
-      .map(([name, value]) => ({ name, value }));
+      .map(([name, value], index) => ({ name, value, fill: BRAND_COLORS[index % BRAND_COLORS.length] }));
   }, [orders]);
 
   const totalBudget = orders.reduce((s, o) => s + (o.budget ?? 0), 0);
@@ -115,7 +116,11 @@ export default function StatsCharts({ orders }: Props) {
                 labelStyle={{ color: "#f3f4f6" }}
                 formatter={(v) => [`${v} órdenes`]}
               />
-              <Bar dataKey="value" fill="#f97316" radius={[6, 6, 0, 0]} />
+              <Bar dataKey="value" radius={[6, 6, 0, 0]}>
+                {byBrand.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.fill} />
+                ))}
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
         </div>
