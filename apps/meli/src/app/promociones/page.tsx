@@ -70,6 +70,7 @@ interface Publication {
   title: string;
   price: number;
   permalink?: string;
+  thumbnail?: string;
 }
 
 function PromotionTypeBadge({ type }: { type: string }) {
@@ -221,6 +222,7 @@ export default function PromocionesPage() {
         title: String(p.title ?? ""),
         price: Number(p.price ?? 0),
         permalink: String(p.permalink ?? ""),
+        thumbnail: String(p.thumbnail ?? ""),
       })));
     } catch (e) {
       console.error("Error cargando publicaciones:", e);
@@ -797,9 +799,32 @@ export default function PromocionesPage() {
                 {/* Selector de publicaciones */}
                 {selectedAcc !== "all" && (
                   <div>
-                    <label className="text-xs font-bold mb-2 block" style={{ color: "#6B7280" }}>
-                      Seleccionar publicaciones ({selectedPubs.length} seleccionadas)
-                    </label>
+                    {/* Header con botones de selección */}
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="text-xs font-bold" style={{ color: "#6B7280" }}>
+                        Seleccionar publicaciones ({selectedPubs.length} de {filteredPubs.length})
+                      </label>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setSelectedPubs(filteredPubs.map(p => p.id))}
+                          className="text-[10px] font-bold px-2 py-1 rounded-lg transition-all"
+                          style={{ background: "rgba(57,255,20,0.15)", color: "#39FF14" }}
+                        >
+                          Seleccionar todo
+                        </button>
+                        {selectedPubs.length > 0 && (
+                          <button
+                            onClick={() => setSelectedPubs([])}
+                            className="text-[10px] font-bold px-2 py-1 rounded-lg transition-all"
+                            style={{ background: "rgba(239,68,68,0.15)", color: "#ef4444" }}
+                          >
+                            Deseleccionar
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {/* Buscador */}
                     <div className="relative mb-2">
                       <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "#6B7280" }} />
                       <input
@@ -811,14 +836,16 @@ export default function PromocionesPage() {
                         style={{ background: "#121212", border: "1px solid rgba(255,255,255,0.1)" }}
                       />
                     </div>
-                    <div className="max-h-48 overflow-y-auto rounded-xl space-y-1 p-2"
+                    
+                    {/* Lista de publicaciones con thumbnails */}
+                    <div className="max-h-64 overflow-y-auto rounded-xl space-y-1 p-2"
                       style={{ background: "#121212", border: "1px solid rgba(255,255,255,0.07)" }}>
                       {loadingPubs && <p className="text-xs text-center py-4" style={{ color: "#6B7280" }}>Cargando...</p>}
                       {!loadingPubs && filteredPubs.length === 0 && (
                         <p className="text-xs text-center py-4" style={{ color: "#6B7280" }}>Sin publicaciones</p>
                       )}
                       {!loadingPubs && filteredPubs.map(pub => (
-                        <label key={pub.id} className="flex items-center gap-2 p-2 rounded-lg cursor-pointer hover:bg-white/5">
+                        <label key={pub.id} className="flex items-center gap-3 p-2 rounded-lg cursor-pointer hover:bg-white/5">
                           <input
                             type="checkbox"
                             checked={selectedPubs.includes(pub.id)}
@@ -826,9 +853,22 @@ export default function PromocionesPage() {
                               if (e.target.checked) setSelectedPubs([...selectedPubs, pub.id]);
                               else setSelectedPubs(selectedPubs.filter(id => id !== pub.id));
                             }}
-                            className="w-4 h-4 rounded"
+                            className="w-4 h-4 rounded flex-shrink-0"
                             style={{ accentColor: "#39FF14" }}
                           />
+                          {/* Thumbnail */}
+                          <div className="w-10 h-10 rounded-lg flex-shrink-0 overflow-hidden bg-gray-800 flex items-center justify-center">
+                            {pub.thumbnail ? (
+                              <img 
+                                src={pub.thumbnail} 
+                                alt={pub.title}
+                                className="w-full h-full object-cover"
+                                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                              />
+                            ) : (
+                              <Package className="w-5 h-5" style={{ color: "#4B5563" }} />
+                            )}
+                          </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-xs text-white line-clamp-1">{pub.title}</p>
                             <p className="text-[10px]" style={{ color: "#6B7280" }}>${pub.price.toLocaleString("es-AR")}</p>
@@ -836,13 +876,6 @@ export default function PromocionesPage() {
                         </label>
                       ))}
                     </div>
-                    {selectedPubs.length > 0 && (
-                      <button
-                        onClick={() => setSelectedPubs([])}
-                        className="text-[10px] mt-1" style={{ color: "#ef4444" }}>
-                        Deseleccionar todo
-                      </button>
-                    )}
                   </div>
                 )}
 
