@@ -77,9 +77,21 @@ export default function QuestionAlertGlobal() {
     alertModeRef.current = alertMode;
   }, [alertMode]);
 
+  // Ref para evitar sonidos duplicados (debounce de 3 segundos)
+  const lastSoundTimeRef = useRef<number>(0);
+  const MIN_SOUND_INTERVAL = 3000; // 3 segundos entre sonidos
+
   // Función para reproducir sonido de alerta usando PRELOAD
   const playAlertSound = useCallback((mode?: AlertMode) => {
     try {
+      const now = Date.now();
+      // Evitar sonidos duplicados si se llamó recientemente
+      if (now - lastSoundTimeRef.current < MIN_SOUND_INTERVAL) {
+        console.log("[AUDIO] Sonido ignorado - demasiado pronto desde el último");
+        return;
+      }
+      lastSoundTimeRef.current = now;
+
       const modeToPlay = mode ?? alertModeRef.current;
       const audios = (window as any).preloadedAudios;
       if (!audios || !audios[modeToPlay]) {
