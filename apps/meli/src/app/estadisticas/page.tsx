@@ -22,7 +22,6 @@ import {
   Filter,
 } from "lucide-react";
 import { useCachedStats, type StatsData } from "@/hooks/useCachedStats";
-import { supabase } from "@/lib/supabase";
 
 type PeriodType = "day" | "week" | "month" | "year" | "custom";
 
@@ -307,14 +306,17 @@ export default function EstadisticasPage() {
   useEffect(() => {
     const loadAccounts = async () => {
       try {
-        const { data: accountsData, error } = await supabase
-          .from("meli_accounts")
-          .select("id, meli_user_id, nickname")
-          .eq("status", "active")
-          .order("nickname");
-        
-        if (!error && accountsData) {
-          setAccounts(accountsData);
+        // Usar el API en lugar de Supabase directo (evita problemas de RLS)
+        const res = await fetch('/api/meli-accounts');
+        if (res.ok) {
+          const accountsData = await res.json();
+          if (Array.isArray(accountsData)) {
+            setAccounts(accountsData.map((a: any) => ({
+              id: String(a.id),
+              meli_user_id: Number(a.meli_user_id),
+              nickname: a.nickname,
+            })));
+          }
         }
       } catch (e) {
         console.error("Error cargando cuentas:", e);
