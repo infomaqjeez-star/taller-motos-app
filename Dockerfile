@@ -1,5 +1,5 @@
 # Dockerfile para Railway - Next.js App Router (apps/meli)
-# Actualizado: 2026-04-03 v2
+# Version: 3.0 - Force rebuild
 FROM node:20-alpine AS base
 
 # Instalar dependencias
@@ -36,7 +36,10 @@ RUN adduser --system --uid 1001 nextjs
 # Copiar standalone build
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+
+# Crear carpeta public si no existe
+RUN mkdir -p public
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public 2>/dev/null || true
 
 USER nextjs
 
