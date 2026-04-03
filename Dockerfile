@@ -1,4 +1,5 @@
 # Dockerfile para Railway - Next.js App Router (apps/meli)
+# Actualizado: 2026-04-03 v2
 FROM node:20-alpine AS base
 
 # Instalar dependencias
@@ -8,7 +9,7 @@ WORKDIR /app
 
 # Copiar package.json de meli
 COPY apps/meli/package.json ./package.json
-COPY apps/meli/package-lock.json* ./package-lock.json
+COPY apps/meli/package-lock.json ./package-lock.json
 RUN npm ci
 
 # Build
@@ -19,6 +20,7 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY apps/meli .
 
+# Construir la aplicación
 RUN npm run build
 
 # Production
