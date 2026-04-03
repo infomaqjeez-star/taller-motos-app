@@ -117,7 +117,12 @@ export default function AccountSelector({ accounts, selectedId, onSelect, compac
                     >
                       📦
                     </div>
-                    <p className="font-bold text-white truncate">@{acc.account}</p>
+                    <div className="flex flex-col min-w-0">
+                      <p className="font-bold text-white truncate">@{acc.account}</p>
+                      {!acc.reputation?.level_id && (
+                        <span className="text-[9px] text-red-400 font-medium">Desconectada</span>
+                      )}
+                    </div>
                     {acc.reputation?.power_seller_status && POWER_SELLER_COLORS[acc.reputation.power_seller_status] && (
                       <span
                         className="text-[8px] font-black px-1.5 py-0.5 rounded flex-shrink-0"
@@ -257,9 +262,13 @@ export default function AccountSelector({ accounts, selectedId, onSelect, compac
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-bold text-white truncate">@{acc.account}</p>
-                    <p className="text-[10px] text-gray-500">
-                      {acc.account}
-                    </p>
+                    {!acc.reputation?.level_id ? (
+                      <p className="text-[10px] text-red-400 font-medium">Desconectada</p>
+                    ) : (
+                      <p className="text-[10px] text-gray-500">
+                        {acc.account}
+                      </p>
+                    )}
                   </div>
                 </div>
 
