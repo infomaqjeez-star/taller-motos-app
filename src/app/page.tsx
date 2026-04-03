@@ -927,13 +927,9 @@ function AppJeezInner() {
               key={n.label}
               href={n.href}
               onClick={() => n.isHome && handleLogout()}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors ${
-                n.isHome ? 'mt-4 border-t border-white/10 pt-4' : ''
-              }`}
+              className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors"
               style={n.active
                 ? { background: "#FFE60018", color: "#FFE600" }
-                : n.isHome 
-                ? { background: "#FFE60018", color: "#FFE600", border: "1px solid #FFE60033" }
                 : { color: "#6B7280" }}
             >
               <span className="relative">
@@ -971,13 +967,9 @@ function AppJeezInner() {
                     setSidebarOpen(false);
                     if (n.isHome) handleLogout();
                   }}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold ${
-                    n.isHome ? 'mt-4 border-t border-white/10 pt-4' : ''
-                  }`}
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold"
                   style={n.active 
                     ? { background: "#FFE60018", color: "#FFE600" } 
-                    : n.isHome
-                    ? { background: "#FFE60018", color: "#FFE600", border: "1px solid #FFE60033" }
                     : { color: "#6B7280" }}
                 >
                   {n.icon} {n.label}
