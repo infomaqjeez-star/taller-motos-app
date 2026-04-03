@@ -368,12 +368,17 @@ function MensajesInner() {
     if (sync) setSyncing(true); else setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/meli-questions");
+      // Usar el nuevo endpoint con caché
+      const res = await fetch(`/api/meli-messages${sync ? "?sync=true" : ""}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data: Question[] = await res.json();
+      const data = await res.json();
+
+      if (!data.ok) throw new Error(data.error || "Error cargando mensajes");
+
+      console.log(`[Mensajes] Cargados ${data.count} mensajes desde ${data.source}`);
 
       const seen = new Set<number>();
-      const unique = data.filter(q => {
+      const unique = (data.questions || []).filter((q: Question) => {
         if (seen.has(q.meli_question_id)) return false;
         seen.add(q.meli_question_id);
         return true;
