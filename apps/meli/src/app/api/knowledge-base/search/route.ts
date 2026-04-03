@@ -30,7 +30,7 @@ function calculateSimilarity(str1: string, str2: string): number {
   const words2 = s2.split(/\s+/);
   
   const commonWords = words1.filter(w => words2.includes(w));
-  const uniqueWords = [...new Set([...words1, ...words2])];
+  const uniqueWords = Array.from(new Set(words1.concat(words2)));
   
   return commonWords.length / uniqueWords.length;
 }
