@@ -95,7 +95,7 @@ export default function AccountSelector({ accounts, selectedId, onSelect, compac
             {sorted.map((acc) => {
               const urgency = getUrgency(acc);
               const isSelected = acc.meli_user_id === selectedId;
-              const repColor = acc.reputation.level_id ? LEVEL_COLORS[acc.reputation.level_id] : "#6B7280";
+              const repColor = acc.reputation?.level_id ? LEVEL_COLORS[acc.reputation.level_id] : "#6B7280";
 
               return (
                 <button
@@ -178,7 +178,7 @@ export default function AccountSelector({ accounts, selectedId, onSelect, compac
                   @{selectedAccount.account}
                 </p>
                 <div className="flex items-center gap-1.5 mt-0.5">
-                  {selectedAccount.reputation.level_id && (
+                  {selectedAccount.reputation?.level_id && (
                     <span
                       className="text-[10px] font-bold px-1.5 py-0.5 rounded"
                       style={{
@@ -190,7 +190,7 @@ export default function AccountSelector({ accounts, selectedId, onSelect, compac
                       {LEVEL_LABELS[selectedAccount.reputation.level_id]}
                     </span>
                   )}
-                  {selectedAccount.reputation.power_seller_status && (
+                  {selectedAccount.reputation?.power_seller_status && (
                     (() => {
                       const ps = POWER_SELLER_COLORS[selectedAccount.reputation.power_seller_status];
                       const c = ps ?? { bg: "#9C27B0", text: "#FFFFFF" };
@@ -233,7 +233,7 @@ export default function AccountSelector({ accounts, selectedId, onSelect, compac
           {sorted.map((acc) => {
             const urgency = getUrgency(acc);
             const isSelected = acc.meli_user_id === selectedId;
-            const repColor = acc.reputation.level_id ? LEVEL_COLORS[acc.reputation.level_id] : "#6B7280";
+            const repColor = acc.reputation?.level_id ? LEVEL_COLORS[acc.reputation.level_id] : "#6B7280";
 
             return (
               <button

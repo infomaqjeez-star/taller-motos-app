@@ -943,15 +943,17 @@ export default function EstadisticasPage() {
                     >
                       <div className="flex items-center justify-between mb-2">
                         <span className="font-semibold text-white">@{rep.account}</span>
-                        <span
-                          className="text-xs px-2 py-1 rounded-full"
-                          style={{
-                            background: rep.level_id === "5_green" ? "#39FF1422" : "#FFE60022",
-                            color: rep.level_id === "5_green" ? "#39FF14" : "#FFE600",
-                          }}
-                        >
-                          {rep.level_id.replace("_", " ").toUpperCase()}
-                        </span>
+                        {rep.level_id && (
+                          <span
+                            className="text-xs px-2 py-1 rounded-full"
+                            style={{
+                              background: rep.level_id === "5_green" ? "#39FF1422" : "#FFE60022",
+                              color: rep.level_id === "5_green" ? "#39FF14" : "#FFE600",
+                            }}
+                          >
+                            {rep.level_id.replace("_", " ").toUpperCase()}
+                          </span>
+                        )}
                       </div>
                       <div className="grid grid-cols-3 gap-2 text-center">
                         <div>
