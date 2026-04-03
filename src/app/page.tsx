@@ -10,7 +10,7 @@ import {
   ChevronDown, ChevronUp, ShoppingCart, DollarSign,
   Package, Clock, XCircle, BarChart2, ExternalLink,
   Bell, Store, Menu, X, Copy, Pencil, Check, Zap,
-  LogOut, User, Mail, Lock, Eye, EyeOff, Shield, AlertCircle
+  LogOut, User, Mail, Lock, Eye, EyeOff, Shield, AlertCircle, Home
 } from "lucide-react";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import { useNotificationStream } from "@/hooks/useNotificationStream";
@@ -837,6 +837,7 @@ function AppJeezInner() {
     { label: "Promociones",     icon: <Zap className="w-4 h-4" />,            href: "/promociones",   active: false },
     { label: "Post-Venta",      icon: <AlertTriangle className="w-4 h-4" />,  href: "/post-venta",    active: false },
     { label: "Cuentas MeLi",    icon: <Store className="w-4 h-4" />,           href: "/configuracion/meli",    active: false },
+    { label: "Inicio",          icon: <Home className="w-4 h-4" />,            href: "/",                    active: false, isHome: true },
   ];
 
   // Early return: si no hay usuario logueado, mostrar landing page con login
@@ -923,11 +924,16 @@ function AppJeezInner() {
         <nav className="flex-1 px-3 py-4 space-y-1">
           {navItems.map(n => (
             <Link
-              key={n.href}
+              key={n.label}
               href={n.href}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors"
+              onClick={() => n.isHome && handleLogout()}
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors ${
+                n.isHome ? 'mt-4 border-t border-white/10 pt-4' : ''
+              }`}
               style={n.active
                 ? { background: "#FFE60018", color: "#FFE600" }
+                : n.isHome 
+                ? { background: "#FFE60018", color: "#FFE600", border: "1px solid #FFE60033" }
                 : { color: "#6B7280" }}
             >
               <span className="relative">
@@ -945,16 +951,6 @@ function AppJeezInner() {
             </Link>
           ))}
         </nav>
-
-        <div className="px-4 pb-4">
-          <Link
-            href="/"
-            className="flex items-center justify-center gap-2 text-sm font-bold px-3 py-2.5 rounded-xl w-full transition-opacity hover:opacity-80"
-            style={{ background: "#FFE60018", color: "#FFE600", border: "1px solid #FFE60033" }}
-          >
-            🏠 Inicio Maqjeez
-          </Link>
-        </div>
       </aside>
 
       {/* Mobile sidebar overlay */}
@@ -969,26 +965,25 @@ function AppJeezInner() {
             <nav className="flex-1 px-3 py-4 space-y-1">
               {navItems.map(n => (
                 <Link
-                  key={n.href}
+                  key={n.label}
                   href={n.href}
-                  onClick={() => setSidebarOpen(false)}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold"
-                  style={n.active ? { background: "#FFE60018", color: "#FFE600" } : { color: "#6B7280" }}
+                  onClick={() => {
+                    setSidebarOpen(false);
+                    if (n.isHome) handleLogout();
+                  }}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold ${
+                    n.isHome ? 'mt-4 border-t border-white/10 pt-4' : ''
+                  }`}
+                  style={n.active 
+                    ? { background: "#FFE60018", color: "#FFE600" } 
+                    : n.isHome
+                    ? { background: "#FFE60018", color: "#FFE600", border: "1px solid #FFE60033" }
+                    : { color: "#6B7280" }}
                 >
                   {n.icon} {n.label}
                 </Link>
               ))}
             </nav>
-            <div className="px-4 pb-5">
-              <Link
-                href="/"
-                onClick={() => setSidebarOpen(false)}
-                className="flex items-center justify-center gap-2 text-sm font-bold px-3 py-2.5 rounded-xl w-full"
-                style={{ background: "#FFE60018", color: "#FFE600", border: "1px solid #FFE60033" }}
-              >
-                🏠 Inicio Maqjeez
-              </Link>
-            </div>
           </aside>
         </div>
       )}
