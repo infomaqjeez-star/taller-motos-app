@@ -25,7 +25,7 @@ export default function AuthCallbackPage() {
         if (session) {
           console.log("[AuthCallback] Usuario autenticado:", session.user.email);
           // Usuario autenticado exitosamente - redirigir al dashboard
-          router.push("/appjeez");
+          router.push("/");
         } else {
           // No hay sesión, intentar intercambiar el código de la URL
           const hashParams = new URLSearchParams(window.location.hash.substring(1));
@@ -57,7 +57,7 @@ export default function AuthCallbackPage() {
             }
             
             console.log("[AuthCallback] Sesión establecida correctamente");
-            router.push("/appjeez");
+            router.push("/");
           } else {
             console.error("[AuthCallback] No hay tokens ni sesión");
             setError("No se pudo completar la autenticación");

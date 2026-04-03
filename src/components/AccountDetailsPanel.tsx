@@ -278,7 +278,7 @@ export default function AccountDetailsPanel({ data, editingNick, editNickVal, se
             <div className="grid grid-cols-2 gap-2 pt-2">
               {/* Ver Preguntas - Link a Mensajería interna */}
               <Link
-                href="/appjeez/mensajes"
+                href="/mensajes"
                 className="rounded-lg px-3 py-2 text-xs font-semibold text-white transition-all hover:scale-105 active:scale-95 text-center"
                 style={{ background: "#FF5722", border: "none", textDecoration: "none" }}
               >
@@ -287,7 +287,7 @@ export default function AccountDetailsPanel({ data, editingNick, editNickVal, se
 
               {/* Post Venta / Gestionar Reclamos - Link a página unificada */}
               <Link
-                href={`/appjeez/post-venta?account=${data.account}`}
+                href={`/post-venta?account=${data.account}`}
                 className="rounded-lg px-3 py-2 text-xs font-semibold text-white transition-all hover:scale-105 active:scale-95 text-center"
                 style={{ background: "#EF4444", border: "none", textDecoration: "none" }}
               >
@@ -296,7 +296,7 @@ export default function AccountDetailsPanel({ data, editingNick, editNickVal, se
 
               {/* Imprimir Envíos - Link a Etiquetas interna */}
               <Link
-                href="/appjeez/etiquetas"
+                href="/etiquetas"
                 className="rounded-lg px-3 py-2 text-xs font-semibold text-white transition-all hover:scale-105 active:scale-95 text-center"
                 style={{ background: "#00E5FF", border: "none", color: "#000", textDecoration: "none" }}
               >
@@ -305,7 +305,7 @@ export default function AccountDetailsPanel({ data, editingNick, editNickVal, se
 
               {/* Sincronizar - Link al menu de sincronización */}
               <Link
-                href="/appjeez/sincronizar"
+                href="/sincronizar"
                 className="rounded-lg px-3 py-2 text-xs font-semibold text-white transition-all hover:scale-105 active:scale-95 text-center"
                 style={{ background: "#9C27B0", border: "none", textDecoration: "none" }}
               >

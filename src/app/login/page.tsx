@@ -41,7 +41,7 @@ export default function LoginPage() {
       setError(error.message);
       setLoading(false);
     } else {
-      router.push("/appjeez");
+      router.push("/");
     }
   };
 
