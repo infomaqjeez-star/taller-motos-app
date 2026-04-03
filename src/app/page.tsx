@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
+// FORCE REBUILD TIMESTAMP: 1775237000
 export default function LandingPage() {
   const router = useRouter();
   const [showLoginModal, setShowLoginModal] = useState(false);
