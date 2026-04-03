@@ -159,7 +159,7 @@ export default function HistorialEtiquetasPage() {
         style={{ background: "#181818", borderColor: "rgba(255,255,255,0.06)" }}
       >
         <Link
-          href="/appjeez/etiquetas"
+          href="/etiquetas"
           className="p-1.5 rounded-lg"
           style={{ color: "#6B7280" }}
         >

@@ -880,7 +880,7 @@ function EtiquetasInner() {
             </span>
           )}
           <Link
-            href="/appjeez/historial-etiquetas"
+            href="/historial-etiquetas"
             className="px-3 py-2 rounded-lg text-xs font-semibold transition-all"
             style={{
               background: testMode ? "rgba(255,255,255,0.05)" : "rgba(57,255,20,0.1)",

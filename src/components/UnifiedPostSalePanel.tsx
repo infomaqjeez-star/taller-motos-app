@@ -111,7 +111,7 @@ export default function UnifiedPostSalePanel({ accounts, isLoading = false }: Pr
           </span>
         </div>
         <a
-          href="/appjeez/post-venta"
+          href="/post-venta"
           className="text-[10px] text-blue-400 hover:text-blue-300 flex items-center gap-1"
         >
           Ver todo <ExternalLink className="w-3 h-3" />
