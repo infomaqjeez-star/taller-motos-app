@@ -75,6 +75,7 @@ export function calculateSimilarity(
 /**
  * Buscar sugerencia en knowledge_base
  * Retorna el resultado con mayor similitud si supera el threshold (40%)
+ * NOTA: Si hay error de permisos (401), retorna null silenciosamente
  */
 export async function searchKnowledgeBase(
   pregunta: string,
@@ -92,10 +93,17 @@ export async function searchKnowledgeBase(
       .order("created_at", { ascending: false })
       .limit(20); // Traer top 20 para comparar
 
-    if (error || !data) {
-      console.error("Error buscando en knowledge_base:", error);
+    if (error) {
+      // Silenciar errores de permisos (401) - la tabla puede tener RLS
+      if (error.code === "401" || error.message?.includes("Unauthorized")) {
+        console.log("[KB] Sin acceso a knowledge_base (RLS)");
+      } else {
+        console.error("Error buscando en knowledge_base:", error);
+      }
       return null;
     }
+
+    if (!data || data.length === 0) return null;
 
     // Calcular similitud con cada resultado
     let bestMatch: KnowledgeItem | null = null;
@@ -125,6 +133,7 @@ export async function searchKnowledgeBase(
 
 /**
  * Guardar nueva respuesta exitosa en knowledge_base
+ * NOTA: Si hay error de permisos (401), no guarda pero no muestra error
  */
 export async function saveToKnowledgeBase(
   pregunta: string,
@@ -152,7 +161,12 @@ export async function saveToKnowledgeBase(
       .single();
 
     if (error) {
-      console.error("[KB] Error guardando respuesta:", error);
+      // Silenciar errores de permisos (401) - la tabla puede tener RLS
+      if (error.code === "401" || error.message?.includes("Unauthorized")) {
+        console.log("[KB] Sin permisos para guardar en knowledge_base (RLS)");
+      } else {
+        console.error("[KB] Error guardando respuesta:", error);
+      }
       return null;
     }
 
