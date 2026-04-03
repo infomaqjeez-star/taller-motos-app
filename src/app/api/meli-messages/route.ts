@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { getActiveAccounts, getValidToken, meliGet } from "@/lib/meli";
+import { getValidToken, meliGet } from "@/lib/meli";
 
 export const dynamic = "force-dynamic";
 
@@ -11,27 +11,63 @@ const supabaseAdmin = supabaseUrl && serviceRoleKey
   ? createClient(supabaseUrl, serviceRoleKey, { auth: { autoRefreshToken: false, persistSession: false } })
   : null;
 
+// Obtener cuentas activas desde Supabase Admin
+async function getAccounts(): Promise<Array<{
+  id: string;
+  meli_user_id: number;
+  nickname: string;
+  access_token_enc: string;
+  refresh_token_enc: string;
+  expires_at: string;
+}>> {
+  const { data, error } = await supabaseAdmin
+    ?.from("linked_meli_accounts")
+    .select("id, meli_user_id, nickname, access_token_enc, refresh_token_enc, token_expiry_date")
+    .eq("status", "active")
+    .order("nickname", { ascending: true }) || { data: null, error: null };
+
+  if (error || !data) {
+    console.error("[getAccounts] Error:", error);
+    return [];
+  }
+
+  return data.map((a: any) => ({
+    id: String(a.id),
+    meli_user_id: Number(a.meli_user_id),
+    nickname: a.nickname,
+    access_token_enc: a.access_token_enc,
+    refresh_token_enc: a.refresh_token_enc,
+    expires_at: a.token_expiry_date,
+  }));
+}
+
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const sync = searchParams.get("sync") === "true";
     
-    // Obtener cuentas activas para determinar el usuario
-    const accounts = await getActiveAccounts();
+    // Obtener todas las cuentas activas
+    const accounts = await getAccounts();
     if (!accounts.length) {
-      return NextResponse.json({ error: "No hay cuentas configuradas" }, { status: 401 });
+      return NextResponse.json({ 
+        ok: true,
+        questions: [],
+        source: "none",
+        count: 0,
+        message: "No hay cuentas configuradas"
+      });
     }
 
-    // Obtener user_id de la primera cuenta
+    // Obtener user_id de la primera cuenta (todas pertenecen al mismo usuario)
     const { data: accountData } = await supabaseAdmin
       ?.from("linked_meli_accounts")
       .select("user_id")
-      .eq("meli_user_id", String(accounts[0].meli_user_id))
+      .eq("id", accounts[0].id)
       .single() || { data: null };
 
     const userId = accountData?.user_id;
 
-    // Si no es sincronización forzada y tenemos userId, leer de caché
+    // Si no es sincronización forzada y tenemos userId, intentar leer de caché
     if (!sync && userId) {
       const { data: cachedQuestions, error } = await supabaseAdmin
         ?.from("meli_questions_sync")
@@ -41,9 +77,7 @@ export async function GET(req: Request) {
         .order("meli_created_date", { ascending: false })
         .limit(100) || { data: null, error: null };
 
-      if (error) {
-        console.error("[Mensajes] Error leyendo caché:", error);
-      } else if (cachedQuestions && cachedQuestions.length > 0) {
+      if (!error && cachedQuestions && cachedQuestions.length > 0) {
         console.log(`[Mensajes] ${cachedQuestions.length} preguntas desde caché`);
         
         const questions = cachedQuestions.map(q => ({
@@ -71,15 +105,17 @@ export async function GET(req: Request) {
       }
     }
 
-    // Fallback: Sincronizar desde MeLi
+    // Sincronizar desde MeLi
     console.log("[Mensajes] Sincronizando desde MeLi...");
-    
     const allQuestions: any[] = [];
     
     for (const account of accounts) {
       try {
-        const token = await getValidToken(account);
-        if (!token) continue;
+        const token = await getValidToken(account as any);
+        if (!token) {
+          console.log(`[Mensajes] Token inválido para ${account.nickname}`);
+          continue;
+        }
 
         const meliUserId = String(account.meli_user_id);
         
