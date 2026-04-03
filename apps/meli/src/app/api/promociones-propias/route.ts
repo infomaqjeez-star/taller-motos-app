@@ -27,6 +27,8 @@ interface CreateCampaignRequest {
 export async function POST(req: Request) {
   try {
     const body: CreateCampaignRequest = await req.json();
+    console.log("[promociones-propias] Body recibido:", JSON.stringify(body, null, 2));
+    
     const {
       account_id,
       name,
@@ -80,17 +82,24 @@ export async function POST(req: Request) {
       errors: [] as string[],
     };
 
-    // 1. Crear la campaña
+    // 1. Crear la campaña - Formatear fechas a ISO con hora
+    const startDateTime = new Date(start_date);
+    startDateTime.setHours(0, 0, 0, 0);
+    const endDateTime = new Date(end_date);
+    endDateTime.setHours(23, 59, 59, 999);
+    
     const campaignBody: Record<string, unknown> = {
       name,
       type: promotion_type,
-      start_date,
-      end_date,
+      start_date: startDateTime.toISOString(),
+      end_date: endDateTime.toISOString(),
       benefits: {
         type: "PRICE_DISCOUNT",
         value: discount_percentage,
       },
     };
+
+    console.log("[promociones-propias] Campaign body:", JSON.stringify(campaignBody, null, 2));
 
     // Si es promoción por volumen, agregar configuración específica
     if (promotion_type === "VOLUME" && volume_config) {
