@@ -344,24 +344,24 @@ export default function PromocionesPage() {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="px-4 pt-4">
-        <div className="flex gap-2 p-1 rounded-xl" style={{ background: "#1A1A1A", border: "1px solid rgba(255,255,255,0.07)" }}>
+      {/* Tabs - Más chicos y centrados */}
+      <div className="px-4 pt-4 flex justify-center">
+        <div className="inline-flex gap-2 p-1 rounded-xl" style={{ background: "#1A1A1A", border: "1px solid rgba(255,255,255,0.07)" }}>
           <button
             onClick={() => setActiveTab("automatizadas")}
-            className="flex-1 py-2 px-3 rounded-lg text-xs font-black transition-all flex items-center justify-center gap-1.5"
+            className="py-2 px-4 rounded-lg text-[11px] font-black transition-all flex items-center justify-center gap-1.5"
             style={activeTab === "automatizadas"
               ? { background: "#FFE600", color: "#121212" }
               : { color: "#9CA3AF" }}>
-            <Sparkles className="w-4 h-4" /> Automáticas
+            <Sparkles className="w-3.5 h-3.5" /> Automáticas
           </button>
           <button
             onClick={() => setActiveTab("propias")}
-            className="flex-1 py-2 px-3 rounded-lg text-xs font-black transition-all flex items-center justify-center gap-1.5"
+            className="py-2 px-4 rounded-lg text-[11px] font-black transition-all flex items-center justify-center gap-1.5"
             style={activeTab === "propias"
               ? { background: "#39FF14", color: "#121212" }
               : { color: "#9CA3AF" }}>
-            <Tag className="w-4 h-4" /> Mis Campañas
+            <Tag className="w-3.5 h-3.5" /> Mis Campañas
           </button>
         </div>
       </div>
@@ -618,13 +618,19 @@ export default function PromocionesPage() {
         {/* TAB: PROMOCIONES PROPIAS */}
         {activeTab === "propias" && (
           <>
-            {/* Botón crear */}
-            <button
-              onClick={() => setShowCreateForm(!showCreateForm)}
-              className="w-full py-3.5 rounded-xl font-black text-sm flex items-center justify-center gap-2 transition-all"
-              style={{ background: "#39FF14", color: "#121212" }}>
-              <Plus className="w-4 h-4" /> {showCreateForm ? "Cancelar" : "Crear Nueva Campaña"}
-            </button>
+            {/* Botón crear - Más compacto */}
+            <div className="flex justify-center">
+              <button
+                onClick={() => setShowCreateForm(!showCreateForm)}
+                className="py-2.5 px-6 rounded-xl font-black text-xs transition-all flex items-center gap-2"
+                style={{ background: "#39FF14", color: "#121212" }}>
+                {showCreateForm ? (
+                  <><XCircle className="w-4 h-4" /> Cancelar</>
+                ) : (
+                  <><Plus className="w-4 h-4" /> Nueva Campaña</>
+                )}
+              </button>
+            </div>
 
             {/* Form crear campaña */}
             {showCreateForm && (
@@ -798,14 +804,16 @@ export default function PromocionesPage() {
                   </div>
                 )}
 
-                {/* Botón crear */}
-                <button
-                  onClick={createCampaign}
-                  disabled={creating || !campaignForm.name || !campaignForm.start_date || !campaignForm.end_date || selectedPubs.length === 0}
-                  className="w-full py-3.5 rounded-xl font-black text-sm flex items-center justify-center gap-2 transition-all disabled:opacity-50"
-                  style={{ background: "#39FF14", color: "#121212" }}>
-                  {creating ? <><RefreshCw className="w-4 h-4 animate-spin" />Creando...</> : <><Plus className="w-4 h-4" />Crear Campaña</>}
-                </button>
+                {/* Botón crear - Compacto */}
+                <div className="flex justify-center">
+                  <button
+                    onClick={createCampaign}
+                    disabled={creating || !campaignForm.name || !campaignForm.start_date || !campaignForm.end_date || selectedPubs.length === 0}
+                    className="py-2.5 px-6 rounded-xl font-black text-xs transition-all disabled:opacity-50 flex items-center gap-2"
+                    style={{ background: "#39FF14", color: "#121212" }}>
+                    {creating ? <><RefreshCw className="w-4 h-4 animate-spin" />Creando...</> : <><Plus className="w-4 h-4" />Crear Campaña</>}
+                  </button>
+                </div>
               </div>
             )}
 
