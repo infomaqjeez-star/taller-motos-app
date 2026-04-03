@@ -5,6 +5,21 @@ import { ALERT_MODES, type AlertMode, ALERT_MODE_STORAGE_KEY } from "@/lib/alert
 import { supabase } from "@/lib/supabase";
 
 /**
+ * Verifica si las credenciales de Supabase están configuradas correctamente
+ */
+function hasValidSupabaseConfig(): boolean {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  return !!(
+    url &&
+    key &&
+    !url.includes("placeholder") &&
+    !key.includes("placeholder") &&
+    url.startsWith("https://")
+  );
+}
+
+/**
  * Global question-alert component with Realtime postgres_changes.
  * Persists alert preference in localStorage so it survives navigation.
  * Uses Supabase Realtime for zero-delay alerts (<500ms).
@@ -21,6 +36,9 @@ export default function QuestionAlertGlobal() {
   const alertedIdsRef = useRef<Set<number>>(new Set());
   const initialLoadDone = useRef(false);
   const loadRef = useRef<(() => Promise<void>) | null>(null);
+
+  // Verificar configuración de Supabase
+  const hasRealtimeSupport = hasValidSupabaseConfig();
 
   // Restore persisted preference on mount
   useEffect(() => {
@@ -148,6 +166,23 @@ export default function QuestionAlertGlobal() {
     // Poll inicial una sola vez
     pollQuestions();
 
+    // Si no hay configuración válida de Supabase, usar solo polling
+    if (!hasRealtimeSupport) {
+      console.warn("[REALTIME] ⚠️  Configuración de Supabase no válida. Usando solo Polling.");
+      console.warn("[REALTIME] Para habilitar WebSocket, configura NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_ANON_KEY en .env.local");
+
+      // Activar polling cada 10s como modo principal
+      const pollingInterval = setInterval(() => {
+        console.log("[POLLING] Verificando nuevas preguntas...");
+        pollQuestions();
+      }, 10000);
+
+      return () => {
+        clearInterval(pollingInterval);
+        console.log("[CLEANUP] Sistema Polling detenido");
+      };
+    }
+
     let realtimeConnected = false;
     let realtimeTimer: NodeJS.Timeout | null = null;
     let pollingFallback: NodeJS.Timeout | null = null;
@@ -167,7 +202,7 @@ export default function QuestionAlertGlobal() {
           table: "meli_questions",
         },
         (payload) => {
-          // 🔥 PRIMERA: reproducir sonido INMEDIATAMENTE (antes de setState)
+          // PRIMERA: reproducir sonido INMEDIATAMENTE (antes de setState)
           console.log("[REALTIME] Nueva pregunta detectada:", payload.new.meli_question_id);
           playAlertSound(alertMode);
 
@@ -178,19 +213,19 @@ export default function QuestionAlertGlobal() {
       .subscribe((status) => {
         if (status === "SUBSCRIBED") {
           realtimeConnected = true;
-          console.log("✅ [REALTIME] Conectado a canal de preguntas (WebSocket OK)");
+          console.log("[REALTIME] Conectado a canal de preguntas (WebSocket OK)");
           // Cancelar fallback si estaba activo
           if (pollingFallback) clearInterval(pollingFallback);
         } else if (status === "CHANNEL_ERROR") {
-          console.error("❌ [REALTIME] Error de conexión al canal");
+          console.error("[REALTIME] Error de conexión al canal");
         } else if (status === "CLOSED") {
-          console.warn("⚠️  [REALTIME] Conexión cerrada");
+          console.warn("[REALTIME] Conexión cerrada");
         } else {
           console.log("[REALTIME] Status:", status);
         }
       });
 
-    // ✅ FALLBACK: Si Realtime no se conecta en 5s, activar polling cada 10s
+    // FALLBACK: Si Realtime no se conecta en 5s, activar polling cada 10s
     realtimeTimer = setTimeout(() => {
       if (!realtimeConnected) {
         console.warn("[FALLBACK] Realtime no respondió en 5s. Activando polling como fallback...");
@@ -201,7 +236,7 @@ export default function QuestionAlertGlobal() {
       }
     }, 5000);
 
-    // 💓 HEARTBEAT: Enviar keep-alive cada 30s para mantener conexión activa
+    // HEARTBEAT: Enviar keep-alive cada 30s para mantener conexión activa
     const heartbeat = setInterval(() => {
       console.log("[REALTIME] Heartbeat @", new Date().toISOString());
     }, 30000);
