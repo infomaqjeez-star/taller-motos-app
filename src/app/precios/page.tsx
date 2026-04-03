@@ -182,7 +182,7 @@ function PreciosInner() {
       {/* Header */}
       <div className="sticky top-0 z-30 px-4 py-3 flex items-center gap-3 border-b"
         style={{ background: "rgba(18,18,18,0.97)", backdropFilter: "blur(16px)", borderColor: "rgba(255,255,255,0.07)" }}>
-        <Link href="/appjeez" className="p-1.5 rounded-lg" style={{ background: "rgba(255,255,255,0.05)" }}>
+        <Link href="/" className="p-1.5 rounded-lg" style={{ background: "rgba(255,255,255,0.05)" }}>
           <ArrowLeft className="w-5 h-5 text-gray-400" />
         </Link>
         <div>

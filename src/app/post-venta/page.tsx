@@ -92,7 +92,7 @@ function PostVentaContent() {
             </h1>
           </div>
           <Link
-            href="/appjeez"
+            href="/"
             className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-all hover:bg-opacity-80"
             style={{ background: "#FFE60022", color: "#FFE600", textDecoration: "none" }}
           >
