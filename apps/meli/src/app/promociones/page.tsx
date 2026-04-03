@@ -330,7 +330,12 @@ export default function PromocionesPage() {
         setSelectedPubs([]);
         loadCampaigns();
       } else {
-        setCreateResult({ ok: false, message: d.error || "Error al crear campaña" });
+        // Mejorar el mensaje de error con los detalles del backend
+        let errorMsg = d.error || "Error al crear campaña";
+        if (d.details?.message) errorMsg += `: ${d.details.message}`;
+        if (d.details?.error) errorMsg += `: ${d.details.error}`;
+        if (d.status) errorMsg += ` (HTTP ${d.status})`;
+        setCreateResult({ ok: false, message: errorMsg });
       }
     } catch (e) {
       setCreateResult({ ok: false, message: (e as Error).message });

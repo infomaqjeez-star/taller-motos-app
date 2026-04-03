@@ -114,7 +114,14 @@ export async function POST(req: Request) {
     );
 
     if (!campaignRes.ok) {
-      const errorData = await campaignRes.json().catch(() => ({}));
+      const errorText = await campaignRes.text();
+      let errorData;
+      try {
+        errorData = JSON.parse(errorText);
+      } catch {
+        errorData = { raw: errorText };
+      }
+      console.error("[promociones-propias] Error creando campaña:", errorData);
       return NextResponse.json(
         {
           error: "Error al crear campaña",
