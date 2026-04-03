@@ -686,7 +686,6 @@ function AppJeezInner() {
   
   // User auth state
   const [user, setUser] = useState<any>(null);
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
 
   const load = useCallback(async () => {
@@ -947,6 +946,26 @@ function AppJeezInner() {
             </Link>
           ))}
         </nav>
+        
+        {/* User section in Desktop Sidebar */}
+        <div className="p-3 border-t" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+          <div className="flex items-center gap-3 p-3 rounded-xl" style={{ background: "rgba(255,255,255,0.03)" }}>
+            <div className="w-8 h-8 rounded-full bg-[#FFE600] flex items-center justify-center flex-shrink-0">
+              <User className="w-4 h-4 text-[#003087]" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-medium text-white truncate">{user?.email || "Usuario"}</p>
+              <p className="text-[10px] text-gray-500">MaqJeez</p>
+            </div>
+          </div>
+          <button
+            onClick={handleLogout}
+            className="w-full mt-2 flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-red-400 hover:bg-red-500/10 transition"
+          >
+            <LogOut className="w-4 h-4" />
+            Cerrar Sesión
+          </button>
+        </div>
       </aside>
 
       {/* Mobile sidebar overlay */}
@@ -975,7 +994,34 @@ function AppJeezInner() {
                   {n.icon} {n.label}
                 </Link>
               ))}
+              
+              {/* Logout Button in Mobile Sidebar */}
+              <div className="pt-4 mt-4 border-t border-white/10">
+                <button
+                  onClick={() => {
+                    setSidebarOpen(false);
+                    handleLogout();
+                  }}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-red-400 hover:bg-red-500/10 transition"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Cerrar Sesión
+                </button>
+              </div>
             </nav>
+            
+            {/* User info in Mobile Sidebar */}
+            <div className="p-4 border-t border-white/10">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-[#FFE600] flex items-center justify-center">
+                  <User className="w-4 h-4 text-[#003087]" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-white truncate">{user?.email || "Usuario"}</p>
+                  <p className="text-xs text-gray-500">MaqJeez</p>
+                </div>
+              </div>
+            </div>
           </aside>
         </div>
       )}
@@ -1043,58 +1089,45 @@ function AppJeezInner() {
               <span className="hidden sm:inline">{loading || isRefreshing ? "Actualizando..." : "Actualizar"}</span>
             </button>
 
-            {/* User Menu */}
-            <div className="relative">
-              <button
-                onClick={() => setUserMenuOpen(!userMenuOpen)}
-                className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold bg-white/5 hover:bg-white/10 transition"
-                style={{ border: "1px solid rgba(255,255,255,0.1)" }}
+            {/* User Info + Logout Button - VISIBLE ALWAYS */}
+            <div className="flex items-center gap-2">
+              {/* User Email Badge */}
+              <div 
+                className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-xl text-sm"
+                style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}
               >
-                <div className="w-7 h-7 rounded-full bg-[#FFE600] flex items-center justify-center">
-                  <User className="w-4 h-4 text-[#003087]" />
+                <div className="w-6 h-6 rounded-full bg-[#FFE600] flex items-center justify-center">
+                  <User className="w-3 h-3 text-[#003087]" />
                 </div>
-                <span className="hidden sm:inline text-gray-300 max-w-[120px] truncate">
+                <span className="text-gray-300 max-w-[120px] truncate text-xs">
                   {user?.email || "Usuario"}
                 </span>
-                <ChevronDown className={`w-4 h-4 text-gray-400 transition ${userMenuOpen ? "rotate-180" : ""}`} />
+              </div>
+
+              {/* Logout Button - PROMINENT */}
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold transition-all hover:scale-105"
+                style={{ 
+                  background: "linear-gradient(135deg, #ef4444, #dc2626)", 
+                  color: "#fff", 
+                  border: "1px solid rgba(239,68,68,0.5)" 
+                }}
+                title="Cerrar Sesión"
+              >
+                <LogOut className="w-4 h-4" />
+                <span className="hidden sm:inline">Salir</span>
               </button>
 
-              {userMenuOpen && (
-                <>
-                  <div 
-                    className="fixed inset-0 z-40" 
-                    onClick={() => setUserMenuOpen(false)}
-                  />
-                  <div className="absolute right-0 top-full mt-2 w-64 bg-[#1F1F1F] border border-white/10 rounded-xl shadow-xl z-50 overflow-hidden">
-                    <div className="p-4 border-b border-white/10">
-                      <p className="text-sm font-semibold text-white truncate">{user?.email || "Usuario"}</p>
-                      <p className="text-xs text-gray-500">{user?.user_metadata?.full_name || "Cuenta de MaqJeez"}</p>
-                    </div>
-                    
-                    <button
-                      onClick={() => {
-                        setUserMenuOpen(false);
-                        setShowProfileModal(true);
-                      }}
-                      className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-white/5 transition text-left"
-                    >
-                      <Settings className="w-4 h-4" />
-                      Configurar Perfil
-                    </button>
-                    
-                    <button
-                      onClick={() => {
-                        setUserMenuOpen(false);
-                        handleLogout();
-                      }}
-                      className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-400 hover:bg-red-500/10 transition"
-                    >
-                      <LogOut className="w-4 h-4" />
-                      Cerrar Sesión
-                    </button>
-                  </div>
-                </>
-              )}
+              {/* Settings Button */}
+              <button
+                onClick={() => setShowProfileModal(true)}
+                className="p-2 rounded-xl text-sm font-semibold transition-all hover:bg-white/10"
+                style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}
+                title="Configurar Perfil"
+              >
+                <Settings className="w-4 h-4 text-gray-400" />
+              </button>
             </div>
           </div>
         </header>
