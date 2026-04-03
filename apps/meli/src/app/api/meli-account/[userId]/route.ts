@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getActiveAccounts, getValidToken, meliGet } from "@/lib/meli";
+import { getActiveAccounts, getValidToken, meliGet } from "../../../../lib/meli";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -107,4 +107,3 @@ function getLevelName(levelId: string | null): string {
   };
   return levelMap[levelId ?? ""] ?? "Desconocido";
 }
-

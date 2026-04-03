@@ -5,11 +5,78 @@ import { createClient } from "@supabase/supabase-js";
 export const dynamic  = "force-dynamic";
 export const revalidate = 0;
 
+// Formato simple para selector de publicaciones
+async function getSimplePublications(accountId: string, limit: number, status: string) {
+  const accounts = await getActiveAccounts();
+  const account = accounts.find(a => String(a.meli_user_id) === accountId);
+  if (!account) return null;
+
+  const token = await getValidToken(account);
+  if (!token) return null;
+
+  const searchData = await meliGet(
+    `/users/${account.meli_user_id}/items/search?status=${status}&limit=${Math.min(limit, 100)}`,
+    token
+  ) as { results?: string[]; paging?: { total: number } } | null;
+
+  const itemIds = searchData?.results ?? [];
+  if (!itemIds.length) return { publications: [], total: 0, account: account.nickname };
+
+  // Obtener detalles en lotes de 20
+  const publications: Array<{
+    id: string;
+    title: string;
+    price: number;
+    permalink: string;
+    status: string;
+    thumbnail?: string;
+  }> = [];
+
+  for (let i = 0; i < itemIds.length; i += 20) {
+    const batch = itemIds.slice(i, i + 20);
+    const data = await meliGet(
+      `/items?ids=${batch.join(",")}&attributes=id,title,price,status,permalink,thumbnail`,
+      token
+    ) as Array<{ code: number; body: Record<string, unknown> }> | null;
+
+    const items = (data ?? [])
+      .filter(entry => entry.code === 200 && entry.body)
+      .map(entry => entry.body);
+
+    publications.push(...items.map(item => ({
+      id: String(item.id),
+      title: String(item.title),
+      price: Number(item.price),
+      permalink: String(item.permalink),
+      status: String(item.status),
+      thumbnail: String(item.thumbnail ?? "").replace("http://", "https://"),
+    })));
+  }
+
+  return {
+    ok: true,
+    publications,
+    total: searchData?.paging?.total ?? publications.length,
+    account: account.nickname,
+  };
+}
+
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const accountId = searchParams.get("account_id");
   const limit = parseInt(searchParams.get("limit") ?? "50", 10);
   const offset = parseInt(searchParams.get("offset") ?? "0", 10);
+  const status = searchParams.get("status") ?? "active";
+  const format = searchParams.get("format") ?? "detailed"; // "simple" o "detailed"
+
+  // Si se pide formato simple, usar el nuevo método
+  if (format === "simple" && accountId) {
+    const result = await getSimplePublications(accountId, limit, status);
+    if (!result) {
+      return NextResponse.json({ error: "Cuenta no encontrada o token inválido" }, { status: 404 });
+    }
+    return NextResponse.json(result);
+  }
 
   try {
     let accounts = await getActiveAccounts();

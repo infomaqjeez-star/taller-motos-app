@@ -16,5 +16,5 @@
     "paths": { "@/*": ["./src/*"] }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules", "supabase", "src-backup-20260325-210144"]
+  "exclude": ["node_modules", "supabase", "src-backup-20260325-210144", "apps/meli"]
 }
