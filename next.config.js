@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  output: 'standalone',
   serverRuntimeConfig: {
     port: process.env.PORT || 3000,
   },
@@ -11,7 +12,6 @@ const nextConfig = {
       { protocol: "https", hostname: "**.mercadolibre.com" },
     ],
   },
-  // Force rebuild timestamp: 1775233000
   async headers() {
     return [
       {
