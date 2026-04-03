@@ -5,7 +5,7 @@ import {
   ArrowLeft, RefreshCw, Zap, CheckCircle2, XCircle,
   AlertCircle, ChevronDown, ChevronUp, Clock, List,
   Play, SkipForward, Plus, Tag, Calendar, Package,
-  Trash2, Search, Sparkles
+  Trash2, Search, Sparkles, ChevronLeft, ChevronRight
 } from "lucide-react";
 
 interface Account {
@@ -162,6 +162,22 @@ export default function PromocionesPage() {
     min_quantity: 2,
   });
 
+  // Calendario
+  const [showCalendar, setShowCalendar] = useState<"start" | "end" | null>(null);
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+
+  // Fechas disponibles (simulado - en producción vendría de MeLi)
+  const getAvailableDates = () => {
+    const dates = [];
+    const today = new Date();
+    for (let i = 0; i < 60; i++) {
+      const d = new Date(today);
+      d.setDate(today.getDate() + i);
+      dates.push(d.toISOString().split('T')[0]);
+    }
+    return dates;
+  };
+
   // Cargar cuentas
   useEffect(() => {
     fetch("/api/meli-accounts")
@@ -189,9 +205,12 @@ export default function PromocionesPage() {
     if (activeTab === "propias") loadCampaigns();
   }, [activeTab, loadCampaigns]);
 
-  // Cargar publicaciones
+  // Cargar publicaciones - Se ejecuta cuando cambia la cuenta seleccionada
   const loadPublications = useCallback(async () => {
-    if (!selectedAcc || selectedAcc === "all") return;
+    if (!selectedAcc || selectedAcc === "all") {
+      setPublications([]);
+      return;
+    }
     setLoadingPubs(true);
     try {
       const res = await fetch(`/api/meli-publications?account_id=${selectedAcc}&limit=200&format=simple`);
@@ -203,14 +222,19 @@ export default function PromocionesPage() {
         price: Number(p.price ?? 0),
         permalink: String(p.permalink ?? ""),
       })));
-    } catch { /* ignore */ } finally {
+    } catch (e) {
+      console.error("Error cargando publicaciones:", e);
+    } finally {
       setLoadingPubs(false);
     }
   }, [selectedAcc]);
 
+  // Recargar publicaciones cuando cambia la cuenta en pestaña propias
   useEffect(() => {
-    if (showCreateForm && selectedAcc !== "all") loadPublications();
-  }, [showCreateForm, selectedAcc, loadPublications]);
+    if (activeTab === "propias" && showCreateForm && selectedAcc !== "all") {
+      loadPublications();
+    }
+  }, [activeTab, showCreateForm, selectedAcc, loadPublications]);
 
   const runScan = useCallback(async (auto = false) => {
     setLoading(true);
@@ -721,27 +745,52 @@ export default function PromocionesPage() {
                   </div>
                 )}
 
-                {/* Fechas */}
+                {/* Fechas tipo MeLi */}
                 <div className="grid grid-cols-2 gap-3">
-                  <div>
+                  <div className="relative">
                     <label className="text-xs font-bold mb-1.5 block" style={{ color: "#6B7280" }}>Fecha inicio</label>
-                    <input
-                      type="date"
-                      value={campaignForm.start_date}
-                      onChange={e => setCampaignForm({ ...campaignForm, start_date: e.target.value })}
-                      className="w-full px-3 py-2.5 rounded-xl text-sm text-white outline-none"
-                      style={{ background: "#121212", border: "1px solid rgba(255,255,255,0.1)" }}
-                    />
+                    <button
+                      onClick={() => setShowCalendar(showCalendar === "start" ? null : "start")}
+                      className="w-full px-3 py-2.5 rounded-xl text-sm text-left flex items-center justify-between transition-all"
+                      style={{ background: "#121212", border: "1px solid rgba(255,255,255,0.1)", color: campaignForm.start_date ? "white" : "#6B7280" }}
+                    >
+                      <span>{campaignForm.start_date ? new Date(campaignForm.start_date).toLocaleDateString("es-AR") : "Seleccionar fecha"}</span>
+                      <Calendar className="w-4 h-4" style={{ color: "#6B7280" }} />
+                    </button>
+                    
+                    {showCalendar === "start" && (
+                      <CalendarPicker
+                        selected={campaignForm.start_date}
+                        onSelect={(date) => {
+                          setCampaignForm({ ...campaignForm, start_date: date });
+                          setShowCalendar(null);
+                        }}
+                        onClose={() => setShowCalendar(null)}
+                      />
+                    )}
                   </div>
-                  <div>
+                  <div className="relative">
                     <label className="text-xs font-bold mb-1.5 block" style={{ color: "#6B7280" }}>Fecha fin</label>
-                    <input
-                      type="date"
-                      value={campaignForm.end_date}
-                      onChange={e => setCampaignForm({ ...campaignForm, end_date: e.target.value })}
-                      className="w-full px-3 py-2.5 rounded-xl text-sm text-white outline-none"
-                      style={{ background: "#121212", border: "1px solid rgba(255,255,255,0.1)" }}
-                    />
+                    <button
+                      onClick={() => setShowCalendar(showCalendar === "end" ? null : "end")}
+                      className="w-full px-3 py-2.5 rounded-xl text-sm text-left flex items-center justify-between transition-all"
+                      style={{ background: "#121212", border: "1px solid rgba(255,255,255,0.1)", color: campaignForm.end_date ? "white" : "#6B7280" }}
+                    >
+                      <span>{campaignForm.end_date ? new Date(campaignForm.end_date).toLocaleDateString("es-AR") : "Seleccionar fecha"}</span>
+                      <Calendar className="w-4 h-4" style={{ color: "#6B7280" }} />
+                    </button>
+                    
+                    {showCalendar === "end" && (
+                      <CalendarPicker
+                        selected={campaignForm.end_date}
+                        onSelect={(date) => {
+                          setCampaignForm({ ...campaignForm, end_date: date });
+                          setShowCalendar(null);
+                        }}
+                        onClose={() => setShowCalendar(null)}
+                        minDate={campaignForm.start_date}
+                      />
+                    )}
                   </div>
                 </div>
 
@@ -874,5 +923,120 @@ export default function PromocionesPage() {
 
       </div>
     </main>
+  );
+}
+
+// Componente CalendarPicker tipo MeLi
+interface CalendarPickerProps {
+  selected: string;
+  onSelect: (date: string) => void;
+  onClose: () => void;
+  minDate?: string;
+}
+
+function CalendarPicker({ selected, onSelect, onClose, minDate }: CalendarPickerProps) {
+  const [currentMonth, setCurrentMonth] = useState(selected ? new Date(selected) : new Date());
+  
+  const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+  const dayNames = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+  
+  const getDaysInMonth = (year: number, month: number) => {
+    return new Date(year, month + 1, 0).getDate();
+  };
+  
+  const getFirstDayOfMonth = (year: number, month: number) => {
+    return new Date(year, month, 1).getDay();
+  };
+  
+  const year = currentMonth.getFullYear();
+  const month = currentMonth.getMonth();
+  const daysInMonth = getDaysInMonth(year, month);
+  const firstDay = getFirstDayOfMonth(year, month);
+  
+  const days = [];
+  for (let i = 0; i < firstDay; i++) {
+    days.push(null);
+  }
+  for (let i = 1; i <= daysInMonth; i++) {
+    days.push(i);
+  }
+  
+  const handleDateClick = (day: number) => {
+    const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    if (minDate && dateStr < minDate) return;
+    onSelect(dateStr);
+  };
+  
+  const isSelected = (day: number) => {
+    if (!selected) return false;
+    const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    return dateStr === selected;
+  };
+  
+  const isDisabled = (day: number) => {
+    if (!minDate || !day) return false;
+    const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    return dateStr < minDate;
+  };
+  
+  const prevMonth = () => {
+    setCurrentMonth(new Date(year, month - 1, 1));
+  };
+  
+  const nextMonth = () => {
+    setCurrentMonth(new Date(year, month + 1, 1));
+  };
+  
+  return (
+    <div className="absolute z-50 mt-1 p-3 rounded-xl shadow-2xl" style={{ background: "#1A1A1A", border: "1px solid rgba(255,255,255,0.1)", minWidth: "260px" }}>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-3">
+        <button onClick={prevMonth} className="p-1 rounded-lg hover:bg-white/10">
+          <ChevronLeft className="w-4 h-4 text-white" />
+        </button>
+        <span className="text-sm font-black text-white">{monthNames[month]} {year}</span>
+        <button onClick={nextMonth} className="p-1 rounded-lg hover:bg-white/10">
+          <ChevronRight className="w-4 h-4 text-white" />
+        </button>
+      </div>
+      
+      {/* Day names */}
+      <div className="grid grid-cols-7 gap-1 mb-2">
+        {dayNames.map(day => (
+          <div key={day} className="text-center text-[10px] font-bold" style={{ color: "#6B7280" }}>{day}</div>
+        ))}
+      </div>
+      
+      {/* Days */}
+      <div className="grid grid-cols-7 gap-1">
+        {days.map((day, i) => (
+          <button
+            key={i}
+            onClick={() => day && handleDateClick(day)}
+            disabled={!day || isDisabled(day)}
+            className={`
+              aspect-square rounded-lg text-xs font-black transition-all
+              ${!day ? "invisible" : ""}
+              ${isSelected(day!) ? "text-[#121212]" : "text-white"}
+              ${isDisabled(day!) ? "opacity-30 cursor-not-allowed" : "hover:bg-white/10"}
+            `}
+            style={{
+              background: isSelected(day!) ? "#FFE600" : "transparent",
+            }}
+          >
+            {day}
+          </button>
+        ))}
+      </div>
+      
+      {/* Close button */}
+      <button
+        onClick={onClose}
+        className="w-full mt-3 py-2 rounded-lg text-xs font-black"
+        style={{ background: "rgba(255,255,255,0.1)", color: "white" }}
+      >
+        Cancelar
+      </button>
+    </div>
   );
 }
