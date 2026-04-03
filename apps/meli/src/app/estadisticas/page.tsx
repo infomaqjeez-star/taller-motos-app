@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -19,8 +19,10 @@ import {
   ChevronLeft,
   ChevronRight,
   X,
+  Filter,
 } from "lucide-react";
 import { useCachedStats, type StatsData } from "@/hooks/useCachedStats";
+import { supabase } from "@/lib/supabase";
 
 type PeriodType = "day" | "week" | "month" | "year" | "custom";
 
@@ -28,6 +30,12 @@ interface PeriodOption {
   value: PeriodType;
   label: string;
   icon: React.ReactNode;
+}
+
+interface Account {
+  id: string;
+  meli_user_id: number;
+  nickname: string;
 }
 
 const PERIODS: PeriodOption[] = [
@@ -287,12 +295,37 @@ export default function EstadisticasPage() {
   const [error, setError] = useState<string | null>(null);
   const [showPeriodDropdown, setShowPeriodDropdown] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  
+  // Nuevo: Estado para selector de cuentas
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [selectedAccount, setSelectedAccount] = useState<string>("all");
+  const [showAccountDropdown, setShowAccountDropdown] = useState(false);
 
   const { getOrFetch } = useCachedStats();
 
+  // Cargar cuentas disponibles
+  useEffect(() => {
+    const loadAccounts = async () => {
+      try {
+        const { data: accountsData, error } = await supabase
+          .from("meli_accounts")
+          .select("id, meli_user_id, nickname")
+          .eq("status", "active")
+          .order("nickname");
+        
+        if (!error && accountsData) {
+          setAccounts(accountsData);
+        }
+      } catch (e) {
+        console.error("Error cargando cuentas:", e);
+      }
+    };
+    loadAccounts();
+  }, []);
+
   const periodDates = useMemo(() => getPeriodDates(period, customStart, customEnd), [period, customStart, customEnd]);
 
-  const loadStats = async () => {
+  const loadStats = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -302,19 +335,19 @@ export default function EstadisticasPage() {
       const dateFrom = periodDates.from.toISOString().split("T")[0];
       const dateTo = periodDates.to.toISOString().split("T")[0];
       
-      // Usar el hook con parámetros de fecha personalizados
-      const stats = await getOrFetch("custom", "all", tzOffset, dateFrom, dateTo);
+      // Usar el hook con parámetros de fecha personalizados y cuenta seleccionada
+      const stats = await getOrFetch("custom", selectedAccount, tzOffset, dateFrom, dateTo);
       setData(stats);
     } catch (e) {
       setError((e as Error).message);
     } finally {
       setLoading(false);
     }
-  };
+  }, [periodDates, selectedAccount, getOrFetch]);
 
   useEffect(() => {
     loadStats();
-  }, [period, customStart, customEnd]);
+  }, [loadStats]);
 
   const handlePeriodSelect = (p: PeriodType) => {
     setPeriod(p);
@@ -529,7 +562,7 @@ export default function EstadisticasPage() {
               Estadísticas Unificadas
             </h1>
             <p className="text-[10px]" style={{ color: "#6B7280" }}>
-              Todas las cuentas · {periodDates.label}
+              {selectedAccount === "all" ? "Todas las cuentas" : accounts.find(a => String(a.meli_user_id) === selectedAccount)?.nickname || "Cuenta seleccionada"} · {periodDates.label}
             </p>
           </div>
         </div>
@@ -569,6 +602,68 @@ export default function EstadisticasPage() {
                   >
                     {p.icon}
                     {p.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Selector de cuenta */}
+          <div className="relative">
+            <button
+              onClick={() => setShowAccountDropdown(!showAccountDropdown)}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold"
+              style={{
+                background: "#1F1F1F",
+                color: "#00E5FF",
+                border: "1px solid #00E5FF33",
+              }}
+            >
+              <Filter className="w-4 h-4" />
+              <span className="hidden sm:inline">
+                {selectedAccount === "all" ? "Todas" : accounts.find(a => String(a.meli_user_id) === selectedAccount)?.nickname || "Cuenta"}
+              </span>
+              <ChevronDown className="w-3 h-3" />
+            </button>
+            {showAccountDropdown && (
+              <div
+                className="absolute top-full right-0 mt-2 rounded-xl shadow-2xl z-50 min-w-max overflow-hidden max-h-64 overflow-y-auto"
+                style={{
+                  background: "#1F1F1F",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                }}
+              >
+                <button
+                  onClick={() => {
+                    setSelectedAccount("all");
+                    setShowAccountDropdown(false);
+                  }}
+                  className={`w-full text-left px-4 py-2.5 text-sm transition-colors flex items-center gap-2 ${
+                    selectedAccount === "all"
+                      ? "bg-blue-600 text-white font-semibold"
+                      : "text-gray-300 hover:bg-gray-800"
+                  }`}
+                >
+                  <Users className="w-4 h-4" />
+                  Todas las cuentas
+                </button>
+                {accounts.map((acc) => (
+                  <button
+                    key={acc.meli_user_id}
+                    onClick={() => {
+                      setSelectedAccount(String(acc.meli_user_id));
+                      setShowAccountDropdown(false);
+                    }}
+                    className={`w-full text-left px-4 py-2.5 text-sm transition-colors flex items-center gap-2 ${
+                      selectedAccount === String(acc.meli_user_id)
+                        ? "bg-blue-600 text-white font-semibold"
+                        : "text-gray-300 hover:bg-gray-800"
+                    }`}
+                  >
+                    <span className="w-4 h-4 rounded-full flex items-center justify-center text-xs" style={{ background: "#39FF1422", color: "#39FF14" }}>
+                      📦
+                    </span>
+                    @{acc.nickname}
                   </button>
                 ))}
               </div>
