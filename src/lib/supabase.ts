@@ -44,3 +44,10 @@ export const supabase: SupabaseClient = createClient(
 if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
   console.log("[Supabase] Client initialized. Using polling for data sync.");
 }
+
+// Helper para obtener usuario actual
+export async function getCurrentUser() {
+  const { data: { user }, error } = await supabase.auth.getUser();
+  if (error) throw error;
+  return user;
+}

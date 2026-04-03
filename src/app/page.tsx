@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   MessageCircle, MessageSquare, Truck, Tag, TrendingUp,
-  Star, AlertTriangle, CheckCircle2, RefreshCw, Settings,
+  Star, AlertTriangle, CheckCircle, CheckCircle2, RefreshCw, Settings,
   ChevronDown, ChevronUp, ShoppingCart, DollarSign,
   Package, Clock, XCircle, BarChart2, ExternalLink,
   Bell, Store, Menu, X, Copy, Pencil, Check, Zap,
