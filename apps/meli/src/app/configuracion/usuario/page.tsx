@@ -46,21 +46,16 @@ export default function UsuarioConfigPage() {
 
   // Cargar datos del usuario y perfil
   useEffect(() => {
-    const loadData = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        router.push("/login");
-        return;
-      }
-      
-      setUser(session.user);
+    let redirectTimeout: NodeJS.Timeout;
+
+    const loadData = async (sessionUser: any) => {
+      setUser(sessionUser);
 
       // Cargar perfil desde la tabla profiles
-      const { data: profileData, error } = await supabase
+      const { data: profileData } = await supabase
         .from("profiles")
         .select("*")
-        .eq("id", session.user.id)
+        .eq("id", sessionUser.id)
         .single();
 
       if (profileData) {
@@ -70,32 +65,49 @@ export default function UsuarioConfigPage() {
         setArcaPosition(profileData.arca_position || "");
         setCuit(profileData.cuit || "");
       } else {
-        // Si no existe el perfil, usar metadatos del usuario
-        setFullName(session.user.user_metadata?.full_name || "");
-        setPhone(session.user.user_metadata?.phone || "");
-        setArcaPosition(session.user.user_metadata?.arca_position || "");
-        setCuit(session.user.user_metadata?.cuit || "");
-        
+        // Usar metadatos del usuario como fallback
+        setFullName(sessionUser.user_metadata?.full_name || "");
+        setPhone(sessionUser.user_metadata?.phone || "");
+        setArcaPosition(sessionUser.user_metadata?.arca_position || "");
+        setCuit(sessionUser.user_metadata?.cuit || "");
+
         // Crear perfil si no existe
         await supabase.from("profiles").upsert({
-          id: session.user.id,
-          email: session.user.email,
-          full_name: session.user.user_metadata?.full_name || "",
+          id: sessionUser.id,
+          email: sessionUser.email,
+          full_name: sessionUser.user_metadata?.full_name || "",
         });
       }
-      
+
       setLoading(false);
     };
 
-    loadData();
-
+    // Escuchar cambios de auth primero (captura sesión de Google OAuth)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session) {
-        router.push("/login");
+      if (session?.user) {
+        clearTimeout(redirectTimeout);
+        loadData(session.user);
       }
     });
 
-    return () => subscription.unsubscribe();
+    // Verificar sesión actual
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        loadData(session.user);
+      } else {
+        // Dar 3 segundos para que el OAuth callback establezca la sesión
+        redirectTimeout = setTimeout(() => {
+          supabase.auth.getSession().then(({ data: { session: s } }) => {
+            if (!s?.user) router.push("/login");
+          });
+        }, 3000);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(redirectTimeout);
+    };
   }, [router]);
 
   const handleSavePersonal = async () => {

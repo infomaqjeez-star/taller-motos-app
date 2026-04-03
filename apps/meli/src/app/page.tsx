@@ -650,31 +650,20 @@ function AppJeezInner() {
 
             {/* User Info + Config + Logout */}
             <div className="flex items-center gap-2">
-              {/* User Email Badge */}
-              <div 
-                className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-xl text-sm"
+              {/* User Badge - muestra nombre antes del @ */}
+              <Link
+                href="/configuracion/usuario"
+                className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition-all hover:scale-105"
                 style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}
+                title="Mi cuenta"
               >
                 <div className="w-6 h-6 rounded-full bg-[#FFE600] flex items-center justify-center">
                   <User className="w-3 h-3 text-[#003087]" />
                 </div>
-                <span className="text-gray-300 max-w-[120px] truncate text-xs">
-                  {user?.email || "Usuario"}
+                <span className="text-gray-300 max-w-[120px] truncate text-xs font-semibold">
+                  {user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Usuario"}
                 </span>
-              </div>
-
-              {/* Config Button */}
-              <Link
-                href="/configuracion/usuario"
-                className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold transition-all hover:scale-105"
-                style={{ 
-                  background: "rgba(255,255,255,0.1)", 
-                  color: "#fff", 
-                  border: "1px solid rgba(255,255,255,0.2)" 
-                }}
-                title="Configuración"
-              >
-                <Settings className="w-4 h-4" />
+                <Settings className="w-3 h-3 text-gray-500" />
               </Link>
 
               {/* Logout Button */}
