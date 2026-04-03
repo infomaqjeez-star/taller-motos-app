@@ -10,7 +10,7 @@ import {
   ChevronDown, ChevronUp, ShoppingCart, DollarSign,
   Package, Clock, XCircle, BarChart2, ExternalLink,
   Bell, Store, Menu, X, Copy, Pencil, Check, Zap,
-  LogOut, User, Mail, Lock, Eye, EyeOff
+  LogOut, User, Mail, Lock, Eye, EyeOff, Shield, AlertCircle
 } from "lucide-react";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import { useNotificationStream } from "@/hooks/useNotificationStream";
@@ -350,6 +350,325 @@ function AccountPanel({ data, defaultOpen, editingNick, editNickVal, setEditingN
   );
 }
 
+function ProfileModal({ user, onClose }: { user: any, onClose: () => void }) {
+  const [activeTab, setActiveTab] = useState<'info' | 'password' | 'recover'>('info');
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  
+  // Estados para cambiar email
+  const [newEmail, setNewEmail] = useState("");
+  const [currentPasswordForEmail, setCurrentPasswordForEmail] = useState("");
+  const [showPasswordForEmail, setShowPasswordForEmail] = useState(false);
+
+  // Estados para cambiar contraseña
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+
+  // Estados para recuperar
+  const [recoveryEmail, setRecoveryEmail] = useState(user?.email || "");
+  const [recoverySent, setRecoverySent] = useState(false);
+
+  // Cambiar Email
+  const handleUpdateEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    setMessage(null);
+
+    try {
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: currentPasswordForEmail,
+      });
+
+      if (signInError) {
+        setMessage({ type: "error", text: "Contraseña actual incorrecta" });
+        setSaving(false);
+        return;
+      }
+
+      const { error } = await supabase.auth.updateUser({ email: newEmail });
+
+      if (error) {
+        setMessage({ type: "error", text: error.message });
+      } else {
+        setMessage({ type: "success", text: "Email actualizado. Revisa tu nuevo correo para confirmar." });
+        setNewEmail("");
+        setCurrentPasswordForEmail("");
+      }
+    } catch (err) {
+      setMessage({ type: "error", text: "Error al actualizar email" });
+    }
+
+    setSaving(false);
+  };
+
+  // Cambiar Contraseña
+  const handleUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    setMessage(null);
+
+    if (newPassword !== confirmNewPassword) {
+      setMessage({ type: "error", text: "Las contraseñas nuevas no coinciden" });
+      setSaving(false);
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      setMessage({ type: "error", text: "La contraseña debe tener al menos 6 caracteres" });
+      setSaving(false);
+      return;
+    }
+
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+
+      if (error) {
+        setMessage({ type: "error", text: error.message });
+      } else {
+        setMessage({ type: "success", text: "Contraseña actualizada correctamente" });
+        setCurrentPassword("");
+        setNewPassword("");
+        setConfirmNewPassword("");
+      }
+    } catch (err) {
+      setMessage({ type: "error", text: "Error al actualizar contraseña" });
+    }
+
+    setSaving(false);
+  };
+
+  // Recuperar Contraseña
+  const handlePasswordRecovery = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    setMessage(null);
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(recoveryEmail, {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      });
+
+      if (error) {
+        setMessage({ type: "error", text: error.message });
+      } else {
+        setRecoverySent(true);
+        setMessage({ type: "success", text: `Email de recuperación enviado a ${recoveryEmail}` });
+      }
+    } catch (err) {
+      setMessage({ type: "error", text: "Error al enviar email de recuperación" });
+    }
+
+    setSaving(false);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" onClick={onClose}>
+      <div className="w-full max-w-lg bg-[#1a1a1a] border border-white/10 rounded-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-white/10">
+          <h2 className="text-xl font-bold">Configurar Perfil</h2>
+          <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-lg">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex border-b border-white/10">
+          {[
+            { id: 'info', label: 'Mi Cuenta', icon: User },
+            { id: 'password', label: 'Contraseña', icon: Lock },
+            { id: 'recover', label: 'Recuperar', icon: Shield },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => { setActiveTab(tab.id as any); setMessage(null); }}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition ${
+                activeTab === tab.id 
+                  ? 'text-[#FFE600] border-b-2 border-[#FFE600] bg-white/5' 
+                  : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              <tab.icon className="w-4 h-4" />
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Content */}
+        <div className="p-6">
+          {/* Message */}
+          {message && (
+            <div className={`p-3 rounded-xl mb-4 flex items-center gap-2 ${
+              message.type === "success" 
+                ? "bg-green-500/10 border border-green-500/20 text-green-400" 
+                : "bg-red-500/10 border border-red-500/20 text-red-400"
+            }`}>
+              {message.type === "success" ? <CheckCircle className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+              <p className="text-sm">{message.text}</p>
+            </div>
+          )}
+
+          {/* Info Tab */}
+          {activeTab === 'info' && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-4 p-4 bg-white/5 rounded-xl">
+                <div className="w-12 h-12 rounded-full bg-[#FFE600] flex items-center justify-center">
+                  <User className="w-6 h-6 text-[#003087]" />
+                </div>
+                <div>
+                  <p className="font-semibold">{user?.user_metadata?.full_name || "Usuario"}</p>
+                  <p className="text-sm text-gray-400">{user?.email}</p>
+                </div>
+              </div>
+
+              <form onSubmit={handleUpdateEmail} className="space-y-4 pt-4 border-t border-white/10">
+                <h3 className="font-semibold flex items-center gap-2">
+                  <Mail className="w-4 h-4 text-[#FFE600]" />
+                  Cambiar Email
+                </h3>
+                
+                <input
+                  type="email"
+                  value={newEmail}
+                  onChange={(e) => setNewEmail(e.target.value)}
+                  placeholder="nuevo@email.com"
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[#FFE600]"
+                  required
+                />
+                
+                <div className="relative">
+                  <input
+                    type={showPasswordForEmail ? "text" : "password"}
+                    value={currentPasswordForEmail}
+                    onChange={(e) => setCurrentPasswordForEmail(e.target.value)}
+                    placeholder="Contraseña actual"
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[#FFE600]"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPasswordForEmail(!showPasswordForEmail)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white"
+                  >
+                    {showPasswordForEmail ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="w-full py-3 bg-[#FFE600] text-[#003087] rounded-xl font-semibold hover:bg-[#ffd700] transition disabled:opacity-50"
+                >
+                  {saving ? "Guardando..." : "Actualizar Email"}
+                </button>
+              </form>
+            </div>
+          )}
+
+          {/* Password Tab */}
+          {activeTab === 'password' && (
+            <form onSubmit={handleUpdatePassword} className="space-y-4">
+              <div className="relative">
+                <input
+                  type={showCurrentPassword ? "text" : "password"}
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  placeholder="Contraseña actual"
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[#FFE600]"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white"
+                >
+                  {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+
+              <div className="relative">
+                <input
+                  type={showNewPassword ? "text" : "password"}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Nueva contraseña (mín. 6 caracteres)"
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[#FFE600]"
+                  required
+                  minLength={6}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowNewPassword(!showNewPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white"
+                >
+                  {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+
+              <input
+                type="password"
+                value={confirmNewPassword}
+                onChange={(e) => setConfirmNewPassword(e.target.value)}
+                placeholder="Confirmar nueva contraseña"
+                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[#FFE600]"
+                required
+              />
+
+              <button
+                type="submit"
+                disabled={saving}
+                className="w-full py-3 bg-[#FFE600] text-[#003087] rounded-xl font-semibold hover:bg-[#ffd700] transition disabled:opacity-50"
+              >
+                {saving ? "Guardando..." : "Cambiar Contraseña"}
+              </button>
+            </form>
+          )}
+
+          {/* Recover Tab */}
+          {activeTab === 'recover' && (
+            <div className="space-y-4">
+              {recoverySent ? (
+                <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-xl text-green-400 text-center">
+                  <CheckCircle className="w-8 h-8 mx-auto mb-2" />
+                  <p className="font-semibold">Email enviado</p>
+                  <p className="text-sm">Revisa tu bandeja de entrada</p>
+                </div>
+              ) : (
+                <form onSubmit={handlePasswordRecovery} className="space-y-4">
+                  <p className="text-gray-400 text-sm">
+                    ¿Olvidaste tu contraseña? Ingresa tu email y te enviaremos un enlace para restablecerla.
+                  </p>
+                  
+                  <input
+                    type="email"
+                    value={recoveryEmail}
+                    onChange={(e) => setRecoveryEmail(e.target.value)}
+                    placeholder="tu@email.com"
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[#FFE600]"
+                    required
+                  />
+
+                  <button
+                    type="submit"
+                    disabled={saving}
+                    className="w-full py-3 bg-white/10 text-white rounded-xl font-semibold hover:bg-white/20 transition disabled:opacity-50"
+                  >
+                    {saving ? "Enviando..." : "Enviar Email de Recuperación"}
+                  </button>
+                </form>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function AppJeezInner() {
   const params    = useSearchParams();
   const router    = useRouter();
@@ -368,6 +687,7 @@ function AppJeezInner() {
   // User auth state
   const [user, setUser] = useState<any>(null);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true); setError(null);
@@ -696,14 +1016,16 @@ function AppJeezInner() {
                       <p className="text-xs text-gray-500">{user?.user_metadata?.full_name || "Cuenta de MaqJeez"}</p>
                     </div>
                     
-                    <Link
-                      href="/perfil"
-                      className="flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-white/5 transition"
-                      onClick={() => setUserMenuOpen(false)}
+                    <button
+                      onClick={() => {
+                        setUserMenuOpen(false);
+                        setShowProfileModal(true);
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-white/5 transition text-left"
                     >
                       <Settings className="w-4 h-4" />
                       Configurar Perfil
-                    </Link>
+                    </button>
                     
                     <button
                       onClick={() => {
@@ -816,6 +1138,14 @@ function AppJeezInner() {
             </>
           )}
         </main>
+
+        {/* Profile Modal */}
+        {showProfileModal && (
+          <ProfileModal 
+            user={user} 
+            onClose={() => setShowProfileModal(false)} 
+          />
+        )}
       </div>
     </div>
   );
