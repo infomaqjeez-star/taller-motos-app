@@ -760,14 +760,11 @@ export async function GET(req: Request) {
       });
     }
 
-    // PDF Merge — 3 etiquetas por página A4 para ahorrar papel al imprimir
-    // Dimensiones A4 en puntos (1 pt = 1/72 pulgada)
+    // PDF Merge — bin-packing en A4 al tamaño original de las etiquetas de MeLi
+    // Las etiquetas de MeLi (10×15 cm) se colocan SIN escalar significativamente.
+    // Solo se aplica el mínimo ajuste necesario para que entren varias por hoja.
     const A4_W = 595.28;
     const A4_H = 841.89;
-    const MARGIN = 10;
-    const SLOTS = 3;
-    const SLOT_H = (A4_H - MARGIN * (SLOTS + 1)) / SLOTS; // ~263 pt por slot
-    const SLOT_W = A4_W - 2 * MARGIN;
 
     // Cargar todos los chunks y recopilar páginas fuente
     const srcDocs: PDFDocument[] = [];
@@ -790,31 +787,41 @@ export async function GET(req: Request) {
 
     const mergedPdf = await PDFDocument.create();
 
-    // Componer páginas A4 con hasta 3 etiquetas cada una
-    for (let i = 0; i < allLabelPages.length; i += SLOTS) {
-      const group = allLabelPages.slice(i, i + SLOTS);
+    // Detectar cuántas etiquetas caben por hoja A4 según el tamaño de la primera etiqueta.
+    // Usamos Math.round para que labels que miden 283 pt (≈10 cm) quepan 3 por A4 con
+    // un ajuste mínimo (<1%) en lugar de caer a solo 2 por hoja.
+    const samplePage = allLabelPages[0].doc.getPage(allLabelPages[0].idx);
+    const sampleH = samplePage.getHeight();
+    const sampleW = samplePage.getWidth();
+    // Cuántas etiquetas caben apiladas verticalmente en A4
+    const labelsPerPage = Math.max(1, Math.round(A4_H / sampleH));
+    // Alto y ancho de slot para esa cantidad (ajuste mínimo si necesario)
+    const slotH = A4_H / labelsPerPage;
+    const slotW = A4_W; // ancho completo
+
+    // Componer páginas A4 con labelsPerPage etiquetas cada una
+    for (let i = 0; i < allLabelPages.length; i += labelsPerPage) {
+      const group = allLabelPages.slice(i, i + labelsPerPage);
       const a4Page = mergedPdf.addPage([A4_W, A4_H]);
 
       for (let j = 0; j < group.length; j++) {
         const { doc, idx } = group[j];
         const srcPage = doc.getPage(idx);
-
-        // Embedir la página como XObject para poder escalarla y posicionarla
-        const embedded = await mergedPdf.embedPage(srcPage);
-
         const origW = srcPage.getWidth();
         const origH = srcPage.getHeight();
-        const scaleX = SLOT_W / origW;
-        const scaleY = SLOT_H / origH;
-        const scale = Math.min(scaleX, scaleY);
+
+        // Escala mínima: solo la necesaria para que la etiqueta entre en el slot
+        // (si las etiquetas son exactamente A6, la escala ≈ 0.99 — prácticamente invisible)
+        const scale = Math.min(1, slotW / origW, slotH / origH);
         const drawW = origW * scale;
         const drawH = origH * scale;
 
-        // Slot j: desde arriba hacia abajo (slot 0 = top)
-        const slotTop = A4_H - MARGIN - j * (SLOT_H + MARGIN);
-        const x = MARGIN + (SLOT_W - drawW) / 2;        // centrar horizontalmente
-        const y = slotTop - SLOT_H + (SLOT_H - drawH) / 2; // centrar verticalmente en slot
+        // Posición en el slot j (de arriba hacia abajo)
+        const slotTopY = A4_H - j * slotH;          // borde superior del slot en coords PDF
+        const x = (slotW - drawW) / 2;              // centrar horizontalmente
+        const y = slotTopY - slotH + (slotH - drawH) / 2; // centrar verticalmente en slot
 
+        const embedded = await mergedPdf.embedPage(srcPage);
         a4Page.drawPage(embedded, { x, y, width: drawW, height: drawH });
       }
     }

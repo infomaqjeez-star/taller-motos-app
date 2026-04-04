@@ -497,6 +497,7 @@ function EtiquetasInner() {
   const [testLoading, setTestLoading] = useState(false);
   const [pendientesCount, setPendientesCount] = useState(0);
   const [pendientes, setPendientes] = useState<PendienteEntrega[]>([]);
+  const [pendienteTypeOpen, setPendienteTypeOpen] = useState<"flex"|"correo"|"turbo"|null>(null);
 
   useEffect(() => {
     const refresh = () => {
@@ -1233,6 +1234,72 @@ function EtiquetasInner() {
                 );
               })}
             </div>
+
+            {/* ── Fila de pendientes de envío por tipo (siempre visible) ── */}
+            {(["flex", "correo", "turbo"] as const).some(t =>
+              pendientes.some(p => p.type === t)
+            ) && (
+              <div className="flex gap-2 mb-3 flex-wrap items-center">
+                <span className="text-[10px] font-bold" style={{ color: "#9CA3AF" }}>PENDIENTES ENVÍO:</span>
+                {(["flex", "correo", "turbo"] as const).map(type => {
+                  const cfg = TYPE_CFG[type];
+                  const count = pendientes.filter(p => p.type === type).length;
+                  const isOpen = pendienteTypeOpen === type;
+                  return (
+                    <button
+                      key={type}
+                      onClick={() => setPendienteTypeOpen(isOpen ? null : type)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl text-[11px] font-bold transition-all whitespace-nowrap"
+                      style={
+                        isOpen
+                          ? { background: "#EF4444", color: "#fff", border: "2px solid #EF4444" }
+                          : count > 0
+                            ? { background: "#EF444420", color: "#EF4444", border: "2px solid #EF444460" }
+                            : { background: "transparent", color: "#4B5563", border: "2px solid #4B556320" }
+                      }
+                    >
+                      {cfg.icon} {cfg.label}
+                      <span className={`text-[9px] font-black px-1 py-0.5 rounded-full min-w-[18px] text-center ${
+                        count > 0 ? "bg-red-500 text-white" : "bg-gray-700 text-gray-400"
+                      }`}>
+                        {count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* ── Expansión inline de pendientes del tipo seleccionado ── */}
+            {pendienteTypeOpen && (() => {
+              const typePend = pendientes.filter(p => p.type === pendienteTypeOpen);
+              if (typePend.length === 0) return null;
+              const cfg = TYPE_CFG[pendienteTypeOpen];
+              return (
+                <div className="mb-4 rounded-2xl overflow-hidden"
+                  style={{ border: "2px solid #EF444440", background: "#1a0808" }}>
+                  <div className="flex items-center gap-2 px-4 py-2.5 border-b border-red-900/40">
+                    <span className="text-xs font-black px-2.5 py-1 rounded-full animate-pulse"
+                      style={{ background: "#EF4444", color: "#fff" }}>
+                      PENDIENTES DE ENVÍO
+                    </span>
+                    <span style={{ color: cfg.color }} className="text-xs font-black">{cfg.icon} {cfg.label.toUpperCase()}</span>
+                    <span className="text-[10px] font-bold text-gray-500 ml-auto">
+                      {typePend.length} {typePend.length === 1 ? "envío" : "envíos"} por despachar hoy
+                    </span>
+                  </div>
+                  <div className="p-3 space-y-0">
+                    {typePend.map(item => (
+                      <PendienteCard
+                        key={item.shipment_id}
+                        item={item}
+                        onEntregado={handleEntregado}
+                      />
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Filtros de Zona Flex (solo cuando se filtra por Flex) */}
             {logisticFilter === "flex" && zoneCounts.total > 0 && (
