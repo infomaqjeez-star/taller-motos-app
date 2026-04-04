@@ -209,7 +209,18 @@ function QuestionCard({ q, onAnswered }: { q: Question; onAnswered: (id: number)
       if (data.status === "ok") {
         onAnswered(q.meli_question_id);
       } else {
-        setError(data.error ?? data.code ?? "Error al enviar");
+        // Detectar si la pregunta ya fue respondida
+        const errorMsg = data.error ?? data.code ?? "Error al enviar";
+        if (errorMsg.toLowerCase().includes("not unanswered") || errorMsg.toLowerCase().includes("ya fue respondida")) {
+          setError("Esta pregunta ya fue respondida. Se actualizará la lista.");
+          // Refrescar la lista después de 2 segundos
+          setTimeout(() => {
+            onAnswered(q.meli_question_id); // Quitar de la lista local
+            window.location.reload(); // Recargar para obtener datos frescos
+          }, 2000);
+        } else {
+          setError(errorMsg);
+        }
       }
     } catch {
       setError("Error de red");
