@@ -9,7 +9,7 @@ import {
 import { classifyFlexZone, ZONE_CFG } from "@/lib/zone-calc";
 import { ZoneIndicator } from "@/components/ZoneIndicator";
 import { supabase } from "@/lib/supabase";
-import { addPendientes } from "@/lib/pendientes";
+import { addPendientes, getPendientes } from "@/lib/pendientes";
 
 type StatusTab = "pending" | "printed" | "in_transit" | "returns";
 type LogisticType = "todas" | "flex" | "correo" | "turbo" | "full";
@@ -382,6 +382,15 @@ function EtiquetasInner() {
   const [showPrintMenu, setShowPrintMenu] = useState(false);
   const [testMode, setTestMode] = useState(false);
   const [testLoading, setTestLoading] = useState(false);
+  const [pendientesCount, setPendientesCount] = useState(0);
+
+  useEffect(() => {
+    const refresh = () => setPendientesCount(getPendientes().length);
+    refresh();
+    const id = setInterval(refresh, 30_000);
+    window.addEventListener("focus", refresh);
+    return () => { clearInterval(id); window.removeEventListener("focus", refresh); };
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -949,6 +958,25 @@ function EtiquetasInner() {
       </div>
 
       <div className="max-w-6xl mx-auto px-4 pt-4">
+        {/* Banner pendientes de entrega */}
+        {pendientesCount > 0 && (
+          <Link
+            href="/pendientes"
+            className="flex items-center justify-between bg-red-900/30 border border-red-500/40 rounded-2xl p-3.5 mb-4 hover:bg-red-900/50 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <div className="bg-red-500 rounded-xl p-1.5">
+                <Package className="w-4 h-4 text-white" />
+              </div>
+              <div>
+                <p className="text-white font-bold text-sm">Pendientes de entregar</p>
+                <p className="text-red-300 text-xs">{pendientesCount} envío{pendientesCount !== 1 ? "s" : ""} pendientes hoy — Tap para ver</p>
+              </div>
+            </div>
+            <span className="text-red-300 text-xl font-black">{pendientesCount}</span>
+          </Link>
+        )}
+
         {loading ? (
           <div className="rounded-2xl p-10 text-center" style={{ background: "#1A1A1A" }}>
             <RefreshCw className="w-8 h-8 mx-auto animate-spin mb-3" style={{ color: "#FFE600" }} />
