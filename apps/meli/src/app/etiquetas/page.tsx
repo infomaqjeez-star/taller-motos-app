@@ -9,7 +9,7 @@ import {
 import { classifyFlexZone, ZONE_CFG } from "@/lib/zone-calc";
 import { ZoneIndicator } from "@/components/ZoneIndicator";
 import { supabase } from "@/lib/supabase";
-import { addPendientes, getPendientes } from "@/lib/pendientes";
+import { addPendientes, getPendientes, removePendiente, PendienteEntrega } from "@/lib/pendientes";
 
 type StatusTab = "pending" | "printed" | "in_transit" | "returns";
 type LogisticType = "todas" | "flex" | "correo" | "turbo" | "full";
@@ -369,6 +369,119 @@ function LabelCard({
   );
 }
 
+// ── Ficha de pendiente de entrega (mismo estilo que LabelCard) ──────────────
+function PendienteCard({
+  item,
+  onEntregado,
+}: {
+  item: PendienteEntrega;
+  onEntregado: (id: number) => void;
+}) {
+  const cfg = TYPE_CFG[item.type as LogisticType] || TYPE_CFG.correo;
+  const thumb = (item.thumbnail || "").replace("http://", "https://");
+
+  return (
+    <div
+      className="rounded-2xl overflow-hidden mb-3 flex items-start gap-4 p-3 relative transition-all"
+      style={{
+        background: "#1A1A1A",
+        border: "2px solid rgba(239,68,68,0.35)",
+        boxShadow: "0 0 10px rgba(239,68,68,0.12)",
+      }}
+    >
+      {/* Thumbnail */}
+      <div
+        className="w-24 h-24 rounded-xl flex-shrink-0 overflow-hidden flex items-center justify-center"
+        style={{ background: "#2a2a2a", border: "1px solid rgba(255,255,255,0.1)" }}
+      >
+        {thumb ? (
+          <Image
+            src={thumb}
+            alt={item.title}
+            width={96}
+            height={96}
+            loading="lazy"
+            className="w-full h-full object-cover"
+            unoptimized
+          />
+        ) : (
+          <Package className="w-8 h-8 text-gray-600" />
+        )}
+      </div>
+
+      {/* Info */}
+      <div className="flex-1 min-w-0 flex flex-col justify-between pt-1 gap-2">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
+              <span className="text-[10px] font-black px-2 py-0.5 rounded-full"
+                style={{ background: cfg.color, color: "#121212" }}>
+                {cfg.label}
+              </span>
+              <span className="text-[10px] font-black px-2 py-0.5 rounded-full"
+                style={{ background: "#EF4444", color: "#fff" }}>
+                PENDIENTE ENTREGA
+              </span>
+            </div>
+            <p className="text-xs font-bold text-white line-clamp-2">{item.title || "Sin título"}</p>
+          </div>
+          {/* Badge cuenta */}
+          <div style={{
+            background: getAccountColor(item.meli_user_id, item.account).bg,
+            color: getAccountColor(item.meli_user_id, item.account).text,
+            border: `1px solid ${getAccountColor(item.meli_user_id, item.account).border}`,
+            padding: "0.25rem 0.5rem",
+            borderRadius: "0.375rem",
+            fontSize: "0.75rem",
+            fontWeight: "bold",
+            whiteSpace: "nowrap",
+          }}>
+            {item.account}
+          </div>
+        </div>
+
+        {/* Comprador */}
+        {item.buyer_nickname && (
+          <p className="text-[10px]" style={{ color: "#D1D5DB" }}>
+            <span style={{ color: "#9CA3AF" }}>👤</span> @{item.buyer_nickname}
+          </p>
+        )}
+
+        {/* Cantidad + SKU */}
+        <div className="flex items-center gap-2 text-[10px] p-1.5 rounded"
+          style={{ background: "rgba(255,255,255,0.05)" }}>
+          <div>
+            <span style={{ color: "#9CA3AF" }}>Unidades:</span>
+            <span className="ml-1 font-bold text-white">{item.quantity}</span>
+          </div>
+          {item.seller_sku && (
+            <>
+              <div style={{ width: "1px", height: "14px", background: "rgba(255,255,255,0.2)" }} />
+              <div className="truncate">
+                <span style={{ color: "#9CA3AF" }}>SKU:</span>
+                <span className="ml-1 font-bold text-white truncate">{item.seller_sku}</span>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Botón Entregado */}
+      <div className="flex flex-col gap-1.5 flex-shrink-0">
+        <button
+          onClick={() => onEntregado(item.shipment_id)}
+          className="px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1 transition-all"
+          style={{ background: "#10B981", color: "#fff" }}
+          title="Marcar como entregado"
+        >
+          <CheckCircle2 className="w-3.5 h-3.5" />
+          <span>Entregado</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function EtiquetasInner() {
   const [data, setData] = useState<LabelData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -383,14 +496,26 @@ function EtiquetasInner() {
   const [testMode, setTestMode] = useState(false);
   const [testLoading, setTestLoading] = useState(false);
   const [pendientesCount, setPendientesCount] = useState(0);
+  const [pendientes, setPendientes] = useState<PendienteEntrega[]>([]);
 
   useEffect(() => {
-    const refresh = () => setPendientesCount(getPendientes().length);
+    const refresh = () => {
+      const list = getPendientes();
+      setPendientes(list);
+      setPendientesCount(list.length);
+    };
     refresh();
     const id = setInterval(refresh, 30_000);
     window.addEventListener("focus", refresh);
     return () => { clearInterval(id); window.removeEventListener("focus", refresh); };
   }, []);
+
+  const handleEntregado = (shipment_id: number) => {
+    removePendiente(shipment_id);
+    const updated = getPendientes();
+    setPendientes(updated);
+    setPendientesCount(updated.length);
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -970,7 +1095,7 @@ function EtiquetasInner() {
               </div>
               <div>
                 <p className="text-white font-bold text-sm">Pendientes de entregar</p>
-                <p className="text-red-300 text-xs">{pendientesCount} envío{pendientesCount !== 1 ? "s" : ""} pendientes hoy — Tap para ver</p>
+                <p className="text-red-300 text-xs">{pendientesCount} envío{pendientesCount !== 1 ? "s" : ""} pendientes hoy</p>
               </div>
             </div>
             <span className="text-red-300 text-xl font-black">{pendientesCount}</span>
@@ -1246,6 +1371,37 @@ function EtiquetasInner() {
             )}
 
             {/* Botón Imprimir Seleccionadas (versión antigua - removida) */}
+
+            {/* ── Sección: Pendientes de entregar (inline, filtrada por tipo) ── */}
+            {(() => {
+              const filteredPend = pendientes.filter(p => {
+                if (logisticFilter === "todas" || logisticFilter === "full") return true;
+                return p.type === logisticFilter;
+              });
+              if (filteredPend.length === 0) return null;
+              return (
+                <div className="mb-4">
+                  <div className="flex items-center gap-2 mb-3 px-1">
+                    <span className="text-xs font-black px-3 py-1 rounded-full animate-pulse"
+                      style={{ background: "#EF4444", color: "#fff" }}>
+                      PENDIENTES DE ENTREGAR
+                    </span>
+                    <span className="text-[10px] font-bold" style={{ color: "#9CA3AF" }}>
+                      {filteredPend.length} {filteredPend.length === 1 ? "envío por entregar hoy" : "envíos por entregar hoy"}
+                    </span>
+                  </div>
+                  <div className="space-y-0">
+                    {filteredPend.map(item => (
+                      <PendienteCard
+                        key={item.shipment_id}
+                        item={item}
+                        onEntregado={handleEntregado}
+                      />
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Lista de Etiquetas */}
             {filtered.length === 0 ? (
