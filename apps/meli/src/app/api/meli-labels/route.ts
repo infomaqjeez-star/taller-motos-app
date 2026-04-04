@@ -780,7 +780,7 @@ export async function GET(req: Request) {
     return new NextResponse(mergedBuffer, {
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="Etiquetas_MaqJeez_${today}.pdf"`,
+        "Content-Disposition": `attachment; filename="Etiquetas_AppJeez_${today}.pdf"`,
         "X-Total-Labels": String(targetShipments.length),
         "X-Total-Pages": String(mergedPdf.getPageCount()),
       },

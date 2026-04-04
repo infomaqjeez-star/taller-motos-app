@@ -102,7 +102,7 @@ export default function RegisterPage() {
             <div className="w-10 h-10 bg-[#FFE600] rounded-xl flex items-center justify-center">
               <span className="text-[#003087] font-black">MJ</span>
             </div>
-            <span className="font-bold text-xl text-white">MaqJeez</span>
+            <span className="font-bold text-xl text-white">AppJeez</span>
           </Link>
           
           <h1 className="text-2xl font-bold text-white mb-2">Crea tu cuenta</h1>

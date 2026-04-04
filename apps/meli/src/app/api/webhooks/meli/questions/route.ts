@@ -80,7 +80,7 @@ export async function POST(req: Request) {
       thumbnail: string;
     } | null;
 
-    // Obtener el user_id de MaqJeez (auth.users) a partir de la cuenta
+    // Obtener el user_id de AppJeez (auth.users) a partir de la cuenta
     const { data: userData, error: userError } = await supabaseAdmin
       ?.from("linked_meli_accounts")
       .select("user_id")

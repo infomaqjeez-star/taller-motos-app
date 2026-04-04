@@ -175,7 +175,7 @@ function QuestionCard({ q, onAnswered }: { q: Question; onAnswered: (id: number)
   const [sending, setSending] = useState(false);
   const [error, setError]     = useState<string | null>(null);
 
-  const FIRMA = "Atte.: MaqJeez de Carlos Spegazzini Ezeiza";
+  const FIRMA = "Atte.: AppJeez de Carlos Spegazzini Ezeiza";
 
   async function handleSend() {
     if (!text.trim()) return;
