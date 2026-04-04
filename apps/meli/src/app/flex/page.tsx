@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import BottomNav from "@/components/BottomNav";
 import { flexDb } from "@/lib/db";
@@ -8,6 +9,7 @@ import {
   FlexEnvio, FlexZona,
   FLEX_LOCALIDADES, FLEX_TARIFAS,
 } from "@/lib/types";
+import { getPendientes } from "@/lib/pendientes";
 import {
   Truck, Trash2, TrendingUp, DollarSign,
   MapPin, Package, BarChart2, Settings, Calendar,
@@ -85,6 +87,7 @@ export default function FlexPage() {
   });
   const [filterZona, setFilterZona]   = useState<FlexZona | "todas">("todas");
   const [periodo, setPeriodo]         = useState<Periodo>("semana");
+  const [pendientesCount, setPendientesCount] = useState(0);
 
   const load = async () => {
     setLoading(true);
@@ -93,6 +96,14 @@ export default function FlexPage() {
   };
 
   useEffect(() => { load(); }, []);
+
+  useEffect(() => {
+    const refresh = () => setPendientesCount(getPendientes().length);
+    refresh();
+    const id = setInterval(refresh, 30_000);
+    window.addEventListener("focus", refresh);
+    return () => { clearInterval(id); window.removeEventListener("focus", refresh); };
+  }, []);
 
   const handleDelete = async (id: string) => {
     if (!confirm("¿Eliminar este envío?")) return;
@@ -165,6 +176,25 @@ export default function FlexPage() {
             </button>
           </div>
         </div>
+
+        {/* Card pendientes de entrega */}
+        {pendientesCount > 0 && (
+          <Link
+            href="/pendientes"
+            className="flex items-center justify-between bg-red-900/30 border border-red-500/40 rounded-2xl p-4 hover:bg-red-900/50 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <div className="bg-red-500 rounded-xl p-2">
+                <Package className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <p className="text-white font-bold text-sm">Pendientes de entregar</p>
+                <p className="text-red-300 text-xs">{pendientesCount} envío{pendientesCount !== 1 ? "s" : ""} para preparar hoy</p>
+              </div>
+            </div>
+            <span className="text-red-300 text-2xl font-black">{pendientesCount}</span>
+          </Link>
+        )}
 
         {/* Panel tarifas */}
         {showSettings && (
