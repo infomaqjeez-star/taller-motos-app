@@ -8,8 +8,9 @@ import {
   CheckCircle, XCircle, RefreshCw, ExternalLink,
   ShieldCheck, Zap, ArrowLeft, User, Clock, Pencil, Check,
 } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 
-// v2 - usa API route con service_role
+// v3 - Multi-tenant con user_id en state
 // ── Tipos ──────────────────────────────────────────────────────
 interface MeliAccount {
   id: string;
@@ -18,33 +19,6 @@ interface MeliAccount {
   expires_at: string;
   status: string;
   created_at: string;
-}
-
-// ── Constantes ─────────────────────────────────────────────────
-const MELI_AUTH_URL =
-  "https://auth.mercadolibre.com.ar/authorization" +
-  `?response_type=code` +
-  `&client_id=${process.env.NEXT_PUBLIC_MELI_APP_ID ?? ""}` +
-  `&redirect_uri=https://ajhmajaclimccrkehsyy.supabase.co/functions/v1/appjeez-meli-callback`;
-
-// ── Helpers ────────────────────────────────────────────────────
-function timeAgo(iso: string) {
-  const diff = Date.now() - new Date(iso).getTime();
-  const m = Math.floor(diff / 60000);
-  if (m < 1)  return "hace un momento";
-  if (m < 60) return `hace ${m} min`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `hace ${h} h`;
-  return `hace ${Math.floor(h / 24)} días`;
-}
-
-function expiresIn(iso: string) {
-  const diff = new Date(iso).getTime() - Date.now();
-  if (diff <= 0) return "Expirado";
-  const h = Math.floor(diff / 3600000);
-  if (h < 1) return `${Math.floor(diff / 60000)} min`;
-  if (h < 24) return `${h} h`;
-  return `${Math.floor(h / 24)} días`;
 }
 
 // ── Componente interno (usa useSearchParams) ───────────────────
@@ -59,11 +33,51 @@ function ConfigMeliContent() {
   const [toast, setToast]         = useState<{ msg: string; ok: boolean } | null>(null);
   const [editing, setEditing]     = useState<string | null>(null);
   const [editName, setEditName]   = useState("");
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [meliAuthUrl, setMeliAuthUrl] = useState<string>("");
+
+  // Obtener usuario actual y construir URL de auth
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setCurrentUser(user);
+      if (user) {
+        // Construir URL con state = user_id para vinculación multi-tenant
+        const state = encodeURIComponent(user.id);
+        const authUrl = 
+          "https://auth.mercadolibre.com.ar/authorization" +
+          `?response_type=code` +
+          `&client_id=${process.env.NEXT_PUBLIC_MELI_APP_ID ?? ""}` +
+          `&redirect_uri=https://ajhmajaclimccrkehsyy.supabase.co/functions/v1/appjeez-meli-callback` +
+          `&state=${state}`;
+        setMeliAuthUrl(authUrl);
+      }
+    });
+  }, []);
 
   const showToast = (msg: string, ok = true) => {
     setToast({ msg, ok });
     setTimeout(() => setToast(null), 3500);
   };
+
+  // ── Helpers ────────────────────────────────────────────────────
+  function timeAgo(iso: string) {
+    const diff = Date.now() - new Date(iso).getTime();
+    const m = Math.floor(diff / 60000);
+    if (m < 1)  return "hace un momento";
+    if (m < 60) return `hace ${m} min`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `hace ${h} h`;
+    return `hace ${Math.floor(h / 24)} días`;
+  }
+
+  function expiresIn(iso: string) {
+    const diff = new Date(iso).getTime() - Date.now();
+    if (diff <= 0) return "Expirado";
+    const h = Math.floor(diff / 3600000);
+    if (h < 1) return `${Math.floor(diff / 60000)} min`;
+    if (h < 24) return `${h} h`;
+    return `${Math.floor(h / 24)} días`;
+  }
 
   // ── Cargar cuentas conectadas ──────────────────────────────
   const loadAccounts = async () => {
@@ -119,6 +133,17 @@ function ConfigMeliContent() {
     showToast(`Renombrada a ${editName.trim()}`);
     setEditing(null);
     loadAccounts();
+  };
+
+  // ── Construir URL de reconexión con state ──────────────────
+  const getReconnectUrl = () => {
+    if (!currentUser) return meliAuthUrl;
+    const state = encodeURIComponent(currentUser.id);
+    return "https://auth.mercadolibre.com.ar/authorization" +
+      `?response_type=code` +
+      `&client_id=${process.env.NEXT_PUBLIC_MELI_APP_ID ?? ""}` +
+      `&redirect_uri=https://ajhmajaclimccrkehsyy.supabase.co/functions/v1/appjeez-meli-callback` +
+      `&state=${state}`;
   };
 
   return (
@@ -182,14 +207,21 @@ function ConfigMeliContent() {
             </div>
           </div>
 
-          <a
-            href={MELI_AUTH_URL}
-            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-black text-sm text-white transition-all"
-            style={{ background: "#FFE600", color: "#003087", boxShadow: "0 0 20px rgba(255,230,0,0.30)" }}
-          >
-            <ExternalLink className="w-4 h-4" />
-            Autorizar con Mercado Libre
-          </a>
+          {currentUser ? (
+            <a
+              href={meliAuthUrl}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-black text-sm text-white transition-all"
+              style={{ background: "#FFE600", color: "#003087", boxShadow: "0 0 20px rgba(255,230,0,0.30)" }}
+            >
+              <ExternalLink className="w-4 h-4" />
+              Autorizar con Mercado Libre
+            </a>
+          ) : (
+            <div className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-black text-sm text-gray-500"
+              style={{ background: "#333" }}>
+              Cargando...
+            </div>
+          )}
 
           <div className="flex items-center gap-4 pt-1">
             <div className="flex items-center gap-1.5 text-xs text-gray-500">
@@ -294,7 +326,7 @@ function ConfigMeliContent() {
                     <div className="flex items-center gap-3 flex-wrap">
                       {/* Reconectar: si el token expiró (sin importar status) */}
                       {(new Date(acc.expires_at).getTime() < Date.now() || expired || acc.status === "revoked") && (
-                        <a href={MELI_AUTH_URL}
+                        <a href={getReconnectUrl()}
                           className="text-xs text-yellow-400 hover:text-yellow-300 font-semibold flex items-center gap-1">
                           <RefreshCw className="w-3.5 h-3.5" /> Reconectar
                         </a>
@@ -336,13 +368,13 @@ function ConfigMeliContent() {
         <div className="rounded-2xl border border-white/5 p-4"
           style={{ background: "#161616" }}>
           <p className="text-xs font-bold text-gray-400 mb-2 flex items-center gap-1.5">
-            <ShieldCheck className="w-3.5 h-3.5 text-green-500" /> Seguridad
+            <ShieldCheck className="w-3.5 h-3.5 text-green-500" /> Seguridad Multi-Inquilino
           </p>
           <ul className="space-y-1 text-xs text-gray-600">
+            <li>• Cada usuario solo ve sus propias cuentas MeLi vinculadas</li>
             <li>• Los tokens se encriptan con AES-256-GCM antes de guardarse</li>
-            <li>• Las claves secretas nunca tocan el frontend</li>
+            <li>• Aislamiento de datos: Usuario A nunca ve datos de Usuario B</li>
             <li>• La renovación es automática (cada 50 min)</li>
-            <li>• Callback URL: ajhmajaclimccrkehsyy.supabase.co</li>
           </ul>
         </div>
 
