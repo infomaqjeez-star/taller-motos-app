@@ -9,6 +9,7 @@ import {
 import { classifyFlexZone, ZONE_CFG } from "@/lib/zone-calc";
 import { ZoneIndicator } from "@/components/ZoneIndicator";
 import { supabase } from "@/lib/supabase";
+import { addPendientes } from "@/lib/pendientes";
 
 type StatusTab = "pending" | "printed" | "in_transit" | "returns";
 type LogisticType = "todas" | "flex" | "correo" | "turbo" | "full";
@@ -743,6 +744,23 @@ function EtiquetasInner() {
         a.remove();
         URL.revokeObjectURL(url);
       }
+
+      // Guardar en pendientes de entrega (expiran a medianoche del mismo día)
+      addPendientes(
+        selectedShipments
+          .filter(s => valid.includes(s.shipment_id))
+          .map(s => ({
+            shipment_id: s.shipment_id,
+            buyer_nickname: s.buyer_nickname || null,
+            title: s.title,
+            quantity: s.quantity,
+            type: s.type as string,
+            account: s.account,
+            meli_user_id: s.meli_user_id,
+            seller_sku: s.seller_sku || null,
+            thumbnail: s.thumbnail || null,
+          }))
+      );
 
       // PASO 4: Convertir blob a base64 y guardar en historial (batch)
       // Usar Promesa para envolver FileReader (callback-based)

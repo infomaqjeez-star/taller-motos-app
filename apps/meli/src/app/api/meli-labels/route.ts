@@ -760,16 +760,62 @@ export async function GET(req: Request) {
       });
     }
 
-    // PDF Merge — unificar todos los chunks en un solo documento
-    const mergedPdf = await PDFDocument.create();
+    // PDF Merge — 3 etiquetas por página A4 para ahorrar papel al imprimir
+    // Dimensiones A4 en puntos (1 pt = 1/72 pulgada)
+    const A4_W = 595.28;
+    const A4_H = 841.89;
+    const MARGIN = 10;
+    const SLOTS = 3;
+    const SLOT_H = (A4_H - MARGIN * (SLOTS + 1)) / SLOTS; // ~263 pt por slot
+    const SLOT_W = A4_W - 2 * MARGIN;
+
+    // Cargar todos los chunks y recopilar páginas fuente
+    const srcDocs: PDFDocument[] = [];
+    const allLabelPages: { doc: PDFDocument; idx: number }[] = [];
     for (const chunk of pdfChunks) {
       try {
         const src = await PDFDocument.load(chunk, { ignoreEncryption: true });
-        const pages = await mergedPdf.copyPages(src, src.getPageIndices());
-        for (const page of pages) mergedPdf.addPage(page);
+        srcDocs.push(src);
+        for (const idx of src.getPageIndices()) {
+          allLabelPages.push({ doc: src, idx });
+        }
       } catch {
-        // Si un chunk es inválido, lo saltamos sin romper el resto
         console.warn("[etiquetas] Chunk de PDF inválido, saltando...");
+      }
+    }
+
+    if (allLabelPages.length === 0) {
+      return NextResponse.json({ error: "No se pudo generar el PDF: las etiquetas no están disponibles o MeLi no las devolvió correctamente." }, { status: 502 });
+    }
+
+    const mergedPdf = await PDFDocument.create();
+
+    // Componer páginas A4 con hasta 3 etiquetas cada una
+    for (let i = 0; i < allLabelPages.length; i += SLOTS) {
+      const group = allLabelPages.slice(i, i + SLOTS);
+      const a4Page = mergedPdf.addPage([A4_W, A4_H]);
+
+      for (let j = 0; j < group.length; j++) {
+        const { doc, idx } = group[j];
+        const srcPage = doc.getPage(idx);
+
+        // Embedir la página como XObject para poder escalarla y posicionarla
+        const embedded = await mergedPdf.embedPage(srcPage);
+
+        const origW = srcPage.getWidth();
+        const origH = srcPage.getHeight();
+        const scaleX = SLOT_W / origW;
+        const scaleY = SLOT_H / origH;
+        const scale = Math.min(scaleX, scaleY);
+        const drawW = origW * scale;
+        const drawH = origH * scale;
+
+        // Slot j: desde arriba hacia abajo (slot 0 = top)
+        const slotTop = A4_H - MARGIN - j * (SLOT_H + MARGIN);
+        const x = MARGIN + (SLOT_W - drawW) / 2;        // centrar horizontalmente
+        const y = slotTop - SLOT_H + (SLOT_H - drawH) / 2; // centrar verticalmente en slot
+
+        a4Page.drawPage(embedded, { x, y, width: drawW, height: drawH });
       }
     }
 
