@@ -84,6 +84,12 @@ export default function QuestionAlertGlobal() {
   // Función para reproducir sonido de alerta usando PRELOAD
   const playAlertSound = useCallback((mode?: AlertMode) => {
     try {
+      // ✅ VERIFICAR: Solo reproducir si las alertas están habilitadas
+      if (!enabledRef.current) {
+        console.log("[AUDIO] Sonido ignorado - alertas desactivadas");
+        return;
+      }
+
       const now = Date.now();
       // Evitar sonidos duplicados si se llamó recientemente
       if (now - lastSoundTimeRef.current < MIN_SOUND_INTERVAL) {

@@ -213,11 +213,10 @@ function QuestionCard({ q, onAnswered }: { q: Question; onAnswered: (id: number)
         const errorMsg = data.error ?? data.code ?? "Error al enviar";
         if (errorMsg.toLowerCase().includes("not unanswered") || errorMsg.toLowerCase().includes("ya fue respondida")) {
           setError("Esta pregunta ya fue respondida. Se actualizará la lista.");
-          // Refrescar la lista después de 2 segundos
+          // ✅ Quitar de la lista y sincronizar sin recargar la página completa
           setTimeout(() => {
-            onAnswered(q.meli_question_id); // Quitar de la lista local
-            window.location.reload(); // Recargar para obtener datos frescos
-          }, 2000);
+            onAnswered(q.meli_question_id);
+          }, 1500);
         } else {
           setError(errorMsg);
         }
@@ -429,7 +428,14 @@ function MensajesInner() {
   }, []);
 
   const handleAnswered = (id: number) => {
+    // Quitar inmediatamente del estado local para feedback instantáneo
     setQuestions(qs => qs.filter(q => q.meli_question_id !== id));
+    
+    // ✅ FORZAR SYNC: Recargar desde el servidor inmediatamente para asegurar que 
+    // las preguntas contestadas se eliminen de la lista (evita que persistan en la pestaña)
+    setTimeout(() => {
+      loadRef.current?.(true);
+    }, 500); // Pequeño delay para que el servidor procese la respuesta
   };
 
   const filtered = questions.filter(q =>
