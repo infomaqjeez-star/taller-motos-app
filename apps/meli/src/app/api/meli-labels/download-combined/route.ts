@@ -78,7 +78,10 @@ export async function POST(req: NextRequest) {
         const src = await PDFDocument.load(chunk, { ignoreEncryption: true });
         srcDocs.push(src);
         for (const idx of src.getPageIndices()) {
-          allLabelPages.push({ doc: src, idx });
+          // SOLO la primera pagina de cada PDF (una etiqueta por PDF)
+          if (idx === 0) {
+            allLabelPages.push({ doc: src, idx });
+          }
         }
       } catch {
         console.warn("[etiquetas] Chunk de PDF invalido, saltando...");
