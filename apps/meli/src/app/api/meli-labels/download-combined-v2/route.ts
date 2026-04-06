@@ -140,7 +140,7 @@ export async function POST(req: NextRequest) {
       // Etiquetas individuales (Flex): 3 por página, tamaño exacto sin márgenes
       // Página custom = 3 etiquetas de ancho × 1 etiqueta de alto
       // Al imprimir "ajustar a página" en A4 landscape queda perfecto
-      const LBL_W = 283.46; // 100mm en pt
+      const LBL_W = 269.29; // 95mm en pt
       const LBL_H = 425.2;  // 150mm en pt
       const PAGE_W = LBL_W * 3; // 850.38pt
 
