@@ -114,6 +114,18 @@ export default function HistorialEtiquetasPage() {
     }
   };
 
+  const selectToday = () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayLabels = filteredResults.filter((r) => {
+      const d = new Date(r.print_date);
+      d.setHours(0, 0, 0, 0);
+      return d.getTime() === today.getTime();
+    });
+    if (todayLabels.length === 0) return;
+    setSelectedIds(new Set(todayLabels.map((r) => r.id)));
+  };
+
   const downloadSelected = async () => {
     if (selectedIds.size === 0) return;
     setDownloading(true);
@@ -200,9 +212,9 @@ export default function HistorialEtiquetasPage() {
           ))}
         </div>
 
-        {/* Search Bar */}
-        <div className="flex gap-2">
-          <div className="flex-1 relative">
+        {/* Search Bar + Seleccionar Hoy */}
+        <div className="flex gap-2 flex-wrap">
+          <div className="flex-1 relative min-w-[200px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
             <input
               type="text"
@@ -217,6 +229,17 @@ export default function HistorialEtiquetasPage() {
               }}
             />
           </div>
+          <button
+            onClick={selectToday}
+            className="px-3 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap"
+            style={{
+              background: "rgba(14, 165, 233, 0.15)",
+              color: "#0EA5E9",
+              border: "1px solid rgba(14, 165, 233, 0.3)",
+            }}
+          >
+            Seleccionar hoy
+          </button>
           {selectedIds.size > 0 && (
             <button
               onClick={downloadSelected}
