@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+Ôªøimport { NextResponse } from "next/server";
 import { getSupabase, getActiveAccounts, getValidToken, meliGet, meliGetRaw, meliGetWithRetry } from "@/lib/meli";
 import { calculateZoneDistance, classifyFlexZone } from "@/lib/zone-calc";
 import { PDFDocument } from "pdf-lib";
@@ -44,8 +44,8 @@ interface ShipmentInfo {
   coupon_code?: string | null;
   thumbnail: string | null;
   item_id: string | null;
-  purchase_url?: string | null;  // URL a la compra especÌfica en MeLi
-  printed_at?: string | null;  // NUEVO: timestamp de impresiÛn
+  purchase_url?: string | null;  // URL a la compra espec√≠fica en MeLi
+  printed_at?: string | null;  // NUEVO: timestamp de impresi√≥n
   is_printed?: boolean;        // NUEVO: derivado de printed_at
 }
 
@@ -78,7 +78,7 @@ function classifyUrgency(deliveryDate: string | null): UrgencyType {
 function statusLabel(status: string, type: LogisticType): string {
   const map: Record<string, string> = {
     ready_to_ship: type === "full" ? "Procesando en la bodega" : "Listo para despachar",
-    handling:      type === "full" ? "Procesando en la bodega" : "Preparando envÌo",
+    handling:      type === "full" ? "Procesando en la bodega" : "Preparando env√≠o",
     shipped:       "En camino",
     delivered:     "Entregado",
     not_delivered: "No entregado",
@@ -122,7 +122,7 @@ function parseOrder(
   const mode      = (ship.mode as string | undefined) ?? "";
   const orderTags = (order.tags as string[] | undefined) ?? [];
   const allTags   = [...tags, ...orderTags];
-  // Tracking prefix "INVE" = Full ó disponible a veces en el objeto de orden tambiÈn
+  // Tracking prefix "INVE" = Full ‚Äî disponible a veces en el objeto de orden tambi√©n
   const trackingFromOrder = String((ship.tracking_number ?? ship.tracking_id ?? "") as string).toUpperCase();
   const isFullByTracking  = trackingFromOrder.startsWith("INVE");
 
@@ -202,7 +202,7 @@ export async function GET(req: Request) {
   const tzOffset = parseFloat(searchParams.get("tz_offset") ?? "0");
   const supabase = getSupabase();
 
-  // FunciÛn helper para ajustar fechas a zona horaria local
+  // Funci√≥n helper para ajustar fechas a zona horaria local
   const adjustDateToZone = (offset: number): { today: Date; yesterday: Date; weekAgo: Date } => {
     const offsetMs = offset * 3600000;
     
@@ -296,7 +296,7 @@ export async function GET(req: Request) {
           }
         }
 
-        // EnvÌos ya despachados (para detectar demorados en tr·nsito)
+        // Env√≠os ya despachados (para detectar demorados en tr√°nsito)
         const seenShipped = new Set<number>();
         for (const order of shippedResults) {
           const ship = order.shipping as Record<string, unknown> | undefined;
@@ -342,7 +342,7 @@ export async function GET(req: Request) {
       byAccountMap.get(s.meli_user_id)!.ids.push(s.shipment_id);
     }
 
-    // Batched enrichment ó 10 shipments at a time to reduce rate-limit pressure
+    // Batched enrichment ‚Äî 10 shipments at a time to reduce rate-limit pressure
     for (const { token, ids } of Array.from(byAccountMap.values())) {
       for (let batchStart = 0; batchStart < ids.length; batchStart += 10) {
         const batch = ids.slice(batchStart, batchStart + 10);
@@ -353,8 +353,8 @@ export async function GET(req: Request) {
             try {
               const detail = await meliGetWithRetry(`/shipments/${sid}`, token) as Record<string, unknown> | null;
               if (!detail) {
-                console.warn(`[etiquetas] Enrichment fallÛ para shipment ${sid} (tipo actual: ${s.type})`);
-                return; // conserva el tipo que parseOrder asignÛ ó NO se sobreescribe
+                console.warn(`[etiquetas] Enrichment fall√≥ para shipment ${sid} (tipo actual: ${s.type})`);
+                return; // conserva el tipo que parseOrder asign√≥ ‚Äî NO se sobreescribe
               }
 
               const lt        = ((detail.logistic_type as string | undefined) ?? "").toLowerCase();
@@ -368,7 +368,7 @@ export async function GET(req: Request) {
 
               s.substatus = substatus || null;
 
-              // Tipo definitivo ó cualquier seÒal de Full es suficiente
+              // Tipo definitivo ‚Äî cualquier se√±al de Full es suficiente
               if (
                 trackingNumber.startsWith("INVE") ||
                 lt === "fulfillment" || lt.includes("fulfillment") ||
@@ -386,7 +386,7 @@ export async function GET(req: Request) {
               if (shipStatus) s.status = shipStatus;
               s.status_label = statusLabel(s.status, s.type);
 
-              // Auto-sync: si MeLi ya marcÛ impresa, guardar tambiÈn en printed_labels (historial)
+              // Auto-sync: si MeLi ya marc√≥ impresa, guardar tambi√©n en printed_labels (historial)
               if (substatus === "printed" || substatus === "label_printed") {
                 // Estampar en memoria
                 if (!s.printed_at) {
@@ -478,7 +478,7 @@ export async function GET(req: Request) {
                 s.urgency = classifyUrgency(deliveryDate);
               }
 
-              // dispatch_date: intentar multiples campos (MeLi varÌa la estructura)
+              // dispatch_date: intentar multiples campos (MeLi var√≠a la estructura)
               const dispatchLimit =
                 (detail.shipping_option as Record<string, unknown> | undefined)?.estimated_handling_limit ??
                 detail.estimated_handling_limit ??
@@ -486,7 +486,7 @@ export async function GET(req: Request) {
                 detail.estimated_schedule_limit;
               s.dispatch_date = tryDate(dispatchLimit);
 
-              // Ciudad y CP del destinatario (m·s confiable desde /shipments/{id})
+              // Ciudad y CP del destinatario (m√°s confiable desde /shipments/{id})
               const recvAddr = detail.receiver_address as Record<string, unknown> | undefined;
               if (recvAddr) {
                 const cityObj = recvAddr.city as Record<string, unknown> | undefined;
@@ -546,7 +546,7 @@ export async function GET(req: Request) {
       if (s.item_id && thumbnailMap.has(s.item_id)) s.thumbnail = thumbnailMap.get(s.item_id)!;
     }
 
-    // -- Fallback: Enriquecimiento desde order_items si thumbnail sigue vacÌo -----
+    // -- Fallback: Enriquecimiento desde order_items si thumbnail sigue vac√≠o -----
     const missingThumbnails = allToEnrich.filter(s => !s.thumbnail && s.order_id);
     const ordersByAccount = new Map<string, { token: string; orderIds: number[] }>();
     for (const s of missingThumbnails) {
@@ -589,7 +589,7 @@ export async function GET(req: Request) {
       })
     );
 
-    // -- SeparaciÛn final ------------------------------------------------------
+    // -- Separaci√≥n final ------------------------------------------------------
     const urgencyOrder: Record<UrgencyType, number>   = { delayed: 0, today: 1, tomorrow: 2, week: 3, upcoming: 4 };
     const typeOrder:    Record<LogisticType, number>   = { correo: 0, turbo: 1, flex: 2, full: 3 };
     allShipments.sort((a, b) => {
@@ -610,7 +610,7 @@ export async function GET(req: Request) {
 
     // Pending = no full, no impresos
     const pending   = allShipments.filter(s => s.type !== "full" && !s.is_printed);
-    // Printed = impresas HOY solo (hasta las 00:00 se limpian autom·ticamente)
+    // Printed = impresas HOY solo (hasta las 00:00 se limpian autom√°ticamente)
     const printedShipments = allShipments.filter(s => {
       if (s.type === "full" || !s.is_printed) return false;
       // Solo incluir si fue impresa hoy
@@ -631,7 +631,7 @@ export async function GET(req: Request) {
     // Devoluciones: todas las not_delivered (no-full)
     const returns = allReturns.filter(s => s.type !== "full");
 
-    // Demorados en tr·nsito: ya despachados, delivery_date pasada
+    // Demorados en tr√°nsito: ya despachados, delivery_date pasada
     const delayed_in_transit = in_transit.filter(s => isDatePast(s.delivery_date));
 
     if (action === "list") {
@@ -667,10 +667,10 @@ export async function GET(req: Request) {
       : pending;
 
     if (!targetShipments.length) {
-      return NextResponse.json({ error: "No hay envÌos seleccionados" }, { status: 400 });
+      return NextResponse.json({ error: "No hay env√≠os seleccionados" }, { status: 400 });
     }
 
-    // Ordenar por tipo de logÌstica: correo ? turbo ? flex
+    // Ordenar por tipo de log√≠stica: correo ? turbo ? flex
     const printOrder: Record<LogisticType, number> = { correo: 0, turbo: 1, flex: 2, full: 3 };
     targetShipments.sort((a, b) => printOrder[a.type] - printOrder[b.type]);
 
@@ -709,7 +709,7 @@ export async function GET(req: Request) {
 
     // ZPL: concatenar texto; PDF: mergear con pdf-lib
     if (format === "zpl") {
-      // MeLi returns a ZIP file for zpl2 ó extract the text content
+      // MeLi returns a ZIP file for zpl2 ‚Äî extract the text content
       const zplTexts: string[] = [];
       for (const chunk of pdfChunks) {
         const bytes = new Uint8Array(chunk);
@@ -772,18 +772,18 @@ export async function GET(req: Request) {
       });
     }
 
-    // PDF Merge ó 3 etiquetas 10x15 cm en horizontal por hoja A4 (landscape)
+    // PDF Merge ‚Äî 3 etiquetas 10x15 cm en horizontal por hoja A4 (landscape)
     // A4 landscape: 842 x 595 puntos (297mm x 210mm)
     // Cada etiqueta 10x15 cm = 283 x 425 puntos aprox
-    // 3 etiquetas horizontales: 3 x 283 = 849 puntos (ajuste mÌnimo)
+    // 3 etiquetas horizontales: 3 x 283 = 849 puntos (ajuste m√≠nimo)
     const A4_W = 841.89;  // A4 landscape ancho
     const A4_H = 595.28;  // A4 landscape alto
     const LABEL_W = 283.46; // 10 cm en puntos
-    const LABEL_H = 425.20; // 15 cm en puntos (altura m·xima disponible)
+    const LABEL_H = 425.20; // 15 cm en puntos (altura m√°xima disponible)
     const LABELS_PER_ROW = 3;
     const GAP = 10; // gap entre etiquetas en puntos
 
-    // Cargar todos los chunks y recopilar p·ginas fuente
+    // Cargar todos los chunks y recopilar p√°ginas fuente
     const srcDocs: PDFDocument[] = [];
     const allLabelPages: { doc: PDFDocument; idx: number }[] = [];
     for (const chunk of pdfChunks) {
@@ -794,12 +794,12 @@ export async function GET(req: Request) {
           allLabelPages.push({ doc: src, idx });
         }
       } catch {
-        console.warn("[etiquetas] Chunk de PDF inv·lido, saltando...");
+        console.warn("[etiquetas] Chunk de PDF inv√°lido, saltando...");
       }
     }
 
     if (allLabelPages.length === 0) {
-      return NextResponse.json({ error: "No se pudo generar el PDF: las etiquetas no est·n disponibles o MeLi no las devolviÛ correctamente." }, { status: 502 });
+      return NextResponse.json({ error: "No se pudo generar el PDF: las etiquetas no est√°n disponibles o MeLi no las devolvi√≥ correctamente." }, { status: 502 });
     }
 
     const mergedPdf = await PDFDocument.create();
@@ -812,7 +812,7 @@ export async function GET(req: Request) {
     const startX = (A4_W - (drawW * LABELS_PER_ROW + GAP * (LABELS_PER_ROW - 1))) / 2;
     const startY = (A4_H - drawH) / 2; // Centrar verticalmente
 
-    // Componer p·ginas A4 landscape con 3 etiquetas horizontales cada una
+    // Componer p√°ginas A4 landscape con 3 etiquetas horizontales cada una
     for (let i = 0; i < allLabelPages.length; i += LABELS_PER_ROW) {
       const group = allLabelPages.slice(i, i + LABELS_PER_ROW);
       const a4Page = mergedPdf.addPage([A4_W, A4_H]); // Landscape
@@ -821,7 +821,7 @@ export async function GET(req: Request) {
         const { doc, idx } = group[j];
         const srcPage = doc.getPage(idx);
 
-        // PosiciÛn horizontal: de izquierda a derecha
+        // Posici√≥n horizontal: de izquierda a derecha
         const x = startX + j * (drawW + GAP);
         const y = startY;
 
@@ -831,7 +831,7 @@ export async function GET(req: Request) {
     }
 
     if (mergedPdf.getPageCount() === 0) {
-      return NextResponse.json({ error: "No se pudo generar el PDF: las etiquetas no est·n disponibles o MeLi no las devolviÛ correctamente." }, { status: 502 });
+      return NextResponse.json({ error: "No se pudo generar el PDF: las etiquetas no est√°n disponibles o MeLi no las devolvi√≥ correctamente." }, { status: 502 });
     }
 
     const mergedBytes = await mergedPdf.save();
@@ -871,7 +871,7 @@ export async function POST(req: Request) {
       action?: string;
     };
 
-    // Manejar acciÛn "mark-printed" (nuevo batch endpoint)
+    // Manejar acci√≥n "mark-printed" (nuevo batch endpoint)
     const ids = shipment_ids ?? [];
     if (!ids?.length) {
       return NextResponse.json({ error: "No shipment_ids" }, { status: 400 });
