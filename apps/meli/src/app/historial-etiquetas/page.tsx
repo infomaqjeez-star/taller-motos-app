@@ -362,7 +362,13 @@ export default function HistorialEtiquetasPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3" style={{ color: "#9CA3AF" }}>
-                      {new Date(label.print_date).toLocaleDateString("es-AR")}
+                      {new Date(label.print_date).toLocaleString("es-AR", {
+                        day: "numeric",
+                        month: "numeric",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit"
+                      })}
                     </td>
                     <td className="px-4 py-3 text-center">
                       <button
