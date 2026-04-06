@@ -137,34 +137,22 @@ export async function POST(req: NextRequest) {
         pdfDoc.addPage(copied);
       }
     } else {
-      // Etiquetas individuales: 3 por A4 landscape
-      // A4 landscape: 841.89 x 595.28 pt (297mm x 210mm)
-      // Slot por etiqueta: 95mm x 142.5mm = 269.3 x 403.9 pt (3 entran exactas)
+      // Etiquetas individuales: 3 por A4 landscape, 100x150mm exacto
+      // A4 landscape: 841.89 x 595.28 pt
+      // 3 etiquetas de 100mm (283.46pt) = 850.38pt — caben con 0 margen
       const A4_W = 841.89;
       const A4_H = 595.28;
-      const COLS = 3;
-      const SLOT_W = 269.3;  // 95mm en pt
-      const SLOT_H = 403.9;  // 142.5mm en pt
-      const totalW = COLS * SLOT_W;
-      const MX = (A4_W - totalW) / 2; // centrado horizontal
-      const MY = (A4_H - SLOT_H) / 2; // centrado vertical
+      const LBL_W = 283.46; // 100mm
+      const LBL_H = 425.2;  // 150mm
+      const MY = (A4_H - LBL_H) / 2; // centrado vertical
 
-      for (let i = 0; i < allPages.length; i += COLS) {
-        const group = allPages.slice(i, i + COLS);
+      for (let i = 0; i < allPages.length; i += 3) {
+        const group = allPages.slice(i, i + 3);
         const a4 = pdfDoc.addPage([A4_W, A4_H]);
-
         for (let j = 0; j < group.length; j++) {
           const { doc, idx } = group[j];
-          const srcPage = doc.getPage(idx);
-          const { width: srcW, height: srcH } = srcPage.getSize();
-          // Escalar para llenar el slot manteniendo proporción
-          const scale = Math.min(SLOT_W / srcW, SLOT_H / srcH);
-          const drawW = srcW * scale;
-          const drawH = srcH * scale;
-          const x = MX + j * SLOT_W + (SLOT_W - drawW) / 2;
-          const y = MY + (SLOT_H - drawH) / 2;
-          const embedded = await pdfDoc.embedPage(srcPage);
-          a4.drawPage(embedded, { x, y, width: drawW, height: drawH });
+          const embedded = await pdfDoc.embedPage(doc.getPage(idx));
+          a4.drawPage(embedded, { x: j * LBL_W, y: MY, width: LBL_W, height: LBL_H });
         }
       }
     }
