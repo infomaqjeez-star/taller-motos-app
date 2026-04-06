@@ -118,7 +118,7 @@ export default function HistorialEtiquetasPage() {
     if (selectedIds.size === 0) return;
     setDownloading(true);
     try {
-      const res = await fetch("/api/meli-labels/download-combined", {
+      const res = await fetch("/api/meli-labels/download-combined-v2", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
