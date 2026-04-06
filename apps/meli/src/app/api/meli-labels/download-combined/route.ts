@@ -121,8 +121,7 @@ export async function POST(req: NextRequest) {
     // ── Detectar si MeLi ya agrupó las etiquetas ────────────────────────
     // Si MeLi las agrupó (3 por A4), el total de páginas será ~ceil(N/3)*2
     // Si son individuales (Flex), el total será ~N*2 (1 etiqueta = 2 páginas)
-    const expectedGrouped = Math.ceil(totalLabels / 3) * 2;
-    const isAlreadyGrouped = allPages.length <= expectedGrouped + 2; // margen de tolerancia
+    const isAlreadyGrouped = allPages.length < totalLabels;
 
     const pdfDoc = await PDFDocument.create();
 
