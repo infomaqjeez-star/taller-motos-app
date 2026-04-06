@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
     const supabase = getSupabase();
     
     // Eliminar IDs duplicados
-    const uniqueIds = [...new Set(ids)];
+    const uniqueIds = Array.from(new Set(ids));
     
     let query = supabase
       .from("printed_labels")
