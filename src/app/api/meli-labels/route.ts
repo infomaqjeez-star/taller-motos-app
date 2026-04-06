@@ -764,16 +764,51 @@ export async function GET(req: Request) {
       });
     }
 
-    // PDF Merge â€” unificar todos los chunks en un solo documento
-    const mergedPdf = await PDFDocument.create();
+    // PDF Merge - 3 etiquetas 10x15 cm en horizontal por hoja A4 (landscape)
+    const A4_W = 841.89;
+    const A4_H = 595.28;
+    const LABEL_W = 283.46;
+    const LABEL_H = 425.20;
+    const LABELS_PER_ROW = 3;
+    const GAP = 10;
+
+    const srcDocs = [];
+    const allLabelPages = [];
     for (const chunk of pdfChunks) {
       try {
         const src = await PDFDocument.load(chunk, { ignoreEncryption: true });
-        const pages = await mergedPdf.copyPages(src, src.getPageIndices());
-        for (const page of pages) mergedPdf.addPage(page);
+        srcDocs.push(src);
+        for (const idx of src.getPageIndices()) {
+          allLabelPages.push({ doc: src, idx });
+        }
       } catch {
-        // Si un chunk es invÃlido, lo saltamos sin romper el resto
-        console.warn("[etiquetas] Chunk de PDF invÃlido, saltando...");
+        console.warn("[etiquetas] Chunk invalido, saltando...");
+      }
+    }
+
+    if (allLabelPages.length === 0) {
+      return NextResponse.json({ error: "No se pudo generar el PDF" }, { status: 502 });
+    }
+
+    const mergedPdf = await PDFDocument.create();
+    const availableWidth = A4_W - (GAP * (LABELS_PER_ROW - 1));
+    const scale = Math.min(1, availableWidth / (LABEL_W * LABELS_PER_ROW), A4_H / LABEL_H);
+    const drawW = LABEL_W * scale;
+    const drawH = LABEL_H * scale;
+    const startX = (A4_W - (drawW * LABELS_PER_ROW + GAP * (LABELS_PER_ROW - 1))) / 2;
+    const startY = (A4_H - drawH) / 2;
+
+    for (let i = 0; i < allLabelPages.length; i += LABELS_PER_ROW) {
+      const group = allLabelPages.slice(i, i + LABELS_PER_ROW);
+      const a4Page = mergedPdf.addPage([A4_W, A4_H]);
+
+      for (let j = 0; j < group.length; j++) {
+        const { doc, idx } = group[j];
+        const srcPage = doc.getPage(idx);
+        const x = startX + j * (drawW + GAP);
+        const y = startY;
+        const embedded = await mergedPdf.embedPage(srcPage);
+        a4Page.drawPage(embedded, { x, y, width: drawW, height: drawH });
       }
     }
 
