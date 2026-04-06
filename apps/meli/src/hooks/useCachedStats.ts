@@ -10,7 +10,7 @@ export interface Reputation {
   transactions_total: number; transactions_completed: number;
   ratings_positive: number; ratings_negative: number;
 }
-export interface PerAccount { account: string; meli_user_id: string; total_orders: number; total_amount: number; sales_by_day?: SalesByDay[] }
+export interface PerAccount { account: string; meli_user_id: string; total_orders: number; total_amount: number; sales_by_day?: SalesByDay[]; sales_by_logistic?: Record<string, { qty: number; amount: number }> }
 
 export interface StatsData {
   period: string;

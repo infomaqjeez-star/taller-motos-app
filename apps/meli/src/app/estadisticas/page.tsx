@@ -530,6 +530,26 @@ export default function EstadisticasPage() {
       }));
   }, [data?.shipping_breakdown, totals?.total_orders]);
 
+  // Datos de Full por cuenta para el nuevo componente
+  const fullByAccountData = useMemo(() => {
+    if (!data?.per_account) return [];
+    return data.per_account
+      .filter(acc => (acc.sales_by_logistic?.full?.qty || 0) > 0)
+      .map(acc => ({
+        account: acc.account,
+        meli_user_id: acc.meli_user_id,
+        fullOrders: acc.sales_by_logistic?.full?.qty || 0,
+        fullAmount: acc.sales_by_logistic?.full?.amount || 0,
+      }))
+      .sort((a, b) => b.fullOrders - a.fullOrders);
+  }, [data?.per_account]);
+
+  // Totales de Full
+  const fullTotals = useMemo(() => {
+    if (!data?.sales_by_logistic?.full) return { qty: 0, amount: 0 };
+    return data.sales_by_logistic.full;
+  }, [data?.sales_by_logistic]);
+
   return (
     <main className="min-h-screen pb-24" style={{ background: "#121212" }}>
       {/* Date Picker Modal */}
@@ -965,6 +985,84 @@ export default function EstadisticasPage() {
                       </p>
                     </div>
                   ))}
+                </div>
+              </div>
+            )}
+
+            {/* Estadísticas de Full por cuenta */}
+            {fullByAccountData.length > 0 && (
+              <div
+                className="rounded-2xl p-4"
+                style={{
+                  background: "#1F1F1F",
+                  border: "1px solid rgba(255,255,255,0.07)",
+                }}
+              >
+                <h3 className="font-bold text-white mb-4 flex items-center gap-2">
+                  <Package className="w-4 h-4" style={{ color: "#39FF14" }} />
+                  Full por cuenta · {PERIODS.find(p => p.value === period)?.label}
+                </h3>
+                
+                {/* KPIs de Full */}
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  <div
+                    className="rounded-xl p-3 text-center"
+                    style={{ background: "#121212", border: "1px solid #39FF1433" }}
+                  >
+                    <p className="text-2xl font-black" style={{ color: "#39FF14" }}>
+                      {fullTotals.qty}
+                    </p>
+                    <p className="text-xs" style={{ color: "#6B7280" }}>
+                      Órdenes Full
+                    </p>
+                    <p className="text-xs font-semibold" style={{ color: "#39FF14" }}>
+                      {totals?.total_orders ? Math.round((fullTotals.qty / totals.total_orders) * 100) : 0}% del total
+                    </p>
+                  </div>
+                  <div
+                    className="rounded-xl p-3 text-center"
+                    style={{ background: "#121212", border: "1px solid #00E5FF33" }}
+                  >
+                    <p className="text-lg font-black" style={{ color: "#00E5FF" }}>
+                      {formatCurrency(fullTotals.amount)}
+                    </p>
+                    <p className="text-xs" style={{ color: "#6B7280" }}>
+                      Ventas Full
+                    </p>
+                    <p className="text-xs font-semibold" style={{ color: "#00E5FF" }}>
+                      {totals?.total_amount ? Math.round((fullTotals.amount / totals.total_amount) * 100) : 0}% del total
+                    </p>
+                  </div>
+                </div>
+
+                {/* Detalle por cuenta */}
+                <div className="space-y-2">
+                  {fullByAccountData.map((acc) => {
+                    const maxOrders = Math.max(...fullByAccountData.map((a) => a.fullOrders));
+                    const percentage = maxOrders > 0 ? (acc.fullOrders / maxOrders) * 100 : 0;
+                    return (
+                      <div key={acc.meli_user_id} className="flex items-center gap-3">
+                        <span className="text-xs w-24 truncate" style={{ color: "#6B7280" }}>
+                          @{acc.account}
+                        </span>
+                        <div className="flex-1 h-6 rounded-full overflow-hidden" style={{ background: "#121212" }}>
+                          <div
+                            className="h-full rounded-full transition-all"
+                            style={{
+                              width: `${percentage}%`,
+                              background: "linear-gradient(90deg, #39FF14, #00E5FF)",
+                            }}
+                          />
+                        </div>
+                        <span className="text-xs font-semibold text-white w-14 text-right">
+                          {acc.fullOrders} ord
+                        </span>
+                        <span className="text-xs font-semibold text-white w-20 text-right">
+                          {formatCurrency(acc.fullAmount)}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
