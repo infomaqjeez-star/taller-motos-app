@@ -348,14 +348,14 @@ export async function GET(req: Request) {
 
     // Batched enrichment â€” 10 shipments at a time to reduce rate-limit pressure
     for (const { token, ids } of Array.from(byAccountMap.values())) {
-      for (let batchStart = 0; batchStart < ids.length; batchStart += 10) {
-        const batch = ids.slice(batchStart, batchStart + 10);
+      for (let batchStart = 0; batchStart < ids.length; batchStart += 5) {
+        const batch = ids.slice(batchStart, batchStart + 5);
         await Promise.all(
           batch.map(async (sid) => {
             const s = allToEnrich.find(x => x.shipment_id === sid);
             if (!s) return;
             try {
-              const detail = await meliGetWithRetry(`/shipments/${sid}`, token) as Record<string, unknown> | null;
+              const detail = await meliGet(`/shipments/${sid}`, token, 5000) as Record<string, unknown> | null;
               if (!detail) {
                 console.warn(`[etiquetas] Enrichment fallÃ para shipment ${sid} (tipo actual: ${s.type})`);
                 return; // conserva el tipo que parseOrder asignÃ â€” NO se sobreescribe
