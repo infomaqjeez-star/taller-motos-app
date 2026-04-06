@@ -22,16 +22,19 @@ function urgency(limitDate: string | null): "overdue" | "urgent" | "soon" | "ok"
   return "ok";
 }
 
-interface MeliShipment {
+interface MeliOrder {
   id: number;
-  logistic_type?: string;
-  substatus?: string;
-  tracking_number?: string;
+  shipping?: {
+    id?: number;
+    logistic_type?: string;
+    status?: string;
+    substatus?: string;
+    tracking_number?: string;
+    date_created?: string;
+    shipping_limit?: string;
+    estimated_handling_limit?: string;
+  };
   date_created?: string;
-  order_id?: number;
-  shipping_limit?: string;
-  estimated_handling_limit?: string;
-  status?: string;
 }
 
 export async function GET() {
@@ -49,40 +52,46 @@ export async function GET() {
         const token = await getValidToken(acc);
         if (!token) return;
 
-        const [readyShip, handlingShip, fullOrders, turboOrders] = await Promise.all([
-          meliGet(`/shipments/search?seller_id=${acc.meli_user_id}&status=ready_to_ship&limit=50`, token),
-          meliGet(`/shipments/search?seller_id=${acc.meli_user_id}&status=handling&limit=50`, token),
+        // Obtener órdenes con diferentes estados de envío
+        const [ordersReadyToShip, ordersHandling, fullOrders, ordersTurbo] = await Promise.all([
+          meliGet(`/orders/search?seller=${acc.meli_user_id}&order.status=paid&shipping.status=ready_to_ship&limit=50`, token),
+          meliGet(`/orders/search?seller=${acc.meli_user_id}&order.status=paid&shipping.status=handling&limit=50`, token),
           meliGet(`/orders/search?seller=${acc.meli_user_id}&order.status=paid&shipping.logistic_type=fulfillment&limit=1`, token),
-          meliGet(`/shipments/search?seller_id=${acc.meli_user_id}&logistic_type=turbo&status=handling&limit=1`, token),
+          meliGet(`/orders/search?seller=${acc.meli_user_id}&order.status=paid&shipping.logistic_type=turbo&limit=1`, token),
         ]);
 
         fullCount  += fullOrders?.paging?.total  ?? 0;
-        turboCount += turboOrders?.paging?.total ?? 0;
+        turboCount += ordersTurbo?.paging?.total ?? 0;
 
-        const toItem = (s: MeliShipment, listType: "ready" | "upcoming") => {
+        const toItem = (order: MeliOrder, listType: "ready" | "upcoming") => {
+          const s = order.shipping ?? {};
           const logType = classifyLogistic(s.logistic_type);
           const limit   = s.shipping_limit ?? s.estimated_handling_limit ?? null;
           return {
-            shipment_id:     s.id,
-            order_id:        s.order_id ?? null,
+            shipment_id:     s.id ?? null,
+            order_id:        order.id,
             account:         acc.nickname,
             logistic_type:   s.logistic_type ?? "unknown",
             type:            logType,
             substatus:       s.substatus ?? null,
             tracking_number: s.tracking_number ?? null,
-            date_created:    s.date_created ?? null,
+            date_created:    order.date_created ?? null,
             shipping_limit:  limit,
             urgency:         urgency(limit),
             list_type:       listType,
-            label_url:       `https://www.mercadolibre.com.ar/envios/details/${s.id}`,
+            label_url:       s.id ? `https://www.mercadolibre.com.ar/envios/details/${s.id}` : null,
           };
         };
 
-        for (const s of (readyShip?.results ?? []) as MeliShipment[]) {
-          if (classifyLogistic(s.logistic_type) !== "full") ready.push(toItem(s, "ready"));
+        for (const order of (ordersReadyToShip?.results ?? []) as MeliOrder[]) {
+          if (classifyLogistic(order.shipping?.logistic_type) !== "full") {
+            ready.push(toItem(order, "ready"));
+          }
         }
-        for (const s of (handlingShip?.results ?? []) as MeliShipment[]) {
-          if (classifyLogistic(s.logistic_type) !== "full") upcoming.push(toItem(s, "upcoming"));
+        for (const order of (ordersHandling?.results ?? []) as MeliOrder[]) {
+          if (classifyLogistic(order.shipping?.logistic_type) !== "full") {
+            upcoming.push(toItem(order, "upcoming"));
+          }
         }
       } catch { /* skip */ }
     }));

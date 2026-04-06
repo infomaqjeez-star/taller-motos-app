@@ -18,10 +18,10 @@ async function processAccount(acc: MeliAccount) {
     }
     const uid = String(acc.meli_user_id);
 
-    const [userData, ordersRes, shipments, itemsSearch, questions, disputes] = await Promise.all([
+    const [userData, ordersRes, ordersReadyToShip, itemsSearch, questions, disputes] = await Promise.all([
       meliGet(`/users/${uid}`, token),
       meliGet(`/orders/search?seller=${uid}&order.status=paid&sort=date_desc&limit=50`, token),
-      meliGet(`/shipments/search?seller_id=${uid}&status=ready_to_ship&limit=1`, token),
+      meliGet(`/orders/search?seller=${uid}&order.status=paid&shipping.status=ready_to_ship&limit=1`, token),
       meliGet(`/users/${uid}/items/search?limit=1`, token),
       meliGet(`/questions/search?seller_id=${uid}&status=UNANSWERED&limit=1`, token),
       meliGet(`/orders/search?seller=${uid}&order.status=disputed&limit=1`, token),
@@ -39,7 +39,7 @@ async function processAccount(acc: MeliAccount) {
       meli_user_id:         uid,
       unanswered_questions: questions?.total ?? 0,
       pending_messages:     0,
-      ready_to_ship:        shipments?.paging?.total ?? 0,
+      ready_to_ship:        ordersReadyToShip?.paging?.total ?? 0,
       total_items:          itemsSearch?.paging?.total ?? 0,
       today_orders:         todayOrders.length,
       today_sales_amount:   totalAmount,
