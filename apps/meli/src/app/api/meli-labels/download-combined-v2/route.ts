@@ -118,37 +118,40 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No se pudo generar el PDF" }, { status: 502 });
     }
 
-    // ── Detectar si MeLi ya agrupó las etiquetas ────────────────────────
-    // Si MeLi agrupó 3 por A4: 10 labels → ~4 páginas (< 10) → ya agrupadas
-    // Si son individuales (Flex/1 por pág): 10 labels → 10 páginas (>= 10) → combinar
-    // Si son individuales (2 pág por label): 10 labels → 20 páginas (>= 10) → combinar
-    const isAlreadyGrouped = allPages.length < totalLabels;
+    // ── Clasificar páginas por tamaño ──────────────────────────────────
+    // Páginas grandes (A4, >500pt) = MeLi ya agrupó etiquetas → copiar tal cual
+    // Páginas chicas (<500pt) = etiquetas individuales → agrupar 3 por hoja
+    const grouped: { doc: PDFDocument; idx: number }[] = [];
+    const individual: { doc: PDFDocument; idx: number }[] = [];
 
-    // ── Combinar PDFs de todas las cuentas ───────────────────────────────
-    // Si MeLi ya agrupó (Correo: 3 por A4), copiar tal cual.
-    // Si son individuales (Flex: 1 por página), agrupar 3 por A4 landscape
-    // sin escalar el contenido (cada etiqueta 10x15cm = 283x425 pt).
+    for (const p of allPages) {
+      const { width, height } = p.doc.getPage(p.idx).getSize();
+      if (width > 500 || height > 500) {
+        grouped.push(p);
+      } else {
+        individual.push(p);
+      }
+    }
+
     const pdfDoc = await PDFDocument.create();
 
-    if (isAlreadyGrouped) {
-      // Ya agrupadas: copiar páginas directamente
-      for (const { doc, idx } of allPages) {
-        const [copied] = await pdfDoc.copyPages(doc, [idx]);
-        pdfDoc.addPage(copied);
-      }
-    } else {
-      // Etiquetas individuales (Flex): 3 por página, tamaño exacto sin márgenes
-      // Página custom = 3 etiquetas de ancho × 1 etiqueta de alto
-      // Al imprimir "ajustar a página" en A4 landscape queda perfecto
+    // Páginas ya agrupadas por MeLi (Correo): copiar directo
+    for (const { doc, idx } of grouped) {
+      const [copied] = await pdfDoc.copyPages(doc, [idx]);
+      pdfDoc.addPage(copied);
+    }
+
+    // Etiquetas individuales (Flex/otras): 3 por página a 95mm x 150mm
+    if (individual.length > 0) {
       const LBL_W = 269.29; // 95mm en pt
       const LBL_H = 425.2;  // 150mm en pt
-      const PAGE_W = LBL_W * 3; // 850.38pt
+      const PAGE_W = LBL_W * 3;
 
-      for (let i = 0; i < allPages.length; i += 3) {
-        const group = allPages.slice(i, i + 3);
+      for (let i = 0; i < individual.length; i += 3) {
+        const batch = individual.slice(i, i + 3);
         const page = pdfDoc.addPage([PAGE_W, LBL_H]);
-        for (let j = 0; j < group.length; j++) {
-          const { doc, idx } = group[j];
+        for (let j = 0; j < batch.length; j++) {
+          const { doc, idx } = batch[j];
           const embedded = await pdfDoc.embedPage(doc.getPage(idx));
           page.drawPage(embedded, { x: j * LBL_W, y: 0, width: LBL_W, height: LBL_H });
         }
