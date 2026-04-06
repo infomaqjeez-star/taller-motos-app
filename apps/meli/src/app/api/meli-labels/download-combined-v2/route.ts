@@ -140,12 +140,19 @@ export async function POST(req: NextRequest) {
       // Etiquetas individuales: 3 por A4 landscape (841x595 pt)
       const A4_W = 841.89;
       const A4_H = 595.28;
-      // Etiqueta MeLi: 10x15cm @ 72dpi base = 283.46x425.2 pt
-      const LBL_W = 283.46;
-      const LBL_H = 425.2;
       const COLS = 3;
-      const MX = 0; // sin márgenes laterales para que quepan exactas
-      const MY = (A4_H - LBL_H) / 2; // centrado vertical
+
+      // Detectar tamaño real de las etiquetas desde la primera página
+      const firstSrcPage = allPages[0].doc.getPage(allPages[0].idx);
+      const { width: srcW, height: srcH } = firstSrcPage.getSize();
+
+      // Calcular slot: dividir A4 landscape en 3 columnas iguales
+      const slotW = A4_W / COLS;
+      // Escalar para llenar el ancho del slot manteniendo proporción
+      const scale = slotW / srcW;
+      const drawW = srcW * scale;
+      const drawH = srcH * scale;
+      const MY = drawH < A4_H ? (A4_H - drawH) / 2 : 0;
 
       for (let i = 0; i < allPages.length; i += COLS) {
         const group = allPages.slice(i, i + COLS);
@@ -154,8 +161,8 @@ export async function POST(req: NextRequest) {
         for (let j = 0; j < group.length; j++) {
           const { doc, idx } = group[j];
           const embedded = await pdfDoc.embedPage(doc.getPage(idx));
-          const x = MX + j * LBL_W;
-          a4.drawPage(embedded, { x, y: MY, width: LBL_W, height: LBL_H });
+          const x = j * slotW;
+          a4.drawPage(embedded, { x, y: MY, width: drawW, height: drawH });
         }
       }
     }
