@@ -1,18 +1,14 @@
-// v4 - copyPages directo, deduplicado por file_path
+// v5 - Descarga fresca desde API MeLi con los shipment_ids exactos seleccionados
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
 import { PDFDocument } from "pdf-lib";
+import { getSupabase, getActiveAccounts, getValidToken, meliGetRaw } from "@/lib/meli";
 
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
-}
+export const runtime = "nodejs";
+export const maxDuration = 30;
 
 export async function POST(req: NextRequest) {
   try {
-    const { ids, account_id, meli_user_id } = await req.json();
+    const { ids, meli_user_id } = await req.json();
 
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
       return NextResponse.json({ error: "No IDs provided" }, { status: 400 });
@@ -21,9 +17,10 @@ export async function POST(req: NextRequest) {
     const supabase = getSupabase();
     const uniqueIds = Array.from(new Set(ids));
 
+    // Obtener los registros seleccionados (para sacar shipment_id y meli_user_id)
     let query = supabase
       .from("printed_labels")
-      .select("*")
+      .select("shipment_id, meli_user_id")
       .in("id", uniqueIds);
 
     if (meli_user_id) {
@@ -34,54 +31,90 @@ export async function POST(req: NextRequest) {
 
     if (dbError || !records || records.length === 0) {
       return NextResponse.json(
-        { error: "Records not found or unauthorized" },
+        { error: "Records not found" },
         { status: 403 }
       );
     }
 
-    // ── Deduplicar por file_path ──────────────────────────────────────────
-    // save-print-batch guarda UN PDF batch (ya con 3 etiquetas por A4)
-    // y asigna la misma URL a los 3 registros individuales.
-    // Sin deduplicar = descargamos el mismo PDF N veces = etiquetas duplicadas.
-    const uniqueUrls = Array.from(new Set(
-      records.map((r: { file_path: string }) => r.file_path).filter(Boolean)
-    ));
+    // Agrupar shipment_ids por meli_user_id (cuenta)
+    const byAccount = new Map<string, number[]>();
+    for (const r of records) {
+      const uid = String(r.meli_user_id);
+      if (!byAccount.has(uid)) byAccount.set(uid, []);
+      const arr = byAccount.get(uid)!;
+      if (!arr.includes(r.shipment_id)) arr.push(r.shipment_id);
+    }
 
-    const pdfChunks: ArrayBuffer[] = [];
-    for (const url of uniqueUrls) {
-      try {
-        const response = await fetch(url);
-        if (!response.ok) {
-          console.warn(`[historial-v2] No se pudo descargar: ${url}`);
-          continue;
+    // Obtener tokens válidos
+    const accounts = await getActiveAccounts();
+    const tokenMap = new Map<string, string>();
+    await Promise.all(
+      accounts.map(async (acc) => {
+        const uid = String(acc.meli_user_id);
+        if (byAccount.has(uid)) {
+          const token = await getValidToken(acc);
+          if (token) tokenMap.set(uid, token);
         }
-        pdfChunks.push(await response.arrayBuffer());
-      } catch (error) {
-        console.error(`[historial-v2] Error descargando PDF:`, error);
+      })
+    );
+
+    // Llamar a MeLi API para obtener las etiquetas exactas seleccionadas
+    // MeLi acepta hasta 50 shipment_ids por llamada y devuelve el PDF formateado
+    const pdfChunks: ArrayBuffer[] = [];
+
+    for (const [uid, shipmentIds] of byAccount.entries()) {
+      const token = tokenMap.get(uid);
+      if (!token) {
+        console.warn(`[historial-v2] Sin token para cuenta ${uid}`);
+        continue;
+      }
+
+      // MeLi permite max ~50 IDs por request, dividir si es necesario
+      for (let i = 0; i < shipmentIds.length; i += 50) {
+        const batch = shipmentIds.slice(i, i + 50);
+        const idsParam = batch.join(",");
+
+        try {
+          const pdfBuffer = await meliGetRaw(
+            `/shipment_labels?shipment_ids=${idsParam}&response_type=pdf`,
+            token
+          );
+          if (pdfBuffer && pdfBuffer.byteLength > 0) {
+            pdfChunks.push(pdfBuffer);
+          } else {
+            console.warn(`[historial-v2] MeLi no devolvió PDF para IDs: ${idsParam}`);
+          }
+        } catch (err) {
+          console.error(`[historial-v2] Error obteniendo etiquetas:`, err);
+        }
       }
     }
 
     if (pdfChunks.length === 0) {
-      return NextResponse.json({ error: "No se pudo generar el PDF" }, { status: 502 });
+      return NextResponse.json(
+        { error: "No se pudieron obtener las etiquetas de MeLi" },
+        { status: 502 }
+      );
     }
 
-    // ── Copiar páginas tal como están (sin re-escalar) ───────────────────
-    // Los PDFs almacenados YA tienen el layout correcto:
-    // A4 landscape con 3 etiquetas 10x15 por página.
+    // Combinar todos los PDFs de distintas cuentas en uno solo
     const pdfDoc = await PDFDocument.create();
 
     for (const chunk of pdfChunks) {
       try {
         const src = await PDFDocument.load(chunk, { ignoreEncryption: true });
         const copiedPages = await pdfDoc.copyPages(src, src.getPageIndices());
-        copiedPages.forEach(page => pdfDoc.addPage(page));
+        copiedPages.forEach((page) => pdfDoc.addPage(page));
       } catch {
-        console.warn("[historial-v2] PDF inválido, saltando...");
+        console.warn("[historial-v2] PDF inválido de MeLi, saltando...");
       }
     }
 
     if (pdfDoc.getPageCount() === 0) {
-      return NextResponse.json({ error: "No se pudo generar el PDF" }, { status: 502 });
+      return NextResponse.json(
+        { error: "No se pudo generar el PDF" },
+        { status: 502 }
+      );
     }
 
     const combinedPdfBytes = await pdfDoc.save();
