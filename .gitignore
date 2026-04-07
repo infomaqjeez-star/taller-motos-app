@@ -1,29 +1,24 @@
-# dependencies
-node_modules/
-.pnp
-.pnp.js
-
-# next.js
-.next/
-out/
-
-# misc
-.DS_Store
-*.pem
-
-# debug
+# Logs
+logs
+*.log
 npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
 
-# local env files
-.env
-.env*.local
+node_modules
+dist
+dist-ssr
+*.local
 
-# typescript
-*.tsbuildinfo
-next-env.d.ts
-
-# batch helpers
-install.bat
-install-xlsx.bat
-install-pdf.bat
-dev.bat
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
