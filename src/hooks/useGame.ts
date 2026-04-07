@@ -1,24 +1,21 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { useGameStore } from '../stores/gameStore';
 
 export function useGameLoop() {
   const tick = useGameStore((state) => state.tick);
   const lastTimeRef = useRef(Date.now());
-  const frameRef = useRef<number>();
+  const frameRef = useRef<number | undefined>(undefined);
+
+  const gameLoop = useCallback(() => {
+    const now = Date.now();
+    const deltaTime = (now - lastTimeRef.current) / 1000;
+    lastTimeRef.current = now;
+    const clampedDeltaTime = Math.min(deltaTime, 1);
+    tick(clampedDeltaTime);
+    frameRef.current = requestAnimationFrame(gameLoop);
+  }, [tick]);
 
   useEffect(() => {
-    const gameLoop = () => {
-      const now = Date.now();
-      const deltaTime = (now - lastTimeRef.current) / 1000; // Convertir a segundos
-      lastTimeRef.current = now;
-
-      // Limitar deltaTime para evitar saltos grandes (ej: pestaña inactiva)
-      const clampedDeltaTime = Math.min(deltaTime, 1);
-      
-      tick(clampedDeltaTime);
-      frameRef.current = requestAnimationFrame(gameLoop);
-    };
-
     frameRef.current = requestAnimationFrame(gameLoop);
 
     return () => {
@@ -26,7 +23,7 @@ export function useGameLoop() {
         cancelAnimationFrame(frameRef.current);
       }
     };
-  }, [tick]);
+  }, [gameLoop]);
 }
 
 export function useFormatNumber() {

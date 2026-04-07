@@ -5,9 +5,7 @@ import type {
   CloudMiner, 
   Region, 
   MinerType, 
-  MiningStats,
-  Upgrade,
-  RegionData 
+  MiningStats
 } from '../types';
 import { MINER_TEMPLATES, REGIONS, UPGRADES, ACHIEVEMENTS } from '../data/gameData';
 
@@ -31,12 +29,14 @@ interface GameStore extends GameState {
   // Cálculos
   getMiningStats: () => MiningStats;
   getRegionMultiplier: (region: Region) => number;
+  getUpgradeMultiplier: (minerType: MinerType) => number;
   
   // Game loop
   tick: (deltaTime: number) => void;
   
   // Utilidades
   resetGame: () => void;
+  checkAchievements: () => void;
 }
 
 const initialState: GameState = {
@@ -199,7 +199,7 @@ export const useGameStore = create<GameStore>()(
       },
 
       getMiningStats: () => {
-        const { miners, upgrades } = get();
+        const { miners } = get();
         const activeMiners = miners.filter(m => m.isActive);
         
         let totalHashRate = 0;
@@ -271,36 +271,56 @@ export const useGameStore = create<GameStore>()(
       },
 
       checkAchievements: () => {
-        const { miners, resources, regions, totalMined } = get();
-        const stats = get().getMiningStats();
+        const state = get();
+        const { miners, resources, regions } = state;
+        const stats = state.getMiningStats();
+        const newAchievements: typeof state.achievements = [];
+        let totalRewards = 0;
         
-        set((state) => ({
-          achievements: state.achievements.map(achievement => {
-            if (achievement.isUnlocked) return achievement;
-            
-            let achieved = false;
-            switch (achievement.condition.type) {
-              case 'miners':
-                achieved = miners.length >= achievement.condition.value;
-                break;
-              case 'credits':
-                achieved = resources.credits >= achievement.condition.value;
-                break;
-              case 'hashRate':
-                achieved = stats.totalHashRate >= achievement.condition.value;
-                break;
-              case 'regions':
-                achieved = regions.filter(r => r.isUnlocked).length >= achievement.condition.value;
-                break;
-            }
-            
-            if (achieved) {
-              get().addCredits(achievement.reward);
-              return { ...achievement, isUnlocked: true, unlockedAt: Date.now() };
-            }
-            return achievement;
-          }),
-        }));
+        state.achievements.forEach(achievement => {
+          if (achievement.isUnlocked) {
+            newAchievements.push(achievement);
+            return;
+          }
+          
+          let achieved = false;
+          switch (achievement.condition.type) {
+            case 'miners':
+              achieved = miners.length >= achievement.condition.value;
+              break;
+            case 'credits':
+              achieved = resources.credits >= achievement.condition.value;
+              break;
+            case 'hashRate':
+              achieved = stats.totalHashRate >= achievement.condition.value;
+              break;
+            case 'regions':
+              achieved = regions.filter(r => r.isUnlocked).length >= achievement.condition.value;
+              break;
+          }
+          
+          if (achieved) {
+            totalRewards += achievement.reward;
+            newAchievements.push({ 
+              ...achievement, 
+              isUnlocked: true, 
+              unlockedAt: Date.now() 
+            });
+          } else {
+            newAchievements.push(achievement);
+          }
+        });
+        
+        if (totalRewards > 0) {
+          set((state) => ({
+            achievements: newAchievements,
+            resources: {
+              ...state.resources,
+              credits: state.resources.credits + totalRewards,
+            },
+            totalMined: state.totalMined + totalRewards,
+          }));
+        }
       },
 
       resetGame: () => {

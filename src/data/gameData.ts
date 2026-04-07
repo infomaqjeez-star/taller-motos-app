@@ -1,4 +1,4 @@
-import type { CloudMiner, Region, MinerType, MiningPower } from '../types';
+import type { CloudMiner, Region, MinerType } from '../types';
 
 export const MINER_TEMPLATES: Record<MinerType, Omit<CloudMiner, 'id' | 'installedAt' | 'location'>> = {
   'cpu-miner': {
