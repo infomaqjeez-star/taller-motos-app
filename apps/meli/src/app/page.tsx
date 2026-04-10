@@ -764,7 +764,7 @@ function AppJeezInner() {
                 Conecta una cuenta de Mercado Libre para ver tus indicadores.
               </p>
               <Link
-                href="/configuracion/meli/meli"
+                href="/configuracion/meli"
                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm text-black"
                 style={{ background: "#FFE600" }}
               >
