@@ -76,7 +76,7 @@ function PromotionTypeBadge({ type }: { type: string }) {
   const short =
     type === "MARKETPLACE_CAMPAIGN" ? "CAMPAIGN" :
     type === "LIGHTNING_DEAL"       ? "FLASH" :
-    type === "VOLUME_ON_VOLUME"     ? "VOL×VOL" :
+    type === "VOLUME_ON_VOLUME"     ? "VOLÃ—VOL" :
     type === "TRADITIONAL"          ? "TRAD" :
     type === "VOLUME"               ? "VOLUMEN" :
     type === "PRICE_DISCOUNT"       ? "DESC" :
@@ -152,7 +152,7 @@ export default function PromocionesPage() {
   const [creating, setCreating] = useState(false);
   const [createResult, setCreateResult] = useState<{ok: boolean; message: string} | null>(null);
 
-  // Form crear campaña
+  // Form crear campaÃ±a
   const [campaignForm, setCampaignForm] = useState({
     name: "",
     discount_percentage: 10,
@@ -173,7 +173,7 @@ export default function PromocionesPage() {
       .catch(() => {});
   }, []);
 
-  // Cargar campañas propias
+  // Cargar campaÃ±as propias
   const loadCampaigns = useCallback(async () => {
     setLoadingCampaigns(true);
     try {
@@ -265,10 +265,10 @@ export default function PromocionesPage() {
     return () => { if (autoRef.current) clearInterval(autoRef.current); };
   }, [autoEnabled, runScan]);
 
-  // Crear campaña propia
+  // Crear campaÃ±a propia
   const createCampaign = async () => {
     if (!campaignForm.name || !campaignForm.start_date || !campaignForm.end_date || selectedPubs.length === 0) {
-      setCreateResult({ ok: false, message: "Completa todos los campos y selecciona al menos una publicación" });
+      setCreateResult({ ok: false, message: "Completa todos los campos y selecciona al menos una publicaciÃ³n" });
       return;
     }
     setCreating(true);
@@ -298,13 +298,13 @@ export default function PromocionesPage() {
       if (d.ok) {
         setCreateResult({ 
           ok: true, 
-          message: `Campaña "${d.campaign.name}" creada con ${d.items_added} items` 
+          message: `CampaÃ±a "${d.campaign.name}" creada con ${d.items_added} items` 
         });
         setCampaignForm({ ...campaignForm, name: "" });
         setSelectedPubs([]);
         loadCampaigns();
       } else {
-        setCreateResult({ ok: false, message: d.error || "Error al crear campaña" });
+        setCreateResult({ ok: false, message: d.error || "Error al crear campaÃ±a" });
       }
     } catch (e) {
       setCreateResult({ ok: false, message: (e as Error).message });
@@ -339,7 +339,7 @@ export default function PromocionesPage() {
             <h1 className="font-black text-white text-base flex items-center gap-2">
               <Zap className="w-5 h-5" style={{ color: "#FFE600" }} /> Promociones
             </h1>
-            <p className="text-[10px]" style={{ color: "#6B7280" }}>Automáticas y campañas propias</p>
+            <p className="text-[10px]" style={{ color: "#6B7280" }}>AutomÃ¡ticas y campaÃ±as propias</p>
           </div>
         </div>
       </div>
@@ -353,7 +353,7 @@ export default function PromocionesPage() {
             style={activeTab === "automatizadas"
               ? { background: "#FFE600", color: "#121212" }
               : { color: "#9CA3AF" }}>
-            <Sparkles className="w-4 h-4" /> Automáticas
+            <Sparkles className="w-4 h-4" /> AutomÃ¡ticas
           </button>
           <button
             onClick={() => setActiveTab("propias")}
@@ -361,7 +361,7 @@ export default function PromocionesPage() {
             style={activeTab === "propias"
               ? { background: "#39FF14", color: "#121212" }
               : { color: "#9CA3AF" }}>
-            <Tag className="w-4 h-4" /> Mis Campañas
+            <Tag className="w-4 h-4" /> Mis CampaÃ±as
           </button>
         </div>
       </div>
@@ -371,11 +371,11 @@ export default function PromocionesPage() {
         {/* TAB: AUTOMATIZADAS */}
         {activeTab === "automatizadas" && (
           <>
-            {/* Configuración */}
+            {/* ConfiguraciÃ³n */}
             <div className="rounded-2xl p-4 space-y-4"
               style={{ background: "#1A1A1A", border: "1px solid rgba(255,255,255,0.07)" }}>
               <p className="text-sm font-black text-white flex items-center gap-2">
-                <Sparkles className="w-4 h-4" style={{ color: "#FFE600" }} /> Piloto Automático
+                <Sparkles className="w-4 h-4" style={{ color: "#FFE600" }} /> Piloto AutomÃ¡tico
               </p>
 
               {/* Selector de cuenta */}
@@ -390,7 +390,7 @@ export default function PromocionesPage() {
                     style={selectedAcc === "all"
                       ? { background: "#FFE600", color: "#121212", borderColor: "#FFE600" }
                       : { background: "transparent", color: "#9CA3AF", borderColor: "rgba(255,255,255,0.15)" }}>
-                    ★ Todas
+                    â˜… Todas
                   </button>
                   {accounts.map(a => (
                     <button
@@ -409,10 +409,10 @@ export default function PromocionesPage() {
                 )}
               </div>
 
-              {/* Máximo % */}
+              {/* MÃ¡ximo % */}
               <div>
                 <label className="text-xs font-bold mb-1.5 flex items-center justify-between" style={{ color: "#6B7280" }}>
-                  <span>Descuento máximo a aceptar</span>
+                  <span>Descuento mÃ¡ximo a aceptar</span>
                   <span className="text-lg font-black" style={{ color: "#FFE600" }}>{maxPct}%</span>
                 </label>
                 <input
@@ -427,12 +427,12 @@ export default function PromocionesPage() {
                 </div>
               </div>
 
-              {/* Modo simulación */}
+              {/* Modo simulaciÃ³n */}
               <div className="flex items-center justify-between p-3 rounded-xl"
                 style={{ background: "#121212", border: "1px solid rgba(255,255,255,0.07)" }}>
                 <div>
-                  <p className="text-xs font-bold text-white">Modo Simulación</p>
-                  <p className="text-[10px] mt-0.5" style={{ color: "#6B7280" }}>Ver qué se aceptaría sin ejecutar cambios reales</p>
+                  <p className="text-xs font-bold text-white">Modo SimulaciÃ³n</p>
+                  <p className="text-[10px] mt-0.5" style={{ color: "#6B7280" }}>Ver quÃ© se aceptarÃ­a sin ejecutar cambios reales</p>
                 </div>
                 <button onClick={() => setDryRun(!dryRun)}
                   className="w-12 h-6 rounded-full relative transition-all flex-shrink-0"
@@ -451,11 +451,11 @@ export default function PromocionesPage() {
                   </p>
                   {nextRun && (
                     <p className="text-[10px] mt-0.5" style={{ color: "#39FF14" }}>
-                      Próxima: {nextRun.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}
+                      PrÃ³xima: {nextRun.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}
                     </p>
                   )}
                   {!autoEnabled && (
-                    <p className="text-[10px] mt-0.5" style={{ color: "#6B7280" }}>Requiere que la pestaña esté abierta</p>
+                    <p className="text-[10px] mt-0.5" style={{ color: "#6B7280" }}>Requiere que la pestaÃ±a estÃ© abierta</p>
                   )}
                 </div>
                 <button onClick={() => setAutoEnabled(!autoEnabled)}
@@ -466,7 +466,7 @@ export default function PromocionesPage() {
                 </button>
               </div>
 
-              {/* Botón ejecutar */}
+              {/* BotÃ³n ejecutar */}
               <button
                 onClick={() => runScan()}
                 disabled={loading}
@@ -480,7 +480,7 @@ export default function PromocionesPage() {
               </button>
               {!dryRun && (
                 <p className="text-[10px] text-center" style={{ color: "#ef4444" }}>
-                  ⚠️ Modo real: las promociones dentro del límite se aceptarán en MeLi
+                  âš ï¸ Modo real: las promociones dentro del lÃ­mite se aceptarÃ¡n en MeLi
                 </p>
               )}
             </div>
@@ -510,7 +510,7 @@ export default function PromocionesPage() {
                 </div>
                 {scanResult.dry_run && (
                   <div className="rounded-xl px-3 py-2 text-center" style={{ background: "#FFE60012", border: "1px solid #FFE60030" }}>
-                    <p className="text-xs font-bold" style={{ color: "#FFE600" }}>SIMULACIÓN — ningún cambio fue aplicado en MeLi</p>
+                    <p className="text-xs font-bold" style={{ color: "#FFE600" }}>SIMULACIÃ“N â€” ningÃºn cambio fue aplicado en MeLi</p>
                   </div>
                 )}
 
@@ -555,7 +555,7 @@ export default function PromocionesPage() {
                               </div>
                               <p className="text-xs text-white line-clamp-1">{offer.item_title}</p>
                               <p className="text-[10px]" style={{ color: "#6B7280" }}>
-                                Vendedor: ${offer.discount_seller_amount.toLocaleString("es-AR")} · MeLi: ${offer.discount_meli_amount.toLocaleString("es-AR")}
+                                Vendedor: ${offer.discount_seller_amount.toLocaleString("es-AR")} Â· MeLi: ${offer.discount_meli_amount.toLocaleString("es-AR")}
                               </p>
                             </div>
                           </div>
@@ -581,13 +581,13 @@ export default function PromocionesPage() {
               {showLogs && (
                 <div className="border-t" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
                   {loadingLogs && <div className="p-6 text-center"><RefreshCw className="w-5 h-5 mx-auto animate-spin" style={{ color: "#FFE600" }} /></div>}
-                  {!loadingLogs && logs.length === 0 && <p className="text-xs text-center py-6" style={{ color: "#6B7280" }}>Sin historial aún</p>}
+                  {!loadingLogs && logs.length === 0 && <p className="text-xs text-center py-6" style={{ color: "#6B7280" }}>Sin historial aÃºn</p>}
                   {!loadingLogs && logs.map(log => (
                     <div key={log.id} className="flex items-start gap-3 px-4 py-3 border-b last:border-0" style={{ borderColor: "rgba(255,255,255,0.04)" }}>
                       <ActionBadge action={log.action} />
                       <div className="flex-1 min-w-0">
                         <p className="text-xs text-white line-clamp-1">{log.item_title}</p>
-                        <p className="text-[10px] mt-0.5" style={{ color: "#6B7280" }}>{log.account} · {log.reason}</p>
+                        <p className="text-[10px] mt-0.5" style={{ color: "#6B7280" }}>{log.account} Â· {log.reason}</p>
                       </div>
                       <div className="text-right flex-shrink-0">
                         <p className="text-[10px] font-black"
@@ -606,9 +606,9 @@ export default function PromocionesPage() {
 
             {/* Info stacking */}
             <div className="rounded-2xl p-4 space-y-2" style={{ background: "#1A1A1A", border: "1px solid #FF980025" }}>
-              <p className="text-xs font-black" style={{ color: "#FF9800" }}>⚠️ Aviso sobre Stacking</p>
+              <p className="text-xs font-black" style={{ color: "#FF9800" }}>âš ï¸ Aviso sobre Stacking</p>
               <p className="text-[11px]" style={{ color: "#9CA3AF" }}>
-                El % mostrado es el descuento que <strong className="text-white">vos absorbés</strong> como vendedor. 
+                El % mostrado es el descuento que <strong className="text-white">vos absorbÃ©s</strong> como vendedor. 
                 MeLi puede combinar este descuento con cupones propios.
               </p>
             </div>
@@ -618,18 +618,18 @@ export default function PromocionesPage() {
         {/* TAB: PROMOCIONES PROPIAS */}
         {activeTab === "propias" && (
           <>
-            {/* Botón crear */}
+            {/* BotÃ³n crear */}
             <button
               onClick={() => setShowCreateForm(!showCreateForm)}
               className="w-full py-3.5 rounded-xl font-black text-sm flex items-center justify-center gap-2 transition-all"
               style={{ background: "#39FF14", color: "#121212" }}>
-              <Plus className="w-4 h-4" /> {showCreateForm ? "Cancelar" : "Crear Nueva Campaña"}
+              <Plus className="w-4 h-4" /> {showCreateForm ? "Cancelar" : "Crear Nueva CampaÃ±a"}
             </button>
 
-            {/* Form crear campaña */}
+            {/* Form crear campaÃ±a */}
             {showCreateForm && (
               <div className="rounded-2xl p-4 space-y-4" style={{ background: "#1A1A1A", border: "1px solid rgba(255,255,255,0.07)" }}>
-                <p className="text-sm font-black text-white">Nueva Campaña de Descuento</p>
+                <p className="text-sm font-black text-white">Nueva CampaÃ±a de Descuento</p>
 
                 {/* Selector cuenta */}
                 <div>
@@ -651,7 +651,7 @@ export default function PromocionesPage() {
 
                 {/* Nombre */}
                 <div>
-                  <label className="text-xs font-bold mb-1.5 block" style={{ color: "#6B7280" }}>Nombre de la campaña</label>
+                  <label className="text-xs font-bold mb-1.5 block" style={{ color: "#6B7280" }}>Nombre de la campaÃ±a</label>
                   <input
                     type="text"
                     value={campaignForm.name}
@@ -664,7 +664,7 @@ export default function PromocionesPage() {
 
                 {/* Tipo */}
                 <div>
-                  <label className="text-xs font-bold mb-1.5 block" style={{ color: "#6B7280" }}>Tipo de promoción</label>
+                  <label className="text-xs font-bold mb-1.5 block" style={{ color: "#6B7280" }}>Tipo de promociÃ³n</label>
                   <div className="flex gap-2">
                     <button
                       onClick={() => setCampaignForm({ ...campaignForm, promotion_type: "TRADITIONAL" })}
@@ -680,7 +680,7 @@ export default function PromocionesPage() {
                       style={campaignForm.promotion_type === "VOLUME"
                         ? { background: "#00E5FF", color: "#121212" }
                         : { background: "#121212", color: "#9CA3AF", border: "1px solid rgba(255,255,255,0.1)" }}>
-                      Por Volumen (Llevá X, pagá Y)
+                      Por Volumen (LlevÃ¡ X, pagÃ¡ Y)
                     </button>
                   </div>
                 </div>
@@ -703,7 +703,7 @@ export default function PromocionesPage() {
                 {/* Config volumen */}
                 {campaignForm.promotion_type === "VOLUME" && (
                   <div>
-                    <label className="text-xs font-bold mb-1.5 block" style={{ color: "#6B7280" }}>Cantidad mínima</label>
+                    <label className="text-xs font-bold mb-1.5 block" style={{ color: "#6B7280" }}>Cantidad mÃ­nima</label>
                     <input
                       type="number" min={2} max={10}
                       value={campaignForm.min_quantity}
@@ -751,7 +751,7 @@ export default function PromocionesPage() {
                         type="text"
                         value={pubSearch}
                         onChange={e => setPubSearch(e.target.value)}
-                        placeholder="Buscar por título o ID..."
+                        placeholder="Buscar por tÃ­tulo o ID..."
                         className="w-full pl-9 pr-3 py-2 rounded-xl text-xs text-white outline-none"
                         style={{ background: "#121212", border: "1px solid rgba(255,255,255,0.1)" }}
                       />
@@ -798,33 +798,33 @@ export default function PromocionesPage() {
                   </div>
                 )}
 
-                {/* Botón crear */}
+                {/* BotÃ³n crear */}
                 <button
                   onClick={createCampaign}
                   disabled={creating || !campaignForm.name || !campaignForm.start_date || !campaignForm.end_date || selectedPubs.length === 0}
                   className="w-full py-3.5 rounded-xl font-black text-sm flex items-center justify-center gap-2 transition-all disabled:opacity-50"
                   style={{ background: "#39FF14", color: "#121212" }}>
-                  {creating ? <><RefreshCw className="w-4 h-4 animate-spin" />Creando...</> : <><Plus className="w-4 h-4" />Crear Campaña</>}
+                  {creating ? <><RefreshCw className="w-4 h-4 animate-spin" />Creando...</> : <><Plus className="w-4 h-4" />Crear CampaÃ±a</>}
                 </button>
               </div>
             )}
 
-            {/* Lista de campañas */}
+            {/* Lista de campaÃ±as */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <p className="text-sm font-black text-white">Mis Campañas</p>
+                <p className="text-sm font-black text-white">Mis CampaÃ±as</p>
                 <button onClick={loadCampaigns} className="p-1.5 rounded-lg" style={{ background: "rgba(255,255,255,0.05)" }}>
                   <RefreshCw className={`w-4 h-4 ${loadingCampaigns ? "animate-spin" : ""}`} style={{ color: "#FFE600" }} />
                 </button>
               </div>
 
-              {loadingCampaigns && <p className="text-xs text-center py-4" style={{ color: "#6B7280" }}>Cargando campañas...</p>}
+              {loadingCampaigns && <p className="text-xs text-center py-4" style={{ color: "#6B7280" }}>Cargando campaÃ±as...</p>}
 
               {!loadingCampaigns && campaigns.length === 0 && (
                 <div className="rounded-2xl p-6 text-center" style={{ background: "#1A1A1A", border: "1px solid rgba(255,255,255,0.07)" }}>
                   <Tag className="w-8 h-8 mx-auto mb-2" style={{ color: "#6B7280" }} />
-                  <p className="text-sm text-white">No tenés campañas activas</p>
-                  <p className="text-[11px] mt-1" style={{ color: "#6B7280" }}>Creá tu primera promoción propia</p>
+                  <p className="text-sm text-white">No tenÃ©s campaÃ±as activas</p>
+                  <p className="text-[11px] mt-1" style={{ color: "#6B7280" }}>CreÃ¡ tu primera promociÃ³n propia</p>
                 </div>
               )}
 

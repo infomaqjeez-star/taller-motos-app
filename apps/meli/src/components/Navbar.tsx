@@ -27,7 +27,7 @@ export default function Navbar({
   const links = [
     { href: "/taller",       label: "Taller",       icon: LayoutDashboard, badge: overdueCount,  badgeColor: "bg-red-500" },
     { href: "/ventas",       label: "Vender",       icon: ShoppingCart,    badge: 0,             badgeColor: "" },
-    { href: "/estadisticas", label: "Estadísticas", icon: BarChart2,       badge: 0,             badgeColor: "" },
+    { href: "/estadisticas", label: "EstadÃ­sticas", icon: BarChart2,       badge: 0,             badgeColor: "" },
     { href: "/agenda",       label: "Agenda",       icon: Users,           badge: 0,             badgeColor: "" },
   ];
 
@@ -36,7 +36,7 @@ export default function Navbar({
       <div className="max-w-3xl mx-auto px-4">
         <div className="flex items-center justify-between h-14">
 
-          {/* Logo — clic lleva al inicio */}
+          {/* Logo â€” clic lleva al inicio */}
           <Link href="/" className="flex items-center h-full py-1">
             <Image
               src="/logo-maqjeez.png"
@@ -100,7 +100,7 @@ export default function Navbar({
             <ThemeToggle />
           </nav>
 
-          {/* Mobile: iconos rápidos */}
+          {/* Mobile: iconos rÃ¡pidos */}
           <div className="sm:hidden flex items-center gap-2">
             {onOpenNotifications && notificationCount > 0 && (
               <button
@@ -125,7 +125,7 @@ export default function Navbar({
           <div className="max-w-5xl mx-auto flex items-center gap-2 text-red-800 text-sm font-semibold">
             <AlertTriangle className="w-4 h-4 flex-shrink-0" />
             <span>
-              {overdueCount} equipo{overdueCount > 1 ? "s" : ""} con más de 90 días esperando retiro
+              {overdueCount} equipo{overdueCount > 1 ? "s" : ""} con mÃ¡s de 90 dÃ­as esperando retiro
             </span>
           </div>
         </div>

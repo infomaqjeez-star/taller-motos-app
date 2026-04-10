@@ -1,13 +1,13 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
 
-// Forzar renderizado dinámico - evita error de generación estática
+// Forzar renderizado dinÃ¡mico - evita error de generaciÃ³n estÃ¡tica
 export const dynamic = 'force-dynamic';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
-// Verificar que las variables de entorno estén configuradas
+// Verificar que las variables de entorno estÃ©n configuradas
 if (!supabaseUrl || !supabaseServiceKey || supabaseUrl.includes("placeholder")) {
   console.warn("[API meli-messages] Supabase no configurado correctamente");
 }
@@ -23,9 +23,9 @@ const supabase = createClient(
  * Obtiene los mensajes de compradores de todas las cuentas de Mercado Libre.
  * Solo incluye mensajes de compradores que han realizado compras (tienen order_id).
  * 
- * Parámetros de query opcionales:
- * - limit: Cantidad máxima de mensajes (default: 50)
- * - offset: Desplazamiento para paginación (default: 0)
+ * ParÃ¡metros de query opcionales:
+ * - limit: Cantidad mÃ¡xima de mensajes (default: 50)
+ * - offset: Desplazamiento para paginaciÃ³n (default: 0)
  * - status: 'unread' | 'read' | 'all' (default: 'all')
  * 
  * Respuesta: Array de mensajes con datos del comprador y la orden
@@ -116,7 +116,7 @@ export async function GET(request: NextRequest) {
 /**
  * POST /api/meli-messages
  * 
- * Envía un mensaje a un comprador.
+ * EnvÃ­a un mensaje a un comprador.
  * 
  * Body:
  * - order_id: ID de la orden de compra
@@ -162,7 +162,7 @@ export async function POST(request: NextRequest) {
     // Preparar el payload para la API de ML
     const payload: any = {
       from: {
-        user_id: account.access_token, // Se reemplaza después
+        user_id: account.access_token, // Se reemplaza despuÃ©s
       },
       to: {
         user_id: "buyer", // Se determina desde la orden
@@ -174,7 +174,7 @@ export async function POST(request: NextRequest) {
       payload.attachments = attachments.map((url: string) => ({ filename: url }));
     }
 
-    // Enviar mensaje a través de la API de Mercado Libre
+    // Enviar mensaje a travÃ©s de la API de Mercado Libre
     let response = await fetch(`https://api.mercadolibre.com/messages/packs/${packId}/sellers/${account.access_token}?tag=post_sale`, {
       method: "POST",
       headers: {
@@ -259,10 +259,10 @@ export async function POST(request: NextRequest) {
 /**
  * PATCH /api/meli-messages
  * 
- * Marca mensajes como leídos.
+ * Marca mensajes como leÃ­dos.
  * 
  * Body:
- * - message_ids: Array de IDs de mensajes a marcar como leídos
+ * - message_ids: Array de IDs de mensajes a marcar como leÃ­dos
  */
 export async function PATCH(request: NextRequest) {
   try {
@@ -286,7 +286,7 @@ export async function PATCH(request: NextRequest) {
 
     if (error) {
       return NextResponse.json(
-        { error: "Error al marcar mensajes como leídos", details: error.message },
+        { error: "Error al marcar mensajes como leÃ­dos", details: error.message },
         { status: 500 }
       );
     }

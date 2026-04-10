@@ -4,7 +4,7 @@ import Providers from "./providers";
 
 export const metadata: Metadata = {
   title: "Taller MAQJEEZ",
-  description: "Sistema de gestión para taller de Moto-Implementos y Motovehículos",
+  description: "Sistema de gestiÃ³n para taller de Moto-Implementos y MotovehÃ­culos",
   manifest: "/manifest.json",
 };
 

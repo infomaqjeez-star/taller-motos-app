@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-// Forzar renderizado din�mico - evita error de generaci�n est�tica
+// Forzar renderizado dinámico - evita error de generación estática
 export const dynamic = 'force-dynamic';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
 /**
  * POST /api/promociones-propias
  * 
- * Crea una nueva promoción.
+ * Crea una nueva promociÃ³n.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
     if (error) {
       console.error("[promociones-propias] Error creando:", error);
       return NextResponse.json(
-        { error: "Error al crear promoción" },
+        { error: "Error al crear promociÃ³n" },
         { status: 500 }
       );
     }

@@ -24,25 +24,25 @@ const RISK_COLORS: Record<string, { bg: string; border: string; text: string; ic
     bg: "#39FF1422",
     border: "#39FF14",
     text: "#39FF14",
-    icon: "✓",
+    icon: "âœ“",
   },
   medium: {
     bg: "#FFE60022",
     border: "#FFE600",
     text: "#FFE600",
-    icon: "⚠",
+    icon: "âš ",
   },
   high: {
     bg: "#FF572222",
     border: "#FF5722",
     text: "#FF5722",
-    icon: "⚠⚠",
+    icon: "âš âš ",
   },
   critical: {
     bg: "#EF444422",
     border: "#EF4444",
     text: "#EF4444",
-    icon: "🚨",
+    icon: "ðŸš¨",
   },
 };
 
@@ -77,8 +77,8 @@ export default function UnifiedPostSalePanel({ accounts, isLoading = false }: Pr
         style={{ background: "#181818", border: "1px solid rgba(255,255,255,0.08)" }}
       >
         <div className="flex items-center justify-center gap-2 text-green-400 text-sm">
-          <span>✓</span>
-          <span>Todas las cuentas están en orden</span>
+          <span>âœ“</span>
+          <span>Todas las cuentas estÃ¡n en orden</span>
         </div>
       </div>
     );
@@ -102,7 +102,7 @@ export default function UnifiedPostSalePanel({ accounts, isLoading = false }: Pr
       >
         <div className="flex items-center gap-2">
           <AlertTriangle className="w-4 h-4" style={{ color: "#EF4444" }} />
-          <h3 className="font-bold text-sm">Gestión Post-Venta</h3>
+          <h3 className="font-bold text-sm">GestiÃ³n Post-Venta</h3>
           <span
             className="inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-black"
             style={{ background: "#EF4444", color: "#fff" }}
@@ -141,7 +141,7 @@ export default function UnifiedPostSalePanel({ accounts, isLoading = false }: Pr
             {totalDelayed}
           </p>
           <p className="text-[9px]" style={{ color: "#6B7280" }}>
-            Envíos Retrasados
+            EnvÃ­os Retrasados
           </p>
         </div>
       </div>
@@ -161,7 +161,7 @@ export default function UnifiedPostSalePanel({ accounts, isLoading = false }: Pr
                     className="w-6 h-6 rounded text-xs font-bold flex items-center justify-center flex-shrink-0"
                     style={{ background: risk.bg, color: risk.text }}
                   >
-                    📦
+                    ðŸ“¦
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-bold text-white truncate">{acc.account_name}</p>
@@ -225,7 +225,7 @@ export default function UnifiedPostSalePanel({ accounts, isLoading = false }: Pr
                   </div>
                 )}
 
-                {/* Envíos Retrasados */}
+                {/* EnvÃ­os Retrasados */}
                 {(acc.delayed_shipments ?? 0) > 0 && (
                   <div
                     className="rounded p-1.5 text-center cursor-pointer transition-all hover:scale-105 hover:shadow-lg"
@@ -255,9 +255,9 @@ export default function UnifiedPostSalePanel({ accounts, isLoading = false }: Pr
           className="px-4 py-2.5 flex items-center gap-2 text-xs font-semibold"
           style={{ background: "#EF444422", borderTop: "1px solid #EF444444" }}
         >
-          <span className="animate-pulse">🚨</span>
+          <span className="animate-pulse">ðŸš¨</span>
           <span style={{ color: "#EF4444" }}>
-            {criticalCount} cuenta{criticalCount > 1 ? "s" : ""} en riesgo crítico
+            {criticalCount} cuenta{criticalCount > 1 ? "s" : ""} en riesgo crÃ­tico
           </span>
         </div>
       )}

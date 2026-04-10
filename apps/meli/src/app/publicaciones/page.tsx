@@ -83,7 +83,7 @@ function AccountSection({ data }: { data: AccountData }) {
   const totalStock  = data.items.reduce((s, i) => s + i.available_quantity, 0);
   const totalSold   = data.items.reduce((s, i) => s + i.sold_quantity, 0);
 
-  // Resetear offset cuando cambia búsqueda/filtro
+  // Resetear offset cuando cambia bÃºsqueda/filtro
   useEffect(() => setOffset(0), [search, filter]);
 
   const colCount = 4; // lg:grid-cols-4
@@ -116,11 +116,11 @@ function AccountSection({ data }: { data: AccountData }) {
         <div className="p-4">
           {data.error && <div className="p-3 rounded-xl mb-3 text-sm" style={{ background: "#ef444418", color: "#ef4444" }}>Error: {data.error}</div>}
 
-          {/* Filtros + búsqueda */}
+          {/* Filtros + bÃºsqueda */}
           <div className="flex flex-col sm:flex-row gap-2 mb-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-              <input type="text" placeholder="Buscar publicación..." value={search} onChange={e => setSearch(e.target.value)}
+              <input type="text" placeholder="Buscar publicaciÃ³n..." value={search} onChange={e => setSearch(e.target.value)}
                 className="w-full pl-9 pr-4 py-2 rounded-xl text-sm text-white placeholder-gray-500 outline-none"
                 style={{ background: "#121212", border: "1px solid rgba(255,255,255,0.08)" }} />
             </div>
@@ -137,19 +137,19 @@ function AccountSection({ data }: { data: AccountData }) {
             </div>
           </div>
 
-          {/* Virtualización con react-window */}
+          {/* VirtualizaciÃ³n con react-window */}
           {filtered.length === 0
             ? <p className="text-center py-8 text-sm" style={{ color: "#6B7280" }}>Sin publicaciones</p>
             : (
               <>
-                {/* Fallback a grid simple si react-window no está disponible */}
+                {/* Fallback a grid simple si react-window no estÃ¡ disponible */}
                 <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${colCount}, 1fr)`, maxHeight: `${gridHeight}px`, overflowY: "auto" }}>
                   {displayed.map((item) => (
                     <ProductCard key={item.id} item={item} />
                   ))}
                 </div>
 
-                {/* Botón "Cargar más" */}
+                {/* BotÃ³n "Cargar mÃ¡s" */}
                 {hasMore && (
                   <div className="text-center mt-4">
                     <button
@@ -157,7 +157,7 @@ function AccountSection({ data }: { data: AccountData }) {
                       className="px-4 py-2 rounded-xl text-sm font-bold"
                       style={{ background: "#FFE600", color: "#121212" }}
                     >
-                      Cargar más ({displayed.length} de {filtered.length})
+                      Cargar mÃ¡s ({displayed.length} de {filtered.length})
                     </button>
                   </div>
                 )}

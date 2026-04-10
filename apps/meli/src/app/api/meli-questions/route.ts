@@ -1,13 +1,13 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
 
-// Forzar renderizado dinámico - evita error de generación estática
+// Forzar renderizado dinÃ¡mico - evita error de generaciÃ³n estÃ¡tica
 export const dynamic = 'force-dynamic';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
-// Verificar que las variables de entorno estén configuradas
+// Verificar que las variables de entorno estÃ©n configuradas
 if (!supabaseUrl || !supabaseServiceKey || supabaseUrl.includes("placeholder")) {
   console.warn("[API meli-questions] Supabase no configurado correctamente");
 }
@@ -21,17 +21,17 @@ const supabase = createClient(
  * GET /api/meli-questions
  * 
  * Obtiene todas las preguntas sin responder de todas las cuentas de Mercado Libre
- * vinculadas al usuario actual. Incluye información del producto y la cuenta.
+ * vinculadas al usuario actual. Incluye informaciÃ³n del producto y la cuenta.
  * 
  * Filtros aplicados:
  * - status = 'UNANSWERED' (solo preguntas pendientes)
- * - Ordenadas por date_created DESC (más recientes primero)
+ * - Ordenadas por date_created DESC (mÃ¡s recientes primero)
  * 
  * Respuesta: Array de preguntas con datos enriquecidos
  */
 export async function GET(request: NextRequest) {
   try {
-    // Obtener el usuario actual de la sesión
+    // Obtener el usuario actual de la sesiÃ³n
     const authHeader = request.headers.get("authorization");
     let userId: string | null = null;
 

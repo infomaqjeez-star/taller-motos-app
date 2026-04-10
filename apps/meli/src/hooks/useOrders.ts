@@ -28,7 +28,7 @@ export function useOrders() {
       const data = await ordersDb.getAll();
       setOrders(data);
     } catch (e) {
-      console.error("Error cargando órdenes:", e);
+      console.error("Error cargando Ã³rdenes:", e);
     } finally {
       setLoading(false);
     }
@@ -64,7 +64,7 @@ export function useOrders() {
 
   const filtered = orders.filter((o) => {
     if (filters.motorType !== "all" && o.motorType !== filters.motorType) return false;
-    // Ocultar entregados por defecto; solo mostrar si el filtro lo selecciona explícitamente
+    // Ocultar entregados por defecto; solo mostrar si el filtro lo selecciona explÃ­citamente
     if (filters.status === "all" && o.status === "entregado") return false;
     if (filters.status !== "all" && o.status !== filters.status) return false;
     if (filters.overdueOnly && !isOverdue90Days(o)) return false;

@@ -22,7 +22,7 @@ const fmt = (n: number) => "$" + n.toLocaleString("es-AR");
 
 function generateId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
 
-// AudioContext compartido — debe crearse desde un gesto del usuario
+// AudioContext compartido â€” debe crearse desde un gesto del usuario
 let _audioCtx: AudioContext | null = null;
 function getAudioCtx(): AudioContext | null {
   try {
@@ -69,44 +69,44 @@ function beepError() {
   } catch (_) {}
 }
 
-// ─── Base de datos oficial ML Flex ───────────────────────────────────────────
+// â”€â”€â”€ Base de datos oficial ML Flex â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const CP_MAP: Record<string, string> = {
-  // ── CABA (rango 1000-1499 manejado por lógica separada) ──
-  // ── GBA NORTE - Lejana ──
-  "1602": "Vicente López", "1603": "Vicente López", "1605": "Vicente López",
-  "1606": "Vicente López", "1636": "Vicente López", "1638": "Vicente López",
+  // â”€â”€ CABA (rango 1000-1499 manejado por lÃ³gica separada) â”€â”€
+  // â”€â”€ GBA NORTE - Lejana â”€â”€
+  "1602": "Vicente LÃ³pez", "1603": "Vicente LÃ³pez", "1605": "Vicente LÃ³pez",
+  "1606": "Vicente LÃ³pez", "1636": "Vicente LÃ³pez", "1638": "Vicente LÃ³pez",
   "1607": "San Isidro",   "1609": "San Isidro",    "1640": "San Isidro",
   "1641": "San Isidro",   "1642": "San Isidro",    "1643": "San Isidro",
   "1644": "San Fernando", "1646": "San Fernando",
   "1648": "Tigre",
-  "1650": "San Martín",   "1651": "San Martín",    "1653": "San Martín",
+  "1650": "San MartÃ­n",   "1651": "San MartÃ­n",    "1653": "San MartÃ­n",
   "1661": "San Miguel",   "1663": "San Miguel",
-  "1665": "José C. Paz",
+  "1665": "JosÃ© C. Paz",
   "1667": "Malvinas Argentinas", "1613": "Malvinas Argentinas",
-  // ── GBA OESTE - Lejana ──
+  // â”€â”€ GBA OESTE - Lejana â”€â”€
   "1682": "Tres de Febrero", "1702": "Tres de Febrero", "1675": "Tres de Febrero",
-  "1684": "Morón",        "1706": "Morón",        "1708": "Morón",        "1712": "Morón",
+  "1684": "MorÃ³n",        "1706": "MorÃ³n",        "1708": "MorÃ³n",        "1712": "MorÃ³n",
   "1686": "Hurlingham",
-  "1714": "Ituzaingó",
+  "1714": "ItuzaingÃ³",
   "1704": "La Matanza",
   "1716": "Merlo",        "1718": "Merlo",        "1722": "Merlo",
   "1752": "La Matanza",   "1754": "La Matanza",   "1765": "La Matanza",   "1768": "La Matanza",
   "1744": "Moreno",
   "1629": "Pilar",        "1625": "Escobar",
-  "1748": "Gral. Rodríguez",
+  "1748": "Gral. RodrÃ­guez",
   "1727": "Marcos Paz",
-  // ── La Matanza SUR - Media ──
+  // â”€â”€ La Matanza SUR - Media â”€â”€
   "1759": "La Matanza Sur", "1761": "La Matanza Sur", "1763": "La Matanza Sur",
-  // ── Ezeiza (Cercana $4490) — SOLO estos CPs: Ezeiza, Carlos Spegazzini, Tristán Suárez, Canning ──
+  // â”€â”€ Ezeiza (Cercana $4490) â€” SOLO estos CPs: Ezeiza, Carlos Spegazzini, TristÃ¡n SuÃ¡rez, Canning â”€â”€
   "1802": "Ezeiza",
-  "1804": "Ezeiza",   // Canning → partido Ezeiza
+  "1804": "Ezeiza",   // Canning â†’ partido Ezeiza
   "1812": "Ezeiza",   // Carlos Spegazzini
-  "1814": "Ezeiza",   // Tristán Suárez
-  "1816": "Ezeiza",   // Tristán Suárez (código alternativo)
-  // ── Esteban Echeverría - Media ──
-  "1842": "Esteban Echeverría",
-  // ── GBA SUR - Lejana ──
-  "1822": "Lanús",        "1824": "Lanús",        "1826": "Lanús",
+  "1814": "Ezeiza",   // TristÃ¡n SuÃ¡rez
+  "1816": "Ezeiza",   // TristÃ¡n SuÃ¡rez (cÃ³digo alternativo)
+  // â”€â”€ Esteban EcheverrÃ­a - Media â”€â”€
+  "1842": "Esteban EcheverrÃ­a",
+  // â”€â”€ GBA SUR - Lejana â”€â”€
+  "1822": "LanÃºs",        "1824": "LanÃºs",        "1826": "LanÃºs",
   "1828": "Lomas de Zamora", "1832": "Lomas de Zamora", "1834": "Lomas de Zamora", "1836": "Lomas de Zamora",
   "1846": "Alte. Brown",  "1847": "Alte. Brown",  "1849": "Alte. Brown",  "1852": "Alte. Brown",
   "1840": "Alte. Brown",  "1841": "Alte. Brown",  "1843": "Alte. Brown",  "1844": "Alte. Brown",
@@ -118,15 +118,15 @@ const CP_MAP: Record<string, string> = {
   "1880": "Berazategui",  "1881": "Berazategui",  "1884": "Berazategui",
   "1888": "Florencio Varela",
   "1900": "La Plata Centro", "1925": "Ensenada",  "1923": "Berisso",
-  "1806": "Cañuelas",     "1865": "San Vicente",  "1862": "Guernica",
-  "2804": "Campana",      "2800": "Zárate",
-  "6700": "Luján",
+  "1806": "CaÃ±uelas",     "1865": "San Vicente",  "1862": "Guernica",
+  "2804": "Campana",      "2800": "ZÃ¡rate",
+  "6700": "LujÃ¡n",
 };
 
-// Detectar localidad por CP — CABA por rango 1000-1499
-// Prioridad ABSOLUTA sobre detección por nombre de texto.
+// Detectar localidad por CP â€” CABA por rango 1000-1499
+// Prioridad ABSOLUTA sobre detecciÃ³n por nombre de texto.
 function detectCPFromText(text: string): string | null {
-  // Normalizar: quitar espacios entre dígitos que el OCR a veces inserta (ej: "1 8 0 4" → "1804")
+  // Normalizar: quitar espacios entre dÃ­gitos que el OCR a veces inserta (ej: "1 8 0 4" â†’ "1804")
   const normalized = text.replace(/(\d)\s+(\d)/g, "$1$2")
                          .replace(/(\d)\s+(\d)/g, "$1$2"); // segunda pasada por si hay 3+ espacios
 
@@ -142,7 +142,7 @@ function detectCPFromText(text: string): string | null {
       const re = new RegExp(pattern.source, pattern.flags);
       let match = re.exec(normalized);
       while (match !== null) {
-        const num = match[1].length === 5 ? match[1].slice(0, 4) : match[1]; // tomar primeros 4 dígitos
+        const num = match[1].length === 5 ? match[1].slice(0, 4) : match[1]; // tomar primeros 4 dÃ­gitos
         const cp = parseInt(num, 10);
         if (cp >= 1000 && cp <= 1499) return "CABA";
         const loc = CP_MAP[num];
@@ -166,50 +166,50 @@ function detectCPFromText(text: string): string | null {
 function detectLocalidadFromText(text: string): string | null {
   const upper = text.toUpperCase().replace(/\n/g, " ").replace(/\s+/g, " ");
 
-  // 1. CP tiene PRIORIDAD ABSOLUTA — más confiable que el texto
+  // 1. CP tiene PRIORIDAD ABSOLUTA â€” mÃ¡s confiable que el texto
   const byCP = detectCPFromText(upper);
   if (byCP) return byCP;
 
-  // 2. Aliases con prioridad explícita (sin sort por longitud que cause colisiones)
-  //    EZEIZA y sus localidades van PRIMERO — prioridad máxima
+  // 2. Aliases con prioridad explÃ­cita (sin sort por longitud que cause colisiones)
+  //    EZEIZA y sus localidades van PRIMERO â€” prioridad mÃ¡xima
   const aliases: [RegExp, string][] = [
     [/\bEZEIZA\b/,               "Ezeiza"],
-    [/\bSPEGAZZINI\b/,           "Ezeiza"],   // Carlos Spegazzini → Ezeiza
+    [/\bSPEGAZZINI\b/,           "Ezeiza"],   // Carlos Spegazzini â†’ Ezeiza
     [/\bCARLOS\s+SPEGAZZINI\b/,  "Ezeiza"],
-    [/\bTRISTAN\s+SUAREZ\b/,     "Ezeiza"],   // Tristán Suárez → Ezeiza
-    [/\bCANNING\b/,              "Ezeiza"],   // Canning → partido Ezeiza
+    [/\bTRISTAN\s+SUAREZ\b/,     "Ezeiza"],   // TristÃ¡n SuÃ¡rez â†’ Ezeiza
+    [/\bCANNING\b/,              "Ezeiza"],   // Canning â†’ partido Ezeiza
     [/\bFLORENCIO\s+VARELA\b/, "Florencio Varela"],
     [/\bFLORENCIO\b/, "Florencio Varela"],
     [/\bTRES\s+DE\s+FEBRERO\b/, "Tres de Febrero"],
     [/\bMARCOS\s+PAZ\b/, "Marcos Paz"],
-    [/\bJOSE\s+C\.?\s*PAZ\b/, "José C. Paz"],
+    [/\bJOSE\s+C\.?\s*PAZ\b/, "JosÃ© C. Paz"],
     [/\bALTE\.?\s*BROWN\b/, "Alte. Brown"],
     [/\bALMIRANTE\s+BROWN\b/, "Alte. Brown"],
-    [/\bGRAL\.?\s*RODRIGUEZ\b/, "Gral. Rodríguez"],
-    [/\bGENERAL\s+RODRIGUEZ\b/, "Gral. Rodríguez"],
+    [/\bGRAL\.?\s*RODRIGUEZ\b/, "Gral. RodrÃ­guez"],
+    [/\bGENERAL\s+RODRIGUEZ\b/, "Gral. RodrÃ­guez"],
     [/\bLOMAS\s+DE\s+ZAMORA\b/, "Lomas de Zamora"],
-    [/\bSAN\s+MARTIN\b/, "San Martín"],
+    [/\bSAN\s+MARTIN\b/, "San MartÃ­n"],
     [/\bSAN\s+ISIDRO\b/, "San Isidro"],
     [/\bSAN\s+FERNANDO\b/, "San Fernando"],
     [/\bSAN\s+MIGUEL\b/, "San Miguel"],
     [/\bSAN\s+VICENTE\b/, "San Vicente"],
-    [/\bVICENTE\s+LOPEZ\b/, "Vicente López"],
+    [/\bVICENTE\s+LOPEZ\b/, "Vicente LÃ³pez"],
     [/\bLA\s+PLATA\b/, "La Plata Centro"],
-    [/\bITUZAINGO\b/, "Ituzaingó"],
-    [/\bMORON\b/, "Morón"],
-    [/\bLUJAN\b/, "Luján"],
-    [/\bZARATE\b/, "Zárate"],
-    [/\bCANUELAS\b/, "Cañuelas"],
-    [/\bENSENADA\b/, "Ensenada"],    // ENSENADA va DESPUÉS de EZEIZA
+    [/\bITUZAINGO\b/, "ItuzaingÃ³"],
+    [/\bMORON\b/, "MorÃ³n"],
+    [/\bLUJAN\b/, "LujÃ¡n"],
+    [/\bZARATE\b/, "ZÃ¡rate"],
+    [/\bCANUELAS\b/, "CaÃ±uelas"],
+    [/\bENSENADA\b/, "Ensenada"],    // ENSENADA va DESPUÃ‰S de EZEIZA
     [/\bBERISSO\b/, "Berisso"],
     [/\bQUILMES\b/, "Quilmes"],
-    [/\bLANUS\b/, "Lanús"],
+    [/\bLANUS\b/, "LanÃºs"],
     [/\bAVELLANEDA\b/, "Avellaneda"],
     [/\bBERAZATEGUI\b/, "Berazategui"],
     [/\bTIGRE\b/, "Tigre"],
     [/\bPILAR\b/, "Pilar"],
     [/\bCAMPANA\b/, "Campana"],
-    [/\bGARIN\b/, "Garín"],
+    [/\bGARIN\b/, "GarÃ­n"],
     [/\bNORDELTA\b/, "Nordelta"],
     [/\bESCOBAR\b/, "Escobar"],
     [/\bHURLINGHAM\b/, "Hurlingham"],
@@ -232,7 +232,7 @@ function detectLocalidadFromText(text: string): string | null {
 
 // Extrae TODOS los campos de la etiqueta ML Flex desde el texto OCR
 function extractEtiquetaData(rawText: string): EtiquetaData {
-  // Normalizar espacios entre dígitos para leer números correctamente
+  // Normalizar espacios entre dÃ­gitos para leer nÃºmeros correctamente
   let text = rawText;
   let prev = "";
   while (prev !== text) {
@@ -240,40 +240,40 @@ function extractEtiquetaData(rawText: string): EtiquetaData {
     text = text.replace(/(\d) (\d)/g, "$1$2");
   }
 
-  // ── Envío ID: número de 11 dígitos después de "Envío:" (con/sin tilde, mayúsculas) ──
+  // â”€â”€ EnvÃ­o ID: nÃºmero de 11 dÃ­gitos despuÃ©s de "EnvÃ­o:" (con/sin tilde, mayÃºsculas) â”€â”€
   const envioMatch = text.match(/[Ee][Nn][Vv][Ii\u00ED][Oo]\s*[:#]?\s*(\d{11})/);
   const envioId = envioMatch ? envioMatch[1] : null;
 
-  // ── Pack ID: número largo después de "Pack ID:" ──
+  // â”€â”€ Pack ID: nÃºmero largo despuÃ©s de "Pack ID:" â”€â”€
   const packMatch = text.match(/[Pp]ack\s*[Ii][Dd]\s*:?\s*(\d{12,20})/);
   const packId = packMatch ? packMatch[1] : null;
 
-  // ── Usuario ML: texto entre paréntesis (MAYÚSCULAS) al final del nombre ──
+  // â”€â”€ Usuario ML: texto entre parÃ©ntesis (MAYÃšSCULAS) al final del nombre â”€â”€
   // Ejemplo: "Adolfo Enrique Recobski (ADOLFORECO)"
   const usuarioMatch = text.match(/\(([A-Z0-9_]{3,20})\)/);
   const usuarioML = usuarioMatch ? usuarioMatch[1] : null;
 
-  // ── Nombre destinatario: línea que contiene "Destinatario:" ──
+  // â”€â”€ Nombre destinatario: lÃ­nea que contiene "Destinatario:" â”€â”€
   const destMatch = text.match(/[Dd]estinatario\s*:?\s*(.+?)(?:\s*\([A-Z]|\n|$)/);
   const nombreDestinatario = destMatch ? destMatch[1].trim() : null;
 
-  // ── Dirección: línea que empieza con "Direcci" o contiene número de calle ──
-  const dirMatch = text.match(/[Dd]irecci[oó]n\s*:?\s*(.+?)(?:\n|$)/);
+  // â”€â”€ DirecciÃ³n: lÃ­nea que empieza con "Direcci" o contiene nÃºmero de calle â”€â”€
+  const dirMatch = text.match(/[Dd]irecci[oÃ³]n\s*:?\s*(.+?)(?:\n|$)/);
   const direccion = dirMatch ? dirMatch[1].trim() : null;
 
-  // ── Código Postal: "CP:" seguido de 4 dígitos ──
+  // â”€â”€ CÃ³digo Postal: "CP:" seguido de 4 dÃ­gitos â”€â”€
   const cpMatch = text.match(/[Cc][Pp]\s*:?\s*(\d{4})/);
   const codigoPostal = cpMatch ? cpMatch[1] : null;
 
-  // ── Producto: línea que contiene "Producto:" o "Artículo:" o "Descripción:" ──
-  // También intenta leer la línea con palabras clave de productos MAQJEEZ
+  // â”€â”€ Producto: lÃ­nea que contiene "Producto:" o "ArtÃ­culo:" o "DescripciÃ³n:" â”€â”€
+  // TambiÃ©n intenta leer la lÃ­nea con palabras clave de productos MAQJEEZ
   const prodPatterns = [
     /[Pp]roducto\s*:?\s*(.+?)(?:\n|$)/,
-    /[Aa]rt[ií]culo\s*:?\s*(.+?)(?:\n|$)/,
-    /[Dd]escripci[oó]n\s*:?\s*(.+?)(?:\n|$)/,
+    /[Aa]rt[iÃ­]culo\s*:?\s*(.+?)(?:\n|$)/,
+    /[Dd]escripci[oÃ³]n\s*:?\s*(.+?)(?:\n|$)/,
     /[Cc]ontenido\s*:?\s*(.+?)(?:\n|$)/,
-    // Línea que contiene palabras de repuestos comunes
-    /([A-Za-záéíóúÁÉÍÓÚñÑ ]{4,50}(?:carburador|cilindro|pist[oó]n|cabezal|cuchilla|cadena|arn[eé]s|buj[ií]a|filtro|brida|tanza|aceite|kit|repuesto|pieza|parte)[A-Za-z0-9áéíóúÁÉÍÓÚñÑ ]{0,30})/i,
+    // LÃ­nea que contiene palabras de repuestos comunes
+    /([A-Za-zÃ¡Ã©Ã­Ã³ÃºÃÃ‰ÃÃ“ÃšÃ±Ã‘ ]{4,50}(?:carburador|cilindro|pist[oÃ³]n|cabezal|cuchilla|cadena|arn[eÃ©]s|buj[iÃ­]a|filtro|brida|tanza|aceite|kit|repuesto|pieza|parte)[A-Za-z0-9Ã¡Ã©Ã­Ã³ÃºÃÃ‰ÃÃ“ÃšÃ±Ã‘ ]{0,30})/i,
   ];
   let productoNombre: string | null = null;
   for (const pat of prodPatterns) {
@@ -281,11 +281,11 @@ function extractEtiquetaData(rawText: string): EtiquetaData {
     if (m) { productoNombre = m[1].trim().slice(0, 80); break; }
   }
 
-  // ── SKU: después de "SKU:" (código corto tipo MAQJEEZ-00179) ──
+  // â”€â”€ SKU: despuÃ©s de "SKU:" (cÃ³digo corto tipo MAQJEEZ-00179) â”€â”€
   const skuMatch = text.match(/[Ss][Kk][Uu]\s*:?\s*([A-Z0-9\-]{4,30})/);
   const productoSku = skuMatch ? skuMatch[1].trim() : null;
 
-  // ── Localidad texto (literal del OCR, para validación cruzada) ──
+  // â”€â”€ Localidad texto (literal del OCR, para validaciÃ³n cruzada) â”€â”€
   const localidadMatch = text.match(/[Ll]ocalidad\s*:?\s*(.+?)(?:\n|$)/) ||
                          text.match(/[Cc]iudad\s*:?\s*(.+?)(?:\n|$)/);
   const localidadTexto = localidadMatch ? localidadMatch[1].trim().slice(0, 40) : null;
@@ -296,14 +296,14 @@ function extractEtiquetaData(rawText: string): EtiquetaData {
 interface QRParsed { envioId: string | null; usuarioML: string | null; }
 
 // ML Flex QR puede codificar:
-//   URL: https://…?shipment_id=46719267146&buyer=ADOLFORECO
+//   URL: https://â€¦?shipment_id=46719267146&buyer=ADOLFORECO
 //   JSON: {"shipment_id":"46719267146","buyer":"ADOLFORECO"}
 //   Texto plano: "46719267146|ADOLFORECO"
 function extractIdFromQR(qrData: string): QRParsed {
   let envioId:  string | null = null;
   let usuarioML: string | null = null;
 
-  // ── Intentar parsear como JSON ──
+  // â”€â”€ Intentar parsear como JSON â”€â”€
   try {
     const obj = JSON.parse(qrData);
     envioId   = obj.shipment_id ?? obj.envio_id ?? obj.id ?? null;
@@ -311,27 +311,27 @@ function extractIdFromQR(qrData: string): QRParsed {
     if (envioId) return { envioId: String(envioId), usuarioML };
   } catch (_) {}
 
-  // ── Buscar shipment_id y buyer en URL / query string ──
+  // â”€â”€ Buscar shipment_id y buyer en URL / query string â”€â”€
   const shipMatch = qrData.match(/[?&/](?:shipment_id=|tracking[/=])(\d{10,13})/i);
   if (shipMatch) envioId = shipMatch[1];
 
   const buyerMatch = qrData.match(/[?&](?:buyer|usuario|user)=([A-Za-z0-9_.-]{3,30})/i);
   if (buyerMatch) usuarioML = buyerMatch[1].toUpperCase();
 
-  // ── Número directo de 11 dígitos (formato más común ML) ──
+  // â”€â”€ NÃºmero directo de 11 dÃ­gitos (formato mÃ¡s comÃºn ML) â”€â”€
   if (!envioId) {
-    // ML Flex QR suele ser solo el número de envío de 11 dígitos
+    // ML Flex QR suele ser solo el nÃºmero de envÃ­o de 11 dÃ­gitos
     const numMatch = qrData.match(/\b(\d{11})\b/);
     if (numMatch) envioId = numMatch[1];
   }
 
-  // ── Fallback: 10 o 12 dígitos si no encontró 11 ──
+  // â”€â”€ Fallback: 10 o 12 dÃ­gitos si no encontrÃ³ 11 â”€â”€
   if (!envioId) {
     const numFallback = qrData.match(/\b(\d{10,12})\b/);
     if (numFallback) envioId = numFallback[1];
   }
 
-  // ── Buscar usuario entre paréntesis en el texto del QR ──
+  // â”€â”€ Buscar usuario entre parÃ©ntesis en el texto del QR â”€â”€
   if (!usuarioML) {
     const userParens = qrData.match(/\(([A-Z0-9_]{3,20})\)/);
     if (userParens) usuarioML = userParens[1];
@@ -340,7 +340,7 @@ function extractIdFromQR(qrData: string): QRParsed {
   return { envioId, usuarioML };
 }
 
-// Escanear QR del canvas usando jsQR (sincrónico, muy rápido)
+// Escanear QR del canvas usando jsQR (sincrÃ³nico, muy rÃ¡pido)
 function scanQRFromCanvas(canvas: HTMLCanvasElement): QRParsed {
   try {
     const ctx = canvas.getContext("2d");
@@ -394,7 +394,7 @@ export interface EtiquetaData {
   codigoPostal:       string | null;
   productoSku:        string | null;
   productoNombre:     string | null;
-  localidadTexto:     string | null; // localidad tal como la leyó el OCR (sin mapear)
+  localidadTexto:     string | null; // localidad tal como la leyÃ³ el OCR (sin mapear)
 }
 
 export interface PaqueteOCR {
@@ -413,7 +413,7 @@ export interface PaqueteOCR {
   codigoPostal:       string | null;
   productoSku:        string | null;
   productoNombre:     string | null;
-  discordancia:       string | null;  // "CP 1812 → Spegazzini, no Villa Bosch"
+  discordancia:       string | null;  // "CP 1812 â†’ Spegazzini, no Villa Bosch"
   estado: "ok";
 }
 
@@ -428,7 +428,7 @@ export default function OCRScanner({ tarifas, onFinish, onClose }: Props) {
   const canvasRef   = useRef<HTMLCanvasElement>(null);
   const streamRef   = useRef<MediaStream | null>(null);
   const workerRef   = useRef<unknown>(null);
-  const scanningRef = useRef(false);   // flag para el loop de análisis en tiempo real
+  const scanningRef = useRef(false);   // flag para el loop de anÃ¡lisis en tiempo real
   const lastScanRef = useRef(0);
 
   const [paquetes, setPaquetes]         = useState<PaqueteOCR[]>([]);
@@ -464,7 +464,7 @@ export default function OCRScanner({ tarifas, onFinish, onClose }: Props) {
       streamRef.current = stream;
       if (videoRef.current) { videoRef.current.srcObject = stream; await videoRef.current.play(); }
     } catch (e: unknown) {
-      setCamError("No se pudo acceder a la cámara: " + (e instanceof Error ? e.message : String(e)));
+      setCamError("No se pudo acceder a la cÃ¡mara: " + (e instanceof Error ? e.message : String(e)));
     }
   }, []);
 
@@ -482,7 +482,7 @@ export default function OCRScanner({ tarifas, onFinish, onClose }: Props) {
         });
         if (!cancelled) {
           await (w as unknown as { setParameters: (p: Record<string, string>) => Promise<void> }).setParameters({
-            tessedit_char_whitelist: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzÁÉÍÓÚáéíóúÑñüÜ0123456789 :.-/()",
+            tessedit_char_whitelist: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzÃÃ‰ÃÃ“ÃšÃ¡Ã©Ã­Ã³ÃºÃ‘Ã±Ã¼Ãœ0123456789 :.-/()",
           });
           workerRef.current = w;
           setWorkerReady(true);
@@ -504,7 +504,7 @@ export default function OCRScanner({ tarifas, onFinish, onClose }: Props) {
     }).catch(() => {});
   }, []);
 
-  // ─── Loop de análisis en tiempo real (cada 1.5s) ─────────────────────────
+  // â”€â”€â”€ Loop de anÃ¡lisis en tiempo real (cada 1.5s) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   useEffect(() => {
     if (!workerReady) return;
     scanningRef.current = true;
@@ -535,16 +535,16 @@ export default function OCRScanner({ tarifas, onFinish, onClose }: Props) {
       const ctx = canvas.getContext("2d")!;
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-      // ── Paso 1: jsQR (sincrónico, ~2ms) — extrae ID y usuario del QR ──
+      // â”€â”€ Paso 1: jsQR (sincrÃ³nico, ~2ms) â€” extrae ID y usuario del QR â”€â”€
       const qrParsed = scanQRFromCanvas(canvas);
 
       try {
-        // ── Paso 2: OCR (async) — extrae todos los campos de la etiqueta ──
+        // â”€â”€ Paso 2: OCR (async) â€” extrae todos los campos de la etiqueta â”€â”€
         const processed = preprocessCanvas(canvas);
         const { data: { text } } = await worker.recognize(processed);
         const loc      = detectLocalidadFromText(text);
         const etiqueta = extractEtiquetaData(text);
-        // QR tiene prioridad para ID y usuario (más confiable que OCR)
+        // QR tiene prioridad para ID y usuario (mÃ¡s confiable que OCR)
         const finalId     = qrParsed.envioId ?? etiqueta.envioId;
         const finalUsuario = qrParsed.usuarioML ?? etiqueta.usuarioML;
 
@@ -572,12 +572,12 @@ export default function OCRScanner({ tarifas, onFinish, onClose }: Props) {
     return () => { scanningRef.current = false; };
   }, [workerReady]);
 
-  // ─── Capturar — solo guarda si hay zona válida, ID obligatorio y no es duplicado ───────────
+  // â”€â”€â”€ Capturar â€” solo guarda si hay zona vÃ¡lida, ID obligatorio y no es duplicado â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const capturar = useCallback(async () => {
     if (capturing || paquetes.length >= MAX) return;
     if (!liveLocalidad) return;
 
-    // ── ID de envío OBLIGATORIO ──
+    // â”€â”€ ID de envÃ­o OBLIGATORIO â”€â”€
     if (!liveEnvioId) {
       navigator.vibrate?.([80, 50, 80]);
       setDuplicateMsg("sinid");
@@ -586,7 +586,7 @@ export default function OCRScanner({ tarifas, onFinish, onClose }: Props) {
       return;
     }
 
-    // ── Anti-duplicados por ID de envío ──
+    // â”€â”€ Anti-duplicados por ID de envÃ­o â”€â”€
     const yaEnLista    = paquetes.some(p => p.envioId === liveEnvioId);
     const yaEnSupabase = existingIds.has(liveEnvioId);
     if (yaEnLista || yaEnSupabase) {
@@ -611,17 +611,17 @@ export default function OCRScanner({ tarifas, onFinish, onClose }: Props) {
 
     const calc    = calcPaquete(liveLocalidad, tarifas);
 
-    // ── Validación cruzada CP ↔ Localidad ──────────────────────────────────
+    // â”€â”€ ValidaciÃ³n cruzada CP â†” Localidad â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const cpDetectado    = liveEtiqueta?.codigoPostal ?? null;
-    const localidadOCR   = liveEtiqueta?.localidadTexto ?? null; // nombre leído por OCR
+    const localidadOCR   = liveEtiqueta?.localidadTexto ?? null; // nombre leÃ­do por OCR
     const localidadPorCP = cpDetectado ? CP_MAP[cpDetectado] : null;
     let discordancia: string | null = null;
     if (cpDetectado && localidadOCR && localidadPorCP) {
-      // Normalizar para comparar (sin tildes, minúsculas)
+      // Normalizar para comparar (sin tildes, minÃºsculas)
       const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
       if (!norm(localidadPorCP).includes(norm(localidadOCR).slice(0, 5)) &&
           !norm(localidadOCR).includes(norm(localidadPorCP).slice(0, 5))) {
-        discordancia = `CP ${cpDetectado} → ${localidadPorCP}, OCR leyó "${localidadOCR}"`;
+        discordancia = `CP ${cpDetectado} â†’ ${localidadPorCP}, OCR leyÃ³ "${localidadOCR}"`;
       }
     }
 
@@ -667,7 +667,7 @@ export default function OCRScanner({ tarifas, onFinish, onClose }: Props) {
   const totalGanancia = paquetes.reduce((s, p) => s + p.ganancia, 0);
   const totalFlete    = paquetes.reduce((s, p) => s + p.pagoFlete, 0);
 
-  // Color del marco según detección en tiempo real
+  // Color del marco segÃºn detecciÃ³n en tiempo real
   const frameColor = !workerReady
     ? "border-yellow-400"
     : liveScan === "found"
@@ -686,8 +686,8 @@ export default function OCRScanner({ tarifas, onFinish, onClose }: Props) {
         <div className="flex items-center gap-2">
           <Camera className="w-5 h-5 text-yellow-400" />
           <div>
-            <p className="text-white font-bold text-sm">Escáner OCR</p>
-            <p className="text-gray-400 text-xs">{paquetes.length}/{MAX} fotos · {okCount} guardadas</p>
+            <p className="text-white font-bold text-sm">EscÃ¡ner OCR</p>
+            <p className="text-gray-400 text-xs">{paquetes.length}/{MAX} fotos Â· {okCount} guardadas</p>
           </div>
         </div>
         <div className="flex gap-2">
@@ -705,7 +705,7 @@ export default function OCRScanner({ tarifas, onFinish, onClose }: Props) {
         </div>
       </div>
 
-      {/* Cámara — altura mínima garantizada para que el botón quede centrado/abajo cómodamente */}
+      {/* CÃ¡mara â€” altura mÃ­nima garantizada para que el botÃ³n quede centrado/abajo cÃ³modamente */}
       <div className="relative overflow-hidden flex-shrink-0" style={{ height: "60vh", minHeight: "360px" }}>
         {camError ? (
           <div className="absolute inset-0 bg-gray-900 flex flex-col items-center justify-center text-center px-6">
@@ -722,60 +722,60 @@ export default function OCRScanner({ tarifas, onFinish, onClose }: Props) {
               <div className="absolute top-16 inset-x-4 z-20 bg-red-600 rounded-2xl px-4 py-3 text-center shadow-2xl">
                 {duplicateMsg === "sinid" ? (
                   <>
-                    <p className="text-white font-black text-sm">Sin ID de envío</p>
-                    <p className="text-red-200 text-xs mt-0.5">Apuntá mejor a la etiqueta — ID obligatorio</p>
+                    <p className="text-white font-black text-sm">Sin ID de envÃ­o</p>
+                    <p className="text-red-200 text-xs mt-0.5">ApuntÃ¡ mejor a la etiqueta â€” ID obligatorio</p>
                   </>
                 ) : (
                   <>
                     <p className="text-white font-black text-sm">Paquete ya escaneado</p>
-                    <p className="text-red-200 text-xs mt-0.5">ID duplicado — ignorado</p>
+                    <p className="text-red-200 text-xs mt-0.5">ID duplicado â€” ignorado</p>
                   </>
                 )}
               </div>
             )}
 
-            {/* Marco de enfoque — color dinámico según detección */}
+            {/* Marco de enfoque â€” color dinÃ¡mico segÃºn detecciÃ³n */}
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ paddingBottom: "130px" }}>
               <div className="relative" style={{ width: "88vw", maxWidth: "380px", height: "62vw", maxHeight: "276px" }}>
                 {/* Borde completo semitransparente de fondo */}
                 <div className={`absolute inset-0 rounded-lg border-2 transition-colors duration-300 ${frameColor}`} style={{ opacity: 0.35 }} />
 
-                {/* Esquinas del marco — gruesas y bien visibles */}
+                {/* Esquinas del marco â€” gruesas y bien visibles */}
                 <div className={`absolute top-0 left-0 w-10 h-10 transition-colors duration-300 ${frameColor}`} style={{ borderWidth: "4px 0 0 4px", borderStyle: "solid", borderRadius: "4px 0 0 0" }} />
                 <div className={`absolute top-0 right-0 w-10 h-10 transition-colors duration-300 ${frameColor}`} style={{ borderWidth: "4px 4px 0 0", borderStyle: "solid", borderRadius: "0 4px 0 0" }} />
                 <div className={`absolute bottom-0 left-0 w-10 h-10 transition-colors duration-300 ${frameColor}`} style={{ borderWidth: "0 0 4px 4px", borderStyle: "solid", borderRadius: "0 0 0 4px" }} />
                 <div className={`absolute bottom-0 right-0 w-10 h-10 transition-colors duration-300 ${frameColor}`} style={{ borderWidth: "0 4px 4px 0", borderStyle: "solid", borderRadius: "0 0 4px 0" }} />
 
-                {/* Guía en la parte superior del recuadro */}
+                {/* GuÃ­a en la parte superior del recuadro */}
                 <div className="absolute -top-7 inset-x-0 flex justify-center">
                   <span className="bg-black/70 text-white text-[11px] font-semibold px-3 py-1 rounded-full">
-                    Centra: Envío + CP + QR dentro del recuadro
+                    Centra: EnvÃ­o + CP + QR dentro del recuadro
                   </span>
                 </div>
 
-                {/* Línea divisoria horizontal a 40% — separa zona "Envío ID" de zona "CP/QR" */}
+                {/* LÃ­nea divisoria horizontal a 40% â€” separa zona "EnvÃ­o ID" de zona "CP/QR" */}
                 <div className={`absolute left-4 right-4 transition-colors duration-300 ${frameColor}`} style={{ top: "40%", height: "1px", opacity: 0.4, background: "currentColor" }} />
 
                 {/* Etiquetas de zona dentro del marco */}
                 <div className="absolute top-1.5 left-3 flex items-center gap-1 opacity-60">
-                  <span className="text-white text-[9px] font-bold uppercase tracking-wider">Envío ID</span>
+                  <span className="text-white text-[9px] font-bold uppercase tracking-wider">EnvÃ­o ID</span>
                 </div>
                 <div className="absolute left-3 flex items-center gap-1 opacity-60" style={{ top: "43%" }}>
                   <span className="text-white text-[9px] font-bold uppercase tracking-wider">CP + Localidad + QR</span>
                 </div>
 
-                {/* Mensaje de detección dentro del marco */}
+                {/* Mensaje de detecciÃ³n dentro del marco */}
                 <div className="absolute inset-0 flex items-center justify-center">
                   {liveScan === "found" && liveLocalidad ? (
                     <div className="bg-green-600/90 rounded-xl px-4 py-2 text-center shadow-xl">
                       <p className="text-white font-black text-lg leading-tight">{liveLocalidad}</p>
                       <p className="text-green-200 text-xs mt-0.5">
-                        {ZONA_LABELS[FLEX_LOCALIDADES.find(l => l.nombre === liveLocalidad)?.zona ?? "lejana"]} · {fmt(calcPaquete(liveLocalidad, tarifas).precioML)}
+                        {ZONA_LABELS[FLEX_LOCALIDADES.find(l => l.nombre === liveLocalidad)?.zona ?? "lejana"]} Â· {fmt(calcPaquete(liveLocalidad, tarifas).precioML)}
                       </p>
                       {liveEnvioId ? (
-                        <p className="text-green-300 text-[11px] mt-1 font-mono font-bold">Envío: {liveEnvioId}</p>
+                        <p className="text-green-300 text-[11px] mt-1 font-mono font-bold">EnvÃ­o: {liveEnvioId}</p>
                       ) : (
-                        <p className="text-yellow-300 text-[11px] mt-1 font-semibold">⚠ Buscando ID de envío...</p>
+                        <p className="text-yellow-300 text-[11px] mt-1 font-semibold">âš  Buscando ID de envÃ­o...</p>
                       )}
                     </div>
                   ) : (
@@ -788,7 +788,7 @@ export default function OCRScanner({ tarifas, onFinish, onClose }: Props) {
                       ) : (
                         <>
                           <Loader2 className="w-3.5 h-3.5 text-gray-400 animate-spin" />
-                          <span className="text-gray-300 text-xs">Buscando zona válida...</span>
+                          <span className="text-gray-300 text-xs">Buscando zona vÃ¡lida...</span>
                         </>
                       )}
                     </div>
@@ -805,23 +805,23 @@ export default function OCRScanner({ tarifas, onFinish, onClose }: Props) {
               <p className="text-gray-300 text-[10px]">/{MAX}</p>
             </div>
 
-            {/* NO hay botón aquí — está fijo abajo en la pantalla */}
+            {/* NO hay botÃ³n aquÃ­ â€” estÃ¡ fijo abajo en la pantalla */}
           </>
         )}
       </div>
 
-      {/* ── BOTÓN CAPTURAR FIJO AL FONDO DE LA PANTALLA ── */}
+      {/* â”€â”€ BOTÃ“N CAPTURAR FIJO AL FONDO DE LA PANTALLA â”€â”€ */}
       {!camError && (
         <div className="fixed bottom-0 inset-x-0 z-[70] flex flex-col items-center pb-8 pt-4 pointer-events-none"
           style={{ background: "linear-gradient(to top, rgba(0,0,0,0.95) 0%, transparent 100%)" }}>
           <p className={`text-xs font-semibold mb-3 transition-colors pointer-events-none ${canCapture ? "text-green-300" : "text-gray-500"}`}>
             {paquetes.length >= MAX
-              ? "Límite alcanzado"
+              ? "LÃ­mite alcanzado"
               : !workerReady
               ? "Cargando motor OCR..."
               : canCapture
-              ? `✓ ${liveLocalidad} — tocá para guardar`
-              : "Buscando zona válida..."}
+              ? `âœ“ ${liveLocalidad} â€” tocÃ¡ para guardar`
+              : "Buscando zona vÃ¡lida..."}
           </p>
           <button
             onPointerDown={capturar}
@@ -843,7 +843,7 @@ export default function OCRScanner({ tarifas, onFinish, onClose }: Props) {
         </div>
       )}
 
-      {/* Lista de paquetes — panel inferior, solo paquetes válidos */}
+      {/* Lista de paquetes â€” panel inferior, solo paquetes vÃ¡lidos */}
       {paquetes.length > 0 && (
         <div className="flex-shrink-0 bg-gray-950 overflow-y-auto" style={{ maxHeight: "40vh" }}>
           <div className="sticky top-0 bg-gray-900/95 border-b border-gray-700 px-4 py-2 flex justify-between z-10">
@@ -900,14 +900,14 @@ export default function OCRScanner({ tarifas, onFinish, onClose }: Props) {
                           <span className={`text-xs px-2 py-0.5 rounded-full border ${ZONA_COLORS[p.zona]}`}>{ZONA_LABELS[p.zona]}</span>
                         </div>
                         <p className="text-gray-500 text-[10px] mt-0.5">
-                          ML: {fmt(p.precioML)} · Flete: {fmt(p.pagoFlete)} · Gan: <span className="text-green-300">{fmt(p.ganancia)}</span>
+                          ML: {fmt(p.precioML)} Â· Flete: {fmt(p.pagoFlete)} Â· Gan: <span className="text-green-300">{fmt(p.ganancia)}</span>
                         </p>
                         {p.envioId && (
                           <p className="text-gray-600 text-[10px] font-mono mt-0.5">ID: {p.envioId}</p>
                         )}
                         {p.discordancia && (
                           <p className="text-red-400 text-[10px] font-bold mt-1 flex items-center gap-1">
-                            ⚠️ {p.discordancia}
+                            âš ï¸ {p.discordancia}
                           </p>
                         )}
                       </div>

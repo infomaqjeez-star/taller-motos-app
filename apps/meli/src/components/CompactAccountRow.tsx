@@ -92,7 +92,7 @@ export default function CompactAccountRow({
 }: Props) {
   const urgentTotal = (data.unanswered_questions ?? 0) + (data.ready_to_ship ?? 0) + (data.pending_messages ?? 0);
 
-  // Cargar datos en tiempo real si la cuenta está abierta
+  // Cargar datos en tiempo real si la cuenta estÃ¡ abierta
   const { data: meliData, loading: dataLoading, error: dataError } = useMeliAccountData(
     isOpen ? data.meli_user_id : null
   );
@@ -115,7 +115,7 @@ export default function CompactAccountRow({
             className="w-10 h-10 rounded-lg flex items-center justify-center font-black text-sm flex-shrink-0"
             style={{ background: "linear-gradient(135deg,#FFE600,#FF9800)" }}
           >
-            📦
+            ðŸ“¦
           </div>
 
           {/* Account Info */}
@@ -206,11 +206,11 @@ export default function CompactAccountRow({
             </div>
           )}
 
-          {/* Reputación en tiempo real */}
+          {/* ReputaciÃ³n en tiempo real */}
           {dataLoading && (
             <div className="p-2 text-xs text-gray-400 flex items-center gap-2">
               <div className="w-4 h-4 border-2 border-gray-600 border-t-gray-400 rounded-full animate-spin" />
-              Cargando datos de reputación...
+              Cargando datos de reputaciÃ³n...
             </div>
           )}
 
@@ -222,11 +222,11 @@ export default function CompactAccountRow({
 
           {meliData && (
             <>
-              {/* Sección 1: Reputación - Nivel + Badge de Poder Vendedor */}
+              {/* SecciÃ³n 1: ReputaciÃ³n - Nivel + Badge de Poder Vendedor */}
               {meliData.reputation && (
                 <div className="space-y-2">
                   <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "#6B7280" }}>
-                    Reputación
+                    ReputaciÃ³n
                   </p>
                   <ReputationBadge
                     levelId={meliData.reputation.level_id}
@@ -236,17 +236,17 @@ export default function CompactAccountRow({
                 </div>
               )}
 
-              {/* Sección 2: Métricas de Reputación (Reclamos, Canceladas, Demora Envíos) */}
+              {/* SecciÃ³n 2: MÃ©tricas de ReputaciÃ³n (Reclamos, Canceladas, Demora EnvÃ­os) */}
               {meliData.reputation && (
                 <MetricsBar
                   claims={meliData.reputation.claims ?? 0}
                   cancellations={meliData.reputation.cancellations ?? 0}
                   delayedHandlingTime={meliData.reputation.delayed_handling_time ?? 0}
-                  measurementPeriod={data.metrics_period || "Últimos 60 días"}
+                  measurementPeriod={data.metrics_period || "Ãšltimos 60 dÃ­as"}
                 />
               )}
 
-              {/* Sección 3: Pendientes Urgentes - 4 Cards Clicables */}
+              {/* SecciÃ³n 3: Pendientes Urgentes - 4 Cards Clicables */}
               <UrgentMetrics
                 questions={data.unanswered_questions ?? 0}
                 messages={data.pending_messages ?? 0}
@@ -254,7 +254,7 @@ export default function CompactAccountRow({
                 claims={data.claims_count ?? 0}
               />
 
-              {/* Sección 4: Resumen de Stock - 3 Cards */}
+              {/* SecciÃ³n 4: Resumen de Stock - 3 Cards */}
               <div className="grid grid-cols-3 gap-2 pt-2">
                 <MetricCard
                   label="Activas"
@@ -273,7 +273,7 @@ export default function CompactAccountRow({
                 />
               </div>
 
-              {/* Sección 5: Acciones Rápidas - Botones */}
+              {/* SecciÃ³n 5: Acciones RÃ¡pidas - Botones */}
               <div className="grid grid-cols-2 gap-2 pt-2">
                 <button
                   className="rounded-lg px-3 py-2 text-xs font-semibold text-white transition-all hover:scale-105 active:scale-95"
@@ -291,7 +291,7 @@ export default function CompactAccountRow({
                   className="rounded-lg px-3 py-2 text-xs font-semibold text-white transition-all hover:scale-105 active:scale-95"
                   style={{ background: "#00E5FF", border: "none", color: "#000" }}
                 >
-                  Imprimir Envíos
+                  Imprimir EnvÃ­os
                 </button>
                 <button
                   className="rounded-lg px-3 py-2 text-xs font-semibold text-white transition-all hover:scale-105 active:scale-95"

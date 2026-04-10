@@ -1,14 +1,14 @@
 import { WorkOrder } from "./types";
 import { buildWhatsAppUrl, isOverdue90Days, daysWaitingForPickup } from "./utils";
 
-// ─── Notification types ───────────────────────────────────────
+// â”€â”€â”€ Notification types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export type NotificationType =
   | "budget_ready"        // Presupuesto listo para comunicar
   | "repair_complete"     // Equipo listo para retirar
   | "no_response"         // Sin respuesta del cliente
-  | "overdue_pickup"      // Más de 90 días esperando retiro
-  | "waiting_parts"       // Esperando repuesto — avisar al cliente
+  | "overdue_pickup"      // MÃ¡s de 90 dÃ­as esperando retiro
+  | "waiting_parts"       // Esperando repuesto â€” avisar al cliente
   | "custom";             // Mensaje personalizado
 
 export interface NotificationTemplate {
@@ -29,7 +29,7 @@ export interface SentNotification {
   sentAt: string; // ISO
 }
 
-// ─── Message templates ────────────────────────────────────────
+// â”€â”€â”€ Message templates â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export const NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
   {
@@ -38,10 +38,10 @@ export const NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     icon: "dollar",
     color: "blue",
     buildMessage: (o) =>
-      `Hola ${o.clientName} 👋, le informamos que el presupuesto para su ${o.brand} ${o.model} está listo.\n\n` +
-      `💰 Monto: $${o.budget ?? "a confirmar"}\n` +
-      `⏱ Tiempo estimado: ${o.estimatedDays ? `${o.estimatedDays} días` : "a confirmar"}\n\n` +
-      `Por favor, confirme si acepta el presupuesto para iniciar la reparación.\n\nGracias — Taller MAQJEEZ`,
+      `Hola ${o.clientName} ðŸ‘‹, le informamos que el presupuesto para su ${o.brand} ${o.model} estÃ¡ listo.\n\n` +
+      `ðŸ’° Monto: $${o.budget ?? "a confirmar"}\n` +
+      `â± Tiempo estimado: ${o.estimatedDays ? `${o.estimatedDays} dÃ­as` : "a confirmar"}\n\n` +
+      `Por favor, confirme si acepta el presupuesto para iniciar la reparaciÃ³n.\n\nGracias â€” Taller MAQJEEZ`,
   },
   {
     type: "repair_complete",
@@ -49,31 +49,31 @@ export const NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     icon: "check",
     color: "green",
     buildMessage: (o) =>
-      `Hola ${o.clientName} 👋, ¡buenas noticias! Su ${o.brand} ${o.model} (${o.motorType}) ya está lista para ser retirada.\n\n` +
-      `📍 Puede pasar por el taller en el horario de atención.\n\n` +
-      `Gracias por confiar en Taller MAQJEEZ 🔧`,
+      `Hola ${o.clientName} ðŸ‘‹, Â¡buenas noticias! Su ${o.brand} ${o.model} (${o.motorType}) ya estÃ¡ lista para ser retirada.\n\n` +
+      `ðŸ“ Puede pasar por el taller en el horario de atenciÃ³n.\n\n` +
+      `Gracias por confiar en Taller MAQJEEZ ðŸ”§`,
   },
   {
     type: "no_response",
-    label: "Sin respuesta — seguimiento",
+    label: "Sin respuesta â€” seguimiento",
     icon: "phone",
     color: "yellow",
     buildMessage: (o) =>
       `Hola ${o.clientName}, le escribimos nuevamente desde Taller MAQJEEZ.\n\n` +
       `Intentamos contactarle por su ${o.brand} ${o.model} y no tuvimos respuesta.\n\n` +
-      `Por favor, comuníquese a la brevedad. Gracias.`,
+      `Por favor, comunÃ­quese a la brevedad. Gracias.`,
   },
   {
     type: "overdue_pickup",
-    label: "Más de 90 días — retiro urgente",
+    label: "MÃ¡s de 90 dÃ­as â€” retiro urgente",
     icon: "alert",
     color: "red",
     buildMessage: (o) => {
       const days = daysWaitingForPickup(o) ?? 90;
       return (
-        `Hola ${o.clientName}, le informamos que su ${o.brand} ${o.model} lleva ${days} días en nuestro taller esperando ser retirado.\n\n` +
-        `⚠️ Le pedimos que se comunique o pase a retirar el equipo a la brevedad para evitar inconvenientes.\n\n` +
-        `Taller MAQJEEZ — Tel/WA: [su número]`
+        `Hola ${o.clientName}, le informamos que su ${o.brand} ${o.model} lleva ${days} dÃ­as en nuestro taller esperando ser retirado.\n\n` +
+        `âš ï¸ Le pedimos que se comunique o pase a retirar el equipo a la brevedad para evitar inconvenientes.\n\n` +
+        `Taller MAQJEEZ â€” Tel/WA: [su nÃºmero]`
       );
     },
   },
@@ -83,13 +83,13 @@ export const NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     icon: "package",
     color: "orange",
     buildMessage: (o) =>
-      `Hola ${o.clientName} 👋, le informamos que su ${o.brand} ${o.model} está en proceso de reparación.\n\n` +
-      `🔧 Actualmente estamos esperando la llegada de un repuesto para continuar.\n` +
-      `Le avisaremos en cuanto tengamos novedades.\n\nGracias — Taller MAQJEEZ`,
+      `Hola ${o.clientName} ðŸ‘‹, le informamos que su ${o.brand} ${o.model} estÃ¡ en proceso de reparaciÃ³n.\n\n` +
+      `ðŸ”§ Actualmente estamos esperando la llegada de un repuesto para continuar.\n` +
+      `Le avisaremos en cuanto tengamos novedades.\n\nGracias â€” Taller MAQJEEZ`,
   },
 ];
 
-// ─── Auto-detect pending notifications ───────────────────────
+// â”€â”€â”€ Auto-detect pending notifications â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export interface PendingNotification {
   order: WorkOrder;
@@ -134,7 +134,7 @@ export function detectPendingNotifications(
       addIfNeeded("budget_ready");
     }
 
-    // Repair complete — needs pickup notification
+    // Repair complete â€” needs pickup notification
     if (
       order.status === "listo_para_retiro" &&
       order.clientNotification !== "avisado"
@@ -168,7 +168,7 @@ export function detectPendingNotifications(
   });
 }
 
-// ─── Sent log storage ─────────────────────────────────────────
+// â”€â”€â”€ Sent log storage â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const SENT_LOG_KEY = "maqjeez_sent_notifications";
 

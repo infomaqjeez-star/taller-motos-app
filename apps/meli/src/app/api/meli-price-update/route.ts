@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-// Forzar renderizado din�mico - evita error de generaci�n est�tica
+// Forzar renderizado dinámico - evita error de generación estática
 export const dynamic = 'force-dynamic';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
@@ -15,7 +15,7 @@ const supabase = createClient(
 /**
  * POST /api/meli-price-update
  * 
- * Actualiza el precio de una publicación.
+ * Actualiza el precio de una publicaciÃ³n.
  */
 export async function POST(request: NextRequest) {
   try {

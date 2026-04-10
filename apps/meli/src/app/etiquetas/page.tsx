@@ -59,11 +59,11 @@ interface LabelData {
 }
 
 const TYPE_CFG: Record<LogisticType, { color: string; label: string; icon: React.ReactNode }> = {
-  todas: { color: "#FFE600", label: "TODAS", icon: <span className="text-xs">📦</span> },
+  todas: { color: "#FFE600", label: "TODAS", icon: <span className="text-xs">ðŸ“¦</span> },
   correo: { color: "#FF9800", label: "CORREO", icon: <Truck className="w-3.5 h-3.5" /> },
   flex: { color: "#00E5FF", label: "FLEX", icon: <Truck className="w-3.5 h-3.5" /> },
   turbo: { color: "#A855F7", label: "TURBO", icon: <Zap className="w-3.5 h-3.5" /> },
-  full: { color: "#FFE600", label: "FULL", icon: <span className="text-xs">⚡</span> },
+  full: { color: "#FFE600", label: "FULL", icon: <span className="text-xs">âš¡</span> },
 };
 
 // Mapeo de cuentas a colores
@@ -79,7 +79,7 @@ const getAccountColor = (meli_user_id: string, accountName: string): { bg: strin
     { bg: "#FFEAA7", text: "#121212", border: "#e6d490" },    // Amarillo
   ];
   
-  // Usar hash combinado de meli_user_id + nombre para mejor distribución
+  // Usar hash combinado de meli_user_id + nombre para mejor distribuciÃ³n
   const str = meli_user_id + accountName;
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
@@ -113,7 +113,7 @@ function LabelCard({
   const zoneCfg = ZONE_CFG[zone] || ZONE_CFG.desconocida;
   const thumb = (shipment.thumbnail || "").replace("http://", "https://");
 
-  // Calcular si está demorada (dispatch_date pasó de las 00:00 del día)
+  // Calcular si estÃ¡ demorada (dispatch_date pasÃ³ de las 00:00 del dÃ­a)
   const isDelayed = (() => {
     if (!shipment.dispatch_date) return false;
     const today = new Date();
@@ -227,7 +227,7 @@ function LabelCard({
             <p className="text-xs font-bold text-white line-clamp-2">
               {shipment.title}
               {shipment.attributes && (
-                <span className="text-gray-400 text-[11px] font-normal"> • {shipment.attributes}</span>
+                <span className="text-gray-400 text-[11px] font-normal"> â€¢ {shipment.attributes}</span>
               )}
             </p>
           </div>
@@ -250,21 +250,21 @@ function LabelCard({
         {/* Comprador + Contacto */}
         <div className="text-[10px] space-y-1">
           <p style={{ color: "#D1D5DB" }}>
-            <span style={{ color: "#9CA3AF" }}>👤</span> {shipment.buyer}{shipment.buyer_nickname ? ` (@${shipment.buyer_nickname})` : ""}
+            <span style={{ color: "#9CA3AF" }}>ðŸ‘¤</span> {shipment.buyer}{shipment.buyer_nickname ? ` (@${shipment.buyer_nickname})` : ""}
           </p>
           {(shipment.buyer_email || shipment.buyer_phone) && (
             <p style={{ color: "#D1D5DB" }}>
-              {shipment.buyer_email && <span>📧 {shipment.buyer_email}</span>}
+              {shipment.buyer_email && <span>ðŸ“§ {shipment.buyer_email}</span>}
               {shipment.buyer_email && shipment.buyer_phone && <span> | </span>}
-              {shipment.buyer_phone && <span>☎️ {shipment.buyer_phone}</span>}
+              {shipment.buyer_phone && <span>â˜Žï¸ {shipment.buyer_phone}</span>}
             </p>
           )}
         </div>
 
-        {/* Dirección */}
+        {/* DirecciÃ³n */}
         {(shipment.delivery_address || shipment.delivery_state || shipment.delivery_zip) && (
           <div className="text-[10px] p-1.5 rounded" style={{ background: "rgba(255,255,255,0.05)" }}>
-            <p style={{ color: "#9CA3AF" }} className="font-bold">📍 ENTREGA:</p>
+            <p style={{ color: "#9CA3AF" }} className="font-bold">ðŸ“ ENTREGA:</p>
             {shipment.delivery_address && <p style={{ color: "#D1D5DB" }}>{shipment.delivery_address}</p>}
             {(shipment.delivery_state || shipment.delivery_zip) && (
               <p style={{ color: "#D1D5DB" }}>
@@ -277,12 +277,12 @@ function LabelCard({
         {/* Precios */}
         {(shipment.unit_price || shipment.total_price || shipment.shipping_cost) && (
           <div className="text-[10px] p-1.5 rounded" style={{ background: "rgba(255,255,255,0.05)" }}>
-            <p style={{ color: "#9CA3AF" }} className="font-bold">💰 VALORES:</p>
+            <p style={{ color: "#9CA3AF" }} className="font-bold">ðŸ’° VALORES:</p>
             {shipment.unit_price && (
               <p style={{ color: "#D1D5DB" }}>Producto: ${shipment.unit_price?.toLocaleString("es-AR")} x{shipment.quantity} = ${(shipment.unit_price * shipment.quantity).toLocaleString("es-AR")}</p>
             )}
             {shipment.shipping_cost !== undefined && (
-              <p style={{ color: "#D1D5DB" }}>Envío: ${shipment.shipping_cost?.toLocaleString("es-AR") ?? "0"}</p>
+              <p style={{ color: "#D1D5DB" }}>EnvÃ­o: ${shipment.shipping_cost?.toLocaleString("es-AR") ?? "0"}</p>
             )}
             {shipment.total_price && (
               <p style={{ color: "#39FF14", fontWeight: "bold" }}>Total: ${shipment.total_price?.toLocaleString("es-AR")}</p>
@@ -290,16 +290,16 @@ function LabelCard({
           </div>
         )}
 
-        {/* Notas + Cupón */}
+        {/* Notas + CupÃ³n */}
         <div className="text-[10px] space-y-1">
           {shipment.buyer_notes && (
             <p style={{ color: "#D1D5DB" }}>
-              📝 <span style={{ color: "#9CA3AF" }}>Notas:</span> &quot;{shipment.buyer_notes}&quot;
+              ðŸ“ <span style={{ color: "#9CA3AF" }}>Notas:</span> &quot;{shipment.buyer_notes}&quot;
             </p>
           )}
           {shipment.coupon_code && (
             <p style={{ color: "#D1D5DB" }}>
-              🛒 <span style={{ color: "#9CA3AF" }}>Cupón:</span> {shipment.coupon_code}
+              ðŸ›’ <span style={{ color: "#9CA3AF" }}>CupÃ³n:</span> {shipment.coupon_code}
             </p>
           )}
         </div>
@@ -331,7 +331,7 @@ function LabelCard({
             if (isNaN(dt.getTime())) return null;
             return (
               <p className="text-[10px]" style={{ color: "#FF9800" }}>
-                {"📦"} Despachar antes del {dt.toLocaleDateString("es-AR", { weekday: "long", day: "numeric" })}
+                {"ðŸ“¦"} Despachar antes del {dt.toLocaleDateString("es-AR", { weekday: "long", day: "numeric" })}
               </p>
             );
           } catch { return null; }
@@ -362,7 +362,7 @@ function LabelCard({
             <span>Re-imprimir</span>
           </button>
         )}
-        {/* in_transit y returns no tienen botón de impresión */}
+        {/* in_transit y returns no tienen botÃ³n de impresiÃ³n */}
       </div>
     </div>
   );
@@ -403,7 +403,7 @@ function EtiquetasInner() {
     load();
   }, [load]);
 
-  // Supabase Realtime: actualizar contadores cuando se añaden nuevas etiquetas impresas
+  // Supabase Realtime: actualizar contadores cuando se aÃ±aden nuevas etiquetas impresas
   useEffect(() => {
     const channel = supabase
       .channel("printed-labels-changes")
@@ -449,7 +449,7 @@ function EtiquetasInner() {
 
   const selectAll = useCallback((allIds: number[]) => {
     setSelectedIds(prev => {
-      // Si todos están seleccionados, deseleccionar todos
+      // Si todos estÃ¡n seleccionados, deseleccionar todos
       if (allIds.every(id => prev.has(id))) {
         return new Set();
       }
@@ -458,7 +458,7 @@ function EtiquetasInner() {
     });
   }, []);
 
-  // FASE 4: Verificación de Duplicados
+  // FASE 4: VerificaciÃ³n de Duplicados
   const checkForDuplicates = useCallback(() => {
     const shipmentIds = new Set<number>();
     const duplicates: number[] = [];
@@ -517,12 +517,12 @@ function EtiquetasInner() {
       }
 
       const result = await res.json();
-      console.log("✅ Test label created:", result);
-      alert(`🧪 Etiqueta de prueba creada exitosamente!\n\nShipment: ${result.test_data.shipment_id}\n\nRevisá el historial para buscarla.`);
+      console.log("âœ… Test label created:", result);
+      alert(`ðŸ§ª Etiqueta de prueba creada exitosamente!\n\nShipment: ${result.test_data.shipment_id}\n\nRevisÃ¡ el historial para buscarla.`);
       load(); // Refrescar para actualizar contadores
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Unknown error";
-      alert(`❌ Error en modo test: ${msg}`);
+      alert(`âŒ Error en modo test: ${msg}`);
       console.error("Test print error:", e);
     } finally {
       setTestLoading(false);
@@ -536,11 +536,11 @@ function EtiquetasInner() {
     }
   }, [data?.shipments, checkForDuplicates]);
 
-  // Filtrar datos según pestaña de estado y logística
+  // Filtrar datos segÃºn pestaÃ±a de estado y logÃ­stica
   const filtered = useMemo(() => {
     let source: ShipmentInfo[] = [];
 
-    // Seleccionar fuente según pestaña
+    // Seleccionar fuente segÃºn pestaÃ±a
     if (statusTab === "pending") {
       if (logisticFilter === "full") {
         source = data?.full ?? [];
@@ -569,7 +569,7 @@ function EtiquetasInner() {
     }
 
     // Filtrar por tiempo (solo para pendientes)
-    // Regla: después de las 13:00, los envíos de "hoy" pasan a "próximos"
+    // Regla: despuÃ©s de las 13:00, los envÃ­os de "hoy" pasan a "prÃ³ximos"
     if (statusTab === "pending" && timeFilter !== "all") {
       const now = new Date();
       const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
@@ -606,12 +606,12 @@ function EtiquetasInner() {
   }, [data]);
 
   // Conteo de envios hoy vs proximos (solo pendientes)
-  // Regla: después de las 13:00 Argentina, los envíos de "hoy" pasan a "próximos"
+  // Regla: despuÃ©s de las 13:00 Argentina, los envÃ­os de "hoy" pasan a "prÃ³ximos"
   const timeCounts = useMemo(() => {
     const source = data?.shipments ?? [];
     const now = new Date();
     const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-    const cutoffPassed = now.getHours() >= 13; // Corte 13:00 - después ya no se despacha hoy
+    const cutoffPassed = now.getHours() >= 13; // Corte 13:00 - despuÃ©s ya no se despacha hoy
     const today = source.filter(s => {
       if (!s.dispatch_date) return !cutoffPassed;
       const d = s.dispatch_date.split("T")[0];
@@ -682,7 +682,7 @@ function EtiquetasInner() {
       const selectedShipments = sourceArray.filter(s => selectedIds.has(s.shipment_id));
       const meli_user_id = selectedShipments[0]?.meli_user_id || "";
 
-      // PASO 1: Validar que los IDs seleccionados aún estén en estado ready_to_print
+      // PASO 1: Validar que los IDs seleccionados aÃºn estÃ©n en estado ready_to_print
       const validateRes = await fetch("/api/meli-labels/validate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -701,9 +701,9 @@ function EtiquetasInner() {
         already_printed: number[];
       };
 
-      // Si hay ya impresas, avisar pero continuar con las válidas
+      // Si hay ya impresas, avisar pero continuar con las vÃ¡lidas
       if (already_printed.length > 0) {
-        const msg = `${already_printed.length} etiqueta(s) ya fueron impresa(s). Continuaré con las ${valid.length} restantes.`;
+        const msg = `${already_printed.length} etiqueta(s) ya fueron impresa(s). ContinuarÃ© con las ${valid.length} restantes.`;
         if (!window.confirm(msg)) {
           setPrinting(false);
           return;
@@ -753,7 +753,7 @@ function EtiquetasInner() {
         reader.readAsDataURL(pdfBlob);
       });
 
-      // Preparar metadata de los shipments válidos
+      // Preparar metadata de los shipments vÃ¡lidos
       const shipmentsToSave = selectedShipments
         .filter(s => valid.includes(s.shipment_id))
         .map(s => ({
@@ -769,7 +769,7 @@ function EtiquetasInner() {
           shipping_method: s.type,
         }));
 
-      console.log("🔄 Saving print history...", { shipmentsToSave, baseLength: base64.length });
+      console.log("ðŸ”„ Saving print history...", { shipmentsToSave, baseLength: base64.length });
 
       // POST a save-print-batch
       const saveRes = await fetch("/api/meli-labels/save-print-batch", {
@@ -784,14 +784,14 @@ function EtiquetasInner() {
 
       if (!saveRes.ok) {
         const errorData = await saveRes.json();
-        console.error("❌ Save failed:", errorData);
+        console.error("âŒ Save failed:", errorData);
         throw new Error(`Failed to save to history: ${errorData.error || "Unknown error"}`);
       }
 
       const saveData = await saveRes.json();
-      console.log("✅ Saved successfully:", saveData);
+      console.log("âœ… Saved successfully:", saveData);
 
-      // PASO 5: Solo después de guardar exitosamente, marcar como impresas
+      // PASO 5: Solo despuÃ©s de guardar exitosamente, marcar como impresas
       const markRes = await fetch("/api/meli-labels", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -812,16 +812,16 @@ function EtiquetasInner() {
       });
 
       if (!markRes.ok) {
-        console.warn("⚠️ Failed to mark as printed, but PDF was saved");
+        console.warn("âš ï¸ Failed to mark as printed, but PDF was saved");
       }
 
       // Actualizar estado local
       setSelectedIds(new Set());
-      alert(`✅ ${valid.length} etiqueta(s) impresa(s) y guardada(s) en historial`);
+      alert(`âœ… ${valid.length} etiqueta(s) impresa(s) y guardada(s) en historial`);
       load(); // Re-fetch para actualizar contadores
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Unknown error";
-      alert(`❌ Error: ${msg}`);
+      alert(`âŒ Error: ${msg}`);
       console.error("Print error:", e);
     } finally {
       setPrinting(false);
@@ -846,7 +846,7 @@ function EtiquetasInner() {
           <div>
             <h1 className="font-black text-white text-base flex items-center gap-2">
               <Printer className="w-5 h-5" style={{ color: "#FFE600" }} />
-              Gestor de Expedición
+              Gestor de ExpediciÃ³n
             </h1>
             {/* Summary por Cuenta */}
             {data && summaryByAccount.size > 0 && (
@@ -876,7 +876,7 @@ function EtiquetasInner() {
                 border: "1px solid rgba(57,255,20,0.5)",
               }}
             >
-              🧪 MODO PRUEBA
+              ðŸ§ª MODO PRUEBA
             </span>
           )}
           <Link
@@ -888,9 +888,9 @@ function EtiquetasInner() {
               border: testMode ? "1px solid rgba(255,255,255,0.06)" : "1px solid rgba(57,255,20,0.3)",
             }}
           >
-            📋 Historial
+            ðŸ“‹ Historial
           </Link>
-          {/* Botón Modo Test */}
+          {/* BotÃ³n Modo Test */}
           <button
             onClick={handlePrintTest}
             disabled={testLoading}
@@ -910,7 +910,7 @@ function EtiquetasInner() {
               </>
             ) : (
               <>
-                🧪 Test
+                ðŸ§ª Test
               </>
             )}
           </button>
@@ -941,7 +941,7 @@ function EtiquetasInner() {
           </div>
         ) : (
           <>
-            {/* Pestañas de Estado */}
+            {/* PestaÃ±as de Estado */}
             <div className="flex gap-2 mb-4 flex-wrap">
               {(["pending", "printed", "in_transit", "returns"] as StatusTab[]).map(tab => {
                 const counts = {
@@ -952,10 +952,10 @@ function EtiquetasInner() {
                 };
                 const isActive = statusTab === tab;
                 const tabLabels: Record<StatusTab, string> = {
-                  pending: "📥 Pendientes",
-                  printed: "✅ Impresas",
-                  in_transit: "🚚 En Tránsito",
-                  returns: "↩️ Devoluciones",
+                  pending: "ðŸ“¥ Pendientes",
+                  printed: "âœ… Impresas",
+                  in_transit: "ðŸšš En TrÃ¡nsito",
+                  returns: "â†©ï¸ Devoluciones",
                 };
                 return (
                   <button
@@ -984,9 +984,9 @@ function EtiquetasInner() {
               })}
             </div>
 
-            {/* Filtros Logísticos + Filtro de Tiempo */}
+            {/* Filtros LogÃ­sticos + Filtro de Tiempo */}
             <div className="flex gap-2 mb-4 flex-wrap pb-2">
-              {/* Botón TODAS */}
+              {/* BotÃ³n TODAS */}
               <button
                 onClick={() => { setLogisticFilter("todas"); setTimeFilter("all"); setZoneFilter("all"); }}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-2xl text-xs font-bold transition-all whitespace-nowrap"
@@ -996,7 +996,7 @@ function EtiquetasInner() {
                     : { background: "transparent", color: "#9CA3AF", border: "2px solid #9CA3AF40" }
                 }
               >
-                <span className="text-xs">📦</span>
+                <span className="text-xs">ðŸ“¦</span>
                 TODAS
                 <span className="text-[9px] font-black px-1">{countByType("todas", statusTab)}</span>
               </button>
@@ -1034,7 +1034,7 @@ function EtiquetasInner() {
               {/* Separador */}
               <div className="w-px h-8 self-center" style={{ background: "rgba(255,255,255,0.15)" }} />
 
-              {/* Filtros por tipo logístico */}
+              {/* Filtros por tipo logÃ­stico */}
               {(["flex", "correo", "turbo", "full"] as LogisticType[]).map(type => {
                 const cfg = TYPE_CFG[type];
                 const count = countByType(type, statusTab);
@@ -1158,7 +1158,7 @@ function EtiquetasInner() {
                     ) : (
                       <>
                         <Download className="w-4 h-4" />
-                        {statusTab === "printed" ? "Re-imprimir" : "Imprimir"} ({selectedIds.size}) ▼
+                        {statusTab === "printed" ? "Re-imprimir" : "Imprimir"} ({selectedIds.size}) â–¼
                       </>
                     )}
                   </button>
@@ -1175,7 +1175,7 @@ function EtiquetasInner() {
                         className="w-full text-left px-4 py-2 hover:bg-gray-800 text-xs font-bold text-white flex items-center gap-2 rounded-t-lg transition-colors"
                       >
                         <Printer className="w-4 h-4" />
-                        🖨️ {statusTab === "printed" ? "Re-imprimir" : "Imprimir"} Térmica
+                        ðŸ–¨ï¸ {statusTab === "printed" ? "Re-imprimir" : "Imprimir"} TÃ©rmica
                       </button>
                       <div style={{ height: "1px", background: "rgba(255,255,255,0.1)" }}></div>
                       <button
@@ -1186,7 +1186,7 @@ function EtiquetasInner() {
                         className="w-full text-left px-4 py-2 hover:bg-gray-800 text-xs font-bold text-white flex items-center gap-2 rounded-b-lg transition-colors"
                       >
                         <Download className="w-4 h-4" />
-                        📄 {statusTab === "printed" ? "Re-descargar" : "Descargar"} PDF
+                        ðŸ“„ {statusTab === "printed" ? "Re-descargar" : "Descargar"} PDF
                       </button>
                     </div>
                   )}
@@ -1194,7 +1194,7 @@ function EtiquetasInner() {
               </div>
             )}
 
-            {/* Botón Imprimir Seleccionadas (versión antigua - removida) */}
+            {/* BotÃ³n Imprimir Seleccionadas (versiÃ³n antigua - removida) */}
 
             {/* Lista de Etiquetas */}
             {filtered.length === 0 ? (
@@ -1212,8 +1212,8 @@ function EtiquetasInner() {
                 </p>
               </div>
             ) : statusTab === "pending" ? (() => {
-              // Agrupar pendientes: DEMORADAS → HOY → PRÓXIMOS
-              // Regla: después de las 13:00, envíos de hoy pasan a "próximos"
+              // Agrupar pendientes: DEMORADAS â†’ HOY â†’ PRÃ“XIMOS
+              // Regla: despuÃ©s de las 13:00, envÃ­os de hoy pasan a "prÃ³ximos"
               const now = new Date();
               const localYear = now.getFullYear();
               const localMonth = String(now.getMonth() + 1).padStart(2, "0");
@@ -1236,7 +1236,7 @@ function EtiquetasInner() {
                 return cutoffPassed ? false : d === todayStr;
               });
 
-              // Próximos: dispatch_date > hoy, o = hoy después de las 13:00
+              // PrÃ³ximos: dispatch_date > hoy, o = hoy despuÃ©s de las 13:00
               const futureShipments = filtered.filter(s => {
                 if (!s.dispatch_date) return cutoffPassed;
                 const d = s.dispatch_date.split("T")[0];

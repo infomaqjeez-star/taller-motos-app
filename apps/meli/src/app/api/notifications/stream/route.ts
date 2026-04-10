@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 
-// Forzar renderizado dinámico - evita error de generación estática y timeout
+// Forzar renderizado dinÃ¡mico - evita error de generaciÃ³n estÃ¡tica y timeout
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
@@ -8,7 +8,7 @@ export const runtime = 'nodejs';
  * GET /api/notifications/stream
  * 
  * Endpoint SSE (Server-Sent Events) para notificaciones en tiempo real.
- * Envía notificaciones de Mercado Libre a los clientes conectados.
+ * EnvÃ­a notificaciones de Mercado Libre a los clientes conectados.
  */
 export async function GET(request: NextRequest) {
   const encoder = new TextEncoder();
@@ -16,11 +16,11 @@ export async function GET(request: NextRequest) {
   // Crear stream SSE
   const stream = new ReadableStream({
     start(controller) {
-      // Enviar evento inicial de conexión
+      // Enviar evento inicial de conexiÃ³n
       const initialEvent = `event: connected\ndata: ${JSON.stringify({ status: "connected", timestamp: new Date().toISOString() })}\n\n`;
       controller.enqueue(encoder.encode(initialEvent));
 
-      // Enviar heartbeat cada 30 segundos para mantener la conexión viva
+      // Enviar heartbeat cada 30 segundos para mantener la conexiÃ³n viva
       const heartbeatInterval = setInterval(() => {
         try {
           const heartbeat = `event: heartbeat\ndata: ${JSON.stringify({ timestamp: new Date().toISOString() })}\n\n`;

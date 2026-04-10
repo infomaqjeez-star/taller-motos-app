@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-// Forzar renderizado dinámico - evita error de generación estática
+// Forzar renderizado dinÃ¡mico - evita error de generaciÃ³n estÃ¡tica
 export const dynamic = 'force-dynamic';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
@@ -20,7 +20,7 @@ const supabase = createClient(
  */
 export async function GET(request: NextRequest) {
   try {
-    // Obtener el usuario actual de la sesión
+    // Obtener el usuario actual de la sesiÃ³n
     const authHeader = request.headers.get("authorization");
     let userId: string | null = null;
 
@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Si no hay usuario autenticado, devolver array vacío
+    // Si no hay usuario autenticado, devolver array vacÃ­o
     if (!userId) {
       return NextResponse.json([]);
     }
@@ -90,7 +90,7 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    // Obtener el usuario actual de la sesión
+    // Obtener el usuario actual de la sesiÃ³n
     const authHeader = request.headers.get("authorization");
     let userId: string | null = null;
 
@@ -144,7 +144,7 @@ export async function PATCH(request: NextRequest) {
 /**
  * DELETE /api/meli-accounts
  * 
- * Desactiva (elimina lógicamente) una cuenta de Mercado Libre.
+ * Desactiva (elimina lÃ³gicamente) una cuenta de Mercado Libre.
  */
 export async function DELETE(request: NextRequest) {
   try {
@@ -158,7 +158,7 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // Obtener el usuario actual de la sesión
+    // Obtener el usuario actual de la sesiÃ³n
     const authHeader = request.headers.get("authorization");
     let userId: string | null = null;
 

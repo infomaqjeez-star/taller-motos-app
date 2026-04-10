@@ -88,7 +88,7 @@ function PostVentaContent() {
           <div className="flex items-center gap-2">
             <AlertTriangle className="w-5 h-5" style={{ color: "#EF4444" }} />
             <h1 className="font-black text-lg text-white">
-              Gestión Post-Venta {selectedAccount ? `- @${selectedAccount}` : "(Unificada)"}
+              GestiÃ³n Post-Venta {selectedAccount ? `- @${selectedAccount}` : "(Unificada)"}
             </h1>
           </div>
           <Link
@@ -146,7 +146,7 @@ function PostVentaContent() {
                         className="w-6 h-6 rounded text-xs font-bold flex items-center justify-center flex-shrink-0"
                         style={{ background: "#FFE600", color: "#121212" }}
                       >
-                        📦
+                        ðŸ“¦
                       </span>
                       <span className="truncate">{acc.account_name}</span>
                     </div>
@@ -207,12 +207,12 @@ function PostVentaContent() {
                         }}
                       >
                         {acc.reputation_risk === "critical"
-                          ? "🚨 Crítico"
+                          ? "ðŸš¨ CrÃ­tico"
                           : acc.reputation_risk === "high"
-                            ? "⚠️ Alto"
+                            ? "âš ï¸ Alto"
                             : acc.reputation_risk === "medium"
-                              ? "⚠ Medio"
-                              : "✓ Bajo"}
+                              ? "âš  Medio"
+                              : "âœ“ Bajo"}
                       </span>
                     </div>
                   </div>

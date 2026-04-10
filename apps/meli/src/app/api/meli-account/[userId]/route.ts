@@ -12,8 +12,8 @@ const supabase = createClient(
 /**
  * GET /api/meli-account/[userId]
  * 
- * Obtiene los datos detallados de una cuenta específica de Mercado Libre.
- * Incluye reputación, publicaciones activas y estadísticas de stock.
+ * Obtiene los datos detallados de una cuenta especÃ­fica de Mercado Libre.
+ * Incluye reputaciÃ³n, publicaciones activas y estadÃ­sticas de stock.
  */
 export async function GET(
   request: NextRequest,
@@ -72,7 +72,7 @@ export async function GET(
       console.error("[meli-account] Error obteniendo items:", itemsError);
     }
 
-    // Calcular estadísticas
+    // Calcular estadÃ­sticas
     const activeItems = items || [];
     const totalActiveItems = activeItems.length;
     const itemsLowStock = activeItems.filter((item) => 
@@ -82,7 +82,7 @@ export async function GET(
       item.available_quantity === 0
     ).length;
 
-    // Construir respuesta con datos de reputación por defecto
+    // Construir respuesta con datos de reputaciÃ³n por defecto
     const responseData = {
       reputation: {
         level_id: null,

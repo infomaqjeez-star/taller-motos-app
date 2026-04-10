@@ -9,8 +9,8 @@ interface Props {
 }
 
 /**
- * Badge dinámico de reputación como en MercadoLibre
- * Muestra nivel de vendedor + poder vendedor (Mercadolíder, Gold, Platinum)
+ * Badge dinÃ¡mico de reputaciÃ³n como en MercadoLibre
+ * Muestra nivel de vendedor + poder vendedor (MercadolÃ­der, Gold, Platinum)
  */
 export default function ReputationBadge({ levelId, levelName, powerSellerStatus }: Props) {
   // Mapeo de colores para cada nivel
@@ -24,7 +24,7 @@ export default function ReputationBadge({ levelId, levelName, powerSellerStatus 
 
   const colors = colorMap[levelId ?? ""] || colorMap["3_yellow"];
 
-  // Determinar ícono según poder vendedor
+  // Determinar Ã­cono segÃºn poder vendedor
   const getPowerSellerIcon = () => {
     if (powerSellerStatus === "platinum") {
       return <Award className="w-3 h-3" />;
@@ -41,7 +41,7 @@ export default function ReputationBadge({ levelId, levelName, powerSellerStatus 
   const getPowerSellerLabel = () => {
     if (powerSellerStatus === "platinum") return "Platinum";
     if (powerSellerStatus === "gold") return "Gold";
-    if (powerSellerStatus === "silver") return "MercadoLíder";
+    if (powerSellerStatus === "silver") return "MercadoLÃ­der";
     return null;
   };
 
@@ -64,7 +64,7 @@ export default function ReputationBadge({ levelId, levelName, powerSellerStatus 
 
   return (
     <div className="flex items-center gap-2 flex-wrap">
-      {/* Badge de nivel de reputación */}
+      {/* Badge de nivel de reputaciÃ³n */}
       <div
         className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-bold"
         style={{

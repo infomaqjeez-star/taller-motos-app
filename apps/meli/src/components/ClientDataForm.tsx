@@ -59,7 +59,7 @@ export default function ClientDataForm({ initialData = {}, onClientDataChange }:
           </span>
         ) : (
           <span className="text-xs px-2 py-1 rounded-lg" style={{ background: "#39FF1415", color: "#39FF14" }}>
-            ✓ Datos cargados
+            âœ“ Datos cargados
           </span>
         )}
       </div>
@@ -73,7 +73,7 @@ export default function ClientDataForm({ initialData = {}, onClientDataChange }:
           </label>
           <input
             type="text"
-            placeholder="Ej: Juan García"
+            placeholder="Ej: Juan GarcÃ­a"
             value={nombre}
             onChange={(e) => setNombre(e.target.value)}
             className="input input-sm w-full"
@@ -94,10 +94,10 @@ export default function ClientDataForm({ initialData = {}, onClientDataChange }:
           />
         </div>
 
-        {/* Dirección */}
+        {/* DirecciÃ³n */}
         <div>
           <label className="text-xs text-gray-500 font-semibold mb-1 flex items-center gap-1">
-            <MapPin className="w-3 h-3" /> Dirección
+            <MapPin className="w-3 h-3" /> DirecciÃ³n
           </label>
           <input
             type="text"
@@ -108,10 +108,10 @@ export default function ClientDataForm({ initialData = {}, onClientDataChange }:
           />
         </div>
 
-        {/* Teléfono */}
+        {/* TelÃ©fono */}
         <div>
           <label className="text-xs text-gray-500 font-semibold mb-1 flex items-center gap-1">
-            📱 Teléfono
+            ðŸ“± TelÃ©fono
           </label>
           <input
             type="tel"

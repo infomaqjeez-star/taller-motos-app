@@ -1,8 +1,8 @@
 /**
- * Spooler Agent client — communicates with the local print agent
+ * Spooler Agent client â€” communicates with the local print agent
  * running on http://localhost:7070.
  *
- * Print chain priority: WebUSB → Spooler Agent → QZ Tray → File Download
+ * Print chain priority: WebUSB â†’ Spooler Agent â†’ QZ Tray â†’ File Download
  */
 
 const AGENT_URL = "http://localhost:7070";

@@ -42,7 +42,7 @@ interface SseDone {
 
 const STATUS_CFG: Record<string, { color: string; label: string }> = {
   updated:         { color: "#39FF14", label: "ACTUALIZADO" },
-  catalog_warning: { color: "#FFE600", label: "CATÁLOGO" },
+  catalog_warning: { color: "#FFE600", label: "CATÃLOGO" },
   skipped:         { color: "#4B5563", label: "OMITIDO" },
   excluded:        { color: "#F97316", label: "EXCLUIDO" },
   error:           { color: "#EF4444", label: "ERROR" },
@@ -53,7 +53,7 @@ const ADJ_TYPES: Array<{
   value: AdjustmentType; label: string; desc: string;
   icon: React.ReactNode; color: string; placeholder: string; prefix: string;
 }> = [
-  { value: "fixed_floor", label: "Precio Piso",  desc: "Solo sube si está por debajo",
+  { value: "fixed_floor", label: "Precio Piso",  desc: "Solo sube si estÃ¡ por debajo",
     icon: <TrendingUp className="w-4 h-4" />, color: "#39FF14", placeholder: "15000", prefix: "$" },
   { value: "percentage",  label: "Porcentaje",    desc: "Multiplica el precio actual",
     icon: <Percent className="w-4 h-4" />,   color: "#FFE600", placeholder: "10",    prefix: "%" },
@@ -96,7 +96,7 @@ function PreciosInner() {
     if (!v) return null;
     const sample = 10000;
     const r = adjType === "percentage" ? sample * (1 + v / 100) : adjType === "fixed_add" ? sample + v : v;
-    return `Ej: $${sample.toLocaleString("es-AR")} → $${Math.round(r).toLocaleString("es-AR")}`;
+    return `Ej: $${sample.toLocaleString("es-AR")} â†’ $${Math.round(r).toLocaleString("es-AR")}`;
   };
 
   const handleStop = useCallback(() => {
@@ -201,7 +201,7 @@ function PreciosInner() {
 
           {/* Palabra clave */}
           <div>
-            <label className="text-xs font-bold text-gray-400 mb-1.5 block">Palabra clave en el título</label>
+            <label className="text-xs font-bold text-gray-400 mb-1.5 block">Palabra clave en el tÃ­tulo</label>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: "#6B7280" }} />
               <input value={keyword} onChange={e => setKeyword(e.target.value)}
@@ -209,7 +209,7 @@ function PreciosInner() {
                 className="w-full pl-9 pr-3 py-2.5 rounded-xl text-sm text-white outline-none"
                 style={{ background: "#121212", border: "1px solid rgba(255,255,255,0.1)" }} />
             </div>
-            <p className="text-[10px] mt-1" style={{ color: "#6B7280" }}>Sin distinción de mayúsculas, tildes ni espacios</p>
+            <p className="text-[10px] mt-1" style={{ color: "#6B7280" }}>Sin distinciÃ³n de mayÃºsculas, tildes ni espacios</p>
           </div>
 
           {/* Palabras excluyentes */}
@@ -223,20 +223,20 @@ function PreciosInner() {
               className="w-full px-3 py-2.5 rounded-xl text-sm text-white outline-none"
               style={{ background: "#121212", border: "1px solid #F9741633" }} />
             <p className="text-[10px] mt-1" style={{ color: "#6B7280" }}>
-              Si el título contiene alguna de estas palabras, la publicación se omite aunque coincida con la clave
+              Si el tÃ­tulo contiene alguna de estas palabras, la publicaciÃ³n se omite aunque coincida con la clave
             </p>
           </div>
 
-          {/* Limpiar caché */}
+          {/* Limpiar cachÃ© */}
           <button onClick={() => setClearCache(v => !v)}
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all"
             style={{ background: clearCache ? "#EF444418" : "#121212", border: `1px solid ${clearCache ? "#EF444455" : "rgba(255,255,255,0.08)"}` }}>
             <div className="w-4 h-4 rounded flex-shrink-0 flex items-center justify-center border"
               style={{ background: clearCache ? "#EF4444" : "transparent", borderColor: clearCache ? "#EF4444" : "#4B5563" }}>
-              {clearCache && <span className="text-white text-[10px] font-black">✓</span>}
+              {clearCache && <span className="text-white text-[10px] font-black">âœ“</span>}
             </div>
             <div className="text-left">
-              <p className="text-xs font-black" style={{ color: clearCache ? "#EF4444" : "#9CA3AF" }}>Limpiar caché de esta keyword</p>
+              <p className="text-xs font-black" style={{ color: clearCache ? "#EF4444" : "#9CA3AF" }}>Limpiar cachÃ© de esta keyword</p>
               <p className="text-[10px]" style={{ color: "#6B7280" }}>Vuelve a revisar TODAS las publicaciones, incluso las ya escaneadas</p>
             </div>
           </button>
@@ -283,7 +283,7 @@ function PreciosInner() {
                 style={selectedAcc === "all"
                   ? { background: "#FFE600", color: "#121212", borderColor: "#FFE600" }
                   : { background: "transparent", color: "#9CA3AF", borderColor: "rgba(255,255,255,0.15)" }}>
-                ★ Todas
+                â˜… Todas
               </button>
               {accounts.map(a => (
                 <button key={a.meli_user_id} onClick={() => setSelectedAcc(String(a.meli_user_id))}
@@ -365,7 +365,7 @@ function PreciosInner() {
               </div>
             )}
 
-            {/* Ítem actual */}
+            {/* Ãtem actual */}
             {progress && (
               <div className="rounded-xl px-3 py-2" style={{ background: "#121212" }}>
                 <div className="flex items-center gap-2 mb-1">
@@ -381,7 +381,7 @@ function PreciosInner() {
                 <p className="text-xs text-white line-clamp-1">{progress.title}</p>
                 {progress.old_price != null && progress.new_price != null && (
                   <p className="text-[10px] mt-0.5 font-bold" style={{ color: activeCfg.color }}>
-                    ${progress.old_price.toLocaleString("es-AR")} → ${progress.new_price.toLocaleString("es-AR")}
+                    ${progress.old_price.toLocaleString("es-AR")} â†’ ${progress.new_price.toLocaleString("es-AR")}
                   </p>
                 )}
               </div>
@@ -397,7 +397,7 @@ function PreciosInner() {
                 style={{ background: "#EF444418", border: "1px solid #EF444430" }}>
                 <Square className="w-4 h-4" style={{ color: "#EF4444" }} />
                 <p className="text-sm font-black" style={{ color: "#EF4444" }}>
-                  Proceso detenido — {summary.updated} actualizados hasta el momento
+                  Proceso detenido â€” {summary.updated} actualizados hasta el momento
                 </p>
               </div>
             )}
@@ -449,7 +449,7 @@ function PreciosInner() {
                         <span style={{ color: "#6B7280" }}>${r.old_price.toLocaleString("es-AR")}</span>
                         {r.status !== "skipped" && r.status !== "excluded" && (
                           <>
-                            <span style={{ color: "#6B7280" }}>→</span>
+                            <span style={{ color: "#6B7280" }}>â†’</span>
                             <span className="font-black" style={{ color: "#39FF14" }}>
                               ${r.new_price.toLocaleString("es-AR")}
                             </span>

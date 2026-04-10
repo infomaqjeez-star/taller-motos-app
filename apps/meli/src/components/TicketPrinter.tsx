@@ -96,7 +96,7 @@ export default function TicketPrinter({ isOpen, venta, clientData, onClose }: Pr
                   <td style={{ width: "50%" }}>
                     <h1 style={{ margin: "0", color: "#000", fontSize: "28px" }}>MAQJEEZ</h1>
                     <p style={{ margin: "5px 0", fontWeight: "bold", fontSize: "12px" }}>
-                      Venta de Maquinaria y Servicios Técnicos
+                      Venta de Maquinaria y Servicios TÃ©cnicos
                     </p>
                     <p style={{ margin: "0", fontSize: "11px", color: "#666" }}>
                       Carlos Spegazzini, Ezeiza - Buenos Aires
@@ -117,7 +117,7 @@ export default function TicketPrinter({ isOpen, venta, clientData, onClose }: Pr
                         fontSize: "12px",
                       }}
                     >
-                      NO VÁLIDO COMO FACTURA
+                      NO VÃLIDO COMO FACTURA
                     </div>
                   </td>
                 </tr>
@@ -147,10 +147,10 @@ export default function TicketPrinter({ isOpen, venta, clientData, onClose }: Pr
                   </tr>
                   <tr>
                     <td>
-                      <strong>Dirección:</strong> {clientDir}
+                      <strong>DirecciÃ³n:</strong> {clientDir}
                     </td>
                     <td>
-                      <strong>Teléfono:</strong> {clientTel}
+                      <strong>TelÃ©fono:</strong> {clientTel}
                     </td>
                   </tr>
                 </table>
@@ -169,7 +169,7 @@ export default function TicketPrinter({ isOpen, venta, clientData, onClose }: Pr
                   <tr style={{ backgroundColor: "#000", color: "#fff" }}>
                     <th style={{ padding: "10px", textAlign: "left", border: "1px solid #000", width: "10%" }}>Cant.</th>
                     <th style={{ padding: "10px", textAlign: "left", border: "1px solid #000", width: "45%" }}>
-                      Descripción del Producto / Servicio
+                      DescripciÃ³n del Producto / Servicio
                     </th>
                     <th style={{ padding: "10px", textAlign: "right", border: "1px solid #000", width: "20%" }}>Precio Unit.</th>
                     <th style={{ padding: "10px", textAlign: "right", border: "1px solid #000", width: "25%" }}>Subtotal</th>
@@ -212,8 +212,8 @@ export default function TicketPrinter({ isOpen, venta, clientData, onClose }: Pr
 
               {/* Pie */}
               <div style={{ marginTop: "50px", textAlign: "center", fontSize: "11px", color: "#777" }}>
-                <p>Gracias por confiar en MaqJeez para sus herramientas y servicios técnicos.</p>
-                <p>Este documento es un resumen de operación comercial interna.</p>
+                <p>Gracias por confiar en MaqJeez para sus herramientas y servicios tÃ©cnicos.</p>
+                <p>Este documento es un resumen de operaciÃ³n comercial interna.</p>
               </div>
             </div>
           </div>

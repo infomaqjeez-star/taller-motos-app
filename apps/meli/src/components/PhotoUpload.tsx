@@ -60,7 +60,7 @@ export default function PhotoUpload({ urls, onChange, maxPhotos = 5 }: Props) {
         newUrls.push(data.publicUrl);
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
-        alert(`Error al subir foto ${i + 1}: ${msg}\n\nAsegurate de que el bucket "fotos-maquinas" existe y es público en Supabase Storage.`);
+        alert(`Error al subir foto ${i + 1}: ${msg}\n\nAsegurate de que el bucket "fotos-maquinas" existe y es pÃºblico en Supabase Storage.`);
       }
     }
 
@@ -96,7 +96,7 @@ export default function PhotoUpload({ urls, onChange, maxPhotos = 5 }: Props) {
           </div>
         ))}
 
-        {/* Botón agregar */}
+        {/* BotÃ³n agregar */}
         {canAdd && (
           <button
             type="button"
@@ -106,7 +106,7 @@ export default function PhotoUpload({ urls, onChange, maxPhotos = 5 }: Props) {
                        flex flex-col items-center justify-center gap-1 text-gray-500 hover:text-orange-400"
           >
             <ImagePlus className="w-6 h-6" />
-            <span className="text-xs font-semibold">Añadir</span>
+            <span className="text-xs font-semibold">AÃ±adir</span>
           </button>
         )}
 
@@ -120,7 +120,7 @@ export default function PhotoUpload({ urls, onChange, maxPhotos = 5 }: Props) {
         )}
       </div>
 
-      {/* Input oculto — acepta cámara en móvil */}
+      {/* Input oculto â€” acepta cÃ¡mara en mÃ³vil */}
       <input
         ref={inputRef}
         type="file"
@@ -133,7 +133,7 @@ export default function PhotoUpload({ urls, onChange, maxPhotos = 5 }: Props) {
 
       <div className="flex items-center justify-between">
         <p className="text-xs text-gray-500">
-          {urls.length}/{maxPhotos} fotos · Se comprimen automáticamente antes de subir
+          {urls.length}/{maxPhotos} fotos Â· Se comprimen automÃ¡ticamente antes de subir
         </p>
         {urls.length === 0 && (
           <button
@@ -142,7 +142,7 @@ export default function PhotoUpload({ urls, onChange, maxPhotos = 5 }: Props) {
             className="btn-secondary btn-sm rounded-xl flex items-center gap-2"
           >
             <Camera className="w-4 h-4 text-orange-400" />
-            Abrir Cámara
+            Abrir CÃ¡mara
           </button>
         )}
       </div>

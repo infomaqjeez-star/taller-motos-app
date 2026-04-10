@@ -24,11 +24,11 @@ interface Props {
 }
 
 /**
- * Tabla de publicaciones activas con información de stock en tiempo real
+ * Tabla de publicaciones activas con informaciÃ³n de stock en tiempo real
  * Muestra indicadores visuales de disponibilidad
  */
 export default function ItemsTable({ items, stats }: Props) {
-  // Validar que items sea un array válido
+  // Validar que items sea un array vÃ¡lido
   const validItems = Array.isArray(items) ? items.filter(item => item && typeof item === 'object') : [];
   const validStats = stats || { total_active_items: 0, items_low_stock: 0, items_out_of_stock: 0 };
   /**
@@ -36,12 +36,12 @@ export default function ItemsTable({ items, stats }: Props) {
    */
   const getStockIndicator = (availableQty: number) => {
     if (availableQty === 0) {
-      return { icon: "🔴", label: "Sin stock", color: "#ef4444" };
+      return { icon: "ðŸ”´", label: "Sin stock", color: "#ef4444" };
     }
     if (availableQty <= 10) {
-      return { icon: "🟡", label: "Stock bajo", color: "#FFE600" };
+      return { icon: "ðŸŸ¡", label: "Stock bajo", color: "#FFE600" };
     }
-    return { icon: "🟢", label: "En stock", color: "#39FF14" };
+    return { icon: "ðŸŸ¢", label: "En stock", color: "#39FF14" };
   };
 
   /**
@@ -98,7 +98,7 @@ export default function ItemsTable({ items, stats }: Props) {
         <table className="w-full text-xs">
           <thead>
             <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
-              <th className="text-left p-2 font-bold text-gray-400">Título</th>
+              <th className="text-left p-2 font-bold text-gray-400">TÃ­tulo</th>
               <th className="text-center p-2 font-bold text-gray-400">Stock</th>
               <th className="text-right p-2 font-bold text-gray-400">Precio</th>
             </tr>
@@ -121,13 +121,13 @@ export default function ItemsTable({ items, stats }: Props) {
                           : "transparent",
                   }}
                 >
-                  {/* Título */}
+                  {/* TÃ­tulo */}
                   <td className="p-2">
                     <p
                       className="truncate text-gray-300"
-                      title={item.title || "Sin título"}
+                      title={item.title || "Sin tÃ­tulo"}
                     >
-                      {(item.title || "Sin título").substring(0, 30)}...
+                      {(item.title || "Sin tÃ­tulo").substring(0, 30)}...
                     </p>
                   </td>
 

@@ -40,7 +40,7 @@ export default function UrgentMetrics({
     },
     {
       icon: <Truck className="w-4 h-4" />,
-      label: "Envíos",
+      label: "EnvÃ­os",
       value: shipments,
       color: "#00E5FF",
       onClick: onShipmentsClick,
@@ -72,7 +72,7 @@ export default function UrgentMetrics({
               cursor: metric.onClick ? "pointer" : "default",
             }}
           >
-            {/* Ícono + Valor */}
+            {/* Ãcono + Valor */}
             <div className="flex items-center justify-between">
               <span style={{ color: metric.value > 0 ? metric.color : "#6B7280" }}>
                 {metric.icon}

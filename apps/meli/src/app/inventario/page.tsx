@@ -68,11 +68,11 @@ export default function InventarioPage() {
   };
 
   const handleDeleteStock = (id: string) => {
-    if (confirm("¿Eliminar este repuesto del stock?")) deleteStock(id);
+    if (confirm("Â¿Eliminar este repuesto del stock?")) deleteStock(id);
   };
 
   const handleDeletePart = (id: string) => {
-    if (confirm("¿Eliminar este pedido?")) deletePart(id);
+    if (confirm("Â¿Eliminar este pedido?")) deletePart(id);
   };
 
   return (
@@ -125,7 +125,7 @@ export default function InventarioPage() {
               <div className="card flex flex-col items-center py-14 text-center">
                 <Package className="w-12 h-12 text-gray-700 mb-4" />
                 <p className="text-gray-400 font-semibold">No hay repuestos en stock</p>
-                <p className="text-gray-600 text-sm mt-1">Tocá el botón naranja para agregar</p>
+                <p className="text-gray-600 text-sm mt-1">TocÃ¡ el botÃ³n naranja para agregar</p>
               </div>
             ) : (
               stock.map((item) => {
@@ -198,7 +198,7 @@ export default function InventarioPage() {
               <div className="card flex flex-col items-center py-14 text-center">
                 <ShoppingCart className="w-12 h-12 text-gray-700 mb-4" />
                 <p className="text-gray-400 font-semibold">No hay pedidos pendientes</p>
-                <p className="text-gray-600 text-sm mt-1">Tocá el botón naranja para agregar un pedido</p>
+                <p className="text-gray-600 text-sm mt-1">TocÃ¡ el botÃ³n naranja para agregar un pedido</p>
               </div>
             ) : (
               partsToOrder.map((part) => {
@@ -227,7 +227,7 @@ export default function InventarioPage() {
                         )}
                       </div>
                       <div className="flex items-center gap-2 flex-shrink-0">
-                        {/* Toggle rápido de estado */}
+                        {/* Toggle rÃ¡pido de estado */}
                         {part.status !== "recibido" && (
                           <button
                             onClick={() =>

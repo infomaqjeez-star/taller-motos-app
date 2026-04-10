@@ -63,7 +63,7 @@ function filtrarPorPeriodo(envios: FlexEnvio[], periodo: Periodo): FlexEnvio[] {
   });
 }
 
-// Agrupa envíos por fecha YYYY-MM-DD y cuenta por zona
+// Agrupa envÃ­os por fecha YYYY-MM-DD y cuenta por zona
 function agruparPorDia(envios: FlexEnvio[]): { fecha: string; cercana: number; media: number; lejana: number }[] {
   const map: Record<string, { cercana: number; media: number; lejana: number }> = {};
   envios.forEach(e => {
@@ -95,12 +95,12 @@ export default function FlexPage() {
   useEffect(() => { load(); }, []);
 
   const handleDelete = async (id: string) => {
-    if (!confirm("¿Eliminar este envío?")) return;
+    if (!confirm("Â¿Eliminar este envÃ­o?")) return;
     await flexDb.delete(id);
     await load();
   };
 
-  // ── Stats generales ──
+  // â”€â”€ Stats generales â”€â”€
   const stats = useMemo(() => {
     const filtered = filterZona === "todas" ? envios : envios.filter(e => e.zona === filterZona);
     const totalML       = filtered.reduce((s, e) => s + e.precioML, 0);
@@ -123,7 +123,7 @@ export default function FlexPage() {
     return { totalML, totalFlete, totalGanancia, porZona, topLocalidades, filtered };
   }, [envios, filterZona]);
 
-  // ── Stats por período ──
+  // â”€â”€ Stats por perÃ­odo â”€â”€
   const grafStats = useMemo(() => {
     const base = filtrarPorPeriodo(envios, periodo);
     const total   = base.length;
@@ -152,8 +152,8 @@ export default function FlexPage() {
               <Truck className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-black text-white">Logística Flex</h1>
-              <p className="text-gray-400 text-sm">Mercado Libre — Control de envíos y descuentos</p>
+              <h1 className="text-2xl font-black text-white">LogÃ­stica Flex</h1>
+              <p className="text-gray-400 text-sm">Mercado Libre â€” Control de envÃ­os y descuentos</p>
             </div>
           </div>
           <div className="flex gap-2">
@@ -219,14 +219,14 @@ export default function FlexPage() {
           </div>
         </div>
 
-        {/* ══════════════════════════════════════
-            ZONA DE GRÁFICOS
-        ══════════════════════════════════════ */}
+        {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+            ZONA DE GRÃFICOS
+        â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
         <div className="bg-gray-800/60 rounded-2xl border border-gray-700 p-5 space-y-5">
-          {/* Header gráficos + selector período */}
+          {/* Header grÃ¡ficos + selector perÃ­odo */}
           <div className="flex items-center justify-between flex-wrap gap-3">
             <h2 className="text-white font-bold flex items-center gap-2">
-              <BarChart2 className="w-4 h-4 text-yellow-400" /> Análisis de Envíos
+              <BarChart2 className="w-4 h-4 text-yellow-400" /> AnÃ¡lisis de EnvÃ­os
             </h2>
             <div className="flex items-center gap-1 bg-gray-900/60 rounded-xl p-1 border border-gray-700">
               {(["dia", "semana", "mes"] as Periodo[]).map(p => (
@@ -245,7 +245,7 @@ export default function FlexPage() {
             </div>
           </div>
 
-          {/* Mini resumen del período */}
+          {/* Mini resumen del perÃ­odo */}
           <div className="grid grid-cols-2 gap-3">
             <div className="bg-gray-900/50 rounded-xl p-3 flex items-center gap-3">
               <Package className="w-8 h-8 text-yellow-400 flex-shrink-0" />
@@ -263,12 +263,12 @@ export default function FlexPage() {
               <div>
                 <p className="text-gray-400 text-xs">Descuento</p>
                 <p className="text-green-300 font-black text-xl leading-tight">{fmt(grafStats.ganancia)}</p>
-                <p className="text-gray-500 text-xs">20% de gestión</p>
+                <p className="text-gray-500 text-xs">20% de gestiÃ³n</p>
               </div>
             </div>
           </div>
 
-          {/* Gráfico de barras por zona */}
+          {/* GrÃ¡fico de barras por zona */}
           <div className="space-y-2">
             <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider">Paquetes por Zona</p>
             {grafStats.porZona.map(({ zona, count }) => {
@@ -295,11 +295,11 @@ export default function FlexPage() {
             })}
           </div>
 
-          {/* Gráfico de barras apiladas por día */}
+          {/* GrÃ¡fico de barras apiladas por dÃ­a */}
           {grafStats.dias.length > 0 && (
             <div className="space-y-2">
               <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider">
-                Paquetes por Día {periodo === "dia" ? "(hoy)" : periodo === "semana" ? "(esta semana)" : "(este mes)"}
+                Paquetes por DÃ­a {periodo === "dia" ? "(hoy)" : periodo === "semana" ? "(esta semana)" : "(este mes)"}
               </p>
               <div className="flex items-end gap-1.5 h-28 overflow-x-auto pb-1">
                 {grafStats.dias.map(d => {
@@ -337,7 +337,7 @@ export default function FlexPage() {
           )}
 
           {grafStats.total === 0 && (
-            <p className="text-gray-500 text-sm text-center py-4">Sin datos para el período seleccionado</p>
+            <p className="text-gray-500 text-sm text-center py-4">Sin datos para el perÃ­odo seleccionado</p>
           )}
         </div>
 
@@ -345,7 +345,7 @@ export default function FlexPage() {
         {stats.topLocalidades.length > 0 && (
           <div className="bg-gray-800/60 rounded-2xl border border-gray-700 p-5 space-y-3">
             <h2 className="text-white font-bold flex items-center gap-2">
-              <MapPin className="w-4 h-4 text-yellow-400" /> Top 5 Localidades más Rentables
+              <MapPin className="w-4 h-4 text-yellow-400" /> Top 5 Localidades mÃ¡s Rentables
             </h2>
             <div className="space-y-2">
               {stats.topLocalidades.map(([loc, data], i) => {
@@ -361,7 +361,7 @@ export default function FlexPage() {
                     </div>
                     <div className="text-right">
                       <p className="text-green-300 font-bold text-sm">{fmt(data.ganancia)}</p>
-                      <p className="text-gray-400 text-xs">{data.count} envíos</p>
+                      <p className="text-gray-400 text-xs">{data.count} envÃ­os</p>
                     </div>
                   </div>
                 );
@@ -370,7 +370,7 @@ export default function FlexPage() {
           </div>
         )}
 
-        {/* Filtro + lista de envíos */}
+        {/* Filtro + lista de envÃ­os */}
         <div className="space-y-3">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-gray-400 text-sm">Filtrar:</span>
@@ -396,8 +396,8 @@ export default function FlexPage() {
           ) : stats.filtered.length === 0 ? (
             <div className="text-center py-12 text-gray-500">
               <Package className="w-12 h-12 mx-auto mb-3 opacity-30" />
-              <p className="font-semibold">Sin envíos registrados</p>
-              <p className="text-sm">Usá &quot;Escanear&quot; para cargar envíos con la cámara</p>
+              <p className="font-semibold">Sin envÃ­os registrados</p>
+              <p className="text-sm">UsÃ¡ &quot;Escanear&quot; para cargar envÃ­os con la cÃ¡mara</p>
             </div>
           ) : (
             <div className="space-y-3">

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-// Forzar renderizado din�mico - evita error de generaci�n est�tica
+// Forzar renderizado dinámico - evita error de generación estática
 export const dynamic = 'force-dynamic';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
@@ -15,7 +15,7 @@ const supabase = createClient(
 /**
  * POST /api/meli-labels/validate
  * 
- * Valida que las órdenes existan y estén listas para imprimir.
+ * Valida que las Ã³rdenes existan y estÃ©n listas para imprimir.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
 
     const accountIds = accounts.map(a => a.id);
 
-    // Verificar que las órdenes existan y pertenezcan al usuario
+    // Verificar que las Ã³rdenes existan y pertenezcan al usuario
     const { data: orders, error } = await supabase
       .from("meli_orders")
       .select("order_id, status, printed")
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       return NextResponse.json(
-        { error: "Error al validar órdenes" },
+        { error: "Error al validar Ã³rdenes" },
         { status: 500 }
       );
     }

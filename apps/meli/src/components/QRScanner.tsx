@@ -43,12 +43,12 @@ function extractShipmentId(qrData: string): string {
   return match ? match[1] : qrData.slice(0, 30);
 }
 
-// Mapa de CPs argentinos → Localidad (zonas de entrega MAQJEEZ)
+// Mapa de CPs argentinos â†’ Localidad (zonas de entrega MAQJEEZ)
 const CP_MAP: Record<string, string> = {
   // Ezeiza
   "1802": "Ezeiza", "1803": "Ezeiza", "1804": "Ezeiza",
-  // Esteban Echeverría
-  "1843": "Esteban Echeverría", "1844": "Esteban Echeverría",
+  // Esteban EcheverrÃ­a
+  "1843": "Esteban EcheverrÃ­a", "1844": "Esteban EcheverrÃ­a",
   // CABA (rangos)
   "1000": "CABA","1001":"CABA","1002":"CABA","1003":"CABA","1004":"CABA","1005":"CABA",
   "1006":"CABA","1007":"CABA","1008":"CABA","1009":"CABA","1010":"CABA","1011":"CABA",
@@ -135,22 +135,22 @@ const CP_MAP: Record<string, string> = {
   "1484":"CABA","1485":"CABA","1486":"CABA","1487":"CABA","1488":"CABA","1489":"CABA",
   "1490":"CABA","1491":"CABA","1492":"CABA","1493":"CABA","1494":"CABA","1495":"CABA",
   "1496":"CABA","1497":"CABA","1498":"CABA","1499":"CABA",
-  // Vicente López
-  "1636":"Vicente López","1637":"Vicente López","1638":"Vicente López","1639":"Vicente López",
+  // Vicente LÃ³pez
+  "1636":"Vicente LÃ³pez","1637":"Vicente LÃ³pez","1638":"Vicente LÃ³pez","1639":"Vicente LÃ³pez",
   // San Isidro
   "1640":"San Isidro","1641":"San Isidro","1642":"San Isidro","1643":"San Isidro","1644":"San Isidro",
   // San Fernando
   "1645":"San Fernando","1646":"San Fernando","1647":"San Fernando","1648":"San Fernando",
-  // San Martín
-  "1650":"San Martín","1651":"San Martín","1652":"San Martín","1653":"San Martín","1654":"San Martín",
+  // San MartÃ­n
+  "1650":"San MartÃ­n","1651":"San MartÃ­n","1652":"San MartÃ­n","1653":"San MartÃ­n","1654":"San MartÃ­n",
   // San Miguel
   "1663":"San Miguel","1664":"San Miguel","1665":"San Miguel",
-  // José C. Paz
-  "1666":"José C. Paz","1667":"José C. Paz","1668":"José C. Paz",
+  // JosÃ© C. Paz
+  "1666":"JosÃ© C. Paz","1667":"JosÃ© C. Paz","1668":"JosÃ© C. Paz",
   // Del Viso
   "1669": "Del Viso",
   // Nordelta / Tigre
-  "1670":"Nordelta","1618":"Tigre","1619":"Garín","1620":"Tigre",
+  "1670":"Nordelta","1618":"Tigre","1619":"GarÃ­n","1620":"Tigre",
   // Tres de Febrero
   "1672":"Tres de Febrero","1673":"Tres de Febrero","1674":"Tres de Febrero",
   "1675":"Tres de Febrero","1676":"Tres de Febrero","1677":"Tres de Febrero",
@@ -158,10 +158,10 @@ const CP_MAP: Record<string, string> = {
   "1681":"Tres de Febrero","1682":"Tres de Febrero","1683":"Tres de Febrero","1684":"Tres de Febrero",
   // Hurlingham
   "1686":"Hurlingham","1687":"Hurlingham","1688":"Hurlingham",
-  // Ituzaingó
-  "1714":"Ituzaingó","1715":"Ituzaingó","1716":"Ituzaingó",
-  // Morón
-  "1708":"Morón","1709":"Morón","1710":"Morón","1711":"Morón","1712":"Morón",
+  // ItuzaingÃ³
+  "1714":"ItuzaingÃ³","1715":"ItuzaingÃ³","1716":"ItuzaingÃ³",
+  // MorÃ³n
+  "1708":"MorÃ³n","1709":"MorÃ³n","1710":"MorÃ³n","1711":"MorÃ³n","1712":"MorÃ³n",
   // Merlo
   "1720":"Merlo","1721":"Merlo","1722":"Merlo",
   // Marcos Paz
@@ -175,8 +175,8 @@ const CP_MAP: Record<string, string> = {
   "1750":"La Matanza Sur","1751":"La Matanza Sur",
   // Moreno
   "1744":"Moreno","1745":"Moreno","1746":"Moreno","1747":"Moreno",
-  // Gral. Rodríguez
-  "1748": "Gral. Rodríguez",
+  // Gral. RodrÃ­guez
+  "1748": "Gral. RodrÃ­guez",
   // Malvinas Argentinas
   "1613":"Malvinas Argentinas","1614":"Malvinas Argentinas","1615":"Malvinas Argentinas","1616":"Malvinas Argentinas",
   // Escobar / Ing. Maschwitz
@@ -187,8 +187,8 @@ const CP_MAP: Record<string, string> = {
   "1840":"Alte. Brown","1841":"Alte. Brown","1842":"Alte. Brown","1845":"Alte. Brown","1846":"Alte. Brown","1848":"Alte. Brown","1850":"Alte. Brown",
   // Lomas de Zamora
   "1832":"Lomas de Zamora","1833":"Lomas de Zamora","1834":"Lomas de Zamora","1835":"Lomas de Zamora","1836":"Lomas de Zamora",
-  // Lanús
-  "1824":"Lanús","1825":"Lanús","1826":"Lanús",
+  // LanÃºs
+  "1824":"LanÃºs","1825":"LanÃºs","1826":"LanÃºs",
   // Avellaneda
   "1870":"Avellaneda","1871":"Avellaneda","1872":"Avellaneda","1873":"Avellaneda","1874":"Avellaneda","1875":"Avellaneda",
   // Quilmes
@@ -197,8 +197,8 @@ const CP_MAP: Record<string, string> = {
   "1883":"Berazategui","1884":"Berazategui","1885":"Berazategui","1886":"Berazategui",
   // Florencio Varela
   "1888":"Florencio Varela","1889":"Florencio Varela","1890":"Florencio Varela","1891":"Florencio Varela",
-  // Cañuelas
-  "1814":"Cañuelas",
+  // CaÃ±uelas
+  "1814":"CaÃ±uelas",
   // San Vicente
   "1815":"San Vicente",
   // Guernica
@@ -212,17 +212,17 @@ const CP_MAP: Record<string, string> = {
   "1923":"Berisso","1924":"Berisso","1925":"Berisso",
   // Ensenada
   "1926":"Ensenada","1927":"Ensenada",
-  // Luján
-  "6700":"Luján","6701":"Luján","6702":"Luján",
-  // Zárate / Campana
-  "2800":"Zárate","2801":"Zárate","2804":"Campana","2805":"Campana",
+  // LujÃ¡n
+  "6700":"LujÃ¡n","6701":"LujÃ¡n","6702":"LujÃ¡n",
+  // ZÃ¡rate / Campana
+  "2800":"ZÃ¡rate","2801":"ZÃ¡rate","2804":"Campana","2805":"Campana",
 };
 
 function extractCPFromQR(qrData: string): string | null {
   // ML QR puede traer CP en formato "CP: 1682" o "CP:1682" o solo "1682"
   const explicit = qrData.match(/CP[:\s]*(\d{4,5})/i);
   if (explicit) return explicit[1];
-  // Buscar código de 4 dígitos que matchee con nuestra tabla
+  // Buscar cÃ³digo de 4 dÃ­gitos que matchee con nuestra tabla
   const matches = qrData.match(/\b(\d{4})\b/g);
   if (matches) {
     for (const cp of matches) {
@@ -233,7 +233,7 @@ function extractCPFromQR(qrData: string): string | null {
 }
 
 function detectLocalidad(qrData: string): string | null {
-  // 1. Intentar por CP primero (más preciso)
+  // 1. Intentar por CP primero (mÃ¡s preciso)
   const cp = extractCPFromQR(qrData);
   if (cp && CP_MAP[cp]) return CP_MAP[cp];
 
@@ -309,7 +309,7 @@ export default function QRScanner({ tarifas, maxPaquetes = 50, onFinish, onClose
       }
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
-      setCamError("No se pudo acceder a la cámara: " + msg);
+      setCamError("No se pudo acceder a la cÃ¡mara: " + msg);
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -323,7 +323,7 @@ export default function QRScanner({ tarifas, maxPaquetes = 50, onFinish, onClose
     if (cooldown) return;
     const shipmentId = extractShipmentId(qrData);
     if (scannedIds.current.has(shipmentId)) {
-      // Duplicado — vibración larga
+      // Duplicado â€” vibraciÃ³n larga
       navigator.vibrate?.([80, 80, 80]);
       setLastScan("DUPLICADO: " + shipmentId);
       return;
@@ -350,7 +350,7 @@ export default function QRScanner({ tarifas, maxPaquetes = 50, onFinish, onClose
 
     setPaquetes(prev => {
       const updated = [...prev, nuevo];
-      setLastScan(shipmentId + (localidad ? ` → ${localidad}` : " → Sin zona"));
+      setLastScan(shipmentId + (localidad ? ` â†’ ${localidad}` : " â†’ Sin zona"));
       if (updated.length >= maxPaquetes) {
         setScanning(false);
         stopCamera();
@@ -406,7 +406,7 @@ export default function QRScanner({ tarifas, maxPaquetes = 50, onFinish, onClose
         <div className="flex items-center gap-2">
           <Zap className="w-5 h-5 text-yellow-400" />
           <div>
-            <p className="text-white font-bold text-sm">Escáner QR Ráfaga</p>
+            <p className="text-white font-bold text-sm">EscÃ¡ner QR RÃ¡faga</p>
             <p className="text-gray-400 text-xs">{paquetes.length}/{maxPaquetes} escaneados</p>
           </div>
         </div>
@@ -416,7 +416,7 @@ export default function QRScanner({ tarifas, maxPaquetes = 50, onFinish, onClose
               onClick={() => { stopCamera(); onFinish(paquetes); }}
               className="bg-yellow-500 text-black font-bold px-3 py-1.5 rounded-xl text-sm"
             >
-              Finalizar →
+              Finalizar â†’
             </button>
           )}
           <button onClick={() => { stopCamera(); onClose(); }} className="p-2 text-gray-400 hover:text-white">
@@ -425,13 +425,13 @@ export default function QRScanner({ tarifas, maxPaquetes = 50, onFinish, onClose
         </div>
       </div>
 
-      {/* Contador gigante + cámara */}
+      {/* Contador gigante + cÃ¡mara */}
       <div className="relative flex-shrink-0" style={{ height: "55vw", maxHeight: "320px" }}>
         {camError ? (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-900 text-center px-6">
             <AlertTriangle className="w-10 h-10 text-red-400 mb-3" />
             <p className="text-red-300 text-sm font-semibold">{camError}</p>
-            <p className="text-gray-500 text-xs mt-2">Usá el modo manual (botón Ráfaga)</p>
+            <p className="text-gray-500 text-xs mt-2">UsÃ¡ el modo manual (botÃ³n RÃ¡faga)</p>
           </div>
         ) : (
           <>
@@ -464,7 +464,7 @@ export default function QRScanner({ tarifas, maxPaquetes = 50, onFinish, onClose
               <p className="text-gray-300 text-xs">/{maxPaquetes}</p>
             </div>
 
-            {/* Último scan */}
+            {/* Ãšltimo scan */}
             {lastScan && (
               <div className="absolute bottom-3 left-3 right-3 bg-black/80 backdrop-blur-sm rounded-xl px-3 py-2">
                 <p className="text-yellow-300 text-xs font-mono truncate">{lastScan}</p>
@@ -474,8 +474,8 @@ export default function QRScanner({ tarifas, maxPaquetes = 50, onFinish, onClose
             {!scanning && paquetes.length >= maxPaquetes && (
               <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
                 <div className="text-center">
-                  <p className="text-white font-black text-xl">Límite alcanzado</p>
-                  <p className="text-yellow-300 text-sm">Tocá &quot;Finalizar&quot; arriba</p>
+                  <p className="text-white font-black text-xl">LÃ­mite alcanzado</p>
+                  <p className="text-yellow-300 text-sm">TocÃ¡ &quot;Finalizar&quot; arriba</p>
                 </div>
               </div>
             )}
@@ -490,7 +490,7 @@ export default function QRScanner({ tarifas, maxPaquetes = 50, onFinish, onClose
         {paquetes.length > 0 && (
           <div className="sticky top-0 bg-gray-900 border-b border-gray-700 px-4 py-2 flex items-center justify-between z-10">
             <p className="text-gray-400 text-xs">
-              {sinZona > 0 && <span className="text-red-400 font-bold">{sinZona} sin zona · </span>}
+              {sinZona > 0 && <span className="text-red-400 font-bold">{sinZona} sin zona Â· </span>}
               ML: <span className="text-white font-bold">{fmt(totalML)}</span>
             </p>
             <p className="text-green-300 font-black text-sm">Ganancia: {fmt(totalGanancia)}</p>
@@ -502,7 +502,7 @@ export default function QRScanner({ tarifas, maxPaquetes = 50, onFinish, onClose
             <div className="w-16 h-16 rounded-2xl border-2 border-dashed border-yellow-500/40 flex items-center justify-center mb-4">
               <Zap className="w-8 h-8 text-yellow-400/50" />
             </div>
-            <p className="text-gray-400 text-sm">Apuntá la cámara al código QR del paquete</p>
+            <p className="text-gray-400 text-sm">ApuntÃ¡ la cÃ¡mara al cÃ³digo QR del paquete</p>
           </div>
         ) : (
           <div className="p-3 space-y-2">
@@ -559,7 +559,7 @@ export default function QRScanner({ tarifas, maxPaquetes = 50, onFinish, onClose
                               )}
                             </>
                           ) : (
-                            <span className="text-red-400 text-sm font-bold">Sin zona — tocar para asignar</span>
+                            <span className="text-red-400 text-sm font-bold">Sin zona â€” tocar para asignar</span>
                           )}
                         </div>
                         <p className="text-gray-600 text-[10px] font-mono truncate mt-0.5">{p.shipmentId}</p>

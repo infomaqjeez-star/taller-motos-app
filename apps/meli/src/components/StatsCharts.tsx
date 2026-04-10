@@ -58,14 +58,14 @@ export default function StatsCharts({ orders }: Props) {
     <div className="space-y-6">
       {/* KPIs */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <StatCard label="Total órdenes"       value={String(orders.length)} />
+        <StatCard label="Total Ã³rdenes"       value={String(orders.length)} />
         <StatCard label="Activas"             value={String(active.length)} />
         <StatCard label="Presup. aceptados"   value={String(accepted)} sub={`de ${orders.length}`} />
         <StatCard label="Presupuestado total" value={formatCurrency(totalBudget)} />
       </div>
       {overdue > 0 && (
         <div className="card-alert text-center py-3">
-          <p className="text-red-300 font-bold">{overdue} equipo{overdue > 1 ? "s" : ""} con +90 días sin retiro</p>
+          <p className="text-red-300 font-bold">{overdue} equipo{overdue > 1 ? "s" : ""} con +90 dÃ­as sin retiro</p>
         </div>
       )}
 
@@ -73,13 +73,13 @@ export default function StatsCharts({ orders }: Props) {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* By status */}
         <div className="card">
-          <h3 className="text-white font-bold mb-4">Órdenes por Estado</h3>
+          <h3 className="text-white font-bold mb-4">Ã“rdenes por Estado</h3>
           <ResponsiveContainer width="100%" height={220}>
             <PieChart>
               <Pie data={byStatus} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={({ name, value }) => `${value}`}>
                 {byStatus.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
               </Pie>
-              <Tooltip formatter={(v) => [`${v} órdenes`]} />
+              <Tooltip formatter={(v) => [`${v} Ã³rdenes`]} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
             </PieChart>
           </ResponsiveContainer>
@@ -104,7 +104,7 @@ export default function StatsCharts({ orders }: Props) {
       {/* By brand */}
       {byBrand.length > 0 && (
         <div className="card">
-          <h3 className="text-white font-bold mb-4">Marcas más reparadas</h3>
+          <h3 className="text-white font-bold mb-4">Marcas mÃ¡s reparadas</h3>
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={byBrand} margin={{ top: 0, right: 0, left: -10, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
@@ -113,7 +113,7 @@ export default function StatsCharts({ orders }: Props) {
               <Tooltip
                 contentStyle={{ background: "#1f2937", border: "1px solid #374151", borderRadius: 8 }}
                 labelStyle={{ color: "#f3f4f6" }}
-                formatter={(v) => [`${v} órdenes`]}
+                formatter={(v) => [`${v} Ã³rdenes`]}
               />
               <Bar dataKey="value" fill="#f97316" radius={[6, 6, 0, 0]} />
             </BarChart>

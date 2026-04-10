@@ -41,10 +41,10 @@ export default function TestPage() {
         internalNotes: "Test",
         photoUrls: [],
       });
-      setSaveResult("✅ ORDEN GUARDADA — Revisá la tabla reparaciones en Supabase");
+      setSaveResult("âœ… ORDEN GUARDADA â€” RevisÃ¡ la tabla reparaciones en Supabase");
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      setSaveResult(`❌ ERROR: ${msg}`);
+      setSaveResult(`âŒ ERROR: ${msg}`);
     }
     setSaving(false);
   };
@@ -64,7 +64,7 @@ export default function TestPage() {
         : "FALTAN variables NEXT_PUBLIC_SUPABASE_URL o NEXT_PUBLIC_SUPABASE_ANON_KEY",
     });
 
-    // 2. Ping a Supabase — leer tabla
+    // 2. Ping a Supabase â€” leer tabla
     try {
       const { data, error } = await supabase
         .from("reparaciones")
@@ -74,8 +74,8 @@ export default function TestPage() {
         test: "Leer tabla reparaciones",
         ok: !error,
         detail: error
-          ? `Error: ${error.message} | Código: ${error.code} | Hint: ${error.hint}`
-          : `OK — ${data?.length ?? 0} fila(s) encontradas`,
+          ? `Error: ${error.message} | CÃ³digo: ${error.code} | Hint: ${error.hint}`
+          : `OK â€” ${data?.length ?? 0} fila(s) encontradas`,
       });
     } catch (e) {
       out.push({ test: "Leer tabla reparaciones", ok: false, detail: String(e) });
@@ -107,7 +107,7 @@ export default function TestPage() {
         test: "Insertar fila de prueba",
         ok: !error,
         detail: error
-          ? `Error: ${error.message} | Código: ${error.code} | Hint: ${error.hint}`
+          ? `Error: ${error.message} | CÃ³digo: ${error.code} | Hint: ${error.hint}`
           : "Fila insertada correctamente",
       });
 
@@ -136,7 +136,7 @@ export default function TestPage() {
   return (
     <div className="min-h-screen bg-gray-950 p-6 max-w-2xl mx-auto">
       <h1 className="text-2xl font-black text-orange-400 mb-6">
-        Diagnóstico de Conexión — Supabase
+        DiagnÃ³stico de ConexiÃ³n â€” Supabase
       </h1>
 
       <button
@@ -158,7 +158,7 @@ export default function TestPage() {
           {saving ? "Guardando..." : "Guardar orden de prueba ahora"}
         </button>
         {saveResult && (
-          <p className={`text-sm font-mono p-3 rounded-xl ${saveResult.startsWith("✅") ? "bg-green-900/40 text-green-300" : "bg-red-900/40 text-red-300"}`}>
+          <p className={`text-sm font-mono p-3 rounded-xl ${saveResult.startsWith("âœ…") ? "bg-green-900/40 text-green-300" : "bg-red-900/40 text-red-300"}`}>
             {saveResult}
           </p>
         )}
@@ -176,7 +176,7 @@ export default function TestPage() {
           >
             <div className="flex items-center gap-3 mb-1">
               <span className={`text-xl ${r.ok ? "text-green-400" : "text-red-400"}`}>
-                {r.ok ? "✅" : "❌"}
+                {r.ok ? "âœ…" : "âŒ"}
               </span>
               <span className="text-white font-bold">{r.test}</span>
             </div>

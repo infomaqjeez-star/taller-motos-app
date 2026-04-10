@@ -9,15 +9,15 @@ interface UseAutoRefreshReturn {
 }
 
 /**
- * Hook para refresh MANUAL de datos (sin polling automático)
- * Con SSE/Webhooks activos, ya no necesitamos polling automático
- * Este hook solo proporciona función de refresh manual bajo demanda
+ * Hook para refresh MANUAL de datos (sin polling automÃ¡tico)
+ * Con SSE/Webhooks activos, ya no necesitamos polling automÃ¡tico
+ * Este hook solo proporciona funciÃ³n de refresh manual bajo demanda
  * 
  * enableAutomatic: DESACTIVADO por defecto (era 60s antes)
  */
 export function useAutoRefresh(
   fetchFn: () => Promise<void>,
-  enableAutomatic: boolean = false, // ⚠️ Ahora DESACTIVADO por defecto
+  enableAutomatic: boolean = false, // âš ï¸ Ahora DESACTIVADO por defecto
   interval: number = 60000 // 60 segundos (no se usa si enableAutomatic=false)
 ): UseAutoRefreshReturn {
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -25,13 +25,13 @@ export function useAutoRefresh(
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const manualRefresh = useCallback(async () => {
-    if (isRefreshing) return; // Evitar multiples llamadas simultáneas
+    if (isRefreshing) return; // Evitar multiples llamadas simultÃ¡neas
 
     setIsRefreshing(true);
     try {
       await fetchFn();
       setLastRefresh(new Date());
-      console.log(`[REFRESH] Sincronización manual completada a las ${new Date().toLocaleTimeString("es-AR")}`);
+      console.log(`[REFRESH] SincronizaciÃ³n manual completada a las ${new Date().toLocaleTimeString("es-AR")}`);
     } catch (error) {
       console.error("[REFRESH] Error:", error);
     } finally {
@@ -40,20 +40,20 @@ export function useAutoRefresh(
   }, [fetchFn, isRefreshing]);
 
   useEffect(() => {
-    // Si automatic está desactivado, no iniciar polling
+    // Si automatic estÃ¡ desactivado, no iniciar polling
     if (!enableAutomatic) {
-      console.log("[REFRESH] Polling automático DESACTIVADO (usando SSE/Webhooks)");
+      console.log("[REFRESH] Polling automÃ¡tico DESACTIVADO (usando SSE/Webhooks)");
       return;
     }
 
-    // Si está habilitado (caso legacy), hacer polling
+    // Si estÃ¡ habilitado (caso legacy), hacer polling
     manualRefresh();
 
     intervalRef.current = setInterval(() => {
       manualRefresh();
     }, interval);
 
-    console.warn("[REFRESH] ⚠️ Polling automático ACTIVADO (modo legacy)");
+    console.warn("[REFRESH] âš ï¸ Polling automÃ¡tico ACTIVADO (modo legacy)");
 
     // Cleanup
     return () => {

@@ -53,7 +53,7 @@ export default function PhotoManager({ order, onClose, onUpdated }: Props) {
             <div className="bg-purple-600 rounded-xl p-2"><Camera className="w-5 h-5 text-white" /></div>
             <div>
               <h2 className="text-white font-bold">Fotos del Equipo</h2>
-              <p className="text-gray-400 text-xs">{order.clientName} · {order.brand} {order.model}</p>
+              <p className="text-gray-400 text-xs">{order.clientName} Â· {order.brand} {order.model}</p>
             </div>
           </div>
           <button onClick={onClose} className="btn-ghost btn-sm p-2.5 rounded-xl"><X className="w-5 h-5" /></button>
@@ -78,7 +78,7 @@ export default function PhotoManager({ order, onClose, onUpdated }: Props) {
               </button>
             </div>
             <p className="text-xs text-gray-500">
-              Sube la foto a Google Drive, Imgur, o cualquier servicio y pega el enlace directo aquí.
+              Sube la foto a Google Drive, Imgur, o cualquier servicio y pega el enlace directo aquÃ­.
             </p>
           </div>
 
@@ -86,7 +86,7 @@ export default function PhotoManager({ order, onClose, onUpdated }: Props) {
           {photos.length === 0 ? (
             <div className="flex flex-col items-center py-10 text-gray-500">
               <Camera className="w-10 h-10 mb-2 opacity-40" />
-              <p className="text-sm">No hay fotos todavía</p>
+              <p className="text-sm">No hay fotos todavÃ­a</p>
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-3">

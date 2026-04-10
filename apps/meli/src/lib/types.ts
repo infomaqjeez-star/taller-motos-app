@@ -1,6 +1,6 @@
 // ============================================================
-// TIPOS CENTRALES — Taller MAQJEEZ
-// Diseñado para MVP con localStorage y migración fácil a Supabase/PostgreSQL
+// TIPOS CENTRALES â€” Taller MAQJEEZ
+// DiseÃ±ado para MVP con localStorage y migraciÃ³n fÃ¡cil a Supabase/PostgreSQL
 // ============================================================
 
 export type MotorType = "desmalezadora" | "motosierra" | "grupo_electrogeno" | "otros";
@@ -37,9 +37,9 @@ export interface WorkOrder {
   machineTypeOther?: string;   // texto libre cuando motorType === "otros"
   brand: string;
   model: string;
-  // Diagnóstico
+  // DiagnÃ³stico
   reportedIssues: string;
-  // Gestión económica
+  // GestiÃ³n econÃ³mica
   budget: number | null;
   estimatedDays: number | null;
   // Seguimiento
@@ -47,20 +47,20 @@ export interface WorkOrder {
   clientNotification: ClientNotification;
   budgetAccepted: boolean;
   // Fechas
-  entryDate: string; // ISO string — automática al crear
-  completionDate: string | null; // ISO string — cuando pasa a "listo_para_retiro"
-  deliveryDate: string | null; // ISO string — cuando se entrega
+  entryDate: string; // ISO string â€” automÃ¡tica al crear
+  completionDate: string | null; // ISO string â€” cuando pasa a "listo_para_retiro"
+  deliveryDate: string | null; // ISO string â€” cuando se entrega
   // Inventario vinculado
   linkedParts: string[]; // IDs de PartToOrder
   // Notas internas
   internalNotes: string;
   // Fotos
   photoUrls: string[];
-  // Máquinas adicionales del mismo cliente
+  // MÃ¡quinas adicionales del mismo cliente
   extraMachines?: ExtraMachine[];
   // Pagos
   totalPaid?: number;
-  deposit?: number;       // seña / pago parcial al ingresar
+  deposit?: number;       // seÃ±a / pago parcial al ingresar
 }
 
 export interface Pago {
@@ -90,7 +90,7 @@ export interface StockItem {
   id: string;
   name: string;
   quantity: number;
-  location: string; // ej: "Estante A-3", "Cajón 2"
+  location: string; // ej: "Estante A-3", "CajÃ³n 2"
   minQuantity: number; // alerta de stock bajo
   notes: string;
 }
@@ -100,7 +100,7 @@ export interface PartToOrder {
   name: string;
   quantity: number;
   orderId: string | null; // vinculado a una orden de trabajo
-  orderClientName: string | null; // para referencia rápida
+  orderClientName: string | null; // para referencia rÃ¡pida
   supplier: string;
   status: "pendiente" | "pedido" | "recibido";
   notes: string;
@@ -114,7 +114,7 @@ export interface PartToOrder {
 export const MOTOR_TYPE_LABELS: Record<MotorType, string> = {
   desmalezadora:    "Desmalezadora",
   motosierra:       "Motosierra",
-  grupo_electrogeno: "Grupo Electrógeno",
+  grupo_electrogeno: "Grupo ElectrÃ³geno",
   otros:            "Otros",
 };
 
@@ -122,7 +122,7 @@ export const REPAIR_STATUS_LABELS: Record<RepairStatus, string> = {
   ingresado: "Ingresado",
   diagnosticando: "Diagnosticando",
   esperando_repuesto: "Esperando Repuesto",
-  en_reparacion: "En Reparación",
+  en_reparacion: "En ReparaciÃ³n",
   listo_para_retiro: "Listo para Retiro",
   entregado: "Entregado",
 };
@@ -175,7 +175,7 @@ export const PART_ORDER_STATUS_LABELS: Record<
 };
 
 // ============================================================
-// LOGÍSTICA FLEX — Mercado Libre
+// LOGÃSTICA FLEX â€” Mercado Libre
 // ============================================================
 
 export type FlexZona = "cercana" | "media" | "lejana";
@@ -196,7 +196,7 @@ export const FLEX_LOCALIDADES: { nombre: string; zona: FlexZona }[] = [
   // Cercanas
   { nombre: "Ezeiza",                zona: "cercana" },
   // Media distancia
-  { nombre: "Esteban Echeverría",    zona: "media" },
+  { nombre: "Esteban EcheverrÃ­a",    zona: "media" },
   { nombre: "La Matanza Sur",        zona: "media" },
   // Lejanas
   { nombre: "Alte. Brown",           zona: "lejana" },
@@ -205,44 +205,44 @@ export const FLEX_LOCALIDADES: { nombre: string; zona: FlexZona }[] = [
   { nombre: "Berisso",               zona: "lejana" },
   { nombre: "CABA",                  zona: "lejana" },
   { nombre: "Campana",               zona: "lejana" },
-  { nombre: "Cañuelas",              zona: "lejana" },
+  { nombre: "CaÃ±uelas",              zona: "lejana" },
   { nombre: "Del Viso",              zona: "lejana" },
   { nombre: "Derqui",                zona: "lejana" },
   { nombre: "Ensenada",              zona: "lejana" },
   { nombre: "Escobar",               zona: "lejana" },
   { nombre: "Florencio Varela",      zona: "lejana" },
-  { nombre: "Garín",                 zona: "lejana" },
-  { nombre: "Gral. Rodríguez",       zona: "lejana" },
+  { nombre: "GarÃ­n",                 zona: "lejana" },
+  { nombre: "Gral. RodrÃ­guez",       zona: "lejana" },
   { nombre: "Guernica",              zona: "lejana" },
   { nombre: "Hurlingham",            zona: "lejana" },
   { nombre: "Ing. Maschwitz",        zona: "lejana" },
-  { nombre: "Ituzaingó",             zona: "lejana" },
-  { nombre: "José C. Paz",           zona: "lejana" },
+  { nombre: "ItuzaingÃ³",             zona: "lejana" },
+  { nombre: "JosÃ© C. Paz",           zona: "lejana" },
   { nombre: "La Matanza Norte",      zona: "lejana" },
   { nombre: "La Plata Centro",       zona: "lejana" },
   { nombre: "La Plata Norte",        zona: "lejana" },
   { nombre: "La Plata Oeste",        zona: "lejana" },
-  { nombre: "Lanús",                 zona: "lejana" },
+  { nombre: "LanÃºs",                 zona: "lejana" },
   { nombre: "Lomas de Zamora",       zona: "lejana" },
-  { nombre: "Luján",                 zona: "lejana" },
+  { nombre: "LujÃ¡n",                 zona: "lejana" },
   { nombre: "Malvinas Argentinas",   zona: "lejana" },
   { nombre: "Marcos Paz",            zona: "lejana" },
   { nombre: "Merlo",                 zona: "lejana" },
   { nombre: "Moreno",                zona: "lejana" },
-  { nombre: "Morón",                 zona: "lejana" },
+  { nombre: "MorÃ³n",                 zona: "lejana" },
   { nombre: "Nordelta",              zona: "lejana" },
   { nombre: "Pilar",                 zona: "lejana" },
   { nombre: "Quilmes",               zona: "lejana" },
   { nombre: "San Fernando",          zona: "lejana" },
   { nombre: "San Isidro",            zona: "lejana" },
-  { nombre: "San Martín",            zona: "lejana" },
+  { nombre: "San MartÃ­n",            zona: "lejana" },
   { nombre: "San Miguel",            zona: "lejana" },
   { nombre: "San Vicente",           zona: "lejana" },
   { nombre: "Tigre",                 zona: "lejana" },
   { nombre: "Tres de Febrero",       zona: "lejana" },
-  { nombre: "Vicente López",         zona: "lejana" },
+  { nombre: "Vicente LÃ³pez",         zona: "lejana" },
   { nombre: "Villa Rosa",            zona: "lejana" },
-  { nombre: "Zárate",                zona: "lejana" },
+  { nombre: "ZÃ¡rate",                zona: "lejana" },
 ];
 
 // ============================================================
@@ -255,17 +255,17 @@ export type VentaStatus = "activa" | "cancelada";
 export const METODO_PAGO_LABELS: Record<MetodoPago, string> = {
   efectivo:      "Efectivo",
   transferencia: "Transferencia",
-  debito:        "Débito",
-  credito:       "Crédito",
+  debito:        "DÃ©bito",
+  credito:       "CrÃ©dito",
   mercado_pago:  "Mercado Pago",
 };
 
 export const METODO_PAGO_ICONS: Record<MetodoPago, string> = {
-  efectivo:      "💵",
-  transferencia: "🏦",
-  debito:        "💳",
-  credito:       "💳",
-  mercado_pago:  "🛒",
+  efectivo:      "ðŸ’µ",
+  transferencia: "ðŸ¦",
+  debito:        "ðŸ’³",
+  credito:       "ðŸ’³",
+  mercado_pago:  "ðŸ›’",
 };
 
 export interface VentaItem {

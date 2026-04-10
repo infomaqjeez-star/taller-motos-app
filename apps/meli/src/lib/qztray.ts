@@ -5,17 +5,17 @@
  * Setup (once):
  *   1. Install QZ Tray from https://qz.io/download/
  *   2. Start QZ Tray (it runs in the system tray)
- *   3. Right-click QZ Tray icon → Advanced → uncheck "Block anonymous requests"
+ *   3. Right-click QZ Tray icon â†’ Advanced â†’ uncheck "Block anonymous requests"
  *   4. Visit https://localhost:8181 in Chrome and accept the certificate warning
  */
 
-// Official QZ Tray 2.x endpoints — no path suffix
+// Official QZ Tray 2.x endpoints â€” no path suffix
 const QZ_WS_SECURE   = "wss://localhost:8181";
 const QZ_WS_INSECURE = "ws://localhost:8182";
 
 const CONNECT_TIMEOUT      = 6_000;
 const CALL_TIMEOUT         = 12_000;
-const KEEPALIVE_INTERVAL   = 30_000; // 30s — safely under QZ Tray's idle timeout
+const KEEPALIVE_INTERVAL   = 30_000; // 30s â€” safely under QZ Tray's idle timeout
 const MAX_RECONNECT_ATTEMPTS = 10;
 
 type QZMsg = {
@@ -25,7 +25,7 @@ type QZMsg = {
   error?:  string;
 };
 
-// ── Module-level state ────────────────────────────────────────────────────────
+// â”€â”€ Module-level state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 let _ws: WebSocket | null = null;
 let _connected = false;
 const _pending = new Map<string, { resolve: (r: unknown) => void; reject: (e: Error) => void }>();
@@ -35,12 +35,12 @@ let _reconnectTimer: ReturnType<typeof setTimeout>   | null = null;
 let _reconnectAttempts = 0;
 let _intentionalClose  = false;
 
-// ── Keepalive helpers ─────────────────────────────────────────────────────────
+// â”€â”€ Keepalive helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function startKeepalive() {
   stopKeepalive();
   _keepAliveTimer = setInterval(() => {
     if (_ws?.readyState === WebSocket.OPEN) {
-      // Exact string the official qz-tray.js uses — resets QZ Tray's idle timer
+      // Exact string the official qz-tray.js uses â€” resets QZ Tray's idle timer
       _ws.send("ping");
     }
   }, KEEPALIVE_INTERVAL);
@@ -50,7 +50,7 @@ function stopKeepalive() {
   if (_keepAliveTimer) { clearInterval(_keepAliveTimer); _keepAliveTimer = null; }
 }
 
-// ── Public API ────────────────────────────────────────────────────────────────
+// â”€â”€ Public API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export function isQZConnected(): boolean {
   return _connected && _ws?.readyState === WebSocket.OPEN;
 }
@@ -87,13 +87,13 @@ export function connectQZ(preferSecure = true): Promise<void> {
       if (preferSecure) {
         connectQZ(false).then(resolve).catch(() =>
           reject(new Error(
-            "QZ Tray no responde. Verificá que esté instalado y ejecutándose en la bandeja del sistema."
+            "QZ Tray no responde. VerificÃ¡ que estÃ© instalado y ejecutÃ¡ndose en la bandeja del sistema."
           ))
         );
       } else {
         reject(new Error(
-          "Timeout: QZ Tray no encontrado. Instalalo en https://qz.io, desactivá 'Block anonymous requests' " +
-          "y aceptá el certificado en https://localhost:8181."
+          "Timeout: QZ Tray no encontrado. Instalalo en https://qz.io, desactivÃ¡ 'Block anonymous requests' " +
+          "y aceptÃ¡ el certificado en https://localhost:8181."
         ));
       }
     }, CONNECT_TIMEOUT);
@@ -102,7 +102,7 @@ export function connectQZ(preferSecure = true): Promise<void> {
       let msg: QZMsg;
       try { msg = JSON.parse(ev.data as string); } catch { return; }
 
-      // ── QZ Tray 2.x handshake ─────────────────────────────────────────────
+      // â”€â”€ QZ Tray 2.x handshake â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
       // Server sends {"call":"websocket.connected","uid":"..."} first.
       // Client MUST acknowledge before sending any commands.
       if (!_connected && msg.call === "websocket.connected") {
@@ -129,7 +129,7 @@ export function connectQZ(preferSecure = true): Promise<void> {
         return;
       }
 
-      // ── Resolve pending RPC call ──────────────────────────────────────────
+      // â”€â”€ Resolve pending RPC call â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
       if (msg.uid && _pending.has(msg.uid)) {
         const { resolve: res, reject: rej } = _pending.get(msg.uid)!;
         _pending.delete(msg.uid);
@@ -138,7 +138,7 @@ export function connectQZ(preferSecure = true): Promise<void> {
         return;
       }
 
-      // ── Catch-all: acknowledge any server-initiated message ───────────────
+      // â”€â”€ Catch-all: acknowledge any server-initiated message â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
       // QZ Tray closes the connection if server-initiated calls (statusChanged,
       // printerAdded, etc.) go unacknowledged.
       if (msg.call && msg.uid) {
@@ -154,7 +154,7 @@ export function connectQZ(preferSecure = true): Promise<void> {
         );
       } else if (!_connected) {
         reject(new Error(
-          "QZ Tray no encontrado. Asegurate que esté corriendo y que 'Block anonymous requests' esté desactivado."
+          "QZ Tray no encontrado. Asegurate que estÃ© corriendo y que 'Block anonymous requests' estÃ© desactivado."
         ));
       }
     };
@@ -175,7 +175,7 @@ export function connectQZ(preferSecure = true): Promise<void> {
   });
 }
 
-// ── Internal RPC call ─────────────────────────────────────────────────────────
+// â”€â”€ Internal RPC call â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function call(callName: string, params: unknown): Promise<unknown> {
   return new Promise((resolve, reject) => {
     if (!_ws || _ws.readyState !== WebSocket.OPEN) {
@@ -194,7 +194,7 @@ function call(callName: string, params: unknown): Promise<unknown> {
   });
 }
 
-// ── Public helpers ────────────────────────────────────────────────────────────
+// â”€â”€ Public helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 /** Returns list of printer names available on this PC */
 export async function qzGetPrinters(): Promise<string[]> {

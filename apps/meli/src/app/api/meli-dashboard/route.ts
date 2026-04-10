@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-// Forzar renderizado dinámico - evita error de generación estática
+// Forzar renderizado dinÃ¡mico - evita error de generaciÃ³n estÃ¡tica
 export const dynamic = 'force-dynamic';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
@@ -51,7 +51,7 @@ interface AccountDash {
  */
 export async function GET(request: NextRequest) {
   try {
-    // Obtener el usuario actual de la sesión
+    // Obtener el usuario actual de la sesiÃ³n
     const authHeader = request.headers.get("authorization");
     let userId: string | null = null;
 
@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Si no hay usuario autenticado, devolver array vacío
+    // Si no hay usuario autenticado, devolver array vacÃ­o
     if (!userId) {
       return NextResponse.json([], { status: 200 });
     }
@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Si no hay cuentas, devolver array vacío
+    // Si no hay cuentas, devolver array vacÃ­o
     if (!accounts || accounts.length === 0) {
       return NextResponse.json([]);
     }
@@ -112,7 +112,7 @@ export async function GET(request: NextRequest) {
             // Tabla puede no existir
           }
 
-          // Obtener conteo de envíos pendientes (si existe la tabla)
+          // Obtener conteo de envÃ­os pendientes (si existe la tabla)
           let readyToShip = 0;
           try {
             const { count: shipmentsCount } = await supabase
@@ -172,7 +172,7 @@ export async function GET(request: NextRequest) {
             // Tabla puede no existir
           }
 
-          // Construir objeto de reputación por defecto
+          // Construir objeto de reputaciÃ³n por defecto
           const defaultReputation: Reputation = {
             level_id: null,
             power_seller_status: null,
@@ -198,7 +198,7 @@ export async function GET(request: NextRequest) {
             today_sales_amount: todaySalesAmount,
             claims_count: claimsCount,
             measurement_date: new Date().toISOString(),
-            metrics_period: "Últimos 60 días",
+            metrics_period: "Ãšltimos 60 dÃ­as",
             reputation: defaultReputation,
           };
         } catch (error) {
@@ -214,7 +214,7 @@ export async function GET(request: NextRequest) {
             today_sales_amount: 0,
             claims_count: 0,
             measurement_date: new Date().toISOString(),
-            metrics_period: "Últimos 60 días",
+            metrics_period: "Ãšltimos 60 dÃ­as",
             reputation: {
               level_id: null,
               power_seller_status: null,

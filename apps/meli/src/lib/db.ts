@@ -1,10 +1,10 @@
 // ============================================================
-// CAPA DE DATOS — API Routes server-side (Railway + Supabase)
+// CAPA DE DATOS â€” API Routes server-side (Railway + Supabase)
 // ============================================================
 
 import { WorkOrder, StockItem, PartToOrder, Pago, PlantillaWhatsApp, AgendaCliente, HistorialReparacion, FlexEnvio, VentaRepuesto, VentaItem, VentasStats, VentasPorDia, TopProducto } from "./types";
 
-// ─── Helper genérico para llamar a /api/db ────────────────────
+// â”€â”€â”€ Helper genÃ©rico para llamar a /api/db â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 async function dbCall(body: Record<string, unknown>): Promise<Record<string, unknown>> {
   const res = await fetch("/api/db", {
@@ -17,7 +17,7 @@ async function dbCall(body: Record<string, unknown>): Promise<Record<string, unk
   return json;
 }
 
-// ─── Helpers de mapeo (snake_case DB → camelCase app) ─────────
+// â”€â”€â”€ Helpers de mapeo (snake_case DB â†’ camelCase app) â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function toOrder(r: Record<string, unknown>): WorkOrder {
   return {
@@ -123,7 +123,7 @@ function fromPart(p: PartToOrder) {
   };
 }
 
-// ─── Órdenes de Trabajo ───────────────────────────────────────
+// â”€â”€â”€ Ã“rdenes de Trabajo â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export const ordersDb = {
   async getAll(): Promise<WorkOrder[]> {
@@ -178,7 +178,7 @@ export const ordersDb = {
   },
 };
 
-// ─── Stock ────────────────────────────────────────────────────
+// â”€â”€â”€ Stock â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export const stockDb = {
   async getAll(): Promise<StockItem[]> {
@@ -208,7 +208,7 @@ export const stockDb = {
   },
 };
 
-// ─── Repuestos a Pedir ────────────────────────────────────────
+// â”€â”€â”€ Repuestos a Pedir â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export const partsToOrderDb = {
   async getAll(): Promise<PartToOrder[]> {
@@ -240,7 +240,7 @@ export const partsToOrderDb = {
   },
 };
 
-// ─── Pagos ────────────────────────────────────────────────────
+// â”€â”€â”€ Pagos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export const pagosDb = {
   async getByOrder(orderId: string): Promise<Pago[]> {
@@ -269,7 +269,7 @@ export const pagosDb = {
   },
 };
 
-// ─── Plantillas WhatsApp ──────────────────────────────────────
+// â”€â”€â”€ Plantillas WhatsApp â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export const plantillasDb = {
   async getAll(): Promise<PlantillaWhatsApp[]> {
@@ -301,7 +301,7 @@ export const plantillasDb = {
   },
 };
 
-// ─── Agenda de Clientes ───────────────────────────────────────
+// â”€â”€â”€ Agenda de Clientes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export const agendaDb = {
   async getAll(): Promise<AgendaCliente[]> {
@@ -383,7 +383,7 @@ export const agendaDb = {
   },
 };
 
-// ─── Historial permanente de reparaciones ─────────────────────
+// â”€â”€â”€ Historial permanente de reparaciones â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export const historialDb = {
   async getByCliente(clienteId: string): Promise<HistorialReparacion[]> {
@@ -429,7 +429,7 @@ export const historialDb = {
   },
 };
 
-// ─── Logística Flex ───────────────────────────────────────────
+// â”€â”€â”€ LogÃ­stica Flex â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function toFlex(r: Record<string, unknown>): FlexEnvio {
   return {
@@ -505,7 +505,7 @@ export const flexDb = {
   },
 };
 
-// ─── Ventas de Repuestos ──────────────────────────────────────
+// â”€â”€â”€ Ventas de Repuestos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function toVenta(r: Record<string, unknown>, items: VentaItem[]): VentaRepuesto {
   return {

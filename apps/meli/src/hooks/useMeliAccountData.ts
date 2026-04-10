@@ -47,8 +47,8 @@ interface UseMeliAccountDataReturn {
 }
 
 /**
- * Hook para cargar datos en tiempo real de una cuenta MeLi específica
- * Carga reputación, publicaciones activas e información de stock
+ * Hook para cargar datos en tiempo real de una cuenta MeLi especÃ­fica
+ * Carga reputaciÃ³n, publicaciones activas e informaciÃ³n de stock
  */
 export function useMeliAccountData(userId: string | null): UseMeliAccountDataReturn {
   const [data, setData] = useState<MeliAccountData | null>(null);
@@ -63,7 +63,7 @@ export function useMeliAccountData(userId: string | null): UseMeliAccountDataRet
       return;
     }
 
-    // Evitar refetch innecesarios si ya se cargó este usuario
+    // Evitar refetch innecesarios si ya se cargÃ³ este usuario
     if (lastFetchedUserId === userId && data) {
       console.log(`[useMeliAccountData] Usando datos cacheados para ${userId}`);
       return;

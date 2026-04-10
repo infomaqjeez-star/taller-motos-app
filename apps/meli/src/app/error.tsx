@@ -16,7 +16,7 @@ export default function Error({
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#121212] text-white p-4">
       <div className="text-center max-w-md">
-        <h2 className="text-2xl font-bold mb-4">Algo salió mal</h2>
+        <h2 className="text-2xl font-bold mb-4">Algo saliÃ³ mal</h2>
         <p className="text-gray-400 mb-6">
           {error.message || "Ha ocurrido un error inesperado. Por favor, intenta nuevamente."}
         </p>

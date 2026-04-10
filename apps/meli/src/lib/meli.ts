@@ -1,7 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 
-// Configuración
+// ConfiguraciÃ³n
 const SUPA_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -14,7 +14,7 @@ export function getSupabase() {
   return createClient(SUPA_URL, SERVICE_KEY);
 }
 
-// Cliente Supabase con sesión de usuario (respeta RLS)
+// Cliente Supabase con sesiÃ³n de usuario (respeta RLS)
 export async function getSupabaseWithAuth() {
   const cookieStore = await cookies();
   const token = cookieStore.get("sb-access-token")?.value;
@@ -39,7 +39,7 @@ export async function getAuthenticatedUserId(): Promise<string | null> {
   return user?.id ?? null;
 }
 
-// ── ENCRIPTACIÓN AES-GCM ───────────────────────────────────────
+// â”€â”€ ENCRIPTACIÃ“N AES-GCM â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 async function deriveKey(passphrase: string): Promise<CryptoKey> {
   const enc = new TextEncoder();
   const km = await crypto.subtle.importKey("raw", enc.encode(passphrase), "PBKDF2", false, ["deriveKey"]);
@@ -67,7 +67,7 @@ export async function encrypt(text: string, pass: string = ENC_KEY): Promise<str
   return btoa(String.fromCharCode.apply(null, Array.from(combined)));
 }
 
-// ── TIPOS ─────────────────────────────────────────────────────
+// â”€â”€ TIPOS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export interface LinkedMeliAccount {
   id: string;
   user_id: string;
@@ -85,7 +85,7 @@ interface RefreshResult {
   expires_in: number;
 }
 
-// ── REFRESH TOKEN ─────────────────────────────────────────────
+// â”€â”€ REFRESH TOKEN â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export async function refreshMeliToken(refreshTokenEnc: string): Promise<RefreshResult | null> {
   if (!APP_ID || !SECRET_KEY) return null;
   try {
@@ -107,7 +107,7 @@ export async function refreshMeliToken(refreshTokenEnc: string): Promise<Refresh
   } catch { return null; }
 }
 
-// ── ACTUALIZAR TOKENS EN BD ───────────────────────────────────
+// â”€â”€ ACTUALIZAR TOKENS EN BD â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export async function updateLinkedAccountTokens(
   accountId: string,
   newTokens: RefreshResult
@@ -137,7 +137,7 @@ export async function updateLinkedAccountTokens(
   return newTokens.access_token;
 }
 
-// ── OBTENER CUENTAS ACTIVAS DE UN USUARIO ─────────────────────
+// â”€â”€ OBTENER CUENTAS ACTIVAS DE UN USUARIO â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export async function getUserLinkedAccounts(userId: string): Promise<LinkedMeliAccount[]> {
   const supabase = getSupabase();
   const { data, error } = await supabase
@@ -155,7 +155,7 @@ export async function getUserLinkedAccounts(userId: string): Promise<LinkedMeliA
   return (data ?? []) as LinkedMeliAccount[];
 }
 
-// ── OBTENER TOKEN VÁLIDO (con auto-refresh) ───────────────────
+// â”€â”€ OBTENER TOKEN VÃLIDO (con auto-refresh) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Acepta tanto LinkedMeliAccount como MeliAccount
 export async function getValidToken(
   account: LinkedMeliAccount | MeliAccount
@@ -166,7 +166,7 @@ export async function getValidToken(
     const meliUserId = (account as LinkedMeliAccount).meli_user_id || (account as MeliAccount).meli_user_id;
     const accountId = account.id;
 
-    // Verificar si está por expirar (con margen de 5 minutos)
+    // Verificar si estÃ¡ por expirar (con margen de 5 minutos)
     const isExpired = tokenExpiryDate && 
       new Date(tokenExpiryDate).getTime() < Date.now() + 5 * 60 * 1000;
 
@@ -198,7 +198,7 @@ export async function getValidToken(
   }
 }
 
-// ── OBTENER TOKEN VÁLIDO POR IDs ──────────────────────────────
+// â”€â”€ OBTENER TOKEN VÃLIDO POR IDs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export async function getValidTokenForAccount(
   userId: string, 
   meliUserId: string
@@ -225,7 +225,7 @@ export async function getValidTokenForAccount(
   return { token, account };
 }
 
-// ── LLAMADAS API MELI ─────────────────────────────────────────
+// â”€â”€ LLAMADAS API MELI â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export async function meliGet(path: string, token: string, timeoutMs = 12000) {
   try {
     const res = await fetch(`https://api.mercadolibre.com${path}`, {
@@ -292,7 +292,7 @@ export async function meliGetRaw(path: string, token: string): Promise<ArrayBuff
   } catch { return null; }
 }
 
-// ── FUNCIÓN PARA PROCESAR MÚLTIPLES CUENTAS ───────────────────
+// â”€â”€ FUNCIÃ“N PARA PROCESAR MÃšLTIPLES CUENTAS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export async function processMultipleAccounts<T>(
   userId: string,
   meliUserIds: string[],
@@ -307,7 +307,7 @@ export async function processMultipleAccounts<T>(
       if (!validTokenData) {
         results.set(meliUserId, { 
           success: false, 
-          error: "No se pudo obtener token válido" 
+          error: "No se pudo obtener token vÃ¡lido" 
         });
         continue;
       }
@@ -326,8 +326,8 @@ export async function processMultipleAccounts<T>(
   return results;
 }
 
-// ── BACKWARDS COMPATIBILITY (legacy functions) ────────────────
-// Mantenemos las funciones antiguas para no romper código existente
+// â”€â”€ BACKWARDS COMPATIBILITY (legacy functions) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Mantenemos las funciones antiguas para no romper cÃ³digo existente
 export interface MeliAccount {
   id: string;
   meli_user_id: number;
@@ -369,14 +369,14 @@ export async function updateAccountTokens(
   return newTokens.access_token;
 }
 
-// ── FUNCIÓN SEGURA: Obtener cuentas del usuario autenticado ────────────────
-// Esta es la función que DEBES usar en las APIs para respetar el multi-tenant
+// â”€â”€ FUNCIÃ“N SEGURA: Obtener cuentas del usuario autenticado â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Esta es la funciÃ³n que DEBES usar en las APIs para respetar el multi-tenant
 export async function getActiveAccountsForUser(userId: string): Promise<LinkedMeliAccount[]> {
   return getUserLinkedAccounts(userId);
 }
 
-// ── FUNCIÓN SEGURA: Obtener cuentas desde el request ──────────────────────
-// Usa esta función en las APIs para obtener las cuentas del usuario autenticado
+// â”€â”€ FUNCIÃ“N SEGURA: Obtener cuentas desde el request â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Usa esta funciÃ³n en las APIs para obtener las cuentas del usuario autenticado
 export async function getUserAccountsFromRequest(): Promise<LinkedMeliAccount[]> {
   const userId = await getAuthenticatedUserId();
   if (!userId) return [];

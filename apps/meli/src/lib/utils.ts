@@ -32,7 +32,7 @@ export function buildWhatsAppUrl(phone: string, message: string): string {
 }
 
 export function buildWhatsAppMessage(order: WorkOrder): string {
-  return `Hola ${order.clientName}, te informamos que tu ${order.brand} ${order.model} (${order.motorType}) ya está lista para ser retirada en el taller MAQJEEZ. ¡Gracias por confiar en nosotros!`;
+  return `Hola ${order.clientName}, te informamos que tu ${order.brand} ${order.model} (${order.motorType}) ya estÃ¡ lista para ser retirada en el taller MAQJEEZ. Â¡Gracias por confiar en nosotros!`;
 }
 
 export function formatCurrency(amount: number): string {

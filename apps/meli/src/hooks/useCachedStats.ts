@@ -55,12 +55,12 @@ export const useCachedStats = () => {
       const key = generateCacheKey(period, accountId);
       const cached = cacheRef.current.get(key);
 
-      // SWR: Si existe en cache y no está expirado, retorna inmediatamente
+      // SWR: Si existe en cache y no estÃ¡ expirado, retorna inmediatamente
       if (cached && !isExpired(cached.timestamp)) {
         return cached.data;
       }
 
-      // Si expiró, fetch datos frescos
+      // Si expirÃ³, fetch datos frescos
       return fetchStats(key, period, accountId, tzOffset);
     },
     []

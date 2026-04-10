@@ -7,16 +7,16 @@ export function exportOrdersToExcel(orders: WorkOrder[]): void {
     "ID": o.id,
     "Fecha Ingreso": formatDate(o.entryDate),
     "Cliente": o.clientName,
-    "Teléfono": o.clientPhone,
+    "TelÃ©fono": o.clientPhone,
     "Tipo Motor": MOTOR_TYPE_LABELS[o.motorType],
     "Marca": o.brand,
     "Modelo": o.model,
     "Fallas Reportadas": o.reportedIssues,
     "Estado": REPAIR_STATUS_LABELS[o.status],
     "Aviso al Cliente": CLIENT_NOTIFICATION_LABELS[o.clientNotification],
-    "Presupuesto Aceptado": o.budgetAccepted ? "Sí" : "No",
+    "Presupuesto Aceptado": o.budgetAccepted ? "SÃ­" : "No",
     "Presupuesto ($)": o.budget !== null ? o.budget : "",
-    "Días Estimados": o.estimatedDays !== null ? o.estimatedDays : "",
+    "DÃ­as Estimados": o.estimatedDays !== null ? o.estimatedDays : "",
     "Fecha Lista para Retiro": o.completionDate ? formatDate(o.completionDate) : "",
     "Fecha Entrega": o.deliveryDate ? formatDate(o.deliveryDate) : "",
     "Notas Internas": o.internalNotes,
@@ -29,7 +29,7 @@ export function exportOrdersToExcel(orders: WorkOrder[]): void {
     { wch: 14 }, // ID
     { wch: 14 }, // Fecha Ingreso
     { wch: 22 }, // Cliente
-    { wch: 18 }, // Teléfono
+    { wch: 18 }, // TelÃ©fono
     { wch: 16 }, // Tipo Motor
     { wch: 14 }, // Marca
     { wch: 16 }, // Modelo
@@ -38,14 +38,14 @@ export function exportOrdersToExcel(orders: WorkOrder[]): void {
     { wch: 22 }, // Aviso
     { wch: 22 }, // Presup. Aceptado
     { wch: 16 }, // Presupuesto
-    { wch: 16 }, // Días Estimados
+    { wch: 16 }, // DÃ­as Estimados
     { wch: 22 }, // Fecha Lista
     { wch: 16 }, // Fecha Entrega
     { wch: 40 }, // Notas
   ];
 
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Órdenes");
+  XLSX.utils.book_append_sheet(wb, ws, "Ã“rdenes");
 
   const fecha = new Date().toISOString().slice(0, 10);
   XLSX.writeFile(wb, `Ordenes_MAQJEEZ_${fecha}.xlsx`);
