@@ -22,10 +22,10 @@ const EMPRESA = {
 };
 
 const CLAUSULA_90 =
-  "Transcurridos los 90 dÃ­as del aviso de retiro, la unidad se considerarÃ¡ en abandono, facultando al taller a proceder a su venta para cubrir gastos de almacenaje y reparaciÃ³n segÃºn los Art. 2525 y 2526 del CÃ³digo Civil y Comercial de la NaciÃ³n (Ley de DepÃ³sito).";
+  "Transcurridos los 90 días del aviso de retiro, la unidad se considerará en abandono, facultando al taller a proceder a su venta para cubrir gastos de almacenaje y reparación según los Art. 2525 y 2526 del Código Civil y Comercial de la Nación (Ley de Depósito).";
 
 const CLAUSULA_DIAG =
-  "El presupuesto de diagnÃ³stico tiene un costo de $20.000. Si la reparaciÃ³n no se realiza en el momento, este monto es vÃ¡lido como crÃ©dito durante 60 dÃ­as, descontÃ¡ndose del total si el cliente decide reparar la mÃ¡quina mÃ¡s adelante.";
+  "El presupuesto de diagnóstico tiene un costo de $20.000. Si la reparación no se realiza en el momento, este monto es válido como crédito durante 60 días, descontándose del total si el cliente decide reparar la máquina más adelante.";
 
 export default function BudgetImage({ order, onClose }: Props) {
   const ref = useRef<HTMLDivElement>(null);
@@ -33,7 +33,7 @@ export default function BudgetImage({ order, onClose }: Props) {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
 
   const [items, setItems] = useState<LineItem[]>([
-    { desc: "Mano de obra â€” " + (order.reportedIssues || "ReparaciÃ³n"), qty: 1, unitPrice: order.budget ?? 0 },
+    { desc: "Mano de obra — " + (order.reportedIssues || "Reparación"), qty: 1, unitPrice: order.budget ?? 0 },
   ]);
   const [discount, setDiscount] = useState(0);
   const [discType, setDiscType] = useState<"$" | "%">("$");
@@ -70,10 +70,10 @@ export default function BudgetImage({ order, onClose }: Props) {
 
   const sendWhatsApp = () => {
     const text = encodeURIComponent(
-      `Hola ${order.clientName}! Te enviamos el presupuesto NÂ° ${noPresup} para tu ${order.brand} ${order.model}.\n` +
+      `Hola ${order.clientName}! Te enviamos el presupuesto N° ${noPresup} para tu ${order.brand} ${order.model}.\n` +
       `Total: ${fmt(total)}\n` +
       `Para confirmar o consultas llamanos al 11 5900-0486 / 11 2181-6064.\n` +
-      `*MAQJEEZ â€” Soluciones en Maquinaria*`
+      `*MAQJEEZ — Soluciones en Maquinaria*`
     );
     const phone = order.clientPhone.replace(/\D/g, "");
     window.open(`https://wa.me/${phone}?text=${text}`, "_blank");
@@ -87,7 +87,7 @@ export default function BudgetImage({ order, onClose }: Props) {
 
   return (
     <div className="fixed inset-0 z-50 bg-black/90 flex flex-col overflow-y-auto">
-      {/* â”€â”€ Controles (no se imprimen) â”€â”€ */}
+      {/* ── Controles (no se imprimen) ── */}
       <div className="no-print sticky top-0 z-10 bg-gray-900 border-b border-gray-700 px-4 py-3 space-y-3">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
@@ -97,10 +97,10 @@ export default function BudgetImage({ order, onClose }: Props) {
           <button onClick={onClose} className="btn-ghost btn-sm p-2 rounded-xl"><X className="w-5 h-5" /></button>
         </div>
 
-        {/* ParÃ¡metros */}
+        {/* Parámetros */}
         <div className="flex flex-wrap gap-3">
           <div>
-            <label className="text-gray-400 text-xs block mb-1">NÂ° Presupuesto</label>
+            <label className="text-gray-400 text-xs block mb-1">N° Presupuesto</label>
             <input className="input input-sm w-32 font-mono" value={noPresup} onChange={e => setNoPresup(e.target.value)} />
           </div>
           <div>
@@ -144,10 +144,10 @@ export default function BudgetImage({ order, onClose }: Props) {
 
         {/* Items editables */}
         <div className="space-y-2">
-          <p className="text-gray-400 text-xs font-semibold uppercase tracking-wide">Ãtems del presupuesto</p>
+          <p className="text-gray-400 text-xs font-semibold uppercase tracking-wide">Ítems del presupuesto</p>
           {items.map((it, i) => (
             <div key={i} className="flex gap-2 items-center">
-              <input className="input input-sm flex-1" placeholder="DescripciÃ³n"
+              <input className="input input-sm flex-1" placeholder="Descripción"
                 value={it.desc} onChange={e => upd(i, "desc", e.target.value)} />
               <input type="number" className="input input-sm w-16" placeholder="Cant"
                 value={it.qty} onChange={e => upd(i, "qty", e.target.value)} />
@@ -159,25 +159,25 @@ export default function BudgetImage({ order, onClose }: Props) {
             </div>
           ))}
           <button onClick={addItem} className="text-orange-400 text-xs font-semibold flex items-center gap-1 hover:text-orange-300">
-            <Plus className="w-3.5 h-3.5" /> Agregar Ã­tem
+            <Plus className="w-3.5 h-3.5" /> Agregar ítem
           </button>
         </div>
 
         {imageUrl && (
           <p className="text-green-400 text-xs font-semibold">
-            âœ“ Imagen lista â€” descargala o enviala por WhatsApp
+            ✓ Imagen lista — descargala o enviala por WhatsApp
           </p>
         )}
       </div>
 
-      {/* â•â•â•â•â•â•â•â•â•â• DISEÃ‘O DEL PRESUPUESTO (se convierte a imagen) â•â•â•â•â•â•â•â•â•â• */}
+      {/* ══════════ DISEÑO DEL PRESUPUESTO (se convierte a imagen) ══════════ */}
       <div className="flex justify-center py-6 print:py-0">
         <div
           ref={ref}
           className="bg-white text-gray-900 font-sans"
           style={{ width: 794, minHeight: 1100, padding: "0 0 32px 0", borderRadius: 0 }}
         >
-          {/* â”€â”€ Header â”€â”€ */}
+          {/* ── Header ── */}
           <div style={{ background: "linear-gradient(135deg,#1a3a5c 0%,#0f2540 100%)", padding: "28px 36px 24px" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
@@ -189,7 +189,7 @@ export default function BudgetImage({ order, onClose }: Props) {
                   Presupuesto
                 </div>
                 <div style={{ color: "#f97316", fontWeight: 900, fontSize: 28, letterSpacing: 1 }}>
-                  NÂ° {noPresup}
+                  N° {noPresup}
                 </div>
                 <div style={{ color: "#94a3b8", fontSize: 12, marginTop: 4 }}>
                   {formatDate(new Date().toISOString())}
@@ -198,7 +198,7 @@ export default function BudgetImage({ order, onClose }: Props) {
             </div>
           </div>
 
-          {/* â”€â”€ Datos empresa / cliente â”€â”€ */}
+          {/* ── Datos empresa / cliente ── */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", borderBottom: "2px solid #e2e8f0" }}>
             {/* Empresa */}
             <div style={{ padding: "20px 24px", borderRight: "1px solid #e2e8f0", background: "#f8fafc" }}>
@@ -220,24 +220,24 @@ export default function BudgetImage({ order, onClose }: Props) {
               <div style={{ fontWeight: 800, fontSize: 15, color: "#1a3a5c", marginBottom: 4 }}>{order.clientName}</div>
               <div style={{ fontSize: 11, color: "#64748b", marginBottom: 2 }}>Tel: {order.clientPhone}</div>
               <div style={{ fontSize: 11, color: "#64748b", marginBottom: 2 }}>
-                <strong>Equipo:</strong> {order.brand} {order.model} â€” Tipo: {MOTOR_TYPE_LABELS[order.motorType] ?? order.motorType}
+                <strong>Equipo:</strong> {order.brand} {order.model} — Tipo: {MOTOR_TYPE_LABELS[order.motorType] ?? order.motorType}
               </div>
               <div style={{ fontSize: 11, color: "#64748b", marginBottom: 2, lineHeight: 1.5 }}>
                 <strong>Falla reportada:</strong> {order.reportedIssues}
               </div>
               {order.internalNotes && (
                 <div style={{ fontSize: 11, color: "#64748b", lineHeight: 1.5 }}>
-                  <strong>Detalle tÃ©cnico:</strong> {order.internalNotes}
+                  <strong>Detalle técnico:</strong> {order.internalNotes}
                 </div>
               )}
             </div>
           </div>
 
-          {/* â”€â”€ Tabla â”€â”€ */}
+          {/* ── Tabla ── */}
           <table style={{ width: "100%", borderCollapse: "collapse", marginTop: 0 }}>
             <thead>
               <tr style={{ background: "#1a3a5c", color: "#ffffff" }}>
-                <th style={{ textAlign: "left",  padding: "10px 24px", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, width: "52%" }}>DescripciÃ³n</th>
+                <th style={{ textAlign: "left",  padding: "10px 24px", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, width: "52%" }}>Descripción</th>
                 <th style={{ textAlign: "center", padding: "10px 12px", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, width: "10%" }}>Cant.</th>
                 <th style={{ textAlign: "right",  padding: "10px 16px", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, width: "19%" }}>Precio Unit.</th>
                 <th style={{ textAlign: "right",  padding: "10px 24px", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, width: "19%" }}>Total</th>
@@ -261,7 +261,7 @@ export default function BudgetImage({ order, onClose }: Props) {
             </tbody>
           </table>
 
-          {/* â”€â”€ Totales â”€â”€ */}
+          {/* ── Totales ── */}
           <div style={{ display: "flex", justifyContent: "flex-end", borderTop: "2px solid #1a3a5c", marginTop: 0 }}>
             <div style={{ width: 280 }}>
               <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 24px", borderBottom: "1px solid #e2e8f0" }}>
@@ -281,23 +281,23 @@ export default function BudgetImage({ order, onClose }: Props) {
             </div>
           </div>
 
-          {/* â”€â”€ Aviso de retiro â”€â”€ */}
+          {/* ── Aviso de retiro ── */}
           <div style={{ background: "#fffbeb", border: "1px solid #f59e0b", borderRadius: 8, margin: "20px 24px 8px", padding: "12px 16px" }}>
             <div style={{ fontSize: 11, fontWeight: 800, color: "#b45309", textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>
-              âš  Fecha de Aviso al Cliente: {new Date(notifDate + "T12:00:00").toLocaleDateString("es-AR")} â€” Retiro antes del: {retiroDeadline()}
+              ⚠ Fecha de Aviso al Cliente: {new Date(notifDate + "T12:00:00").toLocaleDateString("es-AR")} — Retiro antes del: {retiroDeadline()}
             </div>
             <div style={{ fontSize: 10.5, color: "#78350f", lineHeight: 1.6 }}>{CLAUSULA_90}</div>
           </div>
 
-          {/* â”€â”€ PolÃ­tica de diagnÃ³stico â”€â”€ */}
+          {/* ── Política de diagnóstico ── */}
           <div style={{ background: "#f0fdf4", border: "1px solid #86efac", borderRadius: 8, margin: "8px 24px", padding: "12px 16px" }}>
             <div style={{ fontSize: 11, fontWeight: 800, color: "#15803d", textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>
-              ðŸ’¡ PolÃ­tica de DiagnÃ³stico
+              💡 Política de Diagnóstico
             </div>
             <div style={{ fontSize: 10.5, color: "#166534", lineHeight: 1.6 }}>{CLAUSULA_DIAG}</div>
           </div>
 
-          {/* â”€â”€ Firmas â”€â”€ */}
+          {/* ── Firmas ── */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 32, padding: "24px 36px 0", marginTop: 16 }}>
             <div style={{ textAlign: "center" }}>
               <div style={{ borderBottom: "2px solid #1a3a5c", height: 48, marginBottom: 8 }} />
@@ -307,14 +307,14 @@ export default function BudgetImage({ order, onClose }: Props) {
             <div style={{ textAlign: "center" }}>
               <div style={{ borderBottom: "2px solid #1a3a5c", height: 48, marginBottom: 8 }} />
               <div style={{ fontSize: 12, fontWeight: 700, color: "#1a3a5c" }}>{order.clientName}</div>
-              <div style={{ fontSize: 11, color: "#64748b" }}>Firma del cliente â€” Conforme</div>
+              <div style={{ fontSize: 11, color: "#64748b" }}>Firma del cliente — Conforme</div>
             </div>
           </div>
 
-          {/* â”€â”€ Footer â”€â”€ */}
+          {/* ── Footer ── */}
           <div style={{ textAlign: "center", marginTop: 20, padding: "12px 24px", background: "#f8fafc", borderTop: "1px solid #e2e8f0" }}>
             <div style={{ fontSize: 11, color: "#64748b" }}>
-              {EMPRESA.nombre} Â· CUIT {EMPRESA.cuit} Â· {EMPRESA.dir} Â· {EMPRESA.loc} Â· Tel: {EMPRESA.tel}
+              {EMPRESA.nombre} · CUIT {EMPRESA.cuit} · {EMPRESA.dir} · {EMPRESA.loc} · Tel: {EMPRESA.tel}
             </div>
           </div>
         </div>

@@ -40,7 +40,7 @@ export default function PaymentModal({ order, onClose }: Props) {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Â¿Eliminar este pago?")) return;
+    if (!confirm("¿Eliminar este pago?")) return;
     await pagosDb.delete(id); await load();
   };
 
@@ -52,7 +52,7 @@ export default function PaymentModal({ order, onClose }: Props) {
             <div className="bg-green-600 rounded-xl p-2"><DollarSign className="w-5 h-5 text-white" /></div>
             <div>
               <h2 className="text-white font-bold text-base">Registro de Pagos</h2>
-              <p className="text-gray-400 text-xs">{order.clientName} Â· {order.brand} {order.model}</p>
+              <p className="text-gray-400 text-xs">{order.clientName} · {order.brand} {order.model}</p>
             </div>
           </div>
           <button onClick={onClose} className="btn-ghost btn-sm p-2.5 rounded-xl"><X className="w-5 h-5" /></button>
@@ -91,7 +91,7 @@ export default function PaymentModal({ order, onClose }: Props) {
                   value={amount} onChange={(e) => setAmount(e.target.value)} />
               </div>
               <div>
-                <label className="label">MÃ©todo</label>
+                <label className="label">Método</label>
                 <select className="input input-sm" value={method} onChange={(e) => setMethod(e.target.value as Pago["method"])}>
                   {(Object.keys(PAYMENT_METHOD_LABELS) as Pago["method"][]).map((m) => (
                     <option key={m} value={m}>{PAYMENT_METHOD_LABELS[m]}</option>
@@ -114,7 +114,7 @@ export default function PaymentModal({ order, onClose }: Props) {
                 <div key={p.id} className="flex items-center justify-between gap-3 bg-gray-800 rounded-xl px-4 py-3">
                   <div>
                     <p className="text-green-400 font-bold">{formatCurrency(p.amount)}</p>
-                    <p className="text-xs text-gray-400">{PAYMENT_METHOD_LABELS[p.method]} Â· {formatDate(p.paidAt)}</p>
+                    <p className="text-xs text-gray-400">{PAYMENT_METHOD_LABELS[p.method]} · {formatDate(p.paidAt)}</p>
                     {p.notes && <p className="text-xs text-gray-500">{p.notes}</p>}
                   </div>
                   <button onClick={() => handleDelete(p.id)} className="text-gray-600 hover:text-red-400 transition-colors">

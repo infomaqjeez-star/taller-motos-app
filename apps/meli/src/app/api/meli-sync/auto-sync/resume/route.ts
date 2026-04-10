@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 
-// Forzar renderizado dinámico - evita error de generación estática
+// Forzar renderizado din�mico - evita error de generaci�n est�tica
 export const dynamic = 'force-dynamic';
 
-// Estado de sincronizaciÃ³n (compartido con el route principal)
+// Estado de sincronización (compartido con el route principal)
 let syncState = {
   isRunning: false,
   startedAt: null as string | null,
@@ -15,7 +15,7 @@ let syncState = {
 /**
  * GET /api/meli-sync/auto-sync/resume
  * 
- * Reanuda la sincronizaciÃ³n automÃ¡tica.
+ * Reanuda la sincronización automática.
  */
 export async function GET() {
   return NextResponse.json({

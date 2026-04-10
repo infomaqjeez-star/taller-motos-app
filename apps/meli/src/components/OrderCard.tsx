@@ -67,7 +67,7 @@ export default function OrderCard({ order, onEdit, onDelete }: OrderCardProps) {
   const waUrl = buildWhatsAppUrl(currentOrder.clientPhone, buildWhatsAppMessage(currentOrder));
 
   const handleDelete = () => {
-    if (confirm(`Â¿Eliminar la orden de ${currentOrder.clientName}?`)) {
+    if (confirm(`¿Eliminar la orden de ${currentOrder.clientName}?`)) {
       onDelete(currentOrder.id);
     }
   };
@@ -81,19 +81,19 @@ export default function OrderCard({ order, onEdit, onDelete }: OrderCardProps) {
             : "bg-gray-900 border-gray-700"
           }`}
       >
-        {/* Alerta 90 dÃ­as */}
+        {/* Alerta 90 días */}
         {overdue && waitingDays !== null && (
           <div className="bg-red-600 px-4 py-2 flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 text-white flex-shrink-0" />
             <span className="text-white text-sm font-bold">
-              ALERTA: {waitingDays} dÃ­as esperando retiro
+              ALERTA: {waitingDays} días esperando retiro
             </span>
           </div>
         )}
 
         <div className="p-4 space-y-3">
 
-          {/* â”€â”€ Fila 1: Badges â”€â”€ */}
+          {/* ── Fila 1: Badges ── */}
           <div className="flex flex-wrap items-center gap-1.5">
             <span
               className="text-xs font-black px-2 py-0.5 rounded-lg border bg-orange-500/20 text-orange-300 border-orange-500/40"
@@ -124,7 +124,7 @@ export default function OrderCard({ order, onEdit, onDelete }: OrderCardProps) {
             )}
           </div>
 
-          {/* â”€â”€ Fila 2: Nombre + acciones principales â”€â”€ */}
+          {/* ── Fila 2: Nombre + acciones principales ── */}
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
               <h3 className="text-white font-bold text-lg leading-tight truncate">
@@ -135,7 +135,7 @@ export default function OrderCard({ order, onEdit, onDelete }: OrderCardProps) {
               </p>
             </div>
 
-            {/* Acciones primarias â€” siempre visibles */}
+            {/* Acciones primarias — siempre visibles */}
             <div className="flex items-center gap-2 flex-shrink-0">
               <a
                 href={waUrl}
@@ -157,7 +157,7 @@ export default function OrderCard({ order, onEdit, onDelete }: OrderCardProps) {
             </div>
           </div>
 
-          {/* â”€â”€ Fila 3: Info rÃ¡pida â”€â”€ */}
+          {/* ── Fila 3: Info rápida ── */}
           <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
             <span className="flex items-center gap-1 text-gray-400">
               <Calendar className="w-3.5 h-3.5 text-gray-500" />
@@ -181,7 +181,7 @@ export default function OrderCard({ order, onEdit, onDelete }: OrderCardProps) {
             </span>
           </div>
 
-          {/* â”€â”€ Fila 4: Acciones secundarias â”€â”€ */}
+          {/* ── Fila 4: Acciones secundarias ── */}
           <div className="flex flex-wrap gap-2 pt-1 border-t border-gray-700/60">
             <button
               onClick={() => setShowBudget(true)}
@@ -240,7 +240,7 @@ export default function OrderCard({ order, onEdit, onDelete }: OrderCardProps) {
             </button>
           </div>
 
-          {/* â”€â”€ Expandir detalle â”€â”€ */}
+          {/* ── Expandir detalle ── */}
           <button
             onClick={() => setExpanded(!expanded)}
             className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-300 transition-colors"

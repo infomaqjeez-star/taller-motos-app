@@ -54,7 +54,7 @@ export function StatsPanel({ accountId }: { accountId: string }) {
     );
   }
 
-  // Preparar datos para grÃ¡fico
+  // Preparar datos para gráfico
   const chartData = Object.entries(stats.zones).map(([zone, data]) => ({
     zone: ZONE_CFG[zone]?.label || zone,
     total: data.total,
@@ -64,7 +64,7 @@ export function StatsPanel({ accountId }: { accountId: string }) {
 
   return (
     <div className="space-y-4">
-      {/* Selector de perÃ­odo */}
+      {/* Selector de período */}
       <div className="flex gap-2">
         {(["day", "week", "month"] as Period[]).map((p) => (
           <button
@@ -82,7 +82,7 @@ export function StatsPanel({ accountId }: { accountId: string }) {
         ))}
       </div>
 
-      {/* GrÃ¡fico de barras */}
+      {/* Gráfico de barras */}
       {chartData.length > 0 && (
         <div className="rounded-2xl p-4 overflow-x-auto" style={{ background: "#1A1A1A" }}>
           <ResponsiveContainer width="100%" height={300}>
@@ -169,7 +169,7 @@ export function StatsPanel({ accountId }: { accountId: string }) {
       {stats.top_zones.length > 0 && (
         <div className="rounded-2xl p-4" style={{ background: "#1A1A1A" }}>
           <h3 className="text-xs font-black mb-2" style={{ color: "#FFE600" }}>
-            Zonas mÃ¡s activas
+            Zonas más activas
           </h3>
           <div className="space-y-1">
             {stats.top_zones.map((item, i) => (

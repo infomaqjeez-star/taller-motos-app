@@ -12,7 +12,7 @@ import {
   ChevronDown, ChevronUp, RefreshCw,
 } from "lucide-react";
 
-// â”€â”€â”€ LÃ­nea de tiempo de un cliente â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Línea de tiempo de un cliente ──────────────────────────────
 
 function Timeline({ items }: { items: HistorialReparacion[] }) {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
@@ -46,7 +46,7 @@ function Timeline({ items }: { items: HistorialReparacion[] }) {
                       </span>
                       {idx === 0 && (
                         <span className="badge bg-orange-900/40 text-orange-300 border-orange-600">
-                          Ãšltima visita
+                          Última visita
                         </span>
                       )}
                     </div>
@@ -106,7 +106,7 @@ function Timeline({ items }: { items: HistorialReparacion[] }) {
   );
 }
 
-// â”€â”€â”€ Modal ficha de cliente â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Modal ficha de cliente ──────────────────────────────────────
 
 function ClienteModal({ cliente, onClose }: { cliente: AgendaCliente; onClose: () => void }) {
   const [items, setItems] = useState<HistorialReparacion[]>([]);
@@ -180,14 +180,14 @@ function ClienteModal({ cliente, onClose }: { cliente: AgendaCliente; onClose: (
               {equipos.map((eq, i) => (
                 <div key={i} className="bg-gray-800 border border-gray-700 rounded-xl px-3 py-2">
                   <p className="text-white text-sm font-semibold">{eq.brand} {eq.model}</p>
-                  <p className="text-gray-500 text-xs">{eq.type} Â· {eq.count} ingreso{eq.count !== 1 ? "s" : ""}</p>
+                  <p className="text-gray-500 text-xs">{eq.type} · {eq.count} ingreso{eq.count !== 1 ? "s" : ""}</p>
                 </div>
               ))}
             </div>
           </div>
         )}
 
-        {/* LÃ­nea de tiempo */}
+        {/* Línea de tiempo */}
         <div className="overflow-y-auto flex-1 px-5 py-4">
           {loading ? (
             <div className="flex justify-center py-10">
@@ -197,7 +197,7 @@ function ClienteModal({ cliente, onClose }: { cliente: AgendaCliente; onClose: (
             <>
               {items.length > 0 && (
                 <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-4">
-                  Historial permanente â€” {items.length} visita{items.length !== 1 ? "s" : ""}
+                  Historial permanente — {items.length} visita{items.length !== 1 ? "s" : ""}
                 </p>
               )}
               <Timeline items={items} />
@@ -209,7 +209,7 @@ function ClienteModal({ cliente, onClose }: { cliente: AgendaCliente; onClose: (
   );
 }
 
-// â”€â”€â”€ PÃ¡gina principal de Agenda â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Página principal de Agenda ──────────────────────────────────
 
 export default function AgendaPage() {
   const [clientes, setClientes] = useState<AgendaCliente[]>([]);
@@ -229,7 +229,7 @@ export default function AgendaPage() {
     try {
       const count = await agendaDb.syncFromOrders();
       await load();
-      alert(count > 0 ? `âœ“ ${count} cliente${count !== 1 ? "s" : ""} sincronizado${count !== 1 ? "s" : ""} desde las Ã³rdenes.` : "âœ“ La agenda ya estaba al dÃ­a.");
+      alert(count > 0 ? `✓ ${count} cliente${count !== 1 ? "s" : ""} sincronizado${count !== 1 ? "s" : ""} desde las órdenes.` : "✓ La agenda ya estaba al día.");
     } catch (e) { alert("Error al sincronizar: " + e); }
     setSyncing(false);
   };
@@ -264,7 +264,7 @@ export default function AgendaPage() {
       <Navbar />
       <main className="max-w-2xl mx-auto px-4 py-6 pb-20 sm:pb-4 space-y-5">
 
-        {/* TÃ­tulo */}
+        {/* Título */}
         <div className="flex items-center gap-3">
           <div className="bg-blue-600 rounded-xl p-2.5">
             <Users className="w-6 h-6 text-white" />
@@ -272,12 +272,12 @@ export default function AgendaPage() {
           <div>
             <h1 className="text-2xl font-black text-white">Agenda de Clientes</h1>
             <p className="text-gray-400 text-sm">
-              {clientes.length} cliente{clientes.length !== 1 ? "s" : ""} Â· Identificados por telÃ©fono
+              {clientes.length} cliente{clientes.length !== 1 ? "s" : ""} · Identificados por teléfono
             </p>
           </div>
           <button onClick={handleSync} disabled={syncing}
             className="ml-auto btn-secondary btn-sm rounded-xl flex items-center gap-2"
-            title="Sincronizar desde Ã³rdenes existentes">
+            title="Sincronizar desde órdenes existentes">
             <RefreshCw className={`w-4 h-4 ${syncing ? "animate-spin text-orange-400" : "text-gray-400"}`} />
             <span className="hidden sm:inline text-xs">Sincronizar</span>
           </button>
@@ -289,7 +289,7 @@ export default function AgendaPage() {
           <input
             type="text"
             className="input pl-11 text-base"
-            placeholder="Buscar por nombre o telÃ©fono..."
+            placeholder="Buscar por nombre o teléfono..."
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
@@ -311,12 +311,12 @@ export default function AgendaPage() {
           <div className="card text-center py-16">
             <Users className="w-12 h-12 text-gray-700 mx-auto mb-4" />
             <p className="text-gray-400 font-semibold">
-              {search ? "No se encontraron clientes" : "La agenda estÃ¡ vacÃ­a"}
+              {search ? "No se encontraron clientes" : "La agenda está vacía"}
             </p>
             <p className="text-gray-600 text-sm mt-1">
               {search
-                ? "ProbÃ¡ con otro nombre o nÃºmero"
-                : "Los clientes se agregan automÃ¡ticamente al crear Ã³rdenes"}
+                ? "Probá con otro nombre o número"
+                : "Los clientes se agregan automáticamente al crear órdenes"}
             </p>
           </div>
         ) : (
@@ -363,7 +363,7 @@ export default function AgendaPage() {
 
       {selected && <ClienteModal cliente={selected} onClose={() => setSelected(null)} />}
 
-      {/* â”€â”€ Modal doble confirmaciÃ³n para eliminar â”€â”€ */}
+      {/* ── Modal doble confirmación para eliminar ── */}
       {deleteTarget && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-gray-900 rounded-2xl border border-red-700 shadow-2xl w-full max-w-sm p-6 space-y-4">
@@ -377,14 +377,14 @@ export default function AgendaPage() {
             {deleteStep === 1 ? (
               <>
                 <div className="text-center space-y-1">
-                  <h3 className="text-white font-bold text-lg">Â¿Eliminar cliente?</h3>
+                  <h3 className="text-white font-bold text-lg">¿Eliminar cliente?</h3>
                   <p className="text-gray-300 font-semibold">{deleteTarget.nombre}</p>
                   <p className="text-gray-400 text-sm">{deleteTarget.telefono}</p>
                 </div>
                 <div className="bg-yellow-900/30 border border-yellow-600/50 rounded-xl px-4 py-3">
-                  <p className="text-yellow-300 text-sm font-semibold">âš  Primera advertencia</p>
+                  <p className="text-yellow-300 text-sm font-semibold">⚠ Primera advertencia</p>
                   <p className="text-yellow-400/80 text-xs mt-1">
-                    Se eliminarÃ¡ el cliente de la Agenda. Su historial de reparaciones tambiÃ©n se perderÃ¡ permanentemente.
+                    Se eliminará el cliente de la Agenda. Su historial de reparaciones también se perderá permanentemente.
                   </p>
                 </div>
                 <div className="flex gap-3">
@@ -394,20 +394,20 @@ export default function AgendaPage() {
                   </button>
                   <button onClick={confirmDelete}
                     className="flex-1 btn rounded-xl bg-yellow-600 hover:bg-yellow-500 text-white font-bold py-2.5">
-                    Continuar â†’
+                    Continuar →
                   </button>
                 </div>
               </>
             ) : (
               <>
                 <div className="text-center space-y-1">
-                  <h3 className="text-white font-bold text-lg">ConfirmaciÃ³n final</h3>
+                  <h3 className="text-white font-bold text-lg">Confirmación final</h3>
                   <p className="text-gray-300 font-semibold">{deleteTarget.nombre}</p>
                 </div>
                 <div className="bg-red-900/30 border border-red-600/50 rounded-xl px-4 py-3">
-                  <p className="text-red-300 text-sm font-semibold">ðŸš¨ Segunda advertencia â€” AcciÃ³n irreversible</p>
+                  <p className="text-red-300 text-sm font-semibold">🚨 Segunda advertencia — Acción irreversible</p>
                   <p className="text-red-400/80 text-xs mt-1">
-                    Esta acciÃ³n <strong className="text-red-300">no se puede deshacer</strong>. El cliente y todo su historial se eliminarÃ¡n definitivamente de la base de datos de MAQJEEZ.
+                    Esta acción <strong className="text-red-300">no se puede deshacer</strong>. El cliente y todo su historial se eliminarán definitivamente de la base de datos de MAQJEEZ.
                   </p>
                 </div>
                 <div className="flex gap-3">
@@ -417,7 +417,7 @@ export default function AgendaPage() {
                   </button>
                   <button onClick={confirmDelete} disabled={deleting}
                     className="flex-1 btn rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 disabled:opacity-60">
-                    {deleting ? "Eliminando..." : "SÃ­, eliminar"}
+                    {deleting ? "Eliminando..." : "Sí, eliminar"}
                   </button>
                 </div>
               </>

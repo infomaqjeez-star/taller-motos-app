@@ -1,6 +1,6 @@
 /**
- * ConfiguraciÃ³n de Modos de Alerta Unificados
- * Define el comportamiento y estilo de alertas segÃºn el contexto (oficina, taller, urgente)
+ * Configuración de Modos de Alerta Unificados
+ * Define el comportamiento y estilo de alertas según el contexto (oficina, taller, urgente)
  */
 
 export type AlertMode = "discreto" | "taller" | "urgente";
@@ -20,16 +20,16 @@ export const ALERT_MODES: Record<AlertMode, AlertModeConfig> = {
     label: "Oficina (Discreto)",
     duration: 3000,
     style: "bg-blue-600",
-    icon: "ðŸ”¹",
+    icon: "🔹",
     animation: "",
     soundFile: "/sounds/alerta-discreto.mp3",
     volume: 0.5,
   },
   taller: {
-    label: "Taller (EstÃ¡ndar)",
+    label: "Taller (Estándar)",
     duration: 8000,
     style: "bg-green-600",
-    icon: "ðŸ””",
+    icon: "🔔",
     animation: "",
     soundFile: "/sounds/alerta-taller.mp3",
     volume: 0.5,
@@ -38,7 +38,7 @@ export const ALERT_MODES: Record<AlertMode, AlertModeConfig> = {
     label: "Ruidoso (Urgente)",
     duration: 25000, // Alerta extra larga de 25 segundos
     style: "bg-red-600",
-    icon: "âš ï¸",
+    icon: "⚠️",
     animation: "animate-pulse", // Hace que la alerta parpadee
     soundFile: "/sounds/alerta-urgente.mp3",
     volume: 1.0,

@@ -17,7 +17,7 @@ interface UseNotificationStreamReturn {
 
 /**
  * Hook React para conectarse al stream SSE de notificaciones en tiempo real
- * Se reconecta automÃ¡ticamente cada 5s si la conexiÃ³n cae
+ * Se reconecta automáticamente cada 5s si la conexión cae
  */
 export function useNotificationStream(
   onNotification: (data: MeliNotification) => void,
@@ -39,36 +39,36 @@ export function useNotificationStream(
 
       console.log(`[SSE] Intentando conectar a ${url}...`);
 
-      // Crear conexiÃ³n SSE
+      // Crear conexión SSE
       const eventSource = new EventSource(url, { withCredentials: false });
 
-      // Listener: conexiÃ³n establecida
+      // Listener: conexión establecida
       eventSource.addEventListener("open", () => {
-        console.log("[SSE] âœ… ConexiÃ³n establecida correctamente");
+        console.log("[SSE] ✅ Conexión establecida correctamente");
         setConnected(true);
         setError(null);
         reconnectAttempts.current = 0;
       });
 
-      // Listener: evento de notificaciÃ³n MeLi
+      // Listener: evento de notificación MeLi
       eventSource.addEventListener("notificacion_meli", (event: Event) => {
         try {
           const customEvent = event as MessageEvent;
           const notification = JSON.parse(customEvent.data) as MeliNotification;
           onNotification(notification);
-          console.log("[SSE] ðŸ”” NotificaciÃ³n recibida:", notification);
+          console.log("[SSE] 🔔 Notificación recibida:", notification);
         } catch (parseError) {
-          console.error("[SSE] âŒ Error parseando notificaciÃ³n:", parseError);
+          console.error("[SSE] ❌ Error parseando notificación:", parseError);
         }
       });
 
       // Listener: errores
       eventSource.addEventListener("error", (event) => {
-        console.warn(`[SSE] âš ï¸ Error en conexiÃ³n (readyState: ${eventSource.readyState})`);
+        console.warn(`[SSE] ⚠️ Error en conexión (readyState: ${eventSource.readyState})`);
         console.warn("[SSE] Event:", event);
 
         if (eventSource.readyState === EventSource.CLOSED) {
-          console.log("[SSE] ðŸ”´ ConexiÃ³n cerrada");
+          console.log("[SSE] 🔴 Conexión cerrada");
           setConnected(false);
           setError(new Error("SSE connection closed"));
           eventSource.close();
@@ -76,12 +76,12 @@ export function useNotificationStream(
 
           // Intentar reconectar en 5s
           reconnectAttempts.current++;
-          console.log(`[SSE] Intento de reconexiÃ³n #${reconnectAttempts.current} en 5s...`);
+          console.log(`[SSE] Intento de reconexión #${reconnectAttempts.current} en 5s...`);
 
           if (!isCleaningUp.current && reconnectAttempts.current < 10) {
             reconnectTimeoutRef.current = setTimeout(connect, 5000);
           } else if (reconnectAttempts.current >= 10) {
-            console.error("[SSE] âŒ MÃ¡ximo nÃºmero de intentos de reconexiÃ³n alcanzado");
+            console.error("[SSE] ❌ Máximo número de intentos de reconexión alcanzado");
             setError(new Error("Max reconnection attempts reached"));
           }
         }
@@ -91,14 +91,14 @@ export function useNotificationStream(
       console.log("[SSE] EventSource creado");
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err));
-      console.error("[SSE] âŒ Error crÃ­tico conectando:", error);
+      console.error("[SSE] ❌ Error crítico conectando:", error);
       setError(error);
       setConnected(false);
 
       // Reintentar en 5s
       reconnectAttempts.current++;
       if (!isCleaningUp.current && reconnectAttempts.current < 10) {
-        console.log(`[SSE] Intento de reconexiÃ³n #${reconnectAttempts.current} en 5s...`);
+        console.log(`[SSE] Intento de reconexión #${reconnectAttempts.current} en 5s...`);
         reconnectTimeoutRef.current = setTimeout(connect, 5000);
       }
     }
@@ -118,7 +118,7 @@ export function useNotificationStream(
       return;
     }
 
-    console.log("[SSE] ðŸŸ¢ Inicializando useNotificationStream...");
+    console.log("[SSE] 🟢 Inicializando useNotificationStream...");
     isCleaningUp.current = false;
     reconnectAttempts.current = 0;
     
@@ -126,7 +126,7 @@ export function useNotificationStream(
 
     // Cleanup al desmontar
     return () => {
-      console.log("[SSE] ðŸ›‘ Limpiando useNotificationStream...");
+      console.log("[SSE] 🛑 Limpiando useNotificationStream...");
       isCleaningUp.current = true;
 
       if (eventSourceRef.current) {

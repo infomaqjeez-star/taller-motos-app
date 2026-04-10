@@ -69,7 +69,7 @@ export default function PartOrderForm({ initial, onSave, onClose }: PartOrderFor
             <input
               type="text"
               className={`input ${errors.name ? "border-red-500" : ""}`}
-              placeholder="Ej: PistÃ³n 47mm para Stihl MS 250"
+              placeholder="Ej: Pistón 47mm para Stihl MS 250"
               value={form.name}
               onChange={(e) => set("name", e.target.value)}
             />
@@ -117,7 +117,7 @@ export default function PartOrderForm({ initial, onSave, onClose }: PartOrderFor
             <input
               type="text"
               className="input"
-              placeholder="Ej: Juan PÃ©rez â€” Honda CG 150"
+              placeholder="Ej: Juan Pérez — Honda CG 150"
               value={form.orderClientName ?? ""}
               onChange={(e) =>
                 set("orderClientName", e.target.value || null)
@@ -130,7 +130,7 @@ export default function PartOrderForm({ initial, onSave, onClose }: PartOrderFor
             <input
               type="text"
               className="input"
-              placeholder="InformaciÃ³n adicional..."
+              placeholder="Información adicional..."
               value={form.notes}
               onChange={(e) => set("notes", e.target.value)}
             />

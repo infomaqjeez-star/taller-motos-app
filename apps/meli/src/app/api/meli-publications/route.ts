@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-// Forzar renderizado dinÃ¡mico - evita error de generaciÃ³n estÃ¡tica
+// Forzar renderizado dinámico - evita error de generación estática
 export const dynamic = 'force-dynamic';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";

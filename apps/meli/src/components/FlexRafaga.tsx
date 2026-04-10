@@ -162,12 +162,12 @@ export default function FlexRafaga({ tarifas, onClose, onSaved }: Props) {
             <Zap className="w-4 h-4 text-black" />
           </div>
           <div>
-            <h2 className="text-white font-bold text-sm">Modo RÃ¡faga</h2>
+            <h2 className="text-white font-bold text-sm">Modo Ráfaga</h2>
             <p className="text-gray-400 text-xs">
               {paso === "escaneo" ? `${paquetes.length}/${MAX_PAQUETES} paquetes` :
-               paso === "revision" ? "RevisiÃ³n final" :
+               paso === "revision" ? "Revisión final" :
                paso === "guardando" ? `Guardando ${guardados}/${paquetes.length}...` :
-               "Â¡Completado!"}
+               "¡Completado!"}
             </p>
           </div>
         </div>
@@ -192,7 +192,7 @@ export default function FlexRafaga({ tarifas, onClose, onSaved }: Props) {
               onClick={() => { setPaso("escaneo"); setBusqueda(""); }}
               className="px-3 py-2 bg-gray-700 text-white rounded-xl text-sm font-semibold"
             >
-              â† Volver
+              ← Volver
             </button>
             <button
               onClick={guardarTodos}
@@ -210,11 +210,11 @@ export default function FlexRafaga({ tarifas, onClose, onSaved }: Props) {
         )}
       </div>
 
-      {/* â”€â”€ PASO: ESCANEO â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── PASO: ESCANEO ─────────────────────────────────────── */}
       {paso === "escaneo" && (
         <div className="flex flex-col flex-1 overflow-hidden">
 
-          {/* Barra lÃ­mite */}
+          {/* Barra límite */}
           <div className="px-4 pt-3 flex-shrink-0">
             <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
               <div
@@ -227,7 +227,7 @@ export default function FlexRafaga({ tarifas, onClose, onSaved }: Props) {
             </div>
             {paquetes.length >= MAX_PAQUETES && (
               <p className="text-red-400 text-xs font-bold mt-1 text-center">
-                LÃ­mite de 50 paquetes alcanzado â€” tocÃ¡ Finalizar
+                Límite de 50 paquetes alcanzado — tocá Finalizar
               </p>
             )}
           </div>
@@ -313,7 +313,7 @@ export default function FlexRafaga({ tarifas, onClose, onSaved }: Props) {
         </div>
       )}
 
-      {/* â”€â”€ PASO: REVISIÃ“N â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── PASO: REVISIÓN ────────────────────────────────────── */}
       {paso === "revision" && (
         <div className="flex flex-col flex-1 overflow-hidden">
 
@@ -340,12 +340,12 @@ export default function FlexRafaga({ tarifas, onClose, onSaved }: Props) {
             <div className="mx-4 mb-2 bg-red-900/30 border border-red-600/50 rounded-xl px-3 py-2 flex items-center gap-2 flex-shrink-0">
               <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0" />
               <p className="text-red-300 text-xs font-semibold">
-                {invalidos} paquete{invalidos > 1 ? "s" : ""} sin localidad â€” editÃ¡ antes de guardar
+                {invalidos} paquete{invalidos > 1 ? "s" : ""} sin localidad — editá antes de guardar
               </p>
             </div>
           )}
 
-          {/* Lista revisiÃ³n */}
+          {/* Lista revisión */}
           <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-2">
             {paquetes.map((p, idx) => (
               <div
@@ -440,7 +440,7 @@ export default function FlexRafaga({ tarifas, onClose, onSaved }: Props) {
         </div>
       )}
 
-      {/* â”€â”€ PASO: GUARDANDO â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── PASO: GUARDANDO ───────────────────────────────────── */}
       {paso === "guardando" && (
         <div className="flex-1 flex flex-col items-center justify-center gap-6 px-8">
           <div className="w-16 h-16 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin" />
@@ -457,14 +457,14 @@ export default function FlexRafaga({ tarifas, onClose, onSaved }: Props) {
         </div>
       )}
 
-      {/* â”€â”€ PASO: LISTO â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── PASO: LISTO ───────────────────────────────────────── */}
       {paso === "listo" && (
         <div className="flex-1 flex flex-col items-center justify-center gap-6 px-8 text-center">
           <div className="bg-green-500/20 rounded-full p-6">
             <CheckCircle2 className="w-16 h-16 text-green-400" />
           </div>
           <div>
-            <p className="text-white font-black text-2xl">Â¡RÃ¡faga completada!</p>
+            <p className="text-white font-black text-2xl">¡Ráfaga completada!</p>
             <p className="text-gray-400 mt-1">{guardados} paquetes guardados</p>
           </div>
           <div className="bg-gray-800 rounded-2xl border border-gray-700 p-5 w-full space-y-2">

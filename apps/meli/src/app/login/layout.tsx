@@ -1,4 +1,4 @@
-// Este archivo fuerza a Next.js a generar rutas dinÃ¡micas correctamente
+// Este archivo fuerza a Next.js a generar rutas dinámicas correctamente
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 

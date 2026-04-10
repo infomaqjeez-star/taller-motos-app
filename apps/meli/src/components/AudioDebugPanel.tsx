@@ -50,7 +50,7 @@ export default function AudioDebugPanel() {
 
   return (
     <div className="fixed bottom-20 right-4 z-40 bg-gray-900 border border-gray-700 rounded-xl p-4 shadow-2xl max-w-sm max-h-96 overflow-y-auto">
-      <h3 className="text-white font-bold mb-3 text-sm">ðŸ”§ Audio Debug</h3>
+      <h3 className="text-white font-bold mb-3 text-sm">🔧 Audio Debug</h3>
       
       <div className="space-y-2 mb-4">
         {["discreto", "taller", "urgente"].map((mode) => (
@@ -69,7 +69,7 @@ export default function AudioDebugPanel() {
         {Object.entries(results).map(([mode, data]: any) => (
           <div key={mode} className="bg-gray-800 p-2 rounded border border-gray-700">
             <p className="font-bold text-green-400">
-              {data.success ? "âœ…" : "âŒ"} {mode.toUpperCase()}
+              {data.success ? "✅" : "❌"} {mode.toUpperCase()}
             </p>
             <div className="text-gray-400 mt-1 space-y-0.5">
               <p>Path: {data.path}</p>

@@ -12,11 +12,11 @@ interface FiltersBarProps {
 }
 
 const MOTOR_OPTIONS: { value: MotorType | "all"; label: string; emoji: string }[] = [
-  { value: "all",               label: "Todos",            emoji: "âš™ï¸" },
-  { value: "desmalezadora",     label: "Desmalezadora",    emoji: "ðŸŒ¿" },
-  { value: "motosierra",        label: "Motosierra",       emoji: "ðŸªš" },
-  { value: "grupo_electrogeno", label: "Grupo Elec.",      emoji: "âš¡" },
-  { value: "otros",             label: "Otros",            emoji: "ðŸ”§" },
+  { value: "all",               label: "Todos",            emoji: "⚙️" },
+  { value: "desmalezadora",     label: "Desmalezadora",    emoji: "🌿" },
+  { value: "motosierra",        label: "Motosierra",       emoji: "🪚" },
+  { value: "grupo_electrogeno", label: "Grupo Elec.",      emoji: "⚡" },
+  { value: "otros",             label: "Otros",            emoji: "🔧" },
 ];
 
 const STATUS_OPTIONS: { value: RepairStatus | "all"; label: string }[] = [
@@ -41,7 +41,7 @@ export default function FiltersBar({ filters, onChange, totalCount, filteredCoun
 
   return (
     <div className="space-y-3">
-      {/* BÃºsqueda */}
+      {/* Búsqueda */}
       <div className="relative">
         <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 pointer-events-none" />
         <input
@@ -61,7 +61,7 @@ export default function FiltersBar({ filters, onChange, totalCount, filteredCoun
         )}
       </div>
 
-      {/* Fila 1: Tipo de mÃ¡quina â€” scroll horizontal */}
+      {/* Fila 1: Tipo de máquina — scroll horizontal */}
       <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
         {MOTOR_OPTIONS.map(({ value, label, emoji }) => (
           <button
@@ -123,7 +123,7 @@ export default function FiltersBar({ filters, onChange, totalCount, filteredCoun
       {/* Contador */}
       <p className="text-xs text-gray-500">
         Mostrando <span className="text-gray-300 font-semibold">{filteredCount}</span> de{" "}
-        <span className="text-gray-300 font-semibold">{totalCount}</span> Ã³rdenes
+        <span className="text-gray-300 font-semibold">{totalCount}</span> órdenes
       </p>
     </div>
   );

@@ -41,7 +41,7 @@ export default function LoginPage() {
     // Si es login por username, necesitamos buscar el email asociado
     let loginEmail = email;
     if (loginType === "username" && username) {
-      // AquÃ­ deberÃ­as hacer una consulta a tu API para obtener el email del username
+      // Aquí deberías hacer una consulta a tu API para obtener el email del username
       // Por ahora, asumimos que el username es el email para Supabase
       loginEmail = username;
     }
@@ -86,8 +86,8 @@ export default function LoginPage() {
               </div>
               <span className="font-bold text-xl text-white">MaqJeez</span>
             </Link>
-            <h1 className="text-2xl font-bold text-white mb-2">Recuperar ContraseÃ±a</h1>
-            <p className="text-gray-400">Te enviaremos un enlace para restablecer tu contraseÃ±a</p>
+            <h1 className="text-2xl font-bold text-white mb-2">Recuperar Contraseña</h1>
+            <p className="text-gray-400">Te enviaremos un enlace para restablecer tu contraseña</p>
           </div>
 
           <div className="bg-white/5 border border-white/10 rounded-2xl p-8">
@@ -96,7 +96,7 @@ export default function LoginPage() {
                 <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Mail className="w-8 h-8 text-green-500" />
                 </div>
-                <h2 className="text-xl font-bold text-white mb-2">Â¡Email enviado!</h2>
+                <h2 className="text-xl font-bold text-white mb-2">¡Email enviado!</h2>
                 <p className="text-gray-400 mb-6">Revisa tu bandeja de entrada en {recoveryEmail}</p>
                 <button
                   onClick={() => { setShowRecovery(false); setRecoverySent(false); }}
@@ -133,7 +133,7 @@ export default function LoginPage() {
                   disabled={loading}
                   className="w-full py-3 bg-[#FFE600] text-[#003087] rounded-xl font-bold hover:bg-[#ffd700] transition disabled:opacity-50"
                 >
-                  {loading ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : "Enviar Enlace de RecuperaciÃ³n"}
+                  {loading ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : "Enviar Enlace de Recuperación"}
                 </button>
 
                 <button
@@ -162,7 +162,7 @@ export default function LoginPage() {
               </div>
               <span className="font-bold text-xl text-white">MaqJeez</span>
             </Link>
-            <h1 className="text-2xl font-bold text-white mb-2">Â¿Olvidaste tu usuario?</h1>
+            <h1 className="text-2xl font-bold text-white mb-2">¿Olvidaste tu usuario?</h1>
             <p className="text-gray-400">Ingresa tu email y te enviaremos tu nombre de usuario</p>
           </div>
 
@@ -215,7 +215,7 @@ export default function LoginPage() {
           </Link>
           
           <h1 className="text-2xl font-bold text-white mb-2">Bienvenido de vuelta</h1>
-          <p className="text-gray-400">Inicia sesiÃ³n para acceder a tu panel</p>
+          <p className="text-gray-400">Inicia sesión para acceder a tu panel</p>
         </div>
 
         {/* Login Card */}
@@ -305,14 +305,14 @@ export default function LoginPage() {
             )}
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">ContraseÃ±a</label>
+              <label className="block text-sm font-medium text-gray-300 mb-2">Contraseña</label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
                 <input
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+                  placeholder="••••••••"
                   className="w-full pl-10 pr-12 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[#FFE600] transition"
                   required
                 />
@@ -340,7 +340,7 @@ export default function LoginPage() {
               {loading ? (
                 <Loader2 className="w-5 h-5 animate-spin mx-auto" />
               ) : (
-                "Iniciar SesiÃ³n"
+                "Iniciar Sesión"
               )}
             </button>
           </form>
@@ -353,7 +353,7 @@ export default function LoginPage() {
               className="text-sm text-gray-400 hover:text-[#FFE600] transition flex items-center justify-center gap-1"
             >
               <KeyRound className="w-4 h-4" />
-              Â¿Olvidaste tu contraseÃ±a?
+              ¿Olvidaste tu contraseña?
             </button>
             <button
               type="button"
@@ -361,15 +361,15 @@ export default function LoginPage() {
               className="text-sm text-gray-400 hover:text-[#FFE600] transition flex items-center justify-center gap-1"
             >
               <HelpCircle className="w-4 h-4" />
-              Â¿Olvidaste tu usuario?
+              ¿Olvidaste tu usuario?
             </button>
           </div>
 
           <div className="mt-6 pt-6 border-t border-white/10 text-center">
             <p className="text-gray-400">
-              Â¿No tienes cuenta?{" "}
+              ¿No tienes cuenta?{" "}
               <Link href="/register" className="text-[#FFE600] hover:underline font-semibold">
-                RegÃ­strate gratis
+                Regístrate gratis
               </Link>
             </p>
           </div>

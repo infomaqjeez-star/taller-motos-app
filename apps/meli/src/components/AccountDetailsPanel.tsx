@@ -86,7 +86,7 @@ export default function AccountDetailsPanel({ data, editingNick, editNickVal, se
       className="rounded-lg overflow-hidden"
       style={{ background: "#181818", border: "1px solid rgba(255,255,255,0.08)" }}
     >
-      {/* Header - InformaciÃ³n de la cuenta seleccionada */}
+      {/* Header - Información de la cuenta seleccionada */}
       <div
         className="px-4 py-3 border-b"
         style={{ borderColor: "rgba(255,255,255,0.06)", background: "#0f0f0f" }}
@@ -96,7 +96,7 @@ export default function AccountDetailsPanel({ data, editingNick, editNickVal, se
             className="w-10 h-10 rounded-lg flex items-center justify-center font-black text-sm flex-shrink-0"
             style={{ background: "linear-gradient(135deg,#FFE600,#FF9800)" }}
           >
-            ðŸ“¦
+            📦
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5">
@@ -146,11 +146,11 @@ export default function AccountDetailsPanel({ data, editingNick, editNickVal, se
           </div>
         )}
 
-        {/* ReputaciÃ³n en tiempo real */}
+        {/* Reputación en tiempo real */}
         {dataLoading && (
           <div className="p-2 text-xs text-gray-400 flex items-center gap-2">
             <div className="w-4 h-4 border-2 border-gray-600 border-t-gray-400 rounded-full animate-spin" />
-            Cargando datos de reputaciÃ³n...
+            Cargando datos de reputación...
           </div>
         )}
 
@@ -162,11 +162,11 @@ export default function AccountDetailsPanel({ data, editingNick, editNickVal, se
 
         {meliData && (
           <>
-            {/* SecciÃ³n 1: ReputaciÃ³n - Nivel + Badge de Poder Vendedor */}
+            {/* Sección 1: Reputación - Nivel + Badge de Poder Vendedor */}
             {meliData.reputation && (
               <div className="space-y-2">
                 <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "#6B7280" }}>
-                  ReputaciÃ³n
+                  Reputación
                 </p>
                 <ReputationBadge
                   levelId={meliData.reputation.level_id}
@@ -176,17 +176,17 @@ export default function AccountDetailsPanel({ data, editingNick, editNickVal, se
               </div>
             )}
 
-            {/* SecciÃ³n 2: MÃ©tricas de ReputaciÃ³n (Reclamos, Canceladas, Demora EnvÃ­os) */}
+            {/* Sección 2: Métricas de Reputación (Reclamos, Canceladas, Demora Envíos) */}
             {meliData.reputation && (
               <MetricsBar
                 claims={meliData.reputation.claims ?? 0}
                 cancellations={meliData.reputation.cancellations ?? 0}
                 delayedHandlingTime={meliData.reputation.delayed_handling_time ?? 0}
-                measurementPeriod={data.metrics_period || "Ãšltimos 60 dÃ­as"}
+                measurementPeriod={data.metrics_period || "Últimos 60 días"}
               />
             )}
 
-            {/* SecciÃ³n 3: Pendientes Urgentes - 4 Cards Clicables */}
+            {/* Sección 3: Pendientes Urgentes - 4 Cards Clicables */}
             <UrgentMetrics
               questions={data.unanswered_questions ?? 0}
               messages={data.pending_messages ?? 0}
@@ -194,7 +194,7 @@ export default function AccountDetailsPanel({ data, editingNick, editNickVal, se
               claims={data.claims_count ?? 0}
             />
 
-            {/* SecciÃ³n 4: Resumen de Stock - 3 Cards */}
+            {/* Sección 4: Resumen de Stock - 3 Cards */}
             <div className="grid grid-cols-3 gap-2 pt-2">
               <MetricCard
                 label="Activas"
@@ -213,14 +213,14 @@ export default function AccountDetailsPanel({ data, editingNick, editNickVal, se
               />
             </div>
 
-            {/* SecciÃ³n 5: POST-VENTA UNIFICADA - Reclamos, Mediaciones, Demoras */}
+            {/* Sección 5: POST-VENTA UNIFICADA - Reclamos, Mediaciones, Demoras */}
             {meliData?.reputation && (
               <div
                 className="rounded-lg p-3 space-y-2"
                 style={{ background: "#EF444410", border: "1px solid #EF444422" }}
               >
                 <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "#EF4444" }}>
-                  ðŸ“Š Post-Venta (Ãšltimos 60 dÃ­as)
+                  📊 Post-Venta (Últimos 60 días)
                 </p>
                 <div className="grid grid-cols-3 gap-2">
                   {/* Reclamos */}
@@ -251,7 +251,7 @@ export default function AccountDetailsPanel({ data, editingNick, editNickVal, se
                       {meliData.reputation.cancellations ? (meliData.reputation.cancellations * 100).toFixed(2) : "0"}%
                     </p>
                     <p className="text-[8px]" style={{ color: "#6B7280" }}>
-                      En anÃ¡lisis
+                      En análisis
                     </p>
                   </div>
 
@@ -267,16 +267,16 @@ export default function AccountDetailsPanel({ data, editingNick, editNickVal, se
                       {meliData.reputation.delayed_handling_time ? (meliData.reputation.delayed_handling_time * 100).toFixed(2) : "0"}%
                     </p>
                     <p className="text-[8px]" style={{ color: "#6B7280" }}>
-                      En envÃ­o
+                      En envío
                     </p>
                   </div>
                 </div>
               </div>
             )}
 
-            {/* SecciÃ³n 6: Acciones RÃ¡pidas - Botones */}
+            {/* Sección 6: Acciones Rápidas - Botones */}
             <div className="grid grid-cols-2 gap-2 pt-2">
-              {/* Ver Preguntas - Link a MensajerÃ­a interna */}
+              {/* Ver Preguntas - Link a Mensajería interna */}
               <Link
                 href="/mensajes"
                 className="rounded-lg px-3 py-2 text-xs font-semibold text-white transition-all hover:scale-105 active:scale-95 text-center"
@@ -285,7 +285,7 @@ export default function AccountDetailsPanel({ data, editingNick, editNickVal, se
                 Ver Preguntas
               </Link>
 
-              {/* Post Venta / Gestionar Reclamos - Link a pÃ¡gina unificada */}
+              {/* Post Venta / Gestionar Reclamos - Link a página unificada */}
               <Link
                 href={`/post-venta?account=${data.account}`}
                 className="rounded-lg px-3 py-2 text-xs font-semibold text-white transition-all hover:scale-105 active:scale-95 text-center"
@@ -294,16 +294,16 @@ export default function AccountDetailsPanel({ data, editingNick, editNickVal, se
                 Gestionar Reclamos
               </Link>
 
-              {/* Imprimir EnvÃ­os - Link a Etiquetas interna */}
+              {/* Imprimir Envíos - Link a Etiquetas interna */}
               <Link
                 href="/etiquetas"
                 className="rounded-lg px-3 py-2 text-xs font-semibold text-white transition-all hover:scale-105 active:scale-95 text-center"
                 style={{ background: "#00E5FF", border: "none", color: "#000", textDecoration: "none" }}
               >
-                Imprimir EnvÃ­os
+                Imprimir Envíos
               </Link>
 
-              {/* Sincronizar - Link al menu de sincronizaciÃ³n */}
+              {/* Sincronizar - Link al menu de sincronización */}
               <Link
                 href="/sincronizar"
                 className="rounded-lg px-3 py-2 text-xs font-semibold text-white transition-all hover:scale-105 active:scale-95 text-center"

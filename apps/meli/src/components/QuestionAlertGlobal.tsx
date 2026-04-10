@@ -4,7 +4,7 @@ import { Bell, BellOff, ChevronDown } from "lucide-react";
 import { ALERT_MODES, type AlertMode, ALERT_MODE_STORAGE_KEY } from "@/lib/alertModes";
 
 /**
- * Verifica si las credenciales de Supabase estÃ¡n configuradas correctamente
+ * Verifica si las credenciales de Supabase están configuradas correctamente
  */
 function hasValidSupabaseConfig(): boolean {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -24,12 +24,12 @@ function hasValidSupabaseConfig(): boolean {
  * Features:
  * - Polling cada 10 segundos para detectar nuevas preguntas
  * - Sonido de alerta configurable (3 modos: discreto, taller, urgente)
- * - NotificaciÃ³n visual tipo toast
+ * - Notificación visual tipo toast
  * - Persistencia de preferencias en localStorage
  * - Muestra contador de nuevas preguntas
  * 
- * El componente se monta tÃ­picamente en el layout principal para estar
- * disponible en toda la aplicaciÃ³n.
+ * El componente se monta típicamente en el layout principal para estar
+ * disponible en toda la aplicación.
  */
 export default function QuestionAlertGlobal() {
   const [enabled, setEnabled] = useState(false);
@@ -64,7 +64,7 @@ export default function QuestionAlertGlobal() {
       urgente: new Audio("/sounds/alerta-urgente.mp3"),
     };
 
-    // Configurar volumen mÃ¡ximo y forzar carga a RAM
+    // Configurar volumen máximo y forzar carga a RAM
     Object.entries(audios).forEach(([_, audio]) => {
       audio.volume = 1.0;
       audio.preload = "auto";
@@ -93,14 +93,14 @@ export default function QuestionAlertGlobal() {
     localStorage.setItem(ALERT_MODE_STORAGE_KEY, alertMode);
   }, [alertMode]);
 
-  // FunciÃ³n para reproducir sonido de alerta usando PRELOAD
+  // Función para reproducir sonido de alerta usando PRELOAD
   const playAlertSound = useCallback((mode: AlertMode) => {
     try {
-      if (!enabledRef.current) return; // Solo sonar si estÃ¡ habilitado
+      if (!enabledRef.current) return; // Solo sonar si está habilitado
 
       const audios = (window as any).preloadedAudios;
       if (!audios || !audios[mode]) {
-        console.error("âŒ Audio no precargado:", mode);
+        console.error("❌ Audio no precargado:", mode);
         return;
       }
 
@@ -111,17 +111,17 @@ export default function QuestionAlertGlobal() {
       const playPromise = audio.play();
       if (playPromise !== undefined) {
         playPromise.catch((e: Error) => {
-          console.error("âŒ Error reproduciendo audio:", e);
+          console.error("❌ Error reproduciendo audio:", e);
         });
       }
 
-      console.log(`ðŸ”” Alerta ${mode} reproducida`);
+      console.log(`🔔 Alerta ${mode} reproducida`);
     } catch (error) {
-      console.error("âŒ Error en playAlertSound:", error);
+      console.error("❌ Error en playAlertSound:", error);
     }
   }, []);
 
-  // FunciÃ³n para mostrar notificaciÃ³n del navegador
+  // Función para mostrar notificación del navegador
   const showBrowserNotification = useCallback((title: string, body: string) => {
     if (typeof Notification !== "undefined" && Notification.permission === "granted" && enabledRef.current) {
       new Notification(title, {
@@ -134,7 +134,7 @@ export default function QuestionAlertGlobal() {
     }
   }, []);
 
-  // FunciÃ³n para mostrar notificaciÃ³n de cambio de modo
+  // Función para mostrar notificación de cambio de modo
   const showModeNotification = useCallback((mode: AlertMode) => {
     const config = ALERT_MODES[mode];
     setToast(`${config.icon} Modo ${config.label} activado - Prueba de sonido realizada`);
@@ -196,7 +196,7 @@ export default function QuestionAlertGlobal() {
         console.log(`[POLL] ${newQuestions} nuevas preguntas!`);
         setNewCount(prev => prev + newQuestions);
         
-        // Reproducir sonido si estÃ¡ habilitado
+        // Reproducir sonido si está habilitado
         if (enabledRef.current) {
           playAlertSound(alertMode);
         }
@@ -206,9 +206,9 @@ export default function QuestionAlertGlobal() {
         setToast(toastMessage);
         setTimeout(() => setToast(null), ALERT_MODES[alertMode].duration);
         
-        // NotificaciÃ³n del navegador
+        // Notificación del navegador
         showBrowserNotification(
-          "Â¡Nueva pregunta en Mercado Libre!",
+          "¡Nueva pregunta en Mercado Libre!",
           `${newQuestions} pregunta${newQuestions > 1 ? "s" : ""} nueva${newQuestions > 1 ? "s" : ""} de ${newAccounts.join(", ")}`
         );
       }
@@ -259,7 +259,7 @@ export default function QuestionAlertGlobal() {
     setShowModeDropdown(false);
   };
 
-  // Si no estÃ¡ inicializado, no renderizar nada
+  // Si no está inicializado, no renderizar nada
   if (!isInitialized) return null;
 
   return (
@@ -274,7 +274,7 @@ export default function QuestionAlertGlobal() {
           >
             <span className="text-3xl">{ALERT_MODES[alertMode].icon}</span>
             <div>
-              <p className="font-black uppercase tracking-wider text-sm">Â¡Nueva Pregunta!</p>
+              <p className="font-black uppercase tracking-wider text-sm">¡Nueva Pregunta!</p>
               <p className="text-base font-medium">{toast}</p>
             </div>
             <button 
@@ -287,7 +287,7 @@ export default function QuestionAlertGlobal() {
         </div>
       )}
 
-      {/* Floating alert controls â€” fixed bottom-right */}
+      {/* Floating alert controls — fixed bottom-right */}
       <div className="fixed bottom-4 right-4 z-50 flex items-center gap-2">
         {/* Contador de nuevas preguntas */}
         {newCount > 0 && (
@@ -339,7 +339,7 @@ export default function QuestionAlertGlobal() {
                         }`}
                         title="Reproducir prueba de sonido"
                       >
-                        â–¶ï¸
+                        ▶️
                       </button>
                     </div>
                   ))}
@@ -350,7 +350,7 @@ export default function QuestionAlertGlobal() {
             <button onClick={handleDisable}
               className="w-10 h-10 rounded-full flex items-center justify-center transition-all shadow-lg"
               style={{ background: "#39FF14", border: "2px solid #39FF1460" }}
-              title="Alertas activadas â€” clic para desactivar">
+              title="Alertas activadas — clic para desactivar">
               <Bell className="w-5 h-5 text-black" />
             </button>
           </div>

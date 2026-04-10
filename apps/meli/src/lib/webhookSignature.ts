@@ -2,7 +2,7 @@ import { createHmac } from "crypto";
 
 /**
  * Verifica la firma HMAC-SHA256 de un webhook de Mercado Libre
- * MeLi envÃ­a: X-SIGNATURE header con formato "sha256=<hmac>"
+ * MeLi envía: X-SIGNATURE header con formato "sha256=<hmac>"
  * Nosotros recalculamos el HMAC y comparamos
  */
 export function verifyMeliWebhookSignature(
@@ -11,7 +11,7 @@ export function verifyMeliWebhookSignature(
   secret: string
 ): boolean {
   try {
-    // MeLi envÃ­a en formato: "sha256=abc123..."
+    // MeLi envía en formato: "sha256=abc123..."
     // Extraemos el hash de la firma
     const [algo, providedHash] = signature.split("=");
 
@@ -25,12 +25,12 @@ export function verifyMeliWebhookSignature(
     hmac.update(body);
     const calculatedHash = hmac.digest("hex");
 
-    // ComparaciÃ³n timing-safe
+    // Comparación timing-safe
     const isValid = calculatedHash === providedHash;
 
     if (!isValid) {
       console.warn(
-        "[WEBHOOK] Firma invÃ¡lida. Esperada:",
+        "[WEBHOOK] Firma inválida. Esperada:",
         calculatedHash,
         "Recibida:",
         providedHash

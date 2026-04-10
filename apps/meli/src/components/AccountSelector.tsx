@@ -48,13 +48,13 @@ const POWER_SELLER_COLORS: Record<string, { bg: string; text: string }> = {
 const POWER_SELLER_LABELS: Record<string, string> = {
   platinum: "Platinum",
   gold: "Gold",
-  silver: "MercadoLÃ­der",
+  silver: "MercadoLíder",
 };
 
 export default function AccountSelector({ accounts, selectedId, onSelect, compact }: Props) {
   const [isOpen, setIsOpen] = useState(false);
 
-  // Ordenar cuentas alfabÃ©ticamente por nombre
+  // Ordenar cuentas alfabéticamente por nombre
   const sorted = [...accounts].sort((a, b) => a.account.localeCompare(b.account));
 
   const selectedAccount = sorted.find((a) => a.meli_user_id === selectedId);
@@ -69,7 +69,7 @@ export default function AccountSelector({ accounts, selectedId, onSelect, compac
     return total;
   };
 
-  // ===== VERSIÃ“N COMPACTA (para header) =====
+  // ===== VERSIÓN COMPACTA (para header) =====
   if (compact) {
     return (
       <div className="relative inline-block">
@@ -82,7 +82,7 @@ export default function AccountSelector({ accounts, selectedId, onSelect, compac
             color: "#FFE600",
           }}
         >
-          @{selectedAccount?.account ?? "â€”"}
+          @{selectedAccount?.account ?? "—"}
           <ChevronDown className="w-3 h-3" />
         </button>
 
@@ -115,7 +115,7 @@ export default function AccountSelector({ accounts, selectedId, onSelect, compac
                       className="w-6 h-6 rounded flex items-center justify-center text-[9px] font-black flex-shrink-0"
                       style={{ background: repColor + "22", color: repColor }}
                     >
-                      ðŸ“¦
+                      📦
                     </div>
                     <p className="font-bold text-white truncate">@{acc.account}</p>
                     {acc.reputation.power_seller_status && POWER_SELLER_COLORS[acc.reputation.power_seller_status] && (
@@ -152,7 +152,7 @@ export default function AccountSelector({ accounts, selectedId, onSelect, compac
     );
   }
 
-  // ===== VERSIÃ“N FULL (original) =====
+  // ===== VERSIÓN FULL (original) =====
   return (
     <div className="relative mb-4">
       {/* Trigger Button */}
@@ -171,7 +171,7 @@ export default function AccountSelector({ accounts, selectedId, onSelect, compac
                 className="w-10 h-10 rounded-lg flex items-center justify-center font-black text-sm flex-shrink-0"
                 style={{ background: "linear-gradient(135deg,#FFE600,#FF9800)" }}
               >
-                ðŸ“¦
+                📦
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-bold text-white truncate">
@@ -253,7 +253,7 @@ export default function AccountSelector({ accounts, selectedId, onSelect, compac
                     className="w-8 h-8 rounded flex items-center justify-center text-xs font-black flex-shrink-0"
                     style={{ background: repColor + "22", color: repColor }}
                   >
-                    ðŸ“¦
+                    📦
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-bold text-white truncate">@{acc.account}</p>

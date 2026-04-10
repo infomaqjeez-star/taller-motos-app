@@ -8,7 +8,7 @@ import {
 } from "./types";
 import { formatDate, formatCurrency, isOverdue90Days, daysWaitingForPickup } from "./utils";
 
-// â”€â”€â”€ Color palette â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Color palette ───────────────────────────────────────────
 const ORANGE = [234, 88, 12] as [number, number, number];
 const DARK   = [17, 24, 39]  as [number, number, number];
 const GRAY   = [75, 85, 99]  as [number, number, number];
@@ -30,7 +30,7 @@ function statusColor(status: WorkOrder["status"]): [number, number, number] {
   }
 }
 
-// â”€â”€â”€ Header & footer helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Header & footer helpers ─────────────────────────────────
 function drawHeader(doc: jsPDF, title: string, subtitle: string) {
   const pw = doc.internal.pageSize.getWidth();
 
@@ -47,7 +47,7 @@ function drawHeader(doc: jsPDF, title: string, subtitle: string) {
   // Subtitle in bar
   doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
-  doc.text("Taller de Moto-Implementos y MotovehÃ­culos", 60, 14);
+  doc.text("Taller de Moto-Implementos y Motovehículos", 60, 14);
 
   // Report title
   doc.setFillColor(...DARK);
@@ -77,17 +77,17 @@ function drawFooter(doc: jsPDF) {
     doc.setFont("helvetica", "normal");
     doc.setFontSize(7);
     doc.setTextColor(156, 163, 175);
-    doc.text("MAQJEEZ â€” Sistema de GestiÃ³n de Taller", 14, ph - 3.5);
-    doc.text(`PÃ¡gina ${i} de ${pages}`, pw - 14, ph - 3.5, { align: "right" });
+    doc.text("MAQJEEZ — Sistema de Gestión de Taller", 14, ph - 3.5);
+    doc.text(`Página ${i} de ${pages}`, pw - 14, ph - 3.5, { align: "right" });
   }
 }
 
-// â”€â”€â”€ REPORT 1: Full orders list â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-export function exportOrdersReportPDF(orders: WorkOrder[], filterLabel = "Todas las Ã³rdenes") {
+// ─── REPORT 1: Full orders list ───────────────────────────────
+export function exportOrdersReportPDF(orders: WorkOrder[], filterLabel = "Todas las órdenes") {
   const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
   const today = formatDate(new Date().toISOString());
 
-  drawHeader(doc, `Reporte de Ã“rdenes â€” ${filterLabel}`, `Generado: ${today}  |  Total: ${orders.length}`);
+  drawHeader(doc, `Reporte de Órdenes — ${filterLabel}`, `Generado: ${today}  |  Total: ${orders.length}`);
 
   const rows = orders.map((o) => {
     const overdue = isOverdue90Days(o);
@@ -96,18 +96,18 @@ export function exportOrdersReportPDF(orders: WorkOrder[], filterLabel = "Todas 
       formatDate(o.entryDate),
       o.clientName,
       o.clientPhone,
-      `${o.motorType} Â· ${o.brand} ${o.model}`,
-      REPAIR_STATUS_LABELS[o.status] + (overdue && days ? `\nâš  ${days}d en espera` : ""),
+      `${o.motorType} · ${o.brand} ${o.model}`,
+      REPAIR_STATUS_LABELS[o.status] + (overdue && days ? `\n⚠ ${days}d en espera` : ""),
       CLIENT_NOTIFICATION_LABELS[o.clientNotification],
-      o.budgetAccepted ? "SÃ­" : "No",
-      o.budget !== null ? formatCurrency(o.budget) : "â€”",
+      o.budgetAccepted ? "Sí" : "No",
+      o.budget !== null ? formatCurrency(o.budget) : "—",
       o.reportedIssues.length > 60 ? o.reportedIssues.slice(0, 57) + "..." : o.reportedIssues,
     ];
   });
 
   autoTable(doc, {
     startY: 40,
-    head: [["Ingreso", "Cliente", "TelÃ©fono", "Equipo", "Estado", "Aviso", "Presup.OK", "Monto", "Fallas"]],
+    head: [["Ingreso", "Cliente", "Teléfono", "Equipo", "Estado", "Aviso", "Presup.OK", "Monto", "Fallas"]],
     body: rows,
     theme: "grid",
     styles: {
@@ -155,7 +155,7 @@ export function exportOrdersReportPDF(orders: WorkOrder[], filterLabel = "Todas 
   doc.save(`Reporte_Ordenes_MAQJEEZ_${fecha}.pdf`);
 }
 
-// â”€â”€â”€ REPORT 2: Single order detail sheet â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── REPORT 2: Single order detail sheet ─────────────────────
 export function exportOrderDetailPDF(o: WorkOrder) {
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const pw = doc.internal.pageSize.getWidth();
@@ -165,15 +165,15 @@ export function exportOrderDetailPDF(o: WorkOrder) {
 
   drawHeader(doc, "Orden de Trabajo", `Generado: ${today}`);
 
-  // â”€â”€ Order ID badge â”€â”€
+  // ── Order ID badge ──
   doc.setFillColor(...ORANGE);
   doc.roundedRect(14, 40, pw - 28, 10, 2, 2, "F");
   doc.setFont("helvetica", "bold");
   doc.setFontSize(9);
   doc.setTextColor(...WHITE);
-  doc.text(`NÂ° Orden: ${o.id.toUpperCase()}   |   Ingreso: ${formatDate(o.entryDate)}`, pw / 2, 46.5, { align: "center" });
+  doc.text(`N° Orden: ${o.id.toUpperCase()}   |   Ingreso: ${formatDate(o.entryDate)}`, pw / 2, 46.5, { align: "center" });
 
-  // â”€â”€ Overdue alert â”€â”€
+  // ── Overdue alert ──
   let y = 56;
   if (overdue && waitDays !== null) {
     doc.setFillColor(...RED);
@@ -181,11 +181,11 @@ export function exportOrderDetailPDF(o: WorkOrder) {
     doc.setFont("helvetica", "bold");
     doc.setFontSize(9);
     doc.setTextColor(...WHITE);
-    doc.text(`âš   ALERTA: ${waitDays} dÃ­as esperando retiro (mÃ¡s de 90 dÃ­as)`, pw / 2, y + 6, { align: "center" });
+    doc.text(`⚠  ALERTA: ${waitDays} días esperando retiro (más de 90 días)`, pw / 2, y + 6, { align: "center" });
     y += 14;
   }
 
-  // â”€â”€ Section helper â”€â”€
+  // ── Section helper ──
   const section = (title: string, startY: number) => {
     doc.setFillColor(...DARK);
     doc.rect(14, startY, pw - 28, 7, "F");
@@ -203,18 +203,18 @@ export function exportOrderDetailPDF(o: WorkOrder) {
     doc.text(label, x, rowY);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(...DARK);
-    doc.text(value || "â€”", x + 30, rowY);
+    doc.text(value || "—", x + 30, rowY);
     return rowY + 6;
   };
 
-  // â”€â”€ Client â”€â”€
+  // ── Client ──
   y = section("Datos del Cliente", y);
   y += 5;
   row("Cliente:", o.clientName, 14, y);
-  row("TelÃ©fono:", o.clientPhone, pw / 2, y);
+  row("Teléfono:", o.clientPhone, pw / 2, y);
   y += 8;
 
-  // â”€â”€ Equipment â”€â”€
+  // ── Equipment ──
   y = section("Datos del Equipo", y);
   y += 5;
   row("Tipo Motor:", MOTOR_TYPE_LABELS[o.motorType] ?? o.motorType, 14, y);
@@ -223,8 +223,8 @@ export function exportOrderDetailPDF(o: WorkOrder) {
   row("Modelo:", o.model, 14, y);
   y += 8;
 
-  // â”€â”€ Diagnosis â”€â”€
-  y = section("DiagnÃ³stico", y);
+  // ── Diagnosis ──
+  y = section("Diagnóstico", y);
   y += 5;
   doc.setFont("helvetica", "bold");
   doc.setFontSize(8);
@@ -233,7 +233,7 @@ export function exportOrderDetailPDF(o: WorkOrder) {
   y += 5;
   doc.setFont("helvetica", "normal");
   doc.setTextColor(...DARK);
-  const issueLines = doc.splitTextToSize(o.reportedIssues || "â€”", pw - 28);
+  const issueLines = doc.splitTextToSize(o.reportedIssues || "—", pw - 28);
   doc.text(issueLines, 14, y);
   y += issueLines.length * 5 + 4;
 
@@ -250,11 +250,11 @@ export function exportOrderDetailPDF(o: WorkOrder) {
     y += noteLines.length * 5 + 4;
   }
 
-  // â”€â”€ Economics & tracking â”€â”€
-  y = section("GestiÃ³n EconÃ³mica y Seguimiento", y);
+  // ── Economics & tracking ──
+  y = section("Gestión Económica y Seguimiento", y);
   y += 5;
   row("Presupuesto:", o.budget !== null ? formatCurrency(o.budget) : "Sin definir", 14, y);
-  row("DÃ­as estimados:", o.estimatedDays !== null ? `${o.estimatedDays} dÃ­as` : "Sin definir", pw / 2, y);
+  row("Días estimados:", o.estimatedDays !== null ? `${o.estimatedDays} días` : "Sin definir", pw / 2, y);
   y += 6;
 
   const sc = statusColor(o.status);
@@ -271,16 +271,16 @@ export function exportOrderDetailPDF(o: WorkOrder) {
   doc.text(CLIENT_NOTIFICATION_LABELS[o.clientNotification], pw / 2 + 30, y);
   y += 6;
 
-  row("Presup. aceptado:", o.budgetAccepted ? "SÃ­" : "No", 14, y);
+  row("Presup. aceptado:", o.budgetAccepted ? "Sí" : "No", 14, y);
   if (o.completionDate) row("Listo para retiro:", formatDate(o.completionDate), pw / 2, y);
   y += 6;
   if (o.deliveryDate) { row("Fecha entrega:", formatDate(o.deliveryDate), 14, y); y += 6; }
 
-  // â”€â”€ WhatsApp message box â”€â”€
+  // ── WhatsApp message box ──
   y += 2;
   y = section("Mensaje WhatsApp Sugerido", y);
   y += 5;
-  const msg = `Hola ${o.clientName}, te informamos que tu ${o.brand} ${o.model} (${o.motorType}) ya estÃ¡ lista para ser retirada en el taller MAQJEEZ. Â¡Gracias por confiar en nosotros!`;
+  const msg = `Hola ${o.clientName}, te informamos que tu ${o.brand} ${o.model} (${o.motorType}) ya está lista para ser retirada en el taller MAQJEEZ. ¡Gracias por confiar en nosotros!`;
   doc.setFillColor(240, 253, 244);
   const msgLines = doc.splitTextToSize(msg, pw - 32);
   doc.roundedRect(14, y - 2, pw - 28, msgLines.length * 5 + 6, 2, 2, "F");

@@ -12,10 +12,10 @@ import {
 import QuestionSuggestion from "@/components/QuestionSuggestion";
 
 const DEFAULT_TEMPLATES = [
-  "Â¡Hola! SÃ­, el producto estÃ¡ disponible. Â¿TenÃ©s alguna consulta adicional?",
-  "El envÃ­o es por Mercado EnvÃ­os y llega en 24-72hs hÃ¡biles.",
-  "SÃ­, contamos con stock disponible. PodÃ©s comprarlo con total confianza.",
-  "El producto es original de fÃ¡brica. Cualquier consulta estamos a disposiciÃ³n.",
+  "¡Hola! Sí, el producto está disponible. ¿Tenés alguna consulta adicional?",
+  "El envío es por Mercado Envíos y llega en 24-72hs hábiles.",
+  "Sí, contamos con stock disponible. Podés comprarlo con total confianza.",
+  "El producto es original de fábrica. Cualquier consulta estamos a disposición.",
 ];
 
 function useTemplates() {
@@ -85,7 +85,7 @@ function timeAgo(date: string) {
   return `hace ${Math.floor(h / 24)}d`;
 }
 
-/* â”€â”€ Gestor de plantillas â”€â”€ */
+/* ── Gestor de plantillas ── */
 function TemplatesManager({ onClose }: { onClose: () => void }) {
   const { templates, save } = useTemplates();
   const [list, setList]     = useState<string[]>(templates);
@@ -115,7 +115,7 @@ function TemplatesManager({ onClose }: { onClose: () => void }) {
           style={{ borderColor: "rgba(255,255,255,0.07)" }}>
           <h2 className="font-black text-white text-base flex items-center gap-2">
             <Settings className="w-5 h-5" style={{ color: "#00E5FF" }} />
-            Respuestas RÃ¡pidas
+            Respuestas Rápidas
           </h2>
           <button onClick={onClose} className="p-1.5 rounded-lg" style={{ background: "rgba(255,255,255,0.05)" }}>
             <X className="w-4 h-4 text-gray-400" />
@@ -164,7 +164,7 @@ function TemplatesManager({ onClose }: { onClose: () => void }) {
           <div className="flex gap-2">
             <input
               type="text"
-              placeholder="Nueva respuesta rÃ¡pida..."
+              placeholder="Nueva respuesta rápida..."
               value={newText}
               onChange={e => setNewText(e.target.value)}
               onKeyDown={e => e.key === "Enter" && add()}
@@ -191,7 +191,7 @@ function TemplatesManager({ onClose }: { onClose: () => void }) {
   );
 }
 
-/* â”€â”€ Tarjeta de pregunta â”€â”€ */
+/* ── Tarjeta de pregunta ── */
 function QuestionCard({ q, onAnswered }: { q: Question; onAnswered: (id: number) => void }) {
   const { templates } = useTemplates();
   const [open, setOpen]       = useState(false);
@@ -245,7 +245,7 @@ function QuestionCard({ q, onAnswered }: { q: Question; onAnswered: (id: number)
     }
   }
 
-  const account = q.meli_accounts?.nickname ?? "â€”";
+  const account = q.meli_accounts?.nickname ?? "—";
 
   return (
     <div className="rounded-2xl overflow-hidden transition-all duration-300"
@@ -256,12 +256,12 @@ function QuestionCard({ q, onAnswered }: { q: Question; onAnswered: (id: number)
       }}>
       <button onClick={() => setOpen(o => !o)} className="w-full text-left p-4">
         <div className="flex items-start gap-4">
-          {/* Foto del producto â€” 80x80px â€” clickable a la publicaciÃ³n */}
+          {/* Foto del producto — 80x80px — clickable a la publicación */}
           <a
             href={`https://articulo.mercadolibre.com.ar/${q.item_id.replace(/^([A-Z]+)(\d+)$/, "$1-$2")}`}
             target="_blank"
             rel="noopener noreferrer"
-            title="Ver publicaciÃ³n original"
+            title="Ver publicación original"
             onClick={e => e.stopPropagation()}
             className="w-20 h-20 rounded-xl overflow-hidden flex-shrink-0 cursor-pointer relative group shadow-md"
             style={{ background: "#2a2a2a", border: "2px solid rgba(255,230,0,0.1)" }}>
@@ -291,7 +291,7 @@ function QuestionCard({ q, onAnswered }: { q: Question; onAnswered: (id: number)
 
           {/* Info del producto + pregunta */}
           <div className="flex-1 min-w-0">
-            {/* TÃ­tulo del producto */}
+            {/* Título del producto */}
             <a
               href={`https://articulo.mercadolibre.com.ar/${q.item_id.replace(/^([A-Z]+)(\d+)$/, "$1-$2")}`}
               target="_blank"
@@ -364,7 +364,7 @@ function QuestionCard({ q, onAnswered }: { q: Question; onAnswered: (id: number)
             <p className="text-sm text-white">{q.question_text}</p>
           </div>
 
-          {/* âœ¨ Componente de sugerencias basado en historial */}
+          {/* ✨ Componente de sugerencias basado en historial */}
           <QuestionSuggestion
             preguntaTexto={q.question_text}
             onUseSuggestion={(texto) => setText(texto)}
@@ -373,7 +373,7 @@ function QuestionCard({ q, onAnswered }: { q: Question; onAnswered: (id: number)
           {templates.length > 0 && (
             <div>
               <p className="text-[10px] font-bold uppercase tracking-wider mb-1.5" style={{ color: "#6B7280" }}>
-                Respuestas rÃ¡pidas
+                Respuestas rápidas
               </p>
               <div className="flex flex-col gap-1.5">
                 {templates.map((t, i) => (
@@ -391,7 +391,7 @@ function QuestionCard({ q, onAnswered }: { q: Question; onAnswered: (id: number)
             rows={3}
             value={text}
             onChange={e => setText(e.target.value)}
-            placeholder="EscribÃ­ tu respuesta..."
+            placeholder="Escribí tu respuesta..."
             className="w-full px-3 py-2.5 rounded-xl text-sm text-white placeholder-gray-500 outline-none resize-none"
             style={{ background: "#121212", border: "1px solid rgba(255,255,255,0.1)" }}
           />
@@ -411,7 +411,7 @@ function QuestionCard({ q, onAnswered }: { q: Question; onAnswered: (id: number)
   );
 }
 
-/* â”€â”€ Tarjeta de mensaje â”€â”€ */
+/* ── Tarjeta de mensaje ── */
 function MessageCard({ m, onMarkAsRead }: { m: Message; onMarkAsRead: (id: string) => void }) {
   const [open, setOpen] = useState(false);
   const [replyText, setReplyText] = useState("");
@@ -446,14 +446,14 @@ function MessageCard({ m, onMarkAsRead }: { m: Message; onMarkAsRead: (id: strin
     }
   }
 
-  // Marcar como leÃ­do al abrir
+  // Marcar como leído al abrir
   useEffect(() => {
     if (open && m.status === "UNREAD") {
       onMarkAsRead(m.id);
     }
   }, [open, m.status, m.id, onMarkAsRead]);
 
-  const account = m.meli_accounts?.nickname ?? "â€”";
+  const account = m.meli_accounts?.nickname ?? "—";
 
   return (
     <div className="rounded-2xl overflow-hidden"
@@ -557,7 +557,7 @@ function MessageCard({ m, onMarkAsRead }: { m: Message; onMarkAsRead: (id: strin
               rows={2}
               value={replyText}
               onChange={e => setReplyText(e.target.value)}
-              placeholder="EscribÃ­ tu respuesta..."
+              placeholder="Escribí tu respuesta..."
               className="w-full px-3 py-2.5 rounded-xl text-sm text-white placeholder-gray-500 outline-none resize-none mb-2"
               style={{ background: "#121212", border: "1px solid rgba(255,255,255,0.1)" }}
             />
@@ -576,7 +576,7 @@ function MessageCard({ m, onMarkAsRead }: { m: Message; onMarkAsRead: (id: strin
   );
 }
 
-/* â”€â”€ PÃ¡gina principal â”€â”€ */
+/* ── Página principal ── */
 function MensajesInner() {
   const [activeTab, setActiveTab] = useState<TabType>("questions");
   
@@ -665,7 +665,7 @@ function MensajesInner() {
     setQuestions(qs => qs.filter(q => q.meli_question_id !== id));
   }, []);
 
-  // Marcar mensaje como leÃ­do
+  // Marcar mensaje como leído
   const handleMarkAsRead = useCallback(async (id: string) => {
     try {
       await fetch("/api/meli-messages", {
@@ -714,11 +714,11 @@ function MensajesInner() {
           <div>
             <h1 className="font-black text-white text-base flex items-center gap-2">
               <MessageCircle className="w-5 h-5" style={{ color: "#FF5722" }} />
-              MensajerÃ­a Unificada
+              Mensajería Unificada
             </h1>
             <p className="text-[10px]" style={{ color: "#6B7280" }}>
               {lastSync ? `Sync ${lastSync.toLocaleTimeString("es-AR")}` : "Cargando..."}
-              {" Â· "}<Clock className="w-3 h-3 inline" /> auto cada 30s
+              {" · "}<Clock className="w-3 h-3 inline" /> auto cada 30s
             </p>
           </div>
         </div>
@@ -810,8 +810,8 @@ function MensajesInner() {
               </p>
               <p className="text-xs" style={{ color: "#6B7280" }}>
                 {activeTab === "questions"
-                  ? (questions.length > 0 ? "Respondelas rÃ¡pido para mejorar tu reputaciÃ³n" : "Â¡Al dÃ­a con todas tus cuentas!")
-                  : (unreadCount > 0 ? `${unreadCount} mensaje${unreadCount > 1 ? "s" : ""} sin leer` : "Todos los mensajes leÃ­dos")
+                  ? (questions.length > 0 ? "Respondelas rápido para mejorar tu reputación" : "¡Al día con todas tus cuentas!")
+                  : (unreadCount > 0 ? `${unreadCount} mensaje${unreadCount > 1 ? "s" : ""} sin leer` : "Todos los mensajes leídos")
                 }
               </p>
             </div>

@@ -1,35 +1,35 @@
 export const SYNC_ERROR_MAP: Record<string, { label: string; suggestion: string }> = {
   category_not_allowed: {
-    label: "CategorÃ­a no permitida",
-    suggestion: "La cuenta destino no puede vender en esta categorÃ­a. VerificÃ¡ permisos de marca.",
+    label: "Categoría no permitida",
+    suggestion: "La cuenta destino no puede vender en esta categoría. Verificá permisos de marca.",
   },
   missing_attributes: {
-    label: "Ficha tÃ©cnica incompleta",
-    suggestion: "AgregÃ¡ EAN, marca o modelo en la publicaciÃ³n original antes de re-sincronizar.",
+    label: "Ficha técnica incompleta",
+    suggestion: "Agregá EAN, marca o modelo en la publicación original antes de re-sincronizar.",
   },
   title_already_exists: {
-    label: "TÃ­tulo duplicado",
-    suggestion: "Ya existe una publicaciÃ³n con el mismo tÃ­tulo en la cuenta destino.",
+    label: "Título duplicado",
+    suggestion: "Ya existe una publicación con el mismo título en la cuenta destino.",
   },
   invalid_images: {
-    label: "ImÃ¡genes de baja calidad",
-    suggestion: "Las fotos deben ser mÃ­nimo 1200Ã—1200px, sin logos ni bordes blancos.",
+    label: "Imágenes de baja calidad",
+    suggestion: "Las fotos deben ser mínimo 1200×1200px, sin logos ni bordes blancos.",
   },
   variation_error: {
     label: "Error en variaciones",
-    suggestion: "RevisÃ¡ que talles/colores de las variaciones estÃ©n completos en el original.",
+    suggestion: "Revisá que talles/colores de las variaciones estén completos en el original.",
   },
   item_not_found: {
-    label: "PublicaciÃ³n no encontrada",
-    suggestion: "La publicaciÃ³n puede haber sido eliminada. VerificÃ¡ su estado en MeLi.",
+    label: "Publicación no encontrada",
+    suggestion: "La publicación puede haber sido eliminada. Verificá su estado en MeLi.",
   },
   invalid_category: {
-    label: "CategorÃ­a invÃ¡lida",
-    suggestion: "La categorÃ­a no existe o fue migrada. Re-categorizÃ¡ el producto en MeLi.",
+    label: "Categoría inválida",
+    suggestion: "La categoría no existe o fue migrada. Re-categorizá el producto en MeLi.",
   },
   unknown: {
     label: "Error desconocido",
-    suggestion: "RevisÃ¡ los detalles en el log de errores para mÃ¡s informaciÃ³n.",
+    suggestion: "Revisá los detalles en el log de errores para más información.",
   },
 };
 

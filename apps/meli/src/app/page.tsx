@@ -123,7 +123,7 @@ function RepuCard({ rep }: { rep: Reputation }) {
     <div className="rounded-2xl p-4" style={{ background: "#1F1F1F", border: "1px solid rgba(255,255,255,0.07)" }}>
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-bold text-white flex items-center gap-2">
-          <Star className="w-4 h-4" style={{ color: "#FFE600" }} /> ReputaciÃ³n
+          <Star className="w-4 h-4" style={{ color: "#FFE600" }} /> Reputación
         </h3>
         <RepoBadge level={rep.level_id} />
       </div>
@@ -144,9 +144,9 @@ function RepuCard({ rep }: { rep: Reputation }) {
 
       <div className="grid grid-cols-3 gap-2 text-center">
         {[
-          { label: "EnvÃ­os con demora", val: pct(rep.delayed_handling_time), max: "MÃ¡x 18%", color: rep.delayed_handling_time > 0.18 ? "#ef4444" : "#39FF14" },
-          { label: "Reclamos", val: pct(rep.claims), max: "MÃ¡x 2%", color: rep.claims > 0.02 ? "#ef4444" : "#39FF14" },
-          { label: "Cancelaciones", val: pct(rep.cancellations), max: "MÃ¡x 2%", color: rep.cancellations > 0.02 ? "#ef4444" : "#39FF14" },
+          { label: "Envíos con demora", val: pct(rep.delayed_handling_time), max: "Máx 18%", color: rep.delayed_handling_time > 0.18 ? "#ef4444" : "#39FF14" },
+          { label: "Reclamos", val: pct(rep.claims), max: "Máx 2%", color: rep.claims > 0.02 ? "#ef4444" : "#39FF14" },
+          { label: "Cancelaciones", val: pct(rep.cancellations), max: "Máx 2%", color: rep.cancellations > 0.02 ? "#ef4444" : "#39FF14" },
         ].map(m => (
           <div key={m.label} className="rounded-xl p-2" style={{ background: "#121212" }}>
             <p className="text-lg font-black" style={{ color: m.color }}>{m.val}</p>
@@ -157,9 +157,9 @@ function RepuCard({ rep }: { rep: Reputation }) {
       </div>
 
       <div className="mt-3 flex gap-3 text-xs justify-center">
-        <span style={{ color: "#39FF14" }}>âœ“ {pct(rep.ratings_positive)} positivas</span>
-        <span style={{ color: "#6B7280" }}>â—‹ {pct(rep.ratings_neutral)} neutras</span>
-        <span style={{ color: "#ef4444" }}>âœ• {pct(rep.ratings_negative)} negativas</span>
+        <span style={{ color: "#39FF14" }}>✓ {pct(rep.ratings_positive)} positivas</span>
+        <span style={{ color: "#6B7280" }}>○ {pct(rep.ratings_neutral)} neutras</span>
+        <span style={{ color: "#ef4444" }}>✕ {pct(rep.ratings_negative)} negativas</span>
       </div>
     </div>
   );
@@ -169,7 +169,7 @@ function ActivityCard({ orders, amount }: { orders: number; amount: number }) {
   return (
     <div className="rounded-2xl p-4" style={{ background: "#1F1F1F", border: "1px solid rgba(255,255,255,0.07)" }}>
       <h3 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
-        <BarChart2 className="w-4 h-4" style={{ color: "#00E5FF" }} /> Actividad del dÃ­a
+        <BarChart2 className="w-4 h-4" style={{ color: "#00E5FF" }} /> Actividad del día
       </h3>
       <div className="grid grid-cols-2 gap-3">
         <div className="rounded-xl p-3 text-center" style={{ background: "#121212" }}>
@@ -180,7 +180,7 @@ function ActivityCard({ orders, amount }: { orders: number; amount: number }) {
         <div className="rounded-xl p-3 text-center" style={{ background: "#121212" }}>
           <DollarSign className="w-5 h-5 mx-auto mb-1" style={{ color: "#39FF14" }} />
           <p className="text-lg font-black" style={{ color: "#39FF14" }}>{fmt(amount)}</p>
-          <p className="text-[10px]" style={{ color: "#6B7280" }}>FacturaciÃ³n</p>
+          <p className="text-[10px]" style={{ color: "#6B7280" }}>Facturación</p>
         </div>
       </div>
     </div>
@@ -274,12 +274,12 @@ function AccountPanel({ data, defaultOpen, editingNick, editNickVal, setEditingN
         <div className="p-4 space-y-4">
           {data.error && (
             <div className="p-4 rounded-xl text-sm" style={{ background: "#ef444422", color: "#ef4444", border: "1px solid #ef444455" }}>
-              <p className="font-bold mb-1">âš ï¸ Error al cargar cuenta</p>
+              <p className="font-bold mb-1">⚠️ Error al cargar cuenta</p>
               {data.error === "token_expired" && (
-                <p>El token de acceso ha expirado. Por favor, reconecta la cuenta en <a href="/configuracion/meli/meli" className="underline hover:text-red-300">ConfiguraciÃ³n</a>.</p>
+                <p>El token de acceso ha expirado. Por favor, reconecta la cuenta en <a href="/configuracion/meli/meli" className="underline hover:text-red-300">Configuración</a>.</p>
               )}
               {data.error === "http_451_blocked" && (
-                <p>MercadoLibre ha bloqueado el acceso a esta cuenta (HTTP 451). Verifica tu conexiÃ³n o contacta al soporte de MeLi.</p>
+                <p>MercadoLibre ha bloqueado el acceso a esta cuenta (HTTP 451). Verifica tu conexión o contacta al soporte de MeLi.</p>
               )}
               {!["token_expired", "http_451_blocked"].includes(data.error) && (
                 <p>{data.error}</p>
@@ -290,35 +290,35 @@ function AccountPanel({ data, defaultOpen, editingNick, editNickVal, setEditingN
           {/* Indicadores urgentes */}
           <div>
             <p className="text-xs font-bold mb-2 uppercase tracking-wider" style={{ color: "#6B7280" }}>
-              Indicadores â€” Panel de Control
+              Indicadores — Panel de Control
             </p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <MetricCard icon={<MessageCircle className="w-4 h-4" />} label="Preguntas sin responder"
                 value={data.unanswered_questions ?? 0} color="#FF5722" urgent />
               <MetricCard icon={<MessageSquare className="w-4 h-4" />} label="Mensajes pendientes"
                 value={data.pending_messages ?? 0} color="#FF9800" urgent />
-              <MetricCard icon={<Truck className="w-4 h-4" />} label="EnvÃ­os pendientes"
+              <MetricCard icon={<Truck className="w-4 h-4" />} label="Envíos pendientes"
                 value={data.ready_to_ship ?? 0} color="#00E5FF" urgent />
               <MetricCard icon={<Package className="w-4 h-4" />} label="Publicaciones activas"
                 value={data.total_items ?? 0} color="#39FF14" />
             </div>
           </div>
 
-          {/* ReputaciÃ³n + Actividad */}
+          {/* Reputación + Actividad */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <RepuCard rep={data.reputation ?? { level_id: null, power_seller_status: null, transactions_total: 0, transactions_completed: 0, ratings_positive: 0, ratings_negative: 0, ratings_neutral: 0, delayed_handling_time: 0, claims: 0, cancellations: 0, immediate_payment: false }} />
             <ActivityCard orders={data.today_orders ?? 0} amount={data.today_sales_amount ?? 0} />
           </div>
 
-          {/* Acciones rÃ¡pidas */}
+          {/* Acciones rápidas */}
           <div>
             <p className="text-xs font-bold mb-2 uppercase tracking-wider" style={{ color: "#6B7280" }}>
-              Acciones rÃ¡pidas
+              Acciones rápidas
             </p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {[
                 { label: "Ver preguntas",    color: "#FF5722", href: `/mensajes`, icon: <MessageCircle className="w-4 h-4" />, badge: data.unanswered_questions },
-                { label: "EstadÃ­sticas",     color: "#39FF14", href: `/estadisticas`,  icon: <TrendingUp className="w-4 h-4" /> },
+                { label: "Estadísticas",     color: "#39FF14", href: `/estadisticas`,  icon: <TrendingUp className="w-4 h-4" /> },
                 { label: "Ver etiquetas",    color: "#00E5FF", href: `/etiquetas`,     icon: <Tag className="w-4 h-4" /> },
                 { label: "Ver publicaciones",color: "#FFE600", href: `/publicaciones`, icon: <Package className="w-4 h-4" /> },
               ].map(a => (
@@ -377,7 +377,7 @@ function AppJeezInner() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // FunciÃ³n de logout
+  // Función de logout
   const handleLogout = useCallback(async () => {
     await supabase.auth.signOut();
     setUser(null);
@@ -387,7 +387,9 @@ function AppJeezInner() {
   const load = useCallback(async () => {
     setLoading(true); setError(null);
     try {
-      const res = await fetch("/api/meli-dashboard");
+      const { data: { session: _sess } } = await supabase.auth.getSession();
+      const _authHdr = _sess?.access_token ? { Authorization: `Bearer ${_sess.access_token}` } : {};
+      const res = await fetch("/api/meli-dashboard", { headers: _authHdr });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data: AccountDash[] = await res.json();
       setAccounts(data);
@@ -432,15 +434,15 @@ function AppJeezInner() {
     }
   }, [selectedAccountId]);
 
-  // âš ï¸ Polling automÃ¡tico DESACTIVADO - Usando SSE/Webhooks en su lugar
+  // ⚠️ Polling automático DESACTIVADO - Usando SSE/Webhooks en su lugar
   const { isRefreshing, manualRefresh } = useAutoRefresh(
     load,
-    false, // NO automÃ¡tico (era true cada 60s antes)
+    false, // NO automático (era true cada 60s antes)
     60000
   );
 
   const handleNotification = useCallback((notification: any) => {
-    console.log("[SSE] NotificaciÃ³n recibida:", notification);
+    console.log("[SSE] Notificación recibida:", notification);
     // Actualizar solo la cuenta del notification.user_id
     setAccounts(prev =>
       prev.map(acc =>
@@ -518,8 +520,8 @@ function AppJeezInner() {
 
   const navItems = [
     { label: "Dashboard",       icon: <BarChart2 className="w-4 h-4" />,       href: "/",               active: true  },
-    { label: "EstadÃ­sticas",    icon: <TrendingUp className="w-4 h-4" />,      href: "/estadisticas",  active: false },
-    { label: "MensajerÃ­a",      icon: <MessageCircle className="w-4 h-4" />,   href: "/mensajes",      active: false },
+    { label: "Estadísticas",    icon: <TrendingUp className="w-4 h-4" />,      href: "/estadisticas",  active: false },
+    { label: "Mensajería",      icon: <MessageCircle className="w-4 h-4" />,   href: "/mensajes",      active: false },
     { label: "Etiquetas",       icon: <Tag className="w-4 h-4" />,             href: "/etiquetas",     active: false },
     { label: "Publicaciones",   icon: <Package className="w-4 h-4" />,         href: "/publicaciones", active: false },
     { label: "Sincronizar",     icon: <Copy className="w-4 h-4" />,            href: "/sincronizar",   active: false },
@@ -554,7 +556,7 @@ function AppJeezInner() {
             >
               <span className="relative">
                 {n.icon}
-                {n.label === "MensajerÃ­a" && totalQuestionsAlert > 0 && (
+                {n.label === "Mensajería" && totalQuestionsAlert > 0 && (
                   <span
                     className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-black text-black"
                     style={{ background: "#FF5722" }}
@@ -618,11 +620,11 @@ function AppJeezInner() {
               <h1 className="font-black text-white text-base sm:text-lg">Dashboard</h1>
               <p className="text-[10px]" style={{ color: "#6B7280" }}>
                 {streamConnected ? (
-                  <span style={{ color: "#39FF14" }}>ðŸŸ¢ En vivo</span>
+                  <span style={{ color: "#39FF14" }}>🟢 En vivo</span>
                 ) : (
-                  <span style={{ color: "#ef4444" }}>ðŸ”´ Desconectado</span>
+                  <span style={{ color: "#ef4444" }}>🔴 Desconectado</span>
                 )}
-                {" "} â€¢ {lastUpdate ? `Cargado ${lastUpdate.toLocaleTimeString("es-AR")}` : "Cargando..."}
+                {" "} • {lastUpdate ? `Cargado ${lastUpdate.toLocaleTimeString("es-AR")}` : "Cargando..."}
               </p>
             </div>
           </div>
@@ -685,7 +687,7 @@ function AppJeezInner() {
                   color: "#fff", 
                   border: "1px solid rgba(239,68,68,0.5)" 
                 }}
-                title="Cerrar SesiÃ³n"
+                title="Cerrar Sesión"
               >
                 <LogOut className="w-4 h-4" />
                 <span className="hidden sm:inline">Salir</span>
@@ -705,7 +707,7 @@ function AppJeezInner() {
               <div>
                 <p className="font-bold text-white text-sm">Cuenta conectada exitosamente</p>
                 <p className="text-xs" style={{ color: "#39FF14" }}>
-                  Mercado Libre vinculado. Tus indicadores se actualizarÃ¡n automÃ¡ticamente.
+                  Mercado Libre vinculado. Tus indicadores se actualizarán automáticamente.
                 </p>
               </div>
             </div>
@@ -716,7 +718,7 @@ function AppJeezInner() {
             <>
               <KpiBar accountsCount={accounts.length} salesToday={totalSales} totalAmount={totalAmount} urgentAlerts={totalUrgent} />
               
-              {/* Unified Post-Sale Panel - GestiÃ³n de problemas crÃ­ticos */}
+              {/* Unified Post-Sale Panel - Gestión de problemas críticos */}
               <UnifiedPostSalePanel accounts={postSaleMetrics} isLoading={loading} />
             </>
           )}

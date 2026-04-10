@@ -43,7 +43,7 @@ export default function QuestionSuggestion({ preguntaTexto, onUseSuggestion }: P
     await incrementUsageCount(sugerencia.id);
 
     // Toast de feedback
-    console.log("âœ… Sugerencia aplicada:", sugerencia.id);
+    console.log("✅ Sugerencia aplicada:", sugerencia.id);
   };
 
   // No mostrar nada si no hay sugerencia
@@ -64,7 +64,7 @@ export default function QuestionSuggestion({ preguntaTexto, onUseSuggestion }: P
       >
         <div className="flex items-center gap-2">
           <Lightbulb className="w-4 h-4 text-blue-400" />
-          <p className="text-sm font-bold text-blue-300">ðŸ’¡ Sugerencia del historial</p>
+          <p className="text-sm font-bold text-blue-300">💡 Sugerencia del historial</p>
         </div>
         {expanded ? (
           <ChevronUp className="w-4 h-4 text-blue-400" />
@@ -101,12 +101,12 @@ export default function QuestionSuggestion({ preguntaTexto, onUseSuggestion }: P
             )}
           </div>
 
-          {/* BotÃ³n de uso */}
+          {/* Botón de uso */}
           <button
             onClick={handleUseSuggestion}
             className="w-full px-3 py-2 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
           >
-            âœ“ Usar esta respuesta
+            ✓ Usar esta respuesta
           </button>
         </div>
       )}

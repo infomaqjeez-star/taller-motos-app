@@ -63,7 +63,7 @@ export default function ReportesPage() {
     totalGanancia:filtered.reduce((s, e) => s + e.ganancia, 0),
   }), [filtered]);
 
-  // Pie: distribuciÃ³n por zona
+  // Pie: distribución por zona
   const pieData = useMemo(() => {
     const zones = (["cercana", "media", "lejana"] as FlexZona[]).map(z => ({
       name: z === "cercana" ? "Cercana" : z === "media" ? "Media" : "Lejana",
@@ -95,7 +95,7 @@ export default function ReportesPage() {
       }));
   }, [filtered]);
 
-  // Tendencia diaria (Ãºltimos 14 dÃ­as)
+  // Tendencia diaria (últimos 14 días)
   const tendencia = useMemo(() => {
     const days: Record<string, { ganancia: number; count: number }> = {};
     for (let i = 13; i >= 0; i--) {
@@ -117,7 +117,7 @@ export default function ReportesPage() {
 
   const PERIODOS: { key: Periodo; label: string }[] = [
     { key: "hoy",    label: "Hoy" },
-    { key: "semana", label: "7 dÃ­as" },
+    { key: "semana", label: "7 días" },
     { key: "mes",    label: "Este mes" },
     { key: "todo",   label: "Todo" },
   ];
@@ -135,12 +135,12 @@ export default function ReportesPage() {
             </div>
             <div>
               <h1 className="text-2xl font-black text-white">Reportes Flex</h1>
-              <p className="text-gray-400 text-sm">EstadÃ­sticas de logÃ­stica Mercado Libre</p>
+              <p className="text-gray-400 text-sm">Estadísticas de logística Mercado Libre</p>
             </div>
           </div>
         </div>
 
-        {/* Filtro perÃ­odo */}
+        {/* Filtro período */}
         <div className="flex gap-2 flex-wrap">
           {PERIODOS.map(p => (
             <button key={p.key} onClick={() => setPeriodo(p.key)}
@@ -165,7 +165,7 @@ export default function ReportesPage() {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className="bg-gray-800/60 rounded-2xl border border-gray-700 p-4 text-center">
                 <Package className="w-5 h-5 text-blue-400 mx-auto mb-1" />
-                <p className="text-xs text-gray-400">EnvÃ­os</p>
+                <p className="text-xs text-gray-400">Envíos</p>
                 <p className="text-white font-black text-2xl">{kpis.count}</p>
               </div>
               <div className="bg-gray-800/60 rounded-2xl border border-gray-700 p-4 text-center">
@@ -188,14 +188,14 @@ export default function ReportesPage() {
             {filtered.length === 0 ? (
               <div className="text-center py-12 text-gray-500">
                 <BarChart2 className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                <p>Sin envÃ­os en este perÃ­odo</p>
+                <p>Sin envíos en este período</p>
               </div>
             ) : (
               <>
-                {/* GrÃ¡fico de Torta + tabla zona */}
+                {/* Gráfico de Torta + tabla zona */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="bg-gray-800/60 rounded-2xl border border-gray-700 p-5">
-                    <h2 className="text-white font-bold mb-4">DistribuciÃ³n por Zona</h2>
+                    <h2 className="text-white font-bold mb-4">Distribución por Zona</h2>
                     <ResponsiveContainer width="100%" height={220}>
                       <PieChart>
                         <Pie
@@ -212,7 +212,7 @@ export default function ReportesPage() {
                           ))}
                         </Pie>
                         <Tooltip
-                          formatter={(value, name) => [String(value) + " envÃ­os", String(name)]}
+                          formatter={(value, name) => [String(value) + " envíos", String(name)]}
                           contentStyle={{ background: "#1f2937", border: "1px solid #374151", borderRadius: "12px", color: "#fff" }}
                         />
                       </PieChart>
@@ -226,7 +226,7 @@ export default function ReportesPage() {
                             <span className="text-gray-300">{z.name}</span>
                           </div>
                           <div className="text-right">
-                            <span className="text-white font-bold">{z.value} envÃ­os</span>
+                            <span className="text-white font-bold">{z.value} envíos</span>
                             <span className="text-green-300 text-xs ml-2">{fmt(z.ganancia)}</span>
                           </div>
                         </div>
@@ -236,7 +236,7 @@ export default function ReportesPage() {
 
                   {/* Tendencia diaria */}
                   <div className="bg-gray-800/60 rounded-2xl border border-gray-700 p-5">
-                    <h2 className="text-white font-bold mb-4">Ganancia â€” Ãšltimos 14 dÃ­as</h2>
+                    <h2 className="text-white font-bold mb-4">Ganancia — Últimos 14 días</h2>
                     <ResponsiveContainer width="100%" height={220}>
                       <BarChart data={tendencia} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
@@ -284,7 +284,7 @@ export default function ReportesPage() {
                         <tr className="border-b border-gray-700">
                           <th className="text-left text-gray-400 font-semibold py-2 pr-4">#</th>
                           <th className="text-left text-gray-400 font-semibold py-2 pr-4">Localidad</th>
-                          <th className="text-right text-gray-400 font-semibold py-2 pr-4">EnvÃ­os</th>
+                          <th className="text-right text-gray-400 font-semibold py-2 pr-4">Envíos</th>
                           <th className="text-right text-gray-400 font-semibold py-2 pr-4">Total ML</th>
                           <th className="text-right text-gray-400 font-semibold py-2">Ganancia</th>
                         </tr>

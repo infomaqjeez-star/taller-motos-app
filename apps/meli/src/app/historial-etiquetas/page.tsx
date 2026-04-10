@@ -50,11 +50,11 @@ export default function HistorialEtiquetasPage() {
     loadLabels();
   }, [loadLabels]);
 
-  // Filtrar por bÃºsqueda y tipo
+  // Filtrar por búsqueda y tipo
   const filteredResults = useMemo(() => {
     let filtered = allLabels;
 
-    // Filtro de bÃºsqueda
+    // Filtro de búsqueda
     if (query.length >= 2) {
       const q = query.toLowerCase();
       filtered = filtered.filter((r) =>
@@ -66,7 +66,7 @@ export default function HistorialEtiquetasPage() {
       );
     }
 
-    // Filtro por tipo de envÃ­o
+    // Filtro por tipo de envío
     if (activeTab !== "todas") {
       filtered = filtered.filter((r) => r.shipping_method === activeTab);
     }
@@ -178,7 +178,7 @@ export default function HistorialEtiquetasPage() {
 
       {/* Main */}
       <div className="max-w-7xl mx-auto p-4 space-y-4">
-        {/* Tabs por Tipo de EnvÃ­o */}
+        {/* Tabs por Tipo de Envío */}
         <div className="flex gap-2 flex-wrap">
           {(["todas", "correo", "flex", "turbo"] as ShippingMethod[]).map((tab) => (
             <button

@@ -1,7 +1,7 @@
 /**
  * WebUSB direct printing for ZPL thermal printers.
  * Works in Chrome, Opera GX and any Chromium-based browser.
- * No extra software required â€” connects directly to the USB printer.
+ * No extra software required — connects directly to the USB printer.
  *
  * Usage:
  *   1. Call requestUSBPrinter() once (requires user click) to pair the device.
@@ -11,11 +11,11 @@
 
 const USB_STORAGE_KEY = "webusb_printer_ids"; // { vendorId, productId }
 
-// USB Printer class â€” all standard thermal printers expose this
+// USB Printer class — all standard thermal printers expose this
 const PRINTER_CLASS = 0x07;
 
-// â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// WebUSB is not in default TS libs for Next.js 14 â€” use safe type wrappers
+// ── Types ─────────────────────────────────────────────────────────────────────
+// WebUSB is not in default TS libs for Next.js 14 — use safe type wrappers
 type USB = {
   requestDevice: (options: { filters: { classCode?: number; vendorId?: number; productId?: number }[] }) => Promise<USBDevice>;
   getDevices: () => Promise<USBDevice[]>;
@@ -56,7 +56,7 @@ type USBEndpoint = {
   type: "bulk" | "interrupt" | "isochronous";
 };
 
-// â”€â”€ Module state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Module state ──────────────────────────────────────────────────────────────
 let _device: USBDevice | null = null;
 let _claimedInterface: number | null = null;
 let _bulkEndpoint: number | null = null;
@@ -66,7 +66,7 @@ function getUSBAPI(): USB | null {
   return ("usb" in navigator) ? (navigator as unknown as { usb: USB }).usb : null;
 }
 
-// â”€â”€ Public API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Public API ────────────────────────────────────────────────────────────────
 
 /** Returns true if WebUSB is available in this browser */
 export function isWebUSBSupported(): boolean {
@@ -99,9 +99,9 @@ export function isUSBPrinterOpen(): boolean {
  */
 export async function requestUSBPrinter(): Promise<USBDevice> {
   const usb = getUSBAPI();
-  if (!usb) throw new Error("WebUSB no estÃ¡ disponible en este navegador. UsÃ¡ Chrome u Opera GX.");
+  if (!usb) throw new Error("WebUSB no está disponible en este navegador. Usá Chrome u Opera GX.");
 
-  // Show all USB devices (broad filter â€” user selects the printer)
+  // Show all USB devices (broad filter — user selects the printer)
   const device = await usb.requestDevice({
     filters: [
       { classCode: PRINTER_CLASS }, // Standard printer class
@@ -138,14 +138,14 @@ export async function getUSBPrinter(): Promise<USBDevice | null> {
     if (match) return match;
   }
 
-  // No stored match â€” return first device if only one exists
+  // No stored match — return first device if only one exists
   if (devices.length === 1) return devices[0];
   return null;
 }
 
 /**
  * Opens the device and claims the printer interface.
- * Idempotent â€” safe to call multiple times.
+ * Idempotent — safe to call multiple times.
  */
 export async function openUSBPrinter(device: USBDevice): Promise<void> {
   if (device.opened && _claimedInterface !== null && _device === device) return; // already open
@@ -187,8 +187,8 @@ export async function openUSBPrinter(device: USBDevice): Promise<void> {
 
   if (interfaceNum === null || bulkOut === null) {
     throw new Error(
-      "No se encontrÃ³ un endpoint de impresiÃ³n en la impresora USB. " +
-      "Asegurate de que el cable estÃ© conectado y que la impresora estÃ© encendida."
+      "No se encontró un endpoint de impresión en la impresora USB. " +
+      "Asegurate de que el cable esté conectado y que la impresora esté encendida."
     );
   }
 
@@ -222,7 +222,7 @@ export async function printZPLviaUSB(zplContent: string): Promise<void> {
   // Auto-connect if needed
   if (!isUSBPrinterOpen()) {
     const device = await getUSBPrinter();
-    if (!device) throw new Error("No hay impresora USB vinculada. UsÃ¡ el botÃ³n 'Vincular Impresora USB'.");
+    if (!device) throw new Error("No hay impresora USB vinculada. Usá el botón 'Vincular Impresora USB'.");
     await openUSBPrinter(device);
   }
 

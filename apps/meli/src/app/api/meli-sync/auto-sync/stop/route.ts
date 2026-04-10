@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 
-// Forzar renderizado dinámico - evita error de generación estática
+// Forzar renderizado din�mico - evita error de generaci�n est�tica
 export const dynamic = 'force-dynamic';
 
-// Estado de sincronizaciÃ³n (compartido con el route principal)
+// Estado de sincronización (compartido con el route principal)
 let syncState = {
   isRunning: false,
   startedAt: null as string | null,
@@ -15,15 +15,15 @@ let syncState = {
 /**
  * POST /api/meli-sync/auto-sync/stop
  * 
- * Detiene la sincronizaciÃ³n automÃ¡tica.
+ * Detiene la sincronización automática.
  */
 export async function POST() {
   syncState.isRunning = false;
-  syncState.message = "SincronizaciÃ³n detenida por el usuario";
+  syncState.message = "Sincronización detenida por el usuario";
   
   return NextResponse.json({
     success: true,
-    message: "SincronizaciÃ³n detenida",
+    message: "Sincronización detenida",
     stoppedAt: new Date().toISOString(),
   });
 }

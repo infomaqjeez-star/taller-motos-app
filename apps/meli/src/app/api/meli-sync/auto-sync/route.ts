@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-// Forzar renderizado dinámico - evita error de generación estática
+// Forzar renderizado din�mico - evita error de generaci�n est�tica
 export const dynamic = 'force-dynamic';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
@@ -12,7 +12,7 @@ const supabase = createClient(
   supabaseServiceKey || "placeholder-key"
 );
 
-// Estado de sincronizaciÃ³n en memoria (en producciÃ³n usar Redis)
+// Estado de sincronización en memoria (en producción usar Redis)
 let syncState = {
   isRunning: false,
   startedAt: null as string | null,
@@ -24,7 +24,7 @@ let syncState = {
 /**
  * GET /api/meli-sync/auto-sync
  * 
- * Obtiene el estado de la sincronizaciÃ³n automÃ¡tica.
+ * Obtiene el estado de la sincronización automática.
  */
 export async function GET(request: NextRequest) {
   return NextResponse.json({
@@ -39,13 +39,13 @@ export async function GET(request: NextRequest) {
 /**
  * POST /api/meli-sync/auto-sync
  * 
- * Inicia la sincronizaciÃ³n automÃ¡tica.
+ * Inicia la sincronización automática.
  */
 export async function POST(request: NextRequest) {
   try {
     if (syncState.isRunning) {
       return NextResponse.json(
-        { error: "La sincronizaciÃ³n ya estÃ¡ en curso" },
+        { error: "La sincronización ya está en curso" },
         { status: 409 }
       );
     }
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
     syncState.isRunning = true;
     syncState.startedAt = new Date().toISOString();
     syncState.progress = 0;
-    syncState.message = "Iniciando sincronizaciÃ³n...";
+    syncState.message = "Iniciando sincronización...";
 
     // Obtener el usuario actual
     const authHeader = request.headers.get("authorization");
@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Simular progreso de sincronizaciÃ³n
+    // Simular progreso de sincronización
     setTimeout(() => {
       syncState.progress = 25;
       syncState.message = "Sincronizando publicaciones...";
@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
 
     setTimeout(() => {
       syncState.progress = 50;
-      syncState.message = "Sincronizando Ã³rdenes...";
+      syncState.message = "Sincronizando órdenes...";
     }, 2000);
 
     setTimeout(() => {
@@ -91,21 +91,21 @@ export async function POST(request: NextRequest) {
 
     setTimeout(() => {
       syncState.progress = 100;
-      syncState.message = "SincronizaciÃ³n completada";
+      syncState.message = "Sincronización completada";
       syncState.isRunning = false;
       syncState.lastSyncAt = new Date().toISOString();
     }, 4000);
 
     return NextResponse.json({
       success: true,
-      message: "SincronizaciÃ³n iniciada",
+      message: "Sincronización iniciada",
       startedAt: syncState.startedAt,
     });
   } catch (error) {
     syncState.isRunning = false;
     console.error("[meli-sync/auto-sync] Error:", error);
     return NextResponse.json(
-      { error: "Error al iniciar sincronizaciÃ³n" },
+      { error: "Error al iniciar sincronización" },
       { status: 500 }
     );
   }

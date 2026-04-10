@@ -11,26 +11,26 @@ const ZONA_CERCANA: string[] = [
 
 const ZONA_MEDIA: string[] = [
   "esteban echeverria",
-  "esteban echeverrÃ­a",
+  "esteban echeverría",
   "la matanza sur",
   "monte grande",       // suele aparecer como parte de Esteban Echeverria
   "canning",            // suele aparecer como parte de Esteban Echeverria
   "luis guillon",
-  "luis guillÃ³n",
+  "luis guillón",
 ];
 
 const ZONA_LEJANA: string[] = [
   // Lejanas explicitas (config MeLi)
   "berisso",
   "campana",
-  "caÃ±uelas",
+  "cañuelas",
   "canuelas",
   "del viso",
   "derqui",
   "ensenada",
   "escobar",
   "general rodriguez",
-  "general rodrÃ­guez",
+  "general rodríguez",
   "guernica",
   "ingeniero maschwitz",
   "la plata",
@@ -38,16 +38,16 @@ const ZONA_LEJANA: string[] = [
   "la plata norte",
   "la plata oeste",
   "lujan",
-  "lujÃ¡n",
+  "luján",
   "marcos paz",
   "nordelta",
   "pilar",
   "san vicente",
   "villa rosa",
   "zarate",
-  "zÃ¡rate",
+  "zárate",
   "garin",
-  "garÃ­n",
+  "garín",
   // GBA amplio
   "almirante brown",
   "avellaneda",
@@ -55,67 +55,67 @@ const ZONA_LEJANA: string[] = [
   "caba",
   "capital federal",
   "ciudad autonoma de buenos aires",
-  "ciudad autÃ³noma de buenos aires",
+  "ciudad autónoma de buenos aires",
   "buenos aires",
   "florencio varela",
   "hurlingham",
   "ituzaingo",
-  "ituzaingÃ³",
+  "ituzaingó",
   "jose c paz",
-  "josÃ© c paz",
+  "josé c paz",
   "jose c. paz",
-  "josÃ© c. paz",
+  "josé c. paz",
   "la matanza",
   "la matanza norte",
   "lanus",
-  "lanÃºs",
+  "lanús",
   "lomas de zamora",
   "malvinas argentinas",
   "merlo",
   "moreno",
   "moron",
-  "morÃ³n",
+  "morón",
   "quilmes",
   "san fernando",
   "san isidro",
   "san martin",
-  "san martÃ­n",
+  "san martín",
   "san miguel",
   "tigre",
   "tres de febrero",
   "vicente lopez",
-  "vicente lÃ³pez",
+  "vicente lópez",
 ];
 
 // Clasificacion por CP (codigo postal numerico)
 // Rangos de CP para cada zona cuando el nombre de ciudad no matchea
 // Fuente: MeLi Flex zones + CP de Argentina
 const CP_CERCANA: Array<[number, number]> = [
-  [1802, 1804],   // Ezeiza, TristÃ¡n SuÃ¡rez
+  [1802, 1804],   // Ezeiza, Tristán Suárez
 ];
 
 const CP_MEDIA: Array<[number, number]> = [
-  [1838, 1838],   // Luis GuillÃ³n
+  [1838, 1838],   // Luis Guillón
   [1842, 1842],   // Monte Grande
   [1806, 1806],   // Canning (parte de Esteban Echeverria)
   [1841, 1841],   // Esteban Echeverria
-  [1839, 1839],   // Luis GuillÃ³n
+  [1839, 1839],   // Luis Guillón
 ];
 
 const CP_LEJANA: Array<[number, number]> = [
   [1000, 1499],   // CABA (todos los barrios)
-  [1600, 1609],   // Olivos, Florida, MartÃ­nez, San Isidro
-  [1610, 1619],   // Boulogne, BÃ©ccar, Victoria, San Fernando
+  [1600, 1609],   // Olivos, Florida, Martínez, San Isidro
+  [1610, 1619],   // Boulogne, Béccar, Victoria, San Fernando
   [1620, 1629],   // Tigre, Don Torcuato, Pacheco
-  [1630, 1639],   // San MartÃ­n, Caseros, Santos Lugares
-  [1640, 1649],   // Hurlingham, MorÃ³n, Castelar
+  [1630, 1639],   // San Martín, Caseros, Santos Lugares
+  [1640, 1649],   // Hurlingham, Morón, Castelar
   [1650, 1659],   // San Justo, La Matanza
   [1660, 1669],   // Merlo, Moreno
   [1670, 1679],   // Merlo
   [1680, 1689],   // Moreno
-  [1700, 1709],   // Ramos MejÃ­a, La Matanza
-  [1710, 1719],   // LanÃºs, Remedios de Escalada
-  [1720, 1729],   // Avellaneda, SarandÃ­
+  [1700, 1709],   // Ramos Mejía, La Matanza
+  [1710, 1719],   // Lanús, Remedios de Escalada
+  [1720, 1729],   // Avellaneda, Sarandí
   [1740, 1749],   // Lomas de Zamora
   [1750, 1759],   // Quilmes, Bernal
   [1760, 1769],   // Quilmes Oeste
@@ -125,15 +125,15 @@ const CP_LEJANA: Array<[number, number]> = [
   [1820, 1829],   // La Plata, Berisso, Ensenada
   [1870, 1879],   // Pilar, Escobar
   [1880, 1889],   // Del Viso, Villa Rosa
-  [1890, 1899],   // JosÃ© C. Paz, San Miguel, Malvinas Argentinas
+  [1890, 1899],   // José C. Paz, San Miguel, Malvinas Argentinas
   [1900, 1929],   // La Plata
-  [2800, 2809],   // ZÃ¡rate, Campana
-  [1852, 1852],   // Guernica (Pte. PerÃ³n)
-  [1814, 1814],   // CaÃ±uelas
+  [2800, 2809],   // Zárate, Campana
+  [1852, 1852],   // Guernica (Pte. Perón)
+  [1814, 1814],   // Cañuelas
   [1835, 1835],   // San Vicente
   [1744, 1744],   // Marcos Paz
-  [6700, 6709],   // LujÃ¡n
-  [1663, 1663],   // JosÃ© C. Paz
+  [6700, 6709],   // Luján
+  [1663, 1663],   // José C. Paz
 ];
 
 /**
@@ -149,7 +149,7 @@ function normalize(text: string): string {
 
 /**
  * Extrae el numero de CP (elimina prefijo de letra y sufijo)
- * Ej: "B1802BLV" â†’ 1802, "1427" â†’ 1427, "C1427" â†’ 1427
+ * Ej: "B1802BLV" → 1802, "1427" → 1427, "C1427" → 1427
  */
 function extractCpNumber(zip: string): number | null {
   const match = zip.replace(/\s/g, "").match(/[A-Z]?(\d{4})/i);

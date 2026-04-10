@@ -1,6 +1,6 @@
 /**
  * Sistema de Historial Inteligente para Auto-respuesta
- * BÃºsqueda por keywords sin IA - zero cost
+ * Búsqueda por keywords sin IA - zero cost
  */
 
 import { supabase } from "./supabase";
@@ -15,13 +15,13 @@ export interface KnowledgeItem {
   created_at: string;
 }
 
-// Stop words comunes en espaÃ±ol para filtrar
+// Stop words comunes en español para filtrar
 const STOP_WORDS = new Set([
   "el", "la", "de", "que", "y", "a", "en", "es", "se", "los", "las",
   "un", "una", "unos", "unas", "del", "al", "son", "por", "con", "sin",
-  "como", "para", "este", "ese", "este", "del", "pero", "mÃ¡s", "o", "si",
+  "como", "para", "este", "ese", "este", "del", "pero", "más", "o", "si",
   "me", "te", "le", "nos", "os", "les", "mi", "tu", "su", "nuestro",
-  "vuestro", "mÃ­o", "tuyo", "suyo", "nuestro", "vuestro"
+  "vuestro", "mío", "tuyo", "suyo", "nuestro", "vuestro"
 ]);
 
 /**
@@ -29,7 +29,7 @@ const STOP_WORDS = new Set([
  * - Normaliza a lowercase
  * - Remueve acentos
  * - Filtra palabras cortas y stopwords
- * - Retorna array Ãºnico
+ * - Retorna array único
  */
 export function extractKeywords(text: string): string[] {
   if (!text || text.length === 0) return [];
@@ -38,8 +38,8 @@ export function extractKeywords(text: string): string[] {
   const normalized = text
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "") // Remover diacrÃ­ticos
-    .replace(/[^a-z0-9\s]/g, " ") // Solo letras, nÃºmeros, espacios
+    .replace(/[\u0300-\u036f]/g, "") // Remover diacríticos
+    .replace(/[^a-z0-9\s]/g, " ") // Solo letras, números, espacios
     .split(/\s+/)
     .filter((word) => word.length > 0);
 
@@ -48,7 +48,7 @@ export function extractKeywords(text: string): string[] {
     (word) => word.length >= 3 && !STOP_WORDS.has(word)
   );
 
-  // Retornar Ãºnico
+  // Retornar único
   return Array.from(new Set(filtered));
 }
 
@@ -65,7 +65,7 @@ export function calculateSimilarity(
   const set1 = new Set(keywords1);
   const set2 = new Set(keywords2);
 
-  // Jaccard: intersecciÃ³n / uniÃ³n
+  // Jaccard: intersección / unión
   const intersection = Array.from(set1).filter((k) => set2.has(k)).length;
   const union = new Set(Array.from(set1).concat(Array.from(set2))).size;
 
@@ -111,7 +111,7 @@ export async function searchKnowledgeBase(
     }
 
     console.log(
-      `[KB] BÃºsqueda: "${pregunta.substring(0, 50)}..." â†’ ${
+      `[KB] Búsqueda: "${pregunta.substring(0, 50)}..." → ${
         bestMatch ? `Similitud: ${(bestSimilarity * 100).toFixed(0)}%` : "Sin coincidencias"
       }`
     );
@@ -133,7 +133,7 @@ export async function saveToKnowledgeBase(
 ): Promise<string | null> {
   try {
     if (!pregunta.trim() || !respuesta.trim()) {
-      console.warn("[KB] Pregunta o respuesta vacÃ­as, no guardadas");
+      console.warn("[KB] Pregunta o respuesta vacías, no guardadas");
       return null;
     }
 
@@ -177,7 +177,7 @@ export async function incrementUsageCount(id: string): Promise<void> {
     });
 
     if (error) {
-      // Si no existe la funciÃ³n RPC, hacer update directo leyendo primero
+      // Si no existe la función RPC, hacer update directo leyendo primero
       console.log("[KB] RPC no disponible, usando update directo");
       
       const { data } = await supabase

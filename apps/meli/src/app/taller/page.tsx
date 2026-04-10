@@ -22,7 +22,7 @@ import NotificationsPanel from "@/components/NotificationsPanel";
 import TemplateManager from "@/components/TemplateManager";
 import BottomNav from "@/components/BottomNav";
 
-/* â”€â”€ Tarjeta de estado con glow neÃ³n â”€â”€ */
+/* ── Tarjeta de estado con glow neón ── */
 function StatCard({
   label,
   value,
@@ -51,7 +51,7 @@ function StatCard({
   );
 }
 
-/* â”€â”€ Badge de fase de fidelizaciÃ³n â”€â”€ */
+/* ── Badge de fase de fidelización ── */
 function FaseBadge({ compras }: { compras: number }) {
   if (compras >= 50) return (
     <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full border border-yellow-400/60 text-gold" style={{ background: "rgba(255,215,0,0.12)", textShadow: "0 0 6px rgba(255,215,0,0.7)" }}>
@@ -107,7 +107,7 @@ export default function DashboardPage() {
           const cliente = clientes.find(c => c.telefono === order.clientPhone.trim());
           if (cliente) historialDb.upsert(cliente.id, order).catch(() => {});
         }).catch(() => {});
-        showToast("Orden actualizada con Ã©xito");
+        showToast("Orden actualizada con éxito");
       } else {
         const newOrder = { ...order, id: generateId(), entryDate: new Date().toISOString() };
         await create(newOrder);
@@ -116,7 +116,7 @@ export default function DashboardPage() {
           const cliente = clientes.find(c => c.telefono === newOrder.clientPhone.trim());
           if (cliente) historialDb.upsert(cliente.id, newOrder).catch(() => {});
         }).catch(() => {});
-        showToast("Â¡Orden guardada con Ã©xito!");
+        showToast("¡Orden guardada con éxito!");
       }
       setShowForm(false);
       setEditingOrder(null);
@@ -152,7 +152,7 @@ export default function DashboardPage() {
 
       <main className="max-w-5xl mx-auto px-4 py-6 pb-24 sm:pb-6 space-y-6">
 
-        {/* â”€â”€ Tarjetas de estado neÃ³n â”€â”€ */}
+        {/* ── Tarjetas de estado neón ── */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <StatCard
             label="Activas"
@@ -163,7 +163,7 @@ export default function DashboardPage() {
             valueColor="text-orange-neon"
           />
           <StatCard
-            label="En ReparaciÃ³n"
+            label="En Reparación"
             value={inRepairOrders.length}
             icon={Clock}
             cardClass="card-neon-cyan"
@@ -188,28 +188,28 @@ export default function DashboardPage() {
           />
         </div>
 
-        {/* â”€â”€ Alerta 90 dÃ­as â”€â”€ */}
+        {/* ── Alerta 90 días ── */}
         {overdueCount > 0 && (
           <div className="card-alert flex items-start gap-3">
             <AlertTriangle className="w-6 h-6 text-red-400 flex-shrink-0 mt-0.5" />
             <div>
               <p className="text-red-300 font-bold text-base">
-                {overdueCount} equipo{overdueCount > 1 ? "s" : ""} con mÃ¡s de 90 dÃ­as esperando retiro
+                {overdueCount} equipo{overdueCount > 1 ? "s" : ""} con más de 90 días esperando retiro
               </p>
               <p className="text-red-400/70 text-sm mt-0.5">
-                ContactÃ¡ al cliente para coordinar la devoluciÃ³n o el abandono del equipo.
+                Contactá al cliente para coordinar la devolución o el abandono del equipo.
               </p>
               <button
                 onClick={() => setFilters({ ...filters, overdueOnly: true })}
                 className="mt-2 text-sm text-red-300 underline underline-offset-2 hover:text-red-200"
               >
-                Ver solo esas Ã³rdenes â†’
+                Ver solo esas órdenes →
               </button>
             </div>
           </div>
         )}
 
-        {/* â”€â”€ Filtros + Exportar + Plantillas â”€â”€ */}
+        {/* ── Filtros + Exportar + Plantillas ── */}
         <div className="space-y-3">
           <FiltersBar
             filters={filters}
@@ -233,8 +233,8 @@ export default function DashboardPage() {
                     const label =
                       filters.motorType !== "all" ? (MOTOR_TYPE_LABELS[filters.motorType] ?? filters.motorType)
                       : filters.status !== "all" ? `Estado: ${filters.status}`
-                      : filters.overdueOnly ? "MÃ¡s de 90 dÃ­as"
-                      : "Todas las Ã³rdenes";
+                      : filters.overdueOnly ? "Más de 90 días"
+                      : "Todas las órdenes";
                     exportOrdersReportPDF(filtered, label);
                   }}
                   className="btn-secondary flex-1 sm:flex-none"
@@ -256,12 +256,12 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* â”€â”€ Lista de Ã³rdenes â”€â”€ */}
+        {/* ── Lista de órdenes ── */}
         <div className="space-y-3">
           {loading ? (
             <div className="card flex flex-col items-center py-16 text-center">
               <div className="w-10 h-10 border-4 border-[#FF5722] border-t-transparent rounded-full animate-spin mb-4" />
-              <p className="text-gray-400 font-semibold">Cargando Ã³rdenes...</p>
+              <p className="text-gray-400 font-semibold">Cargando órdenes...</p>
             </div>
           ) : filtered.length === 0 ? (
             <div className="card flex flex-col items-center justify-center py-16 text-center gap-4">
@@ -272,13 +272,13 @@ export default function DashboardPage() {
               <div>
                 <p className="text-gray-300 font-bold text-lg">
                   {orders.length === 0
-                    ? "No hay Ã³rdenes de trabajo todavÃ­a"
-                    : "No se encontraron Ã³rdenes con esos filtros"}
+                    ? "No hay órdenes de trabajo todavía"
+                    : "No se encontraron órdenes con esos filtros"}
                 </p>
                 <p className="text-gray-600 text-sm mt-1">
                   {orders.length === 0
-                    ? "TocÃ¡ el botÃ³n naranja para ingresar tu primer equipo"
-                    : "ProbÃ¡ ajustar los filtros"}
+                    ? "Tocá el botón naranja para ingresar tu primer equipo"
+                    : "Probá ajustar los filtros"}
                 </p>
               </div>
             </div>
@@ -295,7 +295,7 @@ export default function DashboardPage() {
         </div>
       </main>
 
-      {/* â”€â”€ FAB â€” Nueva orden (Naranja Maqjeez con glow) â”€â”€ */}
+      {/* ── FAB — Nueva orden (Naranja Maqjeez con glow) ── */}
       <button
         onClick={() => { setEditingOrder(null); setShowForm(true); }}
         className="fixed bottom-[88px] sm:bottom-6 right-4 sm:right-6

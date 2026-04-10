@@ -66,7 +66,7 @@ export default function OrderForm({ initial, onSave, onClose }: OrderFormProps) 
   );
   const [errors, setErrors] = useState<Partial<Record<keyof WorkOrder, string>>>({});
 
-  // â”€â”€ MÃ¡quinas adicionales â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Máquinas adicionales ──────────────────────────────────────
   const [extraMachines, setExtraMachines] = useState<ExtraMachine[]>(
     initial?.extraMachines ?? []
   );
@@ -82,7 +82,7 @@ export default function OrderForm({ initial, onSave, onClose }: OrderFormProps) 
 
   const setMachine = (id: string, key: keyof ExtraMachine, val: string) =>
     setExtraMachines(prev => prev.map(m => m.id === id ? { ...m, [key]: val } : m));
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─────────────────────────────────────────────────────────────
 
   const set = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -90,10 +90,10 @@ export default function OrderForm({ initial, onSave, onClose }: OrderFormProps) 
   const validate = (): boolean => {
     const errs: Partial<Record<keyof WorkOrder, string>> = {};
     if (!form.clientName.trim()) errs.clientName = "Nombre requerido";
-    if (!form.clientPhone.trim()) errs.clientPhone = "TelÃ©fono requerido";
+    if (!form.clientPhone.trim()) errs.clientPhone = "Teléfono requerido";
     if (!form.brand.trim()) errs.brand = "Marca requerida";
     if (!form.model.trim()) errs.model = "Modelo requerido";
-    if (!form.reportedIssues.trim()) errs.reportedIssues = "DescribÃ­ las fallas";
+    if (!form.reportedIssues.trim()) errs.reportedIssues = "Describí las fallas";
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -157,7 +157,7 @@ export default function OrderForm({ initial, onSave, onClose }: OrderFormProps) 
         {/* Scroll body */}
         <form onSubmit={(e) => handleSubmit(e)} className="overflow-y-auto flex-1 px-5 py-5 space-y-5">
 
-          {/* SecciÃ³n Cliente */}
+          {/* Sección Cliente */}
           <section>
             <h3 className="flex items-center gap-2 text-orange-400 font-bold text-sm uppercase tracking-wider mb-3">
               <User className="w-4 h-4" />
@@ -169,7 +169,7 @@ export default function OrderForm({ initial, onSave, onClose }: OrderFormProps) 
                 <input
                   type="text"
                   className={`input ${errors.clientName ? "border-red-500" : ""}`}
-                  placeholder="Ej: Juan PÃ©rez"
+                  placeholder="Ej: Juan Pérez"
                   value={form.clientName}
                   onChange={(e) => set("clientName", e.target.value)}
                 />
@@ -178,7 +178,7 @@ export default function OrderForm({ initial, onSave, onClose }: OrderFormProps) 
               <div>
                 <label className="label">
                   <Phone className="inline w-3.5 h-3.5 mr-1" />
-                  TelÃ©fono / WhatsApp *
+                  Teléfono / WhatsApp *
                 </label>
                 <input
                   type="tel"
@@ -188,12 +188,12 @@ export default function OrderForm({ initial, onSave, onClose }: OrderFormProps) 
                   onChange={(e) => set("clientPhone", e.target.value)}
                 />
                 {fieldError("clientPhone")}
-                <p className="text-xs text-gray-500 mt-1">Incluir cÃ³digo de paÃ­s para WhatsApp</p>
+                <p className="text-xs text-gray-500 mt-1">Incluir código de país para WhatsApp</p>
               </div>
             </div>
           </section>
 
-          {/* SecciÃ³n Equipo */}
+          {/* Sección Equipo */}
           <section>
             <h3 className="flex items-center gap-2 text-orange-400 font-bold text-sm uppercase tracking-wider mb-3">
               <Wrench className="w-4 h-4" />
@@ -255,17 +255,17 @@ export default function OrderForm({ initial, onSave, onClose }: OrderFormProps) 
             </div>
           </section>
 
-          {/* DiagnÃ³stico */}
+          {/* Diagnóstico */}
           <section>
             <h3 className="flex items-center gap-2 text-orange-400 font-bold text-sm uppercase tracking-wider mb-3">
               <ClipboardList className="w-4 h-4" />
-              DiagnÃ³stico
+              Diagnóstico
             </h3>
             <div>
               <label className="label">Fallas Reportadas *</label>
               <textarea
                 className={`input resize-none min-h-[90px] ${errors.reportedIssues ? "border-red-500" : ""}`}
-                placeholder="DescribÃ­ quÃ© falla reporta el cliente..."
+                placeholder="Describí qué falla reporta el cliente..."
                 value={form.reportedIssues}
                 onChange={(e) => set("reportedIssues", e.target.value)}
               />
@@ -275,7 +275,7 @@ export default function OrderForm({ initial, onSave, onClose }: OrderFormProps) 
               <label className="label">Notas Internas</label>
               <textarea
                 className="input resize-none min-h-[70px]"
-                placeholder="Notas para el taller (no se envÃ­an al cliente)..."
+                placeholder="Notas para el taller (no se envían al cliente)..."
                 value={form.internalNotes}
                 onChange={(e) => set("internalNotes", e.target.value)}
               />
@@ -332,11 +332,11 @@ export default function OrderForm({ initial, onSave, onClose }: OrderFormProps) 
             ))}
           </section>
 
-          {/* GestiÃ³n econÃ³mica */}
+          {/* Gestión económica */}
           <section>
             <h3 className="flex items-center gap-2 text-orange-400 font-bold text-sm uppercase tracking-wider mb-3">
               <DollarSign className="w-4 h-4" />
-              GestiÃ³n EconÃ³mica
+              Gestión Económica
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
@@ -355,7 +355,7 @@ export default function OrderForm({ initial, onSave, onClose }: OrderFormProps) 
               <div>
                 <label className="label">
                   <Clock className="inline w-3.5 h-3.5 mr-1" />
-                  Tiempo Estimado (dÃ­as)
+                  Tiempo Estimado (días)
                 </label>
                 <input
                   type="number"
@@ -370,15 +370,15 @@ export default function OrderForm({ initial, onSave, onClose }: OrderFormProps) 
               </div>
             </div>
 
-            {/* SeÃ±a / Pago parcial */}
+            {/* Seña / Pago parcial */}
             <div className="rounded-xl p-3 mt-2" style={{ background: "rgba(255,230,0,0.06)", border: "1px solid rgba(255,230,0,0.2)" }}>
               <label className="label flex items-center gap-1.5 text-yellow-400 font-black">
-                ðŸ’° SeÃ±a / Pago Parcial ($)
+                💰 Seña / Pago Parcial ($)
               </label>
               <input
                 type="number"
                 className="input"
-                placeholder="0 â€” dejar vacÃ­o si no hubo seÃ±a"
+                placeholder="0 — dejar vacío si no hubo seña"
                 min={0}
                 value={form.deposit ?? ""}
                 onChange={(e) =>
@@ -401,7 +401,7 @@ export default function OrderForm({ initial, onSave, onClose }: OrderFormProps) 
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="label">Estado de ReparaciÃ³n</label>
+                <label className="label">Estado de Reparación</label>
                 <select
                   className="input"
                   value={form.status}
@@ -447,7 +447,7 @@ export default function OrderForm({ initial, onSave, onClose }: OrderFormProps) 
                 Presupuesto Aceptado
               </span>
               {form.budgetAccepted && (
-                <span className="text-green-400 text-sm font-bold">SÃ­</span>
+                <span className="text-green-400 text-sm font-bold">Sí</span>
               )}
             </label>
           </section>

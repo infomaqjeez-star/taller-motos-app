@@ -37,13 +37,13 @@ export default function RegisterPage() {
     setError("");
 
     if (password !== confirmPassword) {
-      setError("Las contraseÃ±as no coinciden");
+      setError("Las contraseñas no coinciden");
       setLoading(false);
       return;
     }
 
     if (password.length < 6) {
-      setError("La contraseÃ±a debe tener al menos 6 caracteres");
+      setError("La contraseña debe tener al menos 6 caracteres");
       setLoading(false);
       return;
     }
@@ -77,9 +77,9 @@ export default function RegisterPage() {
             <CheckCircle className="w-10 h-10 text-green-500" />
           </div>
           
-          <h1 className="text-2xl font-bold text-white mb-4">Â¡Registro exitoso!</h1>
+          <h1 className="text-2xl font-bold text-white mb-4">¡Registro exitoso!</h1>
           <p className="text-gray-400 mb-8">
-            Te hemos enviado un email de confirmaciÃ³n. Revisa tu bandeja de entrada y haz clic en el enlace para activar tu cuenta.
+            Te hemos enviado un email de confirmación. Revisa tu bandeja de entrada y haz clic en el enlace para activar tu cuenta.
           </p>
           
           <Link 
@@ -106,7 +106,7 @@ export default function RegisterPage() {
           </Link>
           
           <h1 className="text-2xl font-bold text-white mb-2">Crea tu cuenta</h1>
-          <p className="text-gray-400">Comienza gratis, no necesitas tarjeta de crÃ©dito</p>
+          <p className="text-gray-400">Comienza gratis, no necesitas tarjeta de crédito</p>
         </div>
 
         {/* Register Card */}
@@ -145,7 +145,7 @@ export default function RegisterPage() {
                   type="text"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  placeholder="Juan PÃ©rez"
+                  placeholder="Juan Pérez"
                   className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[#FFE600] transition"
                   required
                 />
@@ -188,7 +188,7 @@ export default function RegisterPage() {
 
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
-                ContraseÃ±a
+                Contraseña
               </label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
@@ -196,7 +196,7 @@ export default function RegisterPage() {
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+                  placeholder="••••••••"
                   className="w-full pl-10 pr-12 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[#FFE600] transition"
                   required
                   minLength={6}
@@ -209,12 +209,12 @@ export default function RegisterPage() {
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </div>
-              <p className="text-xs text-gray-500 mt-1">MÃ­nimo 6 caracteres</p>
+              <p className="text-xs text-gray-500 mt-1">Mínimo 6 caracteres</p>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
-                Confirmar ContraseÃ±a
+                Confirmar Contraseña
               </label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
@@ -222,7 +222,7 @@ export default function RegisterPage() {
                   type={showPassword ? "text" : "password"}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+                  placeholder="••••••••"
                   className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[#FFE600] transition"
                   required
                 />
@@ -250,9 +250,9 @@ export default function RegisterPage() {
 
           <div className="mt-6 text-center">
             <p className="text-gray-400">
-              Â¿Ya tienes cuenta?{" "}
+              ¿Ya tienes cuenta?{" "}
               <Link href="/login" className="text-[#FFE600] hover:underline">
-                Inicia sesiÃ³n
+                Inicia sesión
               </Link>
             </p>
           </div>
@@ -261,7 +261,7 @@ export default function RegisterPage() {
         {/* Benefits */}
         <div className="mt-8 grid grid-cols-2 gap-4 text-center">
           <div className="p-4 bg-white/5 rounded-xl">
-            <div className="text-2xl font-bold text-[#FFE600]">14 dÃ­as</div>
+            <div className="text-2xl font-bold text-[#FFE600]">14 días</div>
             <div className="text-xs text-gray-400">Prueba gratis</div>
           </div>
           <div className="p-4 bg-white/5 rounded-xl">

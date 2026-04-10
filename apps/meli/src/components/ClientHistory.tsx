@@ -27,7 +27,7 @@ export default function ClientHistory({ phone, clientName, onClose, onSelect }: 
             <div className="bg-blue-600 rounded-xl p-2"><User className="w-5 h-5 text-white" /></div>
             <div>
               <h2 className="text-white font-bold">Historial del Cliente</h2>
-              <p className="text-gray-400 text-xs">{clientName} Â· {phone}</p>
+              <p className="text-gray-400 text-xs">{clientName} · {phone}</p>
             </div>
           </div>
           <button onClick={onClose} className="btn-ghost btn-sm p-2.5 rounded-xl"><X className="w-5 h-5" /></button>
@@ -39,7 +39,7 @@ export default function ClientHistory({ phone, clientName, onClose, onSelect }: 
               <div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
             </div>
           ) : orders.length === 0 ? (
-            <p className="text-gray-400 text-center py-10">No hay mÃ¡s Ã³rdenes para este cliente</p>
+            <p className="text-gray-400 text-center py-10">No hay más órdenes para este cliente</p>
           ) : (
             <>
               <p className="text-gray-500 text-xs">{orders.length} orden{orders.length !== 1 ? "es" : ""} en total</p>

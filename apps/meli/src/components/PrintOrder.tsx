@@ -11,7 +11,7 @@ interface LineItem { desc: string; qty: number; price: number; }
 
 const EMPRESA = {
   nombre: "MAQJEEZ",
-  razon:  "Servicio TÃ©cnico de Moto-Implementos y MotovehÃ­culos",
+  razon:  "Servicio Técnico de Moto-Implementos y Motovehículos",
   cuit:   "20-31264840-8",
   dir:    "Constancio Vigil 150, Carlos Spegazzini",
   loc:    "Partido de Ezeiza, Bs. As.",
@@ -24,7 +24,7 @@ function fmt(n: number) {
 
 export default function PrintOrder({ order, onClose }: Props) {
   const defaultItem: LineItem = {
-    desc:  order.reportedIssues || "Servicio de reparaciÃ³n",
+    desc:  order.reportedIssues || "Servicio de reparación",
     qty:   1,
     price: order.budget ?? 0,
   };
@@ -51,16 +51,16 @@ export default function PrintOrder({ order, onClose }: Props) {
 
   return (
     <div className="fixed inset-0 z-50 bg-black/90 flex flex-col overflow-y-auto">
-      {/* Controles â€” ocultos al imprimir */}
+      {/* Controles — ocultos al imprimir */}
       <div className="no-print sticky top-0 z-10 bg-gray-900 border-b border-gray-700 px-4 py-3 flex flex-wrap gap-3 items-center">
         <div className="flex items-center gap-3 flex-1">
           <div>
-            <label className="text-gray-400 text-xs block mb-0.5">NÂ° Presupuesto</label>
+            <label className="text-gray-400 text-xs block mb-0.5">N° Presupuesto</label>
             <input className="input input-sm w-32 font-mono" value={noPresup}
               onChange={e => setNoPresup(e.target.value)} />
           </div>
           <div>
-            <label className="text-gray-400 text-xs block mb-0.5">Validez (dÃ­as)</label>
+            <label className="text-gray-400 text-xs block mb-0.5">Validez (días)</label>
             <input type="number" className="input input-sm w-20" value={validez}
               onChange={e => setValidez(e.target.value)} />
           </div>
@@ -89,13 +89,13 @@ export default function PrintOrder({ order, onClose }: Props) {
         </div>
       </div>
 
-      {/* â•â•â•â•â•â•â•â•â•â• PRESUPUESTO IMPRIMIBLE â•â•â•â•â•â•â•â•â•â• */}
+      {/* ══════════ PRESUPUESTO IMPRIMIBLE ══════════ */}
       <div id="presupuesto"
         className="bg-white text-gray-900 w-full max-w-2xl mx-auto my-6 print:my-0
                    shadow-2xl print:shadow-none rounded-2xl print:rounded-none
                    font-sans text-sm overflow-hidden">
 
-        {/* â”€â”€ Encabezado â”€â”€ */}
+        {/* ── Encabezado ── */}
         <div className="bg-[#1a3a5c] text-white px-6 py-4 flex items-center justify-between">
           <div>
             <p className="text-2xl font-black tracking-tight text-orange-400">{EMPRESA.nombre}</p>
@@ -103,11 +103,11 @@ export default function PrintOrder({ order, onClose }: Props) {
           </div>
           <div className="text-right">
             <p className="text-xs text-blue-300 uppercase tracking-wide">Presupuesto</p>
-            <p className="font-black text-xl text-orange-300">NÂ° {noPresup}</p>
+            <p className="font-black text-xl text-orange-300">N° {noPresup}</p>
           </div>
         </div>
 
-        {/* â”€â”€ Datos empresa / cliente â”€â”€ */}
+        {/* ── Datos empresa / cliente ── */}
         <div className="grid grid-cols-2 border-b border-gray-200">
           <div className="px-5 py-4 border-r border-gray-200 space-y-1">
             <p className="text-xs font-black uppercase tracking-widest text-[#1a3a5c] mb-2">
@@ -135,7 +135,7 @@ export default function PrintOrder({ order, onClose }: Props) {
           </div>
         </div>
 
-        {/* â”€â”€ Fecha y validez â”€â”€ */}
+        {/* ── Fecha y validez ── */}
         <div className="flex items-center gap-6 px-5 py-3 bg-gray-50 border-b border-gray-200 text-xs">
           <span>
             <span className="font-bold text-gray-500 uppercase tracking-wide mr-1">Fecha:</span>
@@ -147,15 +147,15 @@ export default function PrintOrder({ order, onClose }: Props) {
           </span>
           <span>
             <span className="font-bold text-gray-500 uppercase tracking-wide mr-1">Validez:</span>
-            <span className="font-semibold">{validez} dÃ­as</span>
+            <span className="font-semibold">{validez} días</span>
           </span>
         </div>
 
-        {/* â”€â”€ Tabla de Ã­tems â”€â”€ */}
+        {/* ── Tabla de ítems ── */}
         <table className="w-full border-collapse">
           <thead>
             <tr className="bg-[#1a3a5c] text-white text-xs uppercase tracking-wider">
-              <th className="text-left px-4 py-2.5 font-bold w-[50%]">DescripciÃ³n</th>
+              <th className="text-left px-4 py-2.5 font-bold w-[50%]">Descripción</th>
               <th className="text-center px-3 py-2.5 font-bold w-[12%]">Uds.</th>
               <th className="text-right px-3 py-2.5 font-bold w-[19%]">Precio Unit.</th>
               <th className="text-right px-4 py-2.5 font-bold w-[19%]">Total</th>
@@ -164,13 +164,13 @@ export default function PrintOrder({ order, onClose }: Props) {
           <tbody>
             {items.map((item, i) => (
               <tr key={i} className={`border-b border-gray-100 ${i % 2 === 0 ? "bg-white" : "bg-gray-50/60"}`}>
-                {/* DescripciÃ³n */}
+                {/* Descripción */}
                 <td className="px-4 py-2.5">
                   <input
                     className="no-print w-full border-b border-dashed border-gray-300 bg-transparent
                                focus:outline-none focus:border-orange-400 text-sm"
                     value={item.desc}
-                    placeholder="DescripciÃ³n del trabajo..."
+                    placeholder="Descripción del trabajo..."
                     onChange={e => updateItem(i, "desc", e.target.value)}
                   />
                   <span className="only-print">{item.desc}</span>
@@ -208,17 +208,17 @@ export default function PrintOrder({ order, onClose }: Props) {
                 </td>
               </tr>
             ))}
-            {/* BotÃ³n agregar fila â€” solo en pantalla */}
+            {/* Botón agregar fila — solo en pantalla */}
             <tr className="no-print">
               <td colSpan={4} className="px-4 py-2">
                 <button onClick={addItem}
                   className="text-xs text-orange-500 hover:text-orange-400 font-semibold
                              flex items-center gap-1 transition-colors">
-                  <Plus className="w-3.5 h-3.5" /> Agregar Ã­tem
+                  <Plus className="w-3.5 h-3.5" /> Agregar ítem
                 </button>
               </td>
             </tr>
-            {/* Filas vacÃ­as para impresiÃ³n */}
+            {/* Filas vacías para impresión */}
             {[...Array(Math.max(0, 5 - items.length))].map((_, i) => (
               <tr key={"empty" + i} className="only-print border-b border-gray-100">
                 <td className="px-4 py-3">&nbsp;</td>
@@ -228,7 +228,7 @@ export default function PrintOrder({ order, onClose }: Props) {
           </tbody>
         </table>
 
-        {/* â”€â”€ Totales â”€â”€ */}
+        {/* ── Totales ── */}
         <div className="flex justify-end border-t-2 border-[#1a3a5c] mt-1">
           <div className="w-64 divide-y divide-gray-100">
             <div className="flex justify-between px-4 py-2">
@@ -250,15 +250,15 @@ export default function PrintOrder({ order, onClose }: Props) {
           </div>
         </div>
 
-        {/* â”€â”€ Notas / condiciones â”€â”€ */}
+        {/* ── Notas / condiciones ── */}
         <div className="px-5 py-4 text-xs text-gray-500 border-t border-gray-200 space-y-1">
           <p className="font-semibold text-gray-600">Condiciones:</p>
-          <p>â€¢ El presupuesto tiene una validez de {validez} dÃ­as desde su emisiÃ³n.</p>
-          <p>â€¢ Los repuestos no incluidos en este presupuesto serÃ¡n cotizados por separado.</p>
-          <p>â€¢ Una vez aceptado el presupuesto, no se realizarÃ¡n cambios sin previo aviso.</p>
+          <p>• El presupuesto tiene una validez de {validez} días desde su emisión.</p>
+          <p>• Los repuestos no incluidos en este presupuesto serán cotizados por separado.</p>
+          <p>• Una vez aceptado el presupuesto, no se realizarán cambios sin previo aviso.</p>
         </div>
 
-        {/* â”€â”€ Firmas â”€â”€ */}
+        {/* ── Firmas ── */}
         <div className="grid grid-cols-2 gap-8 px-8 py-6 border-t border-gray-200">
           <div className="text-center">
             <div className="border-b-2 border-[#1a3a5c] mb-2 h-12" />
@@ -268,12 +268,12 @@ export default function PrintOrder({ order, onClose }: Props) {
           <div className="text-center">
             <div className="border-b-2 border-[#1a3a5c] mb-2 h-12" />
             <p className="text-xs text-gray-500 font-semibold">{order.clientName}</p>
-            <p className="text-xs text-gray-400">Firma del cliente â€” Conforme</p>
+            <p className="text-xs text-gray-400">Firma del cliente — Conforme</p>
           </div>
         </div>
 
         <div className="text-center text-xs text-gray-400 py-3 bg-gray-50 border-t border-gray-100">
-          {EMPRESA.nombre} Â· CUIT {EMPRESA.cuit} Â· Tel {EMPRESA.tel}
+          {EMPRESA.nombre} · CUIT {EMPRESA.cuit} · Tel {EMPRESA.tel}
         </div>
       </div>
     </div>

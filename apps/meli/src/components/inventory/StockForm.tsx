@@ -64,7 +64,7 @@ export default function StockForm({ initial, onSave, onClose }: StockFormProps) 
             <input
               type="text"
               className={`input ${errors.name ? "border-red-500" : ""}`}
-              placeholder="Ej: BujÃ­a NGK CR6HSA"
+              placeholder="Ej: Bujía NGK CR6HSA"
               value={form.name}
               onChange={(e) => set("name", e.target.value)}
             />
@@ -83,7 +83,7 @@ export default function StockForm({ initial, onSave, onClose }: StockFormProps) 
               />
             </div>
             <div>
-              <label className="label">MÃ­nimo (alerta)</label>
+              <label className="label">Mínimo (alerta)</label>
               <input
                 type="number"
                 className="input"
@@ -95,11 +95,11 @@ export default function StockForm({ initial, onSave, onClose }: StockFormProps) 
           </div>
 
           <div>
-            <label className="label">UbicaciÃ³n</label>
+            <label className="label">Ubicación</label>
             <input
               type="text"
               className="input"
-              placeholder="Ej: Estante A-3, CajÃ³n 2"
+              placeholder="Ej: Estante A-3, Cajón 2"
               value={form.location}
               onChange={(e) => set("location", e.target.value)}
             />

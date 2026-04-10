@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-// Forzar renderizado dinÃ¡mico - evita error de generaciÃ³n estÃ¡tica
+// Forzar renderizado dinámico - evita error de generación estática
 export const dynamic = 'force-dynamic';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
@@ -73,7 +73,7 @@ export async function GET(request: NextRequest) {
       .order("printed_at", { ascending: false })
       .limit(limit);
 
-    // Aplicar bÃºsqueda si hay query
+    // Aplicar búsqueda si hay query
     if (q && q.trim() !== "") {
       query = query.or(`buyer_nickname.ilike.%${q}%,item_title.ilike.%${q}%,order_id.ilike.%${q}%`);
     }

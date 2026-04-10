@@ -47,7 +47,7 @@ interface SyncSummary { cloned: number; skipped: number; errors: number; }
 
 function downloadErrorCSV(errors: ErrorEntry[]) {
   if (!errors.length) return;
-  const header = "ID Original,TÃ­tulo,Motivo,Sugerencia\n";
+  const header = "ID Original,Título,Motivo,Sugerencia\n";
   const rows = errors.map(e =>
     `"${e.item_id}","${(e.title ?? "").replace(/"/g, '""')}","${e.reason_human}","${e.suggestion}"`
   ).join("\n");
@@ -83,7 +83,7 @@ function ItemRow({
       <div className="flex-1 min-w-0">
         <p className="text-xs text-white font-medium line-clamp-1">{item.title}</p>
         <p className="text-[10px] mt-0.5" style={{ color: "#6B7280" }}>
-          {fmt(item.price)} Â· Stock: {item.available_quantity} Â· Vendidos: {item.sold_quantity}
+          {fmt(item.price)} · Stock: {item.available_quantity} · Vendidos: {item.sold_quantity}
         </p>
         {item.category_name && (
           <p className="text-[10px] mt-0.5 font-semibold" style={{ color: "#FFE600" }}>
@@ -205,7 +205,7 @@ function SyncInner() {
         }
       }
     } catch (e) {
-      addLog(`ConexiÃ³n interrumpida: ${(e as Error).message}`);
+      addLog(`Conexión interrumpida: ${(e as Error).message}`);
     } finally {
       setAutoSyncing(false);
       setStopping(false);
@@ -232,8 +232,8 @@ function SyncInner() {
         setJobId(null);
         // Browser notification if tab is hidden
         if (typeof Notification !== "undefined" && Notification.permission === "granted" && document.hidden) {
-          new Notification("SincronizaciÃ³n finalizada â€” Appjeez", {
-            body: `${s.cloned} clonadas Â· ${s.skipped} omitidas Â· ${s.errors} errores`,
+          new Notification("Sincronización finalizada — Appjeez", {
+            body: `${s.cloned} clonadas · ${s.skipped} omitidas · ${s.errors} errores`,
             icon: "/icon-192.png",
           });
         }
@@ -243,11 +243,11 @@ function SyncInner() {
         const s = data.summary as SyncSummary;
         setAutoSummary(s);
         setResumeJobId(data.job_id as string);
-        addLog("â¸ Proceso detenido. PodÃ©s retomarlo desde donde quedÃ³.");
+        addLog("⏸ Proceso detenido. Podés retomarlo desde donde quedó.");
         break;
       }
       case "error":
-        addLog(`âŒ Error: ${data.message}`);
+        addLog(`❌ Error: ${data.message}`);
         break;
     }
   };
@@ -256,7 +256,7 @@ function SyncInner() {
   const stopSync = useCallback(async () => {
     if (!jobId) return;
     setStopping(true);
-    addLog("Enviando seÃ±al de detenciÃ³n...");
+    addLog("Enviando señal de detención...");
     await fetch("/api/meli-sync/auto-sync/stop", {
       method:  "POST",
       headers: { "Content-Type": "application/json" },
@@ -347,14 +347,14 @@ function SyncInner() {
 
       <div className="max-w-2xl mx-auto px-4 pt-5 space-y-4">
 
-        {/* ===================== SYNC AUTOMÃTICO ===================== */}
+        {/* ===================== SYNC AUTOMÁTICO ===================== */}
         <div className="rounded-2xl p-5 space-y-4" style={{ background: "#1F1F1F", border: "1px solid rgba(255,255,255,0.07)" }}>
           <div className="flex items-center gap-3">
             <Zap className="w-5 h-5" style={{ color: "#39FF14" }} />
             <div className="flex-1">
-              <p className="text-sm font-black text-white">SincronizaciÃ³n AutomÃ¡tica</p>
+              <p className="text-sm font-black text-white">Sincronización Automática</p>
               <p className="text-[10px]" style={{ color: "#6B7280" }}>
-                Detecta la cuenta con mÃ¡s publicaciones y clona a todas las demÃ¡s
+                Detecta la cuenta con más publicaciones y clona a todas las demás
               </p>
             </div>
           </div>
@@ -368,12 +368,12 @@ function SyncInner() {
               disabled={autoSyncing}
               className="w-full rounded-xl px-3 py-2.5 text-sm font-semibold text-white"
               style={{ background: "#121212", border: "1px solid rgba(255,255,255,0.1)" }}>
-              <option value="all">SincronizaciÃ³n completa</option>
-              <option value="new_only">Solo publicaciones nuevas (mÃ¡s rÃ¡pido)</option>
+              <option value="all">Sincronización completa</option>
+              <option value="new_only">Solo publicaciones nuevas (más rápido)</option>
             </select>
           </div>
 
-          {/* BotÃ³n Start/Stop dinÃ¡mico */}
+          {/* Botón Start/Stop dinámico */}
           {!autoSyncing ? (
             <div className="space-y-2">
               <button
@@ -385,14 +385,14 @@ function SyncInner() {
                 Sincronizar Todas las Cuentas ({accounts.length})
               </button>
 
-              {/* BotÃ³n Retomar (si hay job pausado) */}
+              {/* Botón Retomar (si hay job pausado) */}
               {resumeJobId && (
                 <button
                   onClick={() => startSync({ resumeId: resumeJobId ?? undefined })}
                   className="w-full py-3 rounded-xl font-black text-sm transition-all flex items-center justify-center gap-2"
                   style={{ background: "#FFE600", color: "#121212" }}>
                   <RotateCcw className="w-4 h-4" />
-                  Retomar donde quedÃ³
+                  Retomar donde quedó
                 </button>
               )}
             </div>
@@ -430,10 +430,10 @@ function SyncInner() {
               {autoLog.map((line, i) => (
                 <p key={i} className="text-[11px] font-mono" style={{
                   color: line.startsWith("===")   ? "#FFE600"
-                       : line.startsWith("âŒ")    ? "#ef4444"
-                       : line.startsWith("âš ï¸")   ? "#FF9800"
-                       : line.startsWith("âœ“")     ? "#39FF14"
-                       : line.startsWith("â¸")    ? "#60a5fa"
+                       : line.startsWith("❌")    ? "#ef4444"
+                       : line.startsWith("⚠️")   ? "#FF9800"
+                       : line.startsWith("✓")     ? "#39FF14"
+                       : line.startsWith("⏸")    ? "#60a5fa"
                        : line.includes("clonadas") ? "#39FF14"
                        : "#9CA3AF",
                 }}>{line}</p>
@@ -471,7 +471,7 @@ function SyncInner() {
               <div className="flex items-center gap-2">
                 <XCircle className="w-4 h-4" style={{ color: "#ef4444" }} />
                 <span className="text-sm font-bold text-white">
-                  {errorReport.length} errores de clonaciÃ³n
+                  {errorReport.length} errores de clonación
                 </span>
               </div>
               {openErrors ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
@@ -511,7 +511,7 @@ function SyncInner() {
                   }}
                 className="w-full rounded-xl px-3 py-2.5 text-sm font-semibold text-white"
                 style={{ background: "#121212", border: "1px solid rgba(255,255,255,0.1)" }}>
-                <option value="">â€” Seleccionar cuenta origen â€”</option>
+                <option value="">— Seleccionar cuenta origen —</option>
                 {accounts.map(a => (
                   <option key={a.id} value={a.id} disabled={a.id === destId}>{a.nickname}</option>
                 ))}
@@ -532,7 +532,7 @@ function SyncInner() {
                 onChange={e => { setDestId(e.target.value); setCompareData(null); }}
                 className="w-full rounded-xl px-3 py-2.5 text-sm font-semibold text-white"
                 style={{ background: "#121212", border: "1px solid rgba(255,255,255,0.1)" }}>
-                <option value="">â€” Seleccionar cuenta destino â€”</option>
+                <option value="">— Seleccionar cuenta destino —</option>
                 {accounts.map(a => (
                   <option key={a.id} value={a.id} disabled={a.id === originId}>{a.nickname}</option>
                 ))}
@@ -547,7 +547,7 @@ function SyncInner() {
                 onClick={() => setShowCatFilter(s => !s)}
                 className="w-full flex items-center justify-between px-3 py-2.5">
                 <span className="text-xs font-bold" style={{ color: "#6B7280" }}>
-                  FILTRAR POR CATEGORÃA (opcional)
+                  FILTRAR POR CATEGORÍA (opcional)
                   {selectedCats.size < categories.length && selectedCats.size > 0 && (
                     <span className="ml-2 px-1.5 py-0.5 rounded-full text-[10px]"
                       style={{ background: "#FFE60020", color: "#FFE600" }}>
@@ -606,7 +606,7 @@ function SyncInner() {
                 </div>
               )}
               {showCatFilter && categories.length === 0 && !loadingCategories && (
-                <p className="px-3 pb-3 text-xs" style={{ color: "#6B7280" }}>No se encontraron categorÃ­as.</p>
+                <p className="px-3 pb-3 text-xs" style={{ color: "#6B7280" }}>No se encontraron categorías.</p>
               )}
             </div>
           )}
@@ -619,7 +619,7 @@ function SyncInner() {
             {comparing
               ? <span className="flex items-center justify-center gap-2"><RefreshCw className="w-4 h-4 animate-spin" /> Analizando publicaciones...</span>
               : selectedCats.size < categories.length && selectedCats.size > 0
-                ? `Analizar â€” ${selectedCats.size} categorÃ­a(s) seleccionada(s)`
+                ? `Analizar — ${selectedCats.size} categoría(s) seleccionada(s)`
                 : "Analizar y Comparar"}
           </button>
         </div>
@@ -632,7 +632,7 @@ function SyncInner() {
           </div>
         )}
 
-        {/* Resultado del anÃ¡lisis */}
+        {/* Resultado del análisis */}
         {compareData && (
           <>
             <div className="grid grid-cols-2 gap-3">
@@ -644,7 +644,7 @@ function SyncInner() {
               <div className="rounded-2xl p-4 text-center" style={{ background: "#FF980010", border: "1px solid #FF980030" }}>
                 <p className="text-3xl font-black" style={{ color: "#FF9800" }}>{compareData.summary.already_exists}</p>
                 <p className="text-xs font-bold text-white mt-1">Ya existen</p>
-                <p className="text-[10px] mt-0.5" style={{ color: "#6B7280" }}>TÃ­tulo duplicado detectado</p>
+                <p className="text-[10px] mt-0.5" style={{ color: "#6B7280" }}>Título duplicado detectado</p>
               </div>
             </div>
 
@@ -677,7 +677,7 @@ function SyncInner() {
                     <input
                       value={search}
                       onChange={e => setSearch(e.target.value)}
-                      placeholder="Buscar publicaciÃ³n..."
+                      placeholder="Buscar publicación..."
                       className="w-full pl-8 pr-3 py-2 rounded-lg text-xs text-white outline-none"
                       style={{ background: "#121212", border: "1px solid rgba(255,255,255,0.08)" }}
                     />
@@ -740,7 +740,7 @@ function SyncInner() {
                   <div className="flex items-center gap-2">
                     <AlertTriangle className="w-4 h-4" style={{ color: "#FF9800" }} />
                     <span className="text-sm font-bold text-white">
-                      {compareData.already_exists.length} tÃ­tulos ya existen en destino
+                      {compareData.already_exists.length} títulos ya existen en destino
                     </span>
                   </div>
                   {openAlready ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
@@ -761,12 +761,12 @@ function SyncInner() {
           </>
         )}
 
-        {/* BotÃ³n limpiar comparaciÃ³n */}
+        {/* Botón limpiar comparación */}
         {compareData && autoSummary && !autoSyncing && (
           <button onClick={() => { setCompareData(null); setSelected(new Set()); setAutoSummary(null); setAutoLog([]); setErrorReport([]); }}
             className="w-full py-3 rounded-xl font-black text-sm"
             style={{ background: "#1F1F1F", color: "#FFE600", border: "1px solid #FFE60033" }}>
-            Nueva SincronizaciÃ³n
+            Nueva Sincronización
           </button>
         )}
       </div>

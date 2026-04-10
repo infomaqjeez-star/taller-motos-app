@@ -25,7 +25,7 @@ import {
 import { formatDatetime, buildWhatsAppUrl } from "@/lib/utils";
 import { WorkOrder } from "@/lib/types";
 
-// â”€â”€â”€ Icon map â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Icon map ─────────────────────────────────────────────────
 
 const TYPE_ICONS: Record<NotificationType, React.ElementType> = {
   budget_ready:    DollarSign,
@@ -45,7 +45,7 @@ const TYPE_COLORS: Record<NotificationType, string> = {
   custom:          "text-gray-400 bg-gray-800 border-gray-700",
 };
 
-// â”€â”€â”€ Custom message editor â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Custom message editor ────────────────────────────────────
 
 function MessageEditor({
   notification,
@@ -70,7 +70,7 @@ function MessageEditor({
             </div>
             <div>
               <h3 className="text-white font-bold text-base">Editar mensaje</h3>
-              <p className="text-gray-400 text-xs">{notification.order.clientName} Â· {notification.order.clientPhone}</p>
+              <p className="text-gray-400 text-xs">{notification.order.clientName} · {notification.order.clientPhone}</p>
             </div>
           </div>
           <button onClick={onClose} className="btn-ghost btn-sm p-2.5 rounded-xl">
@@ -102,7 +102,7 @@ function MessageEditor({
   );
 }
 
-// â”€â”€â”€ Main panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Main panel ───────────────────────────────────────────────
 
 interface NotificationsPanelProps {
   pending: PendingNotification[];
@@ -161,7 +161,7 @@ export default function NotificationsPanel({
               <div>
                 <h2 className="text-lg font-bold text-white">Notificaciones WhatsApp</h2>
                 <p className="text-xs text-gray-500">
-                  {unsent.length} pendiente{unsent.length !== 1 ? "s" : ""} Â· {sent.length} ya enviada{sent.length !== 1 ? "s" : ""}
+                  {unsent.length} pendiente{unsent.length !== 1 ? "s" : ""} · {sent.length} ya enviada{sent.length !== 1 ? "s" : ""}
                 </p>
               </div>
             </div>
@@ -198,13 +198,13 @@ export default function NotificationsPanel({
           {/* Body */}
           <div className="overflow-y-auto flex-1 px-4 py-4 space-y-3">
 
-            {/* â”€â”€ PENDING TAB â”€â”€ */}
+            {/* ── PENDING TAB ── */}
             {tab === "pending" && (
               <>
                 {pending.length === 0 ? (
                   <div className="flex flex-col items-center py-14 text-center">
                     <CheckCircle className="w-12 h-12 text-green-600 mb-4" />
-                    <p className="text-gray-300 font-bold text-lg">Todo al dÃ­a</p>
+                    <p className="text-gray-300 font-bold text-lg">Todo al día</p>
                     <p className="text-gray-500 text-sm mt-1">No hay notificaciones pendientes</p>
                   </div>
                 ) : (
@@ -230,7 +230,7 @@ export default function NotificationsPanel({
                             </div>
                             <div className="min-w-0">
                               <p className="text-white font-bold text-sm truncate">{order.clientName}</p>
-                              <p className="text-gray-400 text-xs">{order.brand} {order.model} Â· {order.clientPhone}</p>
+                              <p className="text-gray-400 text-xs">{order.brand} {order.model} · {order.clientPhone}</p>
                             </div>
                           </div>
                           <div className="flex items-center gap-2 flex-shrink-0 ml-2">
@@ -297,19 +297,19 @@ export default function NotificationsPanel({
               </>
             )}
 
-            {/* â”€â”€ HISTORY TAB â”€â”€ */}
+            {/* ── HISTORY TAB ── */}
             {tab === "history" && (
               <>
                 {sentLog.length === 0 ? (
                   <div className="flex flex-col items-center py-14 text-center">
                     <History className="w-12 h-12 text-gray-700 mb-4" />
-                    <p className="text-gray-400 font-semibold">Sin historial todavÃ­a</p>
-                    <p className="text-gray-600 text-sm mt-1">Los mensajes enviados aparecerÃ¡n aquÃ­</p>
+                    <p className="text-gray-400 font-semibold">Sin historial todavía</p>
+                    <p className="text-gray-600 text-sm mt-1">Los mensajes enviados aparecerán aquí</p>
                   </div>
                 ) : (
                   <>
                     <button
-                      onClick={() => { if (confirm("Â¿Borrar todo el historial?")) onClearLog(); }}
+                      onClick={() => { if (confirm("¿Borrar todo el historial?")) onClearLog(); }}
                       className="btn btn-sm btn-ghost text-red-400 border border-gray-700 px-3 rounded-xl ml-auto flex"
                     >
                       <Trash2 className="w-3.5 h-3.5" />

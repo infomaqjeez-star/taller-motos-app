@@ -19,11 +19,11 @@ const VARIABLES = [
 const DEFAULT_TEMPLATES: Omit<PlantillaWhatsApp, "id" | "createdAt">[] = [
   {
     name: "Presupuesto listo",
-    message: "Hola {{nombre}}, te informamos que el presupuesto para tu {{marca}} {{modelo}} ({{motor}}) estÃ¡ listo. Por favor comunicate con nosotros para confirmarlo. Â¡Gracias por confiar en MAQJEEZ!",
+    message: "Hola {{nombre}}, te informamos que el presupuesto para tu {{marca}} {{modelo}} ({{motor}}) está listo. Por favor comunicate con nosotros para confirmarlo. ¡Gracias por confiar en MAQJEEZ!",
   },
   {
     name: "Equipo listo para retiro",
-    message: "Hola {{nombre}}, tu {{marca}} {{modelo}} ({{motor}}) ya estÃ¡ lista para ser retirada. Te esperamos en el taller. Â¡Gracias!",
+    message: "Hola {{nombre}}, tu {{marca}} {{modelo}} ({{motor}}) ya está lista para ser retirada. Te esperamos en el taller. ¡Gracias!",
   },
   {
     name: "Recordatorio de retiro",
@@ -77,7 +77,7 @@ export default function TemplateManager({ onClose }: Props) {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Â¿Eliminar esta plantilla?")) return;
+    if (!confirm("¿Eliminar esta plantilla?")) return;
     await plantillasDb.delete(id);
     await load();
   };
@@ -94,7 +94,7 @@ export default function TemplateManager({ onClose }: Props) {
   };
 
   const seedDefaults = async () => {
-    if (!confirm("Â¿Cargar plantillas de ejemplo?")) return;
+    if (!confirm("¿Cargar plantillas de ejemplo?")) return;
     setSaving(true);
     for (const t of DEFAULT_TEMPLATES) {
       await plantillasDb.create({ id: generateId(), ...t, createdAt: new Date().toISOString() });
@@ -139,7 +139,7 @@ export default function TemplateManager({ onClose }: Props) {
                 </button>
               ))}
             </div>
-            <p className="text-xs text-gray-500">Las variables se reemplazan automÃ¡ticamente al enviar desde una orden.</p>
+            <p className="text-xs text-gray-500">Las variables se reemplazan automáticamente al enviar desde una orden.</p>
             <div className="flex gap-2">
               <button onClick={handleSave} disabled={saving || !name || !message} className="btn-primary flex-1 btn-sm">
                 <Plus className="w-4 h-4" /> {editingId ? "Guardar cambios" : "Crear plantilla"}
@@ -158,7 +158,7 @@ export default function TemplateManager({ onClose }: Props) {
             </div>
           ) : templates.length === 0 ? (
             <div className="text-center py-8 space-y-3">
-              <p className="text-gray-400">No hay plantillas todavÃ­a</p>
+              <p className="text-gray-400">No hay plantillas todavía</p>
               <button onClick={seedDefaults} disabled={saving} className="btn-secondary btn-sm">
                 Cargar plantillas de ejemplo
               </button>

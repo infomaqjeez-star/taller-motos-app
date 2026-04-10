@@ -37,7 +37,7 @@ export class NotificationManager {
    */
   addClient(controller: ReadableStreamDefaultController<string>, id: string): void {
     sseClients.add({ controller, id });
-    console.log(`[SSE Manager] âœ… Cliente ${id.substring(0, 20)}... agregado. Total: ${sseClients.size}`);
+    console.log(`[SSE Manager] ✅ Cliente ${id.substring(0, 20)}... agregado. Total: ${sseClients.size}`);
   }
 
   /**
@@ -52,15 +52,15 @@ export class NotificationManager {
     });
     const after = sseClients.size;
     if (before !== after) {
-      console.log(`[SSE Manager] ðŸ”´ Cliente ${id.substring(0, 20)}... removido. Total: ${after}`);
+      console.log(`[SSE Manager] 🔴 Cliente ${id.substring(0, 20)}... removido. Total: ${after}`);
     }
   }
 
   /**
-   * Enviar notificaciÃ³n a todos los clientes conectados
+   * Enviar notificación a todos los clientes conectados
    */
   broadcast(notification: MeliNotification): void {
-    console.log(`[SSE Manager] ðŸ“¢ Broadcasting a ${sseClients.size} cliente(s)...`);
+    console.log(`[SSE Manager] 📢 Broadcasting a ${sseClients.size} cliente(s)...`);
 
     const event = `event: notificacion_meli\ndata: ${JSON.stringify(notification)}\n\n`;
 
@@ -72,19 +72,19 @@ export class NotificationManager {
         client.controller.enqueue(event);
         successCount++;
       } catch (error) {
-        console.warn(`[SSE Manager] âš ï¸ Error escribiendo a cliente ${client.id.substring(0, 20)}...:`);
+        console.warn(`[SSE Manager] ⚠️ Error escribiendo a cliente ${client.id.substring(0, 20)}...:`);
         console.warn(error);
         failedCount++;
       }
     });
 
     console.log(
-      `[SSE Manager] âœ… Broadcast completado - ${successCount} exitosos, ${failedCount} fallidos`
+      `[SSE Manager] ✅ Broadcast completado - ${successCount} exitosos, ${failedCount} fallidos`
     );
 
     if (failedCount > 0) {
       console.warn(`[SSE Manager] Limpiando ${failedCount} cliente(s) fallido(s)`);
-      // AquÃ­ podrÃ­as implementar lÃ³gica para remover clientes que fallaron
+      // Aquí podrías implementar lógica para remover clientes que fallaron
     }
   }
 
