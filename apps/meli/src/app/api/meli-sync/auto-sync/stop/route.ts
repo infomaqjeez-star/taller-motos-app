@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
 
+// Forzar renderizado dinámico - evita error de generación estática
+export const dynamic = 'force-dynamic';
+
 // Estado de sincronizaciÃ³n (compartido con el route principal)
 let syncState = {
   isRunning: false,

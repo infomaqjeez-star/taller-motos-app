@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
+// Forzar renderizado dinámico - evita error de generación estática
+export const dynamic = 'force-dynamic';
+
 /**
  * POST /api/meli-labels/test-print
  * 

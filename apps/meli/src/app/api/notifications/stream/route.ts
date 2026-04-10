@@ -1,5 +1,9 @@
 import { NextRequest } from "next/server";
 
+// Forzar renderizado dinámico - evita error de generación estática y timeout
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 /**
  * GET /api/notifications/stream
  * 
