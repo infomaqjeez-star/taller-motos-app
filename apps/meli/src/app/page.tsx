@@ -388,7 +388,7 @@ function AppJeezInner() {
     setLoading(true); setError(null);
     try {
       const { data: { session: _sess } } = await supabase.auth.getSession();
-      const _authHdr = _sess?.access_token ? { Authorization: `Bearer ${_sess.access_token}` } : {};
+      const _authHdr: Record<string, string> = _sess?.access_token ? { Authorization: `Bearer ${_sess.access_token}` } : {};
       const res = await fetch("/api/meli-dashboard", { headers: _authHdr });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data: AccountDash[] = await res.json();
