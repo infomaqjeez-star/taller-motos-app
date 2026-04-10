@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-// Forzar renderizado dinámico - evita error de generación estática
+// Forzar renderizado dinamico - evita error de generacion estatica
 export const dynamic = 'force-dynamic';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
@@ -14,7 +14,7 @@ const supabase = createClient(
 
 /**
  * POST /api/meli-labels/save-print-batch
- * 
+ *
  * Guarda un lote de etiquetas impresas y genera el PDF combinado.
  */
 export async function POST(request: NextRequest) {
@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Marcar Ã³rdenes como impresas
+    // Marcar ordenes como impresas
     const { error: updateError } = await supabase
       .from("meli_orders")
       .update({
@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
 
     if (updateError) {
       return NextResponse.json(
-        { error: "Error al guardar lote de impresiÃ³n" },
+        { error: "Error al guardar lote de impresion" },
         { status: 500 }
       );
     }

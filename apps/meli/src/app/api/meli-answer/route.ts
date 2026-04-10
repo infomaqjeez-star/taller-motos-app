@@ -1,13 +1,13 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
 
-// Forzar renderizado din·mico - evita error de generaciÛn est·tica
+// Forzar renderizado dinamico - evita error de generacion estatica
 export const dynamic = 'force-dynamic';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
-// Verificar que las variables de entorno est√©n configuradas
+// Verificar que las variables de entorno esten configuradas
 if (!supabaseUrl || !supabaseServiceKey || supabaseUrl.includes("placeholder")) {
   console.warn("[API meli-answer] Supabase no configurado correctamente");
 }
@@ -19,18 +19,18 @@ const supabase = createClient(
 
 /**
  * POST /api/meli-answer
- * 
+ *
  * Responde una pregunta de Mercado Libre.
- * 
+ *
  * Body:
  * - question_id: ID de la pregunta en Mercado Libre
  * - answer_text: Texto de la respuesta
  * - meli_account_id: ID de la cuenta de ML
  * - pregunta_original: (opcional) Texto original de la pregunta para guardar en knowledge_base
- * 
+ *
  * Proceso:
  * 1. Obtiene el access_token de la cuenta de ML
- * 2. Env√≠a la respuesta a la API de Mercado Libre
+ * 2. Envia la respuesta a la API de Mercado Libre
  * 3. Actualiza el estado en la base de datos local
  * 4. Guarda en knowledge_base para futuras sugerencias
  */
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify({ text: answer_text }),
     });
 
-    // Si el token expir√≥, intentar refrescarlo
+    // Si el token expiro, intentar refrescarlo
     if (response.status === 401) {
       const refreshResponse = await fetch("https://api.mercadolibre.com/oauth/token", {
         method: "POST",
@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
 
       if (refreshResponse.ok) {
         const newTokens = await refreshResponse.json();
-        
+
         // Actualizar tokens en la base de datos
         await supabase
           .from("meli_accounts")

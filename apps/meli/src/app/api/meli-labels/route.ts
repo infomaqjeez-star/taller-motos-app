@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-// Forzar renderizado dinámico - evita error de generación estática
+// Forzar renderizado dinamico - evita error de generacion estatica
 export const dynamic = 'force-dynamic';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
@@ -14,8 +14,8 @@ const supabase = createClient(
 
 /**
  * GET /api/meli-labels
- * 
- * Obtiene las etiquetas/Ã³rdenes listas para imprimir.
+ *
+ * Obtiene las etiquetas/ordenes listas para imprimir.
  */
 export async function GET(request: NextRequest) {
   try {
@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
 
     const accountIds = accounts.map(a => a.id);
 
-    // Obtener Ã³rdenes/etiquetas
+    // Obtener ordenes/etiquetas
     const { data: labels, error } = await supabase
       .from("meli_orders")
       .select(`
@@ -86,7 +86,7 @@ export async function GET(request: NextRequest) {
 
 /**
  * POST /api/meli-labels
- * 
+ *
  * Marca etiquetas como impresas.
  */
 export async function POST(request: NextRequest) {

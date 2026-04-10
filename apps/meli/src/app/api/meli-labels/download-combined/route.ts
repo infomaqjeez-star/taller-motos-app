@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 
-// Forzar renderizado din·mico - evita error de generaciÛn est·tica
+// Forzar renderizado dinamico - evita error de generacion estatica
 export const dynamic = 'force-dynamic';
 
 /**
  * POST /api/meli-labels/download-combined
- * 
+ *
  * Genera un PDF combinado con todas las etiquetas.
- * Nota: La generaci√≥n real del PDF se hace en el cliente.
+ * Nota: La generacion real del PDF se hace en el cliente.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Retornar informaci√≥n para que el cliente genere el PDF
+    // Retornar informacion para que el cliente genere el PDF
     return NextResponse.json({
       success: true,
       message: "Preparado para descargar",

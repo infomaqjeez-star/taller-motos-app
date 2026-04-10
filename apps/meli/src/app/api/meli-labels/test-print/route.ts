@@ -1,19 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 
-// Forzar renderizado din·mico - evita error de generaciÛn est·tica
+// Forzar renderizado dinamico - evita error de generacion estatica
 export const dynamic = 'force-dynamic';
 
 /**
  * POST /api/meli-labels/test-print
- * 
- * Env√≠a una etiqueta de prueba a la impresora local.
+ *
+ * Envia una etiqueta de prueba a la impresora local.
  */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { printer_ip, printer_port } = body;
 
-    // Simular respuesta exitosa ya que la impresi√≥n real
+    // Simular respuesta exitosa ya que la impresion real
     // se maneja desde el agente local
     return NextResponse.json({
       success: true,
