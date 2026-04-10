@@ -1,0 +1,10 @@
+{
+  "name": "Taller MAQJEEZ",
+  "short_name": "MAQJEEZ",
+  "description": "Sistema de gestión para taller de motovehículos",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#030712",
+  "theme_color": "#f97316",
+  "icons": []
+}
