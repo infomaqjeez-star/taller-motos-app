@@ -1,0 +1,47 @@
+# dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# next.js
+.next/
+out/
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+
+# local env files
+.env
+.env*.local
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# batch helpers
+install.bat
+install-xlsx.bat
+install-pdf.bat
+dev.bat
+
+# local agent & logs
+local-print-agent/
+*.log
+*.lnk
+
+# media & binary not needed in repo
+FOTOS APP/
+*.mp4
+*.zip
+apps/taller-demo/historial-*.pdf
+apps/taller-demo/logo.png
+
+# supabase temp
+supabase/.temp/
+
+# scripts locales
+fix_badges.ps1

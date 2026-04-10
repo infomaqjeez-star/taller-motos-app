@@ -1,0 +1,11 @@
+# INSTALAR Y EJECUTAR — Taller MAQJEEZ
+# Ejecutar en PowerShell desde la carpeta del proyecto
+
+# 1. Descargar e instalar Node.js primero desde: https://nodejs.org (version LTS)
+# 2. Reiniciar PowerShell
+# 3. Navegar a esta carpeta y ejecutar:
+
+npm install
+npm run dev
+
+# Luego abrir en el navegador: http://localhost:3000

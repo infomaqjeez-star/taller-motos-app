@@ -1,0 +1,7 @@
+project_id: "ajhmajaclimccrkehsyy"
+
+functions:
+  - name: cleanup-old-labels
+    schedule: "0 0 * * *"
+  - name: sync-meli-printed-labels
+    schedule: "0 * * * *"
