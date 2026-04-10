@@ -14,7 +14,7 @@ interface LinkedAccount {
   created_at: string;
 }
 
-export default function ConfiguracionMeliPage() {
+function ConfiguracionMeliPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [accounts, setAccounts] = useState<LinkedAccount[]>([]);
