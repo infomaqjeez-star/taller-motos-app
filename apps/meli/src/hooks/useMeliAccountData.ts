@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { supabase } from "@/lib/supabase";
 
 interface Reputation {
   level_id: string | null;
@@ -74,7 +75,11 @@ export function useMeliAccountData(userId: string | null): UseMeliAccountDataRet
 
     try {
       console.log(`[useMeliAccountData] Cargando datos para ${userId}...`);
-      const res = await fetch(`/api/meli-account/${userId}`);
+      const { data: { session } } = await supabase.auth.getSession();
+      const headers: Record<string, string> = session?.access_token
+        ? { Authorization: `Bearer ${session.access_token}` }
+        : {};
+      const res = await fetch(`/api/meli-account/${userId}`, { headers });
 
       if (!res.ok) {
         throw new Error(`HTTP ${res.status}`);
