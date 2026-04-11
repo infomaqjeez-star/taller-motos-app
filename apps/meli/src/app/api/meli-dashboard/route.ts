@@ -70,6 +70,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Obtener las cuentas de Mercado Libre del usuario
+    console.log(`[meli-dashboard] Buscando cuentas para userId: ${userId}`);
+    
     const { data: accounts, error: accountsError } = await supabase
       .from("linked_meli_accounts")
       .select("id, meli_user_id, meli_nickname, is_active, access_token_enc, refresh_token_enc, token_expiry_date")
@@ -82,6 +84,11 @@ export async function GET(request: NextRequest) {
         { error: "Error al obtener cuentas" },
         { status: 500 }
       );
+    }
+
+    console.log(`[meli-dashboard] Cuentas encontradas: ${accounts?.length || 0}`);
+    if (accounts && accounts.length > 0) {
+      console.log(`[meli-dashboard] Primeras cuentas:`, accounts.map(a => ({ id: a.id, nickname: a.meli_nickname, meli_user_id: a.meli_user_id })));
     }
 
     // Si no hay cuentas, devolver array vacío
