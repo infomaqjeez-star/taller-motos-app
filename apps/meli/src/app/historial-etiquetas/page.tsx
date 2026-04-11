@@ -15,10 +15,13 @@ interface PrintedLabel {
   variation: string | null;
   quantity: number | null;
   account_id: string | null;
+  meli_user_id: string;
   shipping_method: string | null;
+  tipo: string | null;
+  source: string | null;
   file_path: string;
   print_date: string;
-  meli_user_id: string;
+  days_remaining: number;
 }
 
 export default function HistorialEtiquetasPage() {
@@ -292,10 +295,13 @@ export default function HistorialEtiquetasPage() {
                     Comprador
                   </th>
                   <th className="px-4 py-3 text-left" style={{ color: "#9CA3AF" }}>
-                    Metodo
+                    Tipo
                   </th>
                   <th className="px-4 py-3 text-left" style={{ color: "#9CA3AF" }}>
                     Fecha
+                  </th>
+                  <th className="px-4 py-3 text-left" style={{ color: "#9CA3AF" }}>
+                    Expira
                   </th>
                   <th className="px-4 py-3 text-center" style={{ color: "#9CA3AF" }}>
                     Accion
@@ -363,6 +369,20 @@ export default function HistorialEtiquetasPage() {
                     </td>
                     <td className="px-4 py-3" style={{ color: "#9CA3AF" }}>
                       {new Date(label.print_date).toLocaleDateString("es-AR")}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span
+                        className="text-xs font-bold"
+                        style={{
+                          color: label.days_remaining <= 7
+                            ? "#EF4444"
+                            : label.days_remaining <= 30
+                            ? "#F59E0B"
+                            : "#34D399",
+                        }}
+                      >
+                        {label.days_remaining}d
+                      </span>
                     </td>
                     <td className="px-4 py-3 text-center">
                       <button

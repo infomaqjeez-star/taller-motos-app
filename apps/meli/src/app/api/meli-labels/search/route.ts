@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-// Forzar renderizado dinámico - evita error de generación estática
+// Forzar renderizado dinamico - evita error de generacion estatica
 export const dynamic = 'force-dynamic';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
@@ -14,80 +14,96 @@ const supabase = createClient(
 
 /**
  * GET /api/meli-labels/search
- * 
- * Busca etiquetas impresas en el historial.
+ *
+ * Busca etiquetas impresas en el historial (meli_printed_labels).
+ *
+ * Query params:
+ *   q          - texto a buscar (buyer_nickname, sku, tracking, account_id)
+ *   tipo       - 'flex' | 'turbo' | 'correo' | todas si no se especifica
+ *   limit      - cantidad maxima (default 50)
+ *   all        - 'true' para traer todos (max 500)
  */
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const q = searchParams.get("q") || "";
-    const limit = parseInt(searchParams.get("limit") || "50", 10);
-    const all = searchParams.get("all") === "true";
+    const q     = searchParams.get("q") || "";
+    const tipo  = searchParams.get("tipo") || "";
+    const all   = searchParams.get("all") === "true";
+    const limit = all ? 500 : parseInt(searchParams.get("limit") || "50", 10);
 
-    // Obtener el usuario actual
-    const authHeader = request.headers.get("authorization");
-    let userId: string | null = null;
-
-    if (authHeader?.startsWith("Bearer ")) {
-      const token = authHeader.slice(7);
-      const { data: { user } } = await supabase.auth.getUser(token);
-      if (user) userId = user.id;
-    }
-
-    if (!userId) {
-      return NextResponse.json([]);
-    }
-
-    // Obtener las cuentas del usuario
-    const { data: accounts } = await supabase
-      .from("linked_meli_accounts")
-      .select("id")
-      .eq("user_id", userId);
-
-    if (!accounts || accounts.length === 0) {
-      return NextResponse.json([]);
-    }
-
-    const accountIds = accounts.map(a => a.id);
-
-    // Construir la consulta
+    // Construir la consulta base desde meli_printed_labels
     let query = supabase
-      .from("meli_orders")
+      .from("meli_printed_labels")
       .select(`
         id,
+        shipment_id,
         order_id,
-        meli_account_id,
+        tracking_number,
         buyer_nickname,
-        item_title,
-        item_thumbnail,
-        total_amount,
-        status,
-        shipping_id,
-        date_created,
-        printed,
+        sku,
+        variation,
+        quantity,
+        account_id,
+        meli_user_id,
+        type,
+        source,
         printed_at,
-        meli_accounts:meli_account_id (nickname)
+        created_at
       `)
-      .in("meli_account_id", accountIds)
-      .eq("printed", true)
       .order("printed_at", { ascending: false })
       .limit(limit);
 
-    // Aplicar búsqueda si hay query
-    if (q && q.trim() !== "") {
-      query = query.or(`buyer_nickname.ilike.%${q}%,item_title.ilike.%${q}%,order_id.ilike.%${q}%`);
+    // Filtro por tipo de envio
+    if (tipo && tipo !== "todas") {
+      query = query.eq("type", tipo);
     }
+
+    // Filtro de busqueda libre
+    if (q && q.trim().length >= 2) {
+      query = query.or(
+        `buyer_nickname.ilike.%${q}%,sku.ilike.%${q}%,tracking_number.ilike.%${q}%,account_id.ilike.%${q}%,shipment_id::text.ilike.%${q}%`
+      );
+    }
+
+    // Filtro TTL: solo etiquetas de los ultimos 90 dias
+    const ninetyDaysAgo = new Date();
+    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+    query = query.gte("printed_at", ninetyDaysAgo.toISOString());
 
     const { data: labels, error } = await query;
 
     if (error) {
       console.error("[meli-labels/search] Error:", error);
-      return NextResponse.json([]);
+      // Devolver estructura vacia compatible con la pagina
+      return NextResponse.json({ results: [], total: 0 });
     }
 
-    return NextResponse.json(labels || []);
+    const results = (labels || []).map((l: any) => ({
+      id:              l.id,
+      shipment_id:     l.shipment_id,
+      order_id:        l.order_id,
+      tracking_number: l.tracking_number,
+      buyer_nickname:  l.buyer_nickname,
+      sku:             l.sku,
+      variation:       l.variation,
+      quantity:        l.quantity,
+      account_id:      l.account_id,
+      meli_user_id:    l.meli_user_id,
+      shipping_method: l.type,   // alias para compatibilidad con la UI
+      tipo:            l.type,
+      source:          l.source || "app",
+      print_date:      l.printed_at,
+      printed_at:      l.printed_at,
+      file_path:       "",
+      // Dias restantes antes de expirar (90 dias desde printed_at)
+      days_remaining:  l.printed_at
+        ? Math.max(0, 90 - Math.floor((Date.now() - new Date(l.printed_at).getTime()) / 86_400_000))
+        : 90,
+    }));
+
+    return NextResponse.json({ results, total: results.length });
   } catch (error) {
     console.error("[meli-labels/search] Error inesperado:", error);
-    return NextResponse.json([]);
+    return NextResponse.json({ results: [], total: 0 });
   }
 }

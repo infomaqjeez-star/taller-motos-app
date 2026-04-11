@@ -15,45 +15,87 @@ const supabase = createClient(
 /**
  * POST /api/meli-labels/save-print-batch
  *
- * Guarda un lote de etiquetas impresas y genera el PDF combinado.
+ * Guarda un lote de etiquetas impresas en el historial.
+ * Acepta: { shipments, pdf_base64?, tzOffset? }
+ *   shipments[]: { shipment_id, order_id, tracking_number, buyer_nickname,
+ *                  sku, variation, quantity, account_id, meli_user_id, shipping_method }
  */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { order_ids, print_date } = body;
 
-    if (!Array.isArray(order_ids) || order_ids.length === 0) {
+    // Compatibilidad con el formato nuevo (shipments[]) y el viejo (order_ids[])
+    const shipments: any[] = body.shipments || [];
+    const legacyOrderIds: string[] = body.order_ids || [];
+
+    if (shipments.length === 0 && legacyOrderIds.length === 0) {
       return NextResponse.json(
-        { error: "Se requiere un array de order_ids" },
+        { error: "Se requiere 'shipments' o 'order_ids'" },
         { status: 400 }
       );
     }
 
-    // Obtener el usuario actual
+    const printedAt = body.print_date || new Date().toISOString();
+
+    // ── Obtener userId desde el header Authorization (opcional) ──────────
     const authHeader = request.headers.get("authorization");
     let userId: string | null = null;
-
     if (authHeader?.startsWith("Bearer ")) {
       const token = authHeader.slice(7);
       const { data: { user } } = await supabase.auth.getUser(token);
       if (user) userId = user.id;
     }
 
-    if (!userId) {
-      return NextResponse.json(
-        { error: "No autorizado" },
-        { status: 401 }
-      );
+    // ── Procesar formato nuevo (shipments[]) ─────────────────────────────
+    if (shipments.length > 0) {
+      const rows = shipments.map((s: any) => ({
+        shipment_id:      s.shipment_id,
+        order_id:         s.order_id ?? null,
+        tracking_number:  s.tracking_number ?? null,
+        buyer_nickname:   s.buyer_nickname ?? null,
+        sku:              s.sku ?? null,
+        variation:        s.variation ?? null,
+        quantity:         s.quantity ?? 1,
+        account_id:       s.account_id ?? null,
+        meli_user_id:     s.meli_user_id ?? null,
+        // tipo / shipping_method → guardado en columna 'type'
+        type:             (s.shipping_method || "flex").toLowerCase(),
+        source:           "app",
+        printed_at:       printedAt,
+        user_id:          userId,
+      }));
+
+      const { error: insertError } = await supabase
+        .from("meli_printed_labels")
+        .upsert(rows, { onConflict: "shipment_id" });
+
+      if (insertError) {
+        console.error("[save-print-batch] Error guardando historial:", insertError);
+        return NextResponse.json(
+          { error: "Error al guardar historial de impresion", details: insertError.message },
+          { status: 500 }
+        );
+      }
+
+      return NextResponse.json({
+        success: true,
+        saved: rows.length,
+        shipment_ids: rows.map((r) => r.shipment_id),
+      });
     }
 
-    // Marcar ordenes como impresas
+    // ── Compatibilidad con formato legacy (order_ids[]) ──────────────────
+    if (!userId) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
+
     const { error: updateError } = await supabase
       .from("meli_orders")
       .update({
         printed: true,
-        printed_at: print_date || new Date().toISOString(),
+        printed_at: printedAt,
       })
-      .in("order_id", order_ids);
+      .in("order_id", legacyOrderIds);
 
     if (updateError) {
       return NextResponse.json(
@@ -62,24 +104,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Guardar en historial de impresiones
-    const { error: historyError } = await supabase
-      .from("printed_labels_history")
-      .insert({
-        user_id: userId,
-        order_ids: order_ids,
-        printed_at: print_date || new Date().toISOString(),
-        total_labels: order_ids.length,
-      });
-
-    if (historyError) {
-      console.error("[save-print-batch] Error guardando historial:", historyError);
-    }
-
     return NextResponse.json({
       success: true,
-      saved: order_ids.length,
-      order_ids,
+      saved: legacyOrderIds.length,
+      order_ids: legacyOrderIds,
     });
   } catch (error) {
     console.error("[meli-labels/save-print-batch] Error:", error);

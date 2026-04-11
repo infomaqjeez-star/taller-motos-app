@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
     // Obtener las cuentas de Mercado Libre del usuario
     const { data: accounts, error: accountsError } = await supabase
       .from("linked_meli_accounts")
-      .select("id, meli_user_id, meli_nickname, is_active, access_token_enc, refresh_token_enc, token_expiry_date")
+      .select("id, meli_user_id, meli_nickname, is_active, access_token_enc, refresh_token_enc, token_expiry_date, reputation_json, reputation_updated_at")
       .eq("user_id", userId)
       .eq("is_active", true);
 
@@ -172,7 +172,7 @@ export async function GET(request: NextRequest) {
             // Tabla puede no existir
           }
 
-          // Construir objeto de reputación por defecto
+          // Construir objeto de reputación — intentar obtener de MeLi API
           const defaultReputation: Reputation = {
             level_id: null,
             power_seller_status: null,
@@ -187,6 +187,68 @@ export async function GET(request: NextRequest) {
             immediate_payment: false,
           };
 
+          let reputation: Reputation = defaultReputation;
+
+          // Usar reputation_json cacheada en DB si tiene < 6 horas
+          const repUpdatedAt = (account as any).reputation_updated_at
+            ? new Date((account as any).reputation_updated_at).getTime()
+            : 0;
+          const sixHoursMs = 6 * 60 * 60 * 1000;
+
+          if ((account as any).reputation_json && repUpdatedAt && Date.now() - repUpdatedAt < sixHoursMs) {
+            const rep = (account as any).reputation_json;
+            reputation = {
+              level_id: rep.level_id ?? null,
+              power_seller_status: rep.power_seller_status ?? null,
+              transactions_total: rep.transactions?.total ?? 0,
+              transactions_completed: rep.transactions?.completed ?? 0,
+              ratings_positive: rep.metrics?.sales?.fulfilled ?? 0,
+              ratings_negative: rep.metrics?.claims?.rate ?? 0,
+              ratings_neutral: 0,
+              delayed_handling_time: rep.metrics?.delayed_handling_time?.rate ?? 0,
+              claims: rep.metrics?.claims?.rate ?? 0,
+              cancellations: rep.metrics?.cancellations?.rate ?? 0,
+              immediate_payment: false,
+            };
+          } else if (account.access_token_enc) {
+            // Fetch desde MeLi API (fire & forget style, sin bloquear el dashboard)
+            try {
+              const meliRes = await fetch(
+                `https://api.mercadolibre.com/users/${account.meli_user_id}?attributes=reputation`,
+                {
+                  headers: { Authorization: `Bearer ${account.access_token_enc}` },
+                  signal: AbortSignal.timeout(4000),
+                }
+              );
+              if (meliRes.ok) {
+                const meliUser = await meliRes.json();
+                const rep = meliUser.reputation ?? {};
+                reputation = {
+                  level_id: rep.level_id ?? null,
+                  power_seller_status: rep.power_seller_status ?? null,
+                  transactions_total: rep.transactions?.total ?? 0,
+                  transactions_completed: rep.transactions?.completed ?? 0,
+                  ratings_positive: rep.metrics?.sales?.fulfilled ?? 0,
+                  ratings_negative: rep.metrics?.claims?.rate ?? 0,
+                  ratings_neutral: 0,
+                  delayed_handling_time: rep.metrics?.delayed_handling_time?.rate ?? 0,
+                  claims: rep.metrics?.claims?.rate ?? 0,
+                  cancellations: rep.metrics?.cancellations?.rate ?? 0,
+                  immediate_payment: false,
+                };
+                // Guardar en cache DB de forma async (sin await)
+                supabase
+                  .from("linked_meli_accounts")
+                  .update({ reputation_json: rep, reputation_updated_at: new Date().toISOString() })
+                  .eq("id", account.id)
+                  .then(() => {})
+                  .catch(() => {});
+              }
+            } catch {
+              // No bloquear el dashboard si la API de MeLi falla
+            }
+          }
+
           return {
             account: account.meli_nickname || `Cuenta ${account.meli_user_id}`,
             meli_user_id: String(account.meli_user_id),
@@ -199,7 +261,7 @@ export async function GET(request: NextRequest) {
             claims_count: claimsCount,
             measurement_date: new Date().toISOString(),
             metrics_period: "Últimos 60 días",
-            reputation: defaultReputation,
+            reputation,
           };
         } catch (error) {
           console.error(`[meli-dashboard] Error procesando cuenta ${account.meli_user_id}:`, error);
