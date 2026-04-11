@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback, Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowLeft, RefreshCw, Package, TrendingUp, ExternalLink, Search, ChevronDown, ChevronUp, Store, AlertCircle } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 
 interface MeliItem { id: string; title: string; price: number; available_quantity: number; sold_quantity: number; status: string; thumbnail: string; secure_thumbnail: string; permalink: string; currency_id: string; }
 interface AccountData { account: string; meli_user_id: string; items: MeliItem[]; total: number; cached_at?: string; error?: string; }
@@ -178,7 +179,16 @@ function PublicacionesInner() {
   const load = useCallback(async () => {
     setLoading(true); setError(null);
     try {
-      const res = await fetch("/api/meli-publications");
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        setError("No autenticado");
+        setLoading(false);
+        return;
+      }
+
+      const res = await fetch("/api/meli-publications", {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       setAccounts(await res.json());
       setLastUpdate(new Date());

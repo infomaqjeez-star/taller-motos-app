@@ -132,7 +132,7 @@ export async function GET(request: NextRequest) {
           const meliId = String(account.meli_user_id);
 
           // ── Llamadas paralelas a MeLi API ───────────────────────────────
-          const [userRes, questionsRes, ordersReadyRes, itemsRes, claimsRes, unreadRes] =
+          const [userRes, questionsRes, ordersReadyRes, itemsRes, claimsRes, unreadRes, todayOrdersRes] =
             await Promise.allSettled([
               // 1. Reputacion + datos del vendedor
               fetch(`https://api.mercadolibre.com/users/${meliId}?attributes=seller_reputation,nickname`, {
@@ -158,6 +158,10 @@ export async function GET(request: NextRequest) {
               fetch(`https://api.mercadolibre.com/messages/unread?role=seller&limit=1`, {
                 headers: meliHeaders, signal: AbortSignal.timeout(5000),
               }),
+              // 7. Órdenes de hoy (pagadas)
+              fetch(`https://api.mercadolibre.com/orders/search?seller=${meliId}&order.status=paid&order.date_created.from=${new Date().toISOString().split('T')[0]}T00:00:00.000-03:00&limit=50`, {
+                headers: meliHeaders, signal: AbortSignal.timeout(10000),
+              }),
             ]);
 
           // ── Parsear resultados ──────────────────────────────────────────
@@ -168,8 +172,8 @@ export async function GET(request: NextRequest) {
             return null;
           };
 
-          const [userData, questionsData, ordersData, itemsData, claimsData, unreadData] =
-            await Promise.all([userRes, questionsRes, ordersReadyRes, itemsRes, claimsRes, unreadRes].map(safeJson));
+          const [userData, questionsData, ordersData, itemsData, claimsData, unreadData, todayOrdersData] =
+            await Promise.all([userRes, questionsRes, ordersReadyRes, itemsRes, claimsRes, unreadRes, todayOrdersRes].map(safeJson));
 
           // Reputación
           const rep = userData?.seller_reputation ?? {};
@@ -194,21 +198,12 @@ export async function GET(request: NextRequest) {
           const claimsCount         = claimsData?.meta?.paging?.total ?? claimsData?.paging?.total ?? 0;
           const pendingMessages     = unreadData?.total ?? unreadData?.paging?.total ?? 0;
 
-          // Ventas de hoy (desde DB, no hay endpoint simple en MeLi para esto)
-          let todayOrders = 0;
-          let todaySalesAmount = 0;
-          try {
-            const today = new Date(); today.setHours(0, 0, 0, 0);
-            const { data: todaySales } = await supabase
-              .from("meli_orders")
-              .select("total_amount")
-              .eq("meli_account_id", account.id)
-              .gte("date_created", today.toISOString());
-            if (todaySales) {
-              todayOrders = todaySales.length;
-              todaySalesAmount = todaySales.reduce((s, o) => s + (o.total_amount || 0), 0);
-            }
-          } catch { /* tabla puede no existir */ }
+          // Ventas de hoy desde MeLi API
+          const todayOrdersList = todayOrdersData?.results || [];
+          const todayOrders = todayOrdersList.length;
+          const todaySalesAmount = todayOrdersList.reduce((sum: number, order: any) => {
+            return sum + (order.total_amount || order.paid_amount || 0);
+          }, 0);
 
           return {
             account: account.meli_nickname || `Cuenta ${account.meli_user_id}`,

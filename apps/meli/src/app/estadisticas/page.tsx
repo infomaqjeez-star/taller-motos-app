@@ -56,6 +56,7 @@ export default function EstadisticasMeliPage() {
   function changePeriodo(p: Periodo) {
     setPeriodo(p);
     localStorage.setItem("meli-stats-periodo", p);
+    load(p);
   }
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);

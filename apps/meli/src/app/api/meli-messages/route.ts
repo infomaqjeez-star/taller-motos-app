@@ -42,25 +42,41 @@ export async function GET(request: NextRequest) {
 
     const allMessages: any[] = [];
 
+    console.log(`[meli-messages] Procesando ${accounts.length} cuentas...`);
+
     await Promise.all(
       accounts.map(async (account: any) => {
         // Filtro por account_id si se especifica
         if (accountId && account.id !== accountId) return;
         try {
+          console.log(`[meli-messages] Cuenta: ${account.meli_nickname}`);
+          
           const validToken = await getValidToken(account);
-          if (!validToken) return;
+          if (!validToken) {
+            console.log(`[meli-messages] No se pudo obtener token válido para ${account.meli_nickname}`);
+            return;
+          }
 
           const headers = { Authorization: `Bearer ${validToken}` };
 
           // Mensajes no leídos de ventas
-          const res = await fetch(
-            `https://api.mercadolibre.com/messages/unread?role=seller&limit=${limit}`,
-            { headers, signal: AbortSignal.timeout(6000) }
-          );
-          if (!res.ok) return;
+          const url = `https://api.mercadolibre.com/messages/unread?role=seller&limit=${limit}`;
+          console.log(`[meli-messages] Fetching: ${url}`);
+          
+          const res = await fetch(url, { headers, signal: AbortSignal.timeout(10000) });
+          
+          console.log(`[meli-messages] Response status: ${res.status} ${res.statusText}`);
+          
+          if (!res.ok) {
+            const errorText = await res.text().catch(() => "Unknown error");
+            console.error(`[meli-messages] Error ${res.status} para ${account.meli_nickname}: ${errorText}`);
+            return;
+          }
 
           const data = await res.json();
           const conversations: any[] = data.results || [];
+
+          console.log(`[meli-messages] ${account.meli_nickname}: ${conversations.length} mensajes encontrados`);
 
           for (const conv of conversations) {
             allMessages.push({
@@ -84,7 +100,9 @@ export async function GET(request: NextRequest) {
               meli_accounts:   { nickname: account.meli_nickname },
             });
           }
-        } catch { /* token inválido — ignorar cuenta */ }
+        } catch (err) { 
+          console.error(`[meli-messages] Error procesando cuenta ${account.meli_nickname}:`, err);
+        }
       })
     );
 
@@ -94,6 +112,8 @@ export async function GET(request: NextRequest) {
     else if (status === "read") result = result.filter((m) => m.status === "READ");
     result.sort((a, b) => new Date(b.date_created).getTime() - new Date(a.date_created).getTime());
     result = result.slice(0, limit);
+
+    console.log(`[meli-messages] Total mensajes devueltos: ${result.length}`);
 
     return NextResponse.json(result);
   } catch (error) {

@@ -42,22 +42,39 @@ export async function GET(request: NextRequest) {
     // Fetch preguntas de todas las cuentas en paralelo
     const allQuestions: any[] = [];
 
+    console.log(`[meli-questions] Procesando ${accounts.length} cuentas...`);
+
     await Promise.all(
       accounts.map(async (account: any) => {
         try {
+          console.log(`[meli-questions] Cuenta: ${account.meli_nickname} (ID: ${account.meli_user_id})`);
+          
           const validToken = await getValidToken(account);
-          if (!validToken) return;
+          if (!validToken) {
+            console.log(`[meli-questions] No se pudo obtener token válido para ${account.meli_nickname}`);
+            return;
+          }
 
           const headers = { Authorization: `Bearer ${validToken}` };
 
-          // Preguntas sin responder
-          const qRes = await fetch(
-            "https://api.mercadolibre.com/my/questions?status=UNANSWERED&sort_fields=date_created&sort_types=DESC&limit=50",
-            { headers, signal: AbortSignal.timeout(6000) }
-          );
-          if (!qRes.ok) return;
+          // Preguntas sin responder - usar /my/questions que requiere el token de la cuenta
+          const url = "https://api.mercadolibre.com/my/questions?status=UNANSWERED&sort_fields=date_created&sort_types=DESC&limit=50";
+          console.log(`[meli-questions] Fetching: ${url}`);
+          
+          const qRes = await fetch(url, { headers, signal: AbortSignal.timeout(10000) });
+          
+          console.log(`[meli-questions] Response status: ${qRes.status} ${qRes.statusText}`);
+          
+          if (!qRes.ok) {
+            const errorText = await qRes.text().catch(() => "Unknown error");
+            console.error(`[meli-questions] Error ${qRes.status} para ${account.meli_nickname}: ${errorText}`);
+            return;
+          }
+          
           const qData = await qRes.json();
           const questions: any[] = qData.questions || [];
+          
+          console.log(`[meli-questions] ${account.meli_nickname}: ${questions.length} preguntas encontradas`);
 
           if (questions.length === 0) return;
 
@@ -110,7 +127,9 @@ export async function GET(request: NextRequest) {
               meli_accounts:    { nickname: account.meli_nickname },
             });
           }
-        } catch { /* token inválido — ignorar cuenta */ }
+        } catch (err) { 
+          console.error(`[meli-questions] Error procesando cuenta ${account.meli_nickname}:`, err);
+        }
       })
     );
 
@@ -118,6 +137,8 @@ export async function GET(request: NextRequest) {
     allQuestions.sort((a, b) =>
       new Date(b.date_created).getTime() - new Date(a.date_created).getTime()
     );
+
+    console.log(`[meli-questions] Total preguntas devueltas: ${allQuestions.length}`);
 
     return NextResponse.json(allQuestions);
   } catch (error) {
