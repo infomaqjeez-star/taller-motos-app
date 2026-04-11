@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { getValidToken } from "@/lib/meli";
 
 // Forzar renderizado dinámico - evita error de generación estática
 export const dynamic = 'force-dynamic';
@@ -121,18 +120,12 @@ export async function GET(request: NextRequest) {
         });
 
         try {
-          // ── Obtener token descifrado y vigente ──────────────────────────
-          const validToken = await getValidToken(account as any);
+          // ── Usar token directamente (ahora se guarda sin encriptar) ──────────────────────────
+          const validToken = account.access_token_enc;
 
-          if (!validToken) {
-            // Sin token válido, intentar conteos desde DB como fallback
-            const [{ count: qCount }, { count: iCount }] = await Promise.all([
-              supabase.from("meli_unified_questions").select("*", { count: "exact", head: true })
-                .eq("meli_account_id", account.id).eq("status", "UNANSWERED"),
-              supabase.from("meli_items").select("*", { count: "exact", head: true })
-                .eq("meli_account_id", account.id).eq("status", "active"),
-            ]);
-            return { ...defaultReturn(), unanswered_questions: qCount || 0, total_items: iCount || 0 };
+          if (!validToken || !validToken.startsWith('APP_USR')) {
+            console.log(`[meli-dashboard] Token inválido para ${account.meli_nickname}`);
+            return defaultReturn("Token inválido");
           }
 
           const meliHeaders = { Authorization: `Bearer ${validToken}` };
