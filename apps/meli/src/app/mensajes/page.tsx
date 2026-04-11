@@ -333,31 +333,15 @@ function QuestionCard({ q, onAnswered }: { q: Question; onAnswered: (id: number)
 
       {open && !answered && (
         <div className="px-4 pb-4 space-y-3 border-t" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
-          {/* Context del producto */}
-          <div className="pt-3 p-3 rounded-xl flex gap-3" style={{ background: "#121212" }}>
-            {q.item_thumbnail && (
-              <div className="w-16 h-16 rounded-lg flex-shrink-0 overflow-hidden"
-                style={{ background: "#2a2a2a", border: "1px solid rgba(255,255,255,0.1)" }}>
-                <Image
-                  src={q.item_thumbnail}
-                  alt={q.item_title}
-                  width={64}
-                  height={64}
-                  loading="lazy"
-                  className="w-full h-full object-cover"
-                  unoptimized
-                />
-              </div>
-            )}
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-bold" style={{ color: "#FFE600" }}>
-                Producto
-              </p>
-              <p className="text-xs text-white line-clamp-2 mb-1.5">{q.item_title}</p>
-              <p className="text-[10px]" style={{ color: "#6B7280" }}>
-                ID: {q.item_id}
-              </p>
-            </div>
+          {/* Context del producto - SIN IMAGEN DUPLICADA */}
+          <div className="pt-3 p-3 rounded-xl" style={{ background: "#121212" }}>
+            <p className="text-xs font-bold mb-1" style={{ color: "#FFE600" }}>
+              Producto
+            </p>
+            <p className="text-xs text-white line-clamp-2 mb-1">{q.item_title}</p>
+            <p className="text-[10px]" style={{ color: "#6B7280" }}>
+              ID: {q.item_id}
+            </p>
           </div>
 
           <div className="pt-2 p-3 rounded-xl" style={{ background: "#121212" }}>
