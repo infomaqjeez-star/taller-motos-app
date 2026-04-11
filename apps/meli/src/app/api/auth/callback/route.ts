@@ -114,30 +114,17 @@ export async function GET(request: NextRequest) {
     // Usar nickname por defecto
   }
 
-  // Encriptar los tokens
-  let accessTokenEnc: string;
-  let refreshTokenEnc: string;
-  try {
-    [accessTokenEnc, refreshTokenEnc] = await Promise.all([
-      encrypt(tokenData.access_token),
-      encrypt(tokenData.refresh_token),
-    ]);
-  } catch (err) {
-    console.error("[callback] Error al encriptar tokens:", err);
-    return NextResponse.redirect(`${configUrl}?error=encryption_failed`);
-  }
-
+  // Guardar tokens sin encriptar para poder usarlos en endpoints
   const expiresAt = new Date(Date.now() + tokenData.expires_in * 1000).toISOString();
 
   // Guardar en Supabase usando la funcion RPC
-  // NOTA: También guardamos el access_token sin encriptar para usar en endpoints
   try {
     const { error: rpcError } = await supabase.rpc("upsert_linked_meli_account", {
       p_user_id: userId,
       p_meli_user_id: String(tokenData.user_id),
       p_meli_nickname: meliNickname,
-      p_access_token_enc: tokenData.access_token, // Guardar sin encriptar temporalmente
-      p_refresh_token_enc: refreshTokenEnc,
+      p_access_token_enc: tokenData.access_token, // Sin encriptar
+      p_refresh_token_enc: tokenData.refresh_token, // Sin encriptar
       p_token_expiry_date: expiresAt,
     });
 
