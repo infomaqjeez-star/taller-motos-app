@@ -57,8 +57,9 @@ export async function GET(request: NextRequest) {
 
           const headers = { Authorization: `Bearer ${validToken}` };
 
-          // Preguntas sin responder - usar /my/questions que requiere el token de la cuenta
-          const url = "https://api.mercadolibre.com/my/questions?status=UNANSWERED&sort_fields=date_created&sort_types=DESC&limit=50";
+          // Preguntas sin responder - intentar con formato alternativo
+          // Opción 1: /questions/search (sin seller_id en query, usa el token)
+          const url = "https://api.mercadolibre.com/questions/search?status=UNANSWERED&limit=50";
           console.log(`[meli-questions] Fetching: ${url}`);
           
           const qRes = await fetch(url, { headers, signal: AbortSignal.timeout(10000) });
