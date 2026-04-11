@@ -56,12 +56,9 @@ export async function GET(request: NextRequest) {
         message_type,
         date_created,
         date_read,
-        attachments,
-        meli_accounts:meli_account_id (nickname),
-        meli_orders!inner(order_id, status, total_amount)
+        attachments
       `)
       .order("date_created", { ascending: false })
-      .limit(limit)
       .range(offset, offset + limit - 1);
 
     // Aplicar filtro de estado si no es 'all'
@@ -99,8 +96,6 @@ export async function GET(request: NextRequest) {
       date_created: m.date_created,
       date_read: m.date_read,
       attachments: m.attachments,
-      meli_accounts: m.meli_accounts,
-      order: m.meli_orders,
     })) || [];
 
     return NextResponse.json(formattedMessages);
