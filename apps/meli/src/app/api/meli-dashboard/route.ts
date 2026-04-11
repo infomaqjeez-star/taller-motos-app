@@ -92,182 +92,141 @@ export async function GET(request: NextRequest) {
     // Para cada cuenta, obtener datos del dashboard
     const dashboardData: AccountDash[] = await Promise.all(
       accounts.map(async (account) => {
+        const defaultReturn = (error?: string): AccountDash => ({
+          account: account.meli_nickname || `Cuenta ${account.meli_user_id}`,
+          meli_user_id: String(account.meli_user_id),
+          unanswered_questions: 0,
+          pending_messages: 0,
+          ready_to_ship: 0,
+          total_items: 0,
+          today_orders: 0,
+          today_sales_amount: 0,
+          claims_count: 0,
+          measurement_date: new Date().toISOString(),
+          metrics_period: "Últimos 60 días",
+          reputation: {
+            level_id: null, power_seller_status: null,
+            transactions_total: 0, transactions_completed: 0,
+            ratings_positive: 0, ratings_negative: 0, ratings_neutral: 0,
+            delayed_handling_time: 0, claims: 0, cancellations: 0, immediate_payment: false,
+          },
+          ...(error ? { error } : {}),
+        });
+
         try {
-          // Obtener conteo de preguntas sin responder
-          const { count: unansweredQuestions } = await supabase
-            .from("meli_unified_questions")
-            .select("*", { count: "exact", head: true })
-            .eq("meli_account_id", account.id)
-            .eq("status", "UNANSWERED");
+          // ── Obtener token descifrado y vigente ──────────────────────────
+          const validToken = await getValidToken(account as any);
 
-          // Obtener conteo de mensajes pendientes (si existe la tabla)
-          let pendingMessages = 0;
-          try {
-            const { count: messagesCount } = await supabase
-              .from("meli_messages")
-              .select("*", { count: "exact", head: true })
-              .eq("meli_account_id", account.id)
-              .eq("status", "unread");
-            pendingMessages = messagesCount || 0;
-          } catch {
-            // Tabla puede no existir
+          if (!validToken) {
+            // Sin token válido, intentar conteos desde DB como fallback
+            const [{ count: qCount }, { count: iCount }] = await Promise.all([
+              supabase.from("meli_unified_questions").select("*", { count: "exact", head: true })
+                .eq("meli_account_id", account.id).eq("status", "UNANSWERED"),
+              supabase.from("meli_items").select("*", { count: "exact", head: true })
+                .eq("meli_account_id", account.id).eq("status", "active"),
+            ]);
+            return { ...defaultReturn(), unanswered_questions: qCount || 0, total_items: iCount || 0 };
           }
 
-          // Obtener conteo de envíos pendientes (si existe la tabla)
-          let readyToShip = 0;
-          try {
-            const { count: shipmentsCount } = await supabase
-              .from("meli_shipments")
-              .select("*", { count: "exact", head: true })
-              .eq("meli_account_id", account.id)
-              .eq("status", "ready_to_ship");
-            readyToShip = shipmentsCount || 0;
-          } catch {
-            // Tabla puede no existir
-          }
+          const meliHeaders = { Authorization: `Bearer ${validToken}` };
+          const meliId = String(account.meli_user_id);
 
-          // Obtener conteo de publicaciones
-          let totalItems = 0;
-          try {
-            const { count: itemsCount } = await supabase
-              .from("meli_items")
-              .select("*", { count: "exact", head: true })
-              .eq("meli_account_id", account.id)
-              .eq("status", "active");
-            totalItems = itemsCount || 0;
-          } catch {
-            // Tabla puede no existir
-          }
+          // ── Llamadas paralelas a MeLi API ───────────────────────────────
+          const [userRes, questionsRes, ordersReadyRes, itemsRes, claimsRes, unreadRes] =
+            await Promise.allSettled([
+              // 1. Reputacion + datos del vendedor
+              fetch(`https://api.mercadolibre.com/users/${meliId}?attributes=reputation,nickname`, {
+                headers: meliHeaders, signal: AbortSignal.timeout(5000),
+              }),
+              // 2. Preguntas sin responder
+              fetch(`https://api.mercadolibre.com/my/questions?status=UNANSWERED&limit=1`, {
+                headers: meliHeaders, signal: AbortSignal.timeout(5000),
+              }),
+              // 3. Órdenes listas para enviar
+              fetch(`https://api.mercadolibre.com/orders/search?seller=${meliId}&order.status=ready_to_ship&limit=1`, {
+                headers: meliHeaders, signal: AbortSignal.timeout(5000),
+              }),
+              // 4. Publicaciones activas
+              fetch(`https://api.mercadolibre.com/users/${meliId}/items/search?status=active&limit=1`, {
+                headers: meliHeaders, signal: AbortSignal.timeout(5000),
+              }),
+              // 5. Reclamos abiertos
+              fetch(`https://api.mercadolibre.com/post-sale/v2/claims/search?role=seller&status=opened&limit=1`, {
+                headers: meliHeaders, signal: AbortSignal.timeout(5000),
+              }),
+              // 6. Mensajes no leídos
+              fetch(`https://api.mercadolibre.com/messages/unread?role=seller&limit=1`, {
+                headers: meliHeaders, signal: AbortSignal.timeout(5000),
+              }),
+            ]);
 
-          // Obtener ventas de hoy
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
-          
+          // ── Parsear resultados ──────────────────────────────────────────
+          const safeJson = async (r: PromiseSettledResult<Response>) => {
+            if (r.status === "fulfilled" && r.value.ok) {
+              try { return await r.value.json(); } catch { return null; }
+            }
+            return null;
+          };
+
+          const [userData, questionsData, ordersData, itemsData, claimsData, unreadData] =
+            await Promise.all([userRes, questionsRes, ordersReadyRes, itemsRes, claimsRes, unreadRes].map(safeJson));
+
+          // Reputación
+          const rep = userData?.reputation ?? {};
+          const reputation: Reputation = {
+            level_id:               rep.level_id ?? null,
+            power_seller_status:    rep.power_seller_status ?? null,
+            transactions_total:     rep.transactions?.total ?? 0,
+            transactions_completed: rep.transactions?.completed ?? 0,
+            ratings_positive:       rep.metrics?.sales?.fulfilled ?? 0,
+            ratings_negative:       rep.metrics?.claims?.rate ?? 0,
+            ratings_neutral:        0,
+            delayed_handling_time:  rep.metrics?.delayed_handling_time?.rate ?? 0,
+            claims:                 rep.metrics?.claims?.rate ?? 0,
+            cancellations:          rep.metrics?.cancellations?.rate ?? 0,
+            immediate_payment:      false,
+          };
+
+          // Contadores
+          const unansweredQuestions = questionsData?.total ?? questionsData?.paging?.total ?? 0;
+          const readyToShip         = ordersData?.paging?.total ?? 0;
+          const totalItems          = itemsData?.paging?.total ?? 0;
+          const claimsCount         = claimsData?.meta?.paging?.total ?? claimsData?.paging?.total ?? 0;
+          const pendingMessages     = unreadData?.total ?? unreadData?.paging?.total ?? 0;
+
+          // Ventas de hoy (desde DB, no hay endpoint simple en MeLi para esto)
           let todayOrders = 0;
           let todaySalesAmount = 0;
           try {
+            const today = new Date(); today.setHours(0, 0, 0, 0);
             const { data: todaySales } = await supabase
               .from("meli_orders")
               .select("total_amount")
               .eq("meli_account_id", account.id)
               .gte("date_created", today.toISOString());
-            
             if (todaySales) {
               todayOrders = todaySales.length;
-              todaySalesAmount = todaySales.reduce((sum, order) => sum + (order.total_amount || 0), 0);
+              todaySalesAmount = todaySales.reduce((s, o) => s + (o.total_amount || 0), 0);
             }
-          } catch {
-            // Tabla puede no existir
-          }
-
-          // Obtener conteo de reclamos
-          let claimsCount = 0;
-          try {
-            const { count: claims } = await supabase
-              .from("meli_claims")
-              .select("*", { count: "exact", head: true })
-              .eq("meli_account_id", account.id)
-              .eq("status", "open");
-            claimsCount = claims || 0;
-          } catch {
-            // Tabla puede no existir
-          }
-
-          // Construir objeto de reputación — intentar obtener de MeLi API
-          const defaultReputation: Reputation = {
-            level_id: null,
-            power_seller_status: null,
-            transactions_total: 0,
-            transactions_completed: 0,
-            ratings_positive: 0,
-            ratings_negative: 0,
-            ratings_neutral: 0,
-            delayed_handling_time: 0,
-            claims: 0,
-            cancellations: 0,
-            immediate_payment: false,
-          };
-
-          let reputation: Reputation = defaultReputation;
-
-          if (account.access_token_enc) {
-            try {
-              // Descifrar token (AES-GCM) y refrescar si está vencido
-              const validToken = await getValidToken(account as any);
-              if (validToken) {
-                const meliRes = await fetch(
-                  `https://api.mercadolibre.com/users/${account.meli_user_id}?attributes=reputation`,
-                  {
-                    headers: { Authorization: `Bearer ${validToken}` },
-                    signal: AbortSignal.timeout(4000),
-                  }
-                );
-                if (meliRes.ok) {
-                  const meliUser = await meliRes.json();
-                  const rep = meliUser.reputation ?? {};
-                  reputation = {
-                    level_id:               rep.level_id ?? null,
-                    power_seller_status:    rep.power_seller_status ?? null,
-                    transactions_total:     rep.transactions?.total ?? 0,
-                    transactions_completed: rep.transactions?.completed ?? 0,
-                    ratings_positive:       rep.metrics?.sales?.fulfilled ?? 0,
-                    ratings_negative:       rep.metrics?.claims?.rate ?? 0,
-                    ratings_neutral:        0,
-                    delayed_handling_time:  rep.metrics?.delayed_handling_time?.rate ?? 0,
-                    claims:                 rep.metrics?.claims?.rate ?? 0,
-                    cancellations:          rep.metrics?.cancellations?.rate ?? 0,
-                    immediate_payment:      false,
-                  };
-                }
-              }
-            } catch {
-              // No bloquear el dashboard si el token falla
-            }
-          }
+          } catch { /* tabla puede no existir */ }
 
           return {
             account: account.meli_nickname || `Cuenta ${account.meli_user_id}`,
-            meli_user_id: String(account.meli_user_id),
-            unanswered_questions: unansweredQuestions || 0,
-            pending_messages: pendingMessages,
-            ready_to_ship: readyToShip,
-            total_items: totalItems,
-            today_orders: todayOrders,
-            today_sales_amount: todaySalesAmount,
-            claims_count: claimsCount,
-            measurement_date: new Date().toISOString(),
-            metrics_period: "Últimos 60 días",
+            meli_user_id: meliId,
+            unanswered_questions: unansweredQuestions,
+            pending_messages:     pendingMessages,
+            ready_to_ship:        readyToShip,
+            total_items:          totalItems,
+            today_orders:         todayOrders,
+            today_sales_amount:   todaySalesAmount,
+            claims_count:         claimsCount,
+            measurement_date:     new Date().toISOString(),
+            metrics_period:       "Últimos 60 días",
             reputation,
           };
         } catch (error) {
           console.error(`[meli-dashboard] Error procesando cuenta ${account.meli_user_id}:`, error);
-          return {
-            account: account.meli_nickname || `Cuenta ${account.meli_user_id}`,
-            meli_user_id: String(account.meli_user_id),
-            unanswered_questions: 0,
-            pending_messages: 0,
-            ready_to_ship: 0,
-            total_items: 0,
-            today_orders: 0,
-            today_sales_amount: 0,
-            claims_count: 0,
-            measurement_date: new Date().toISOString(),
-            metrics_period: "Últimos 60 días",
-            reputation: {
-              level_id: null,
-              power_seller_status: null,
-              transactions_total: 0,
-              transactions_completed: 0,
-              ratings_positive: 0,
-              ratings_negative: 0,
-              ratings_neutral: 0,
-              delayed_handling_time: 0,
-              claims: 0,
-              cancellations: 0,
-              immediate_payment: false,
-            },
-            error: error instanceof Error ? error.message : "Error desconocido",
-          };
+          return defaultReturn(error instanceof Error ? error.message : "Error desconocido");
         }
       })
     );
