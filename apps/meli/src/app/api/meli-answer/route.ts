@@ -34,7 +34,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log(`[meli-answer] Respondiendo para: ${account.meli_nickname}`);
+    console.log(`[meli-answer] Respondiendo pregunta ${question_id} para cuenta: ${account.meli_nickname} (ID: ${account.id})`);
+    console.log(`[meli-answer] Token preview: ${account.access_token_enc?.substring(0, 30)}...`);
+
+    // Primero verificar que la pregunta existe y pertenece a esta cuenta
+    const questionCheck = await fetch(`https://api.mercadolibre.com/questions/${question_id}`, {
+      headers: { "Authorization": `Bearer ${account.access_token_enc}` },
+    });
+    
+    if (!questionCheck.ok) {
+      console.error(`[meli-answer] Pregunta ${question_id} no encontrada con el token de ${account.meli_nickname}`);
+      return NextResponse.json(
+        { error: `La pregunta no existe o no pertenece a la cuenta ${account.meli_nickname}. Verifica que estés usando la cuenta correcta.` },
+        { status: 404 }
+      );
+    }
+    
+    const questionData = await questionCheck.json();
+    console.log(`[meli-answer] Pregunta encontrada: ID=${questionData.id}, seller_id=${questionData.seller_id}, status=${questionData.status}`);
 
     // Responder en MeLi
     const response = await fetch(`https://api.mercadolibre.com/questions/${question_id}/answers`, {
