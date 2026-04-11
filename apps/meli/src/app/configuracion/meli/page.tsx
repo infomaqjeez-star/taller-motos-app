@@ -94,19 +94,28 @@ function ConfiguracionMeliPage() {
     if (!confirm(`Desconectar la cuenta "${nickname}"?`)) return;
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
+      if (!session) {
+        setError("No hay sesión activa");
+        return;
+      }
 
+      console.log(`[handleDisconnect] Desconectando cuenta ${accountId}...`);
+      
       const res = await fetch(`/api/meli-accounts?id=${accountId}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
 
+      console.log(`[handleDisconnect] Response status: ${res.status}`);
+      
       if (res.ok) {
         setAccounts(prev => prev.filter(a => a.id !== accountId));
         setSuccess(`Cuenta "${nickname}" desconectada.`);
         setTimeout(() => setSuccess(null), 3000);
       } else {
-        throw new Error("Error al desconectar la cuenta");
+        const errorData = await res.json().catch(() => ({ error: "Error desconocido" }));
+        console.error(`[handleDisconnect] Error:`, errorData);
+        throw new Error(errorData.error || "Error al desconectar la cuenta");
       }
     } catch (e) {
       setError((e as Error).message);

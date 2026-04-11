@@ -171,30 +171,36 @@ export async function DELETE(request: NextRequest) {
     }
 
     if (!userId) {
+      console.error("[meli-accounts DELETE] No autorizado - sin userId");
       return NextResponse.json(
         { error: "No autorizado" },
         { status: 401 }
       );
     }
 
+    console.log(`[meli-accounts DELETE] Desactivando cuenta ${id} para usuario ${userId}`);
+
     // Desactivar la cuenta
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from("linked_meli_accounts")
       .update({ is_active: false, updated_at: new Date().toISOString() })
       .eq("id", id)
-      .eq("user_id", userId);
+      .eq("user_id", userId)
+      .select();
 
     if (error) {
-      console.error("[meli-accounts] Error al desactivar cuenta:", error);
+      console.error("[meli-accounts DELETE] Error al desactivar cuenta:", error);
       return NextResponse.json(
         { error: "Error al desactivar cuenta" },
         { status: 500 }
       );
     }
 
-    return NextResponse.json({ success: true });
+    console.log(`[meli-accounts DELETE] Cuenta desactivada exitosamente:`, data);
+
+    return NextResponse.json({ success: true, data });
   } catch (error) {
-    console.error("[meli-accounts] Error inesperado:", error);
+    console.error("[meli-accounts DELETE] Error inesperado:", error);
     return NextResponse.json(
       { error: "Error interno del servidor" },
       { status: 500 }
