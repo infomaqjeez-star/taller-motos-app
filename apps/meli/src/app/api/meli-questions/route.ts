@@ -34,11 +34,17 @@ export async function GET(request: NextRequest) {
 
     for (const account of accounts) {
       try {
-        console.log(`[meli-questions] Procesando cuenta: ${account.meli_nickname}, meli_user_id: ${account.meli_user_id}`);
-        console.log(`[meli-questions] Token (primeros 30 chars): ${account.access_token_enc?.substring(0, 30)}...`);
+        console.log(`[meli-questions] Procesando cuenta: ${account.meli_nickname}, ID: ${account.id}`);
+        console.log(`[meli-questions] Token preview: ${account.access_token_enc?.substring(0, 20)}...`);
         
         if (!account.access_token_enc) {
           console.log(`[meli-questions] Sin token para ${account.meli_nickname}`);
+          continue;
+        }
+        
+        // Verificar si el token parece válido (debe empezar con APP_USR)
+        if (!account.access_token_enc.startsWith('APP_USR')) {
+          console.error(`[meli-questions] Token inválido para ${account.meli_nickname} - no empieza con APP_USR`);
           continue;
         }
         
@@ -52,7 +58,7 @@ export async function GET(request: NextRequest) {
         
         if (!res.ok) {
           const errorText = await res.text().catch(() => "Unknown");
-          console.error(`[meli-questions] Error ${res.status} para ${account.meli_nickname}: ${errorText}`);
+          console.error(`[meli-questions] Error ${res.status} para ${account.meli_nickname}: ${errorText.substring(0, 200)}`);
           continue;
         }
         
