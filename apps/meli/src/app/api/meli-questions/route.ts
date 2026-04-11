@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
           if (questions.length === 0) return;
 
           // Obtener thumbnails de items en lotes de 20
-          const itemIds = [...new Set(questions.map((q: any) => q.item_id).filter(Boolean))] as string[];
+          const itemIds = Array.from(new Set(questions.map((q: any) => q.item_id).filter(Boolean))) as string[];
           const itemMap: Record<string, { title: string; thumbnail: string }> = {};
 
           const chunks: string[][] = [];
