@@ -68,6 +68,7 @@ export async function GET(request: NextRequest) {
         console.log(`[meli-questions] ${questions.length} preguntas encontradas`);
         
         for (const q of questions) {
+          console.log(`[meli-questions] Pregunta recibida: ID=${q.id}, text="${q.text?.substring(0, 50)}...", status=${q.status}`);
           allQuestions.push({
             meli_question_id: q.id,
             meli_account_id: account.id,
