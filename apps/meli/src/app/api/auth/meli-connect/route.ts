@@ -51,6 +51,8 @@ export async function GET(request: NextRequest) {
     meliAuthUrl.searchParams.set("client_id", MELI_APP_ID);
     meliAuthUrl.searchParams.set("redirect_uri", callbackUrl);
     meliAuthUrl.searchParams.set("state", state);
+    // Scopes necesarios para todas las funcionalidades
+    meliAuthUrl.searchParams.set("scope", "read write offline_access questions:read messages:read orders:read items:read claims:read");
 
     return NextResponse.json({ url: meliAuthUrl.toString() });
   } catch (err) {

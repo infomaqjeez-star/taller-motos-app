@@ -158,8 +158,8 @@ export async function GET(request: NextRequest) {
               fetch(`https://api.mercadolibre.com/messages/unread?role=seller&limit=1`, {
                 headers: meliHeaders, signal: AbortSignal.timeout(5000),
               }),
-              // 7. Órdenes de hoy (pagadas)
-              fetch(`https://api.mercadolibre.com/orders/search?seller=${meliId}&order.status=paid&order.date_created.from=${new Date().toISOString().split('T')[0]}T00:00:00.000-03:00&limit=50`, {
+              // 7. Órdenes de hoy (pagadas) - usar zona horaria Argentina
+              fetch(`https://api.mercadolibre.com/orders/search?seller=${meliId}&order.status=paid&order.date_created.from=${new Date().toISOString().split('T')[0]}T00:00:00.000Z&limit=50`, {
                 headers: meliHeaders, signal: AbortSignal.timeout(10000),
               }),
             ]);
