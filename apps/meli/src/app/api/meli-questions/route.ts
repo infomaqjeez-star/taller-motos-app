@@ -72,12 +72,30 @@ export async function GET(request: NextRequest) {
         
         for (const q of questions) {
           console.log(`[meli-questions] Pregunta recibida: ID=${q.id}, text="${q.text?.substring(0, 50)}...", status=${q.status}`);
+          
+          // Obtener detalles del item (título e imagen)
+          let itemTitle = q.item_id;
+          let itemThumbnail = "";
+          try {
+            const itemRes = await fetch(`https://api.mercadolibre.com/items/${q.item_id}`, {
+              headers: { Authorization: `Bearer ${account.access_token_enc}` },
+              signal: AbortSignal.timeout(5000),
+            });
+            if (itemRes.ok) {
+              const itemData = await itemRes.json();
+              itemTitle = itemData.title || q.item_id;
+              itemThumbnail = itemData.thumbnail || itemData.pictures?.[0]?.url || "";
+            }
+          } catch (e) {
+            console.log(`[meli-questions] Error obteniendo item ${q.item_id}:`, e);
+          }
+          
           allQuestions.push({
             meli_question_id: q.id,
             meli_account_id: account.id,
             item_id: q.item_id,
-            item_title: q.item_id,
-            item_thumbnail: "",
+            item_title: itemTitle,
+            item_thumbnail: itemThumbnail,
             buyer_id: q.from?.id,
             buyer_nickname: q.from?.nickname || "Comprador",
             question_text: q.text,
