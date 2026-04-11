@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { getValidToken } from "@/lib/meli";
 
 // Forzar renderizado dinámico - evita error de generación estática
 export const dynamic = 'force-dynamic';
@@ -191,39 +192,36 @@ export async function GET(request: NextRequest) {
 
           if (account.access_token_enc) {
             try {
-              const meliRes = await fetch(
-                `https://api.mercadolibre.com/users/${account.meli_user_id}?attributes=reputation`,
-                {
-                  headers: { Authorization: `Bearer ${account.access_token_enc}` },
-                  signal: AbortSignal.timeout(4000),
+              // Descifrar token (AES-GCM) y refrescar si está vencido
+              const validToken = await getValidToken(account as any);
+              if (validToken) {
+                const meliRes = await fetch(
+                  `https://api.mercadolibre.com/users/${account.meli_user_id}?attributes=reputation`,
+                  {
+                    headers: { Authorization: `Bearer ${validToken}` },
+                    signal: AbortSignal.timeout(4000),
+                  }
+                );
+                if (meliRes.ok) {
+                  const meliUser = await meliRes.json();
+                  const rep = meliUser.reputation ?? {};
+                  reputation = {
+                    level_id:               rep.level_id ?? null,
+                    power_seller_status:    rep.power_seller_status ?? null,
+                    transactions_total:     rep.transactions?.total ?? 0,
+                    transactions_completed: rep.transactions?.completed ?? 0,
+                    ratings_positive:       rep.metrics?.sales?.fulfilled ?? 0,
+                    ratings_negative:       rep.metrics?.claims?.rate ?? 0,
+                    ratings_neutral:        0,
+                    delayed_handling_time:  rep.metrics?.delayed_handling_time?.rate ?? 0,
+                    claims:                 rep.metrics?.claims?.rate ?? 0,
+                    cancellations:          rep.metrics?.cancellations?.rate ?? 0,
+                    immediate_payment:      false,
+                  };
                 }
-              );
-              if (meliRes.ok) {
-                const meliUser = await meliRes.json();
-                const rep = meliUser.reputation ?? {};
-                reputation = {
-                  level_id: rep.level_id ?? null,
-                  power_seller_status: rep.power_seller_status ?? null,
-                  transactions_total: rep.transactions?.total ?? 0,
-                  transactions_completed: rep.transactions?.completed ?? 0,
-                  ratings_positive: rep.metrics?.sales?.fulfilled ?? 0,
-                  ratings_negative: rep.metrics?.claims?.rate ?? 0,
-                  ratings_neutral: 0,
-                  delayed_handling_time: rep.metrics?.delayed_handling_time?.rate ?? 0,
-                  claims: rep.metrics?.claims?.rate ?? 0,
-                  cancellations: rep.metrics?.cancellations?.rate ?? 0,
-                  immediate_payment: false,
-                };
-                // Guardar en cache DB de forma async (ignorar si la columna no existe)
-                void Promise.resolve(
-                  supabase
-                    .from("linked_meli_accounts")
-                    .update({ reputation_json: rep, reputation_updated_at: new Date().toISOString() })
-                    .eq("id", account.id)
-                ).catch(() => {});
               }
             } catch {
-              // No bloquear el dashboard si la API de MeLi falla o token vencido
+              // No bloquear el dashboard si el token falla
             }
           }
 

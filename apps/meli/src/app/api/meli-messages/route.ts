@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
+import { getValidToken } from "@/lib/meli";
 
 // Forzar renderizado dinámico - evita error de generación estática
 export const dynamic = 'force-dynamic';
@@ -90,11 +91,14 @@ export async function GET(request: NextRequest) {
       accounts.map(async (account: any) => {
         if (!account.access_token_enc) return;
         try {
-          // Obtener mensajes no leídos de ventas
+          // Descifrar token AES-GCM antes de usarlo
+          const validToken = await getValidToken(account as any);
+          if (!validToken) return;
+
           const meliRes = await fetch(
             `https://api.mercadolibre.com/messages/unread?role=seller&limit=25`,
             {
-              headers: { Authorization: `Bearer ${account.access_token_enc}` },
+              headers: { Authorization: `Bearer ${validToken}` },
               signal: AbortSignal.timeout(5000),
             }
           );

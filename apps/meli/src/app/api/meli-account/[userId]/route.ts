@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { getValidToken } from "@/lib/meli";
 
 export const dynamic = 'force-dynamic';
 
@@ -27,7 +28,6 @@ export async function GET(
 ) {
   try {
     const { userId } = params;
-
     if (!userId) {
       return NextResponse.json({ error: "userId es requerido" }, { status: 400 });
     }
@@ -44,10 +44,10 @@ export async function GET(
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
 
-    // Obtener la cuenta + token desde linked_meli_accounts
+    // Obtener la cuenta desde linked_meli_accounts
     const { data: account, error: accountError } = await supabase
       .from("linked_meli_accounts")
-      .select("id, meli_user_id, meli_nickname, access_token_enc, reputation_json, reputation_updated_at")
+      .select("id, meli_user_id, meli_nickname, access_token_enc, refresh_token_enc, token_expiry_date")
       .eq("meli_user_id", userId)
       .eq("user_id", currentUserId)
       .single();
@@ -68,64 +68,58 @@ export async function GET(
     const itemsLowStock = activeItems.filter((i) => i.available_quantity > 0 && i.available_quantity <= 5).length;
     const itemsOutOfStock = activeItems.filter((i) => i.available_quantity === 0).length;
 
-    // ── Reputacion: usar cache en DB si es reciente (< 6 horas) ──────────
+    // ── Reputacion: cache en memoria (5 min) ────────────────────────────
     let reputationData: any = null;
     const cacheEntry = repCache.get(userId);
-    const repUpdatedAt = account.reputation_updated_at
-      ? new Date(account.reputation_updated_at).getTime()
-      : 0;
-    const sixHoursMs = 6 * 60 * 60 * 1000;
-    const isDbCacheValid = repUpdatedAt && Date.now() - repUpdatedAt < sixHoursMs;
-    const isMemCacheValid = cacheEntry && Date.now() - cacheEntry.ts < REP_TTL_MS;
-
-    if (isMemCacheValid) {
-      reputationData = cacheEntry!.data;
-    } else if (isDbCacheValid && account.reputation_json) {
-      reputationData = account.reputation_json;
-      repCache.set(userId, { data: reputationData, ts: Date.now() });
-    } else if (account.access_token_enc) {
-      // Llamar a MeLi API para reputacion fresca
+    if (cacheEntry && Date.now() - cacheEntry.ts < REP_TTL_MS) {
+      reputationData = cacheEntry.data;
+    } else {
+      // Descifrar token y llamar MeLi API
       try {
-        const meliRes = await fetch(
-          `https://api.mercadolibre.com/users/${userId}?attributes=reputation,site_id,nickname`,
-          {
-            headers: { Authorization: `Bearer ${account.access_token_enc}` },
-            signal: AbortSignal.timeout(5000),
+        const validToken = await getValidToken(account as any);
+        if (validToken) {
+          const meliRes = await fetch(
+            `https://api.mercadolibre.com/users/${userId}?attributes=reputation,site_id,nickname`,
+            {
+              headers: { Authorization: `Bearer ${validToken}` },
+              signal: AbortSignal.timeout(5000),
+            }
+          );
+          if (meliRes.ok) {
+            const meliUser = await meliRes.json();
+            reputationData = meliUser.reputation ?? null;
+            repCache.set(userId, { data: reputationData, ts: Date.now() });
           }
-        );
-        if (meliRes.ok) {
-          const meliUser = await meliRes.json();
-          reputationData = meliUser.reputation ?? null;
-          // Guardar en DB
-          await supabase
-            .from("linked_meli_accounts")
-            .update({
-              reputation_json: reputationData,
-              reputation_updated_at: new Date().toISOString(),
-            })
-            .eq("id", account.id);
-          repCache.set(userId, { data: reputationData, ts: Date.now() });
         }
       } catch (e) {
         console.warn("[meli-account] No se pudo obtener reputacion de MeLi:", e);
       }
     }
 
-    // Construir objeto de reputacion normalizado
+    // ── Mapeo de nivel a nombre legible ─────────────────────────────────
+    const LEVEL_NAMES: Record<string, string> = {
+      "1_red":         "Rojo",
+      "2_orange":      "Naranja",
+      "3_yellow":      "Amarillo",
+      "4_light_green": "Verde claro",
+      "5_green":       "Verde",
+    };
+
     const rep = reputationData || {};
+    const levelId = rep.level_id ?? null;
     const reputation = {
-      level_id:              rep.level_id ?? null,
-      level_name:            rep.level_id ? String(rep.level_id).replace(/_/g, " ") : "Sin datos",
-      power_seller_status:   rep.power_seller_status ?? null,
-      transactions_total:    rep.transactions?.total ?? 0,
+      level_id:               levelId,
+      level_name:             levelId ? (LEVEL_NAMES[levelId] ?? levelId) : "Sin datos",
+      power_seller_status:    rep.power_seller_status ?? null,
+      transactions_total:     rep.transactions?.total ?? 0,
       transactions_completed: rep.transactions?.completed ?? 0,
-      ratings_positive:      rep.metrics?.sales?.fulfilled ?? 0,
-      ratings_negative:      rep.metrics?.claims?.rate ?? 0,
-      ratings_neutral:       0,
-      delayed_handling_time: rep.metrics?.delayed_handling_time?.rate ?? 0,
-      claims:                rep.metrics?.claims?.rate ?? 0,
-      cancellations:         rep.metrics?.cancellations?.rate ?? 0,
-      immediate_payment:     false,
+      ratings_positive:       rep.metrics?.sales?.fulfilled ?? 0,
+      ratings_negative:       rep.metrics?.claims?.rate ?? 0,
+      ratings_neutral:        0,
+      delayed_handling_time:  rep.metrics?.delayed_handling_time?.rate ?? 0,
+      claims:                 rep.metrics?.claims?.rate ?? 0,
+      cancellations:          rep.metrics?.cancellations?.rate ?? 0,
+      immediate_payment:      false,
     };
 
     return NextResponse.json({
@@ -140,7 +134,7 @@ export async function GET(
       })),
       stats: {
         total_active_items: totalActiveItems,
-        items_low_stock: itemsLowStock,
+        items_low_stock:    itemsLowStock,
         items_out_of_stock: itemsOutOfStock,
       },
     });
