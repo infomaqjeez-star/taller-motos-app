@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
     // Obtener las cuentas de Mercado Libre del usuario
     const { data: accounts, error: accountsError } = await supabase
       .from("linked_meli_accounts")
-      .select("id, meli_user_id, meli_nickname, is_active, access_token_enc, refresh_token_enc, token_expiry_date, reputation_json, reputation_updated_at")
+      .select("id, meli_user_id, meli_nickname, is_active, access_token_enc, refresh_token_enc, token_expiry_date")
       .eq("user_id", userId)
       .eq("is_active", true);
 
@@ -189,29 +189,7 @@ export async function GET(request: NextRequest) {
 
           let reputation: Reputation = defaultReputation;
 
-          // Usar reputation_json cacheada en DB si tiene < 6 horas
-          const repUpdatedAt = (account as any).reputation_updated_at
-            ? new Date((account as any).reputation_updated_at).getTime()
-            : 0;
-          const sixHoursMs = 6 * 60 * 60 * 1000;
-
-          if ((account as any).reputation_json && repUpdatedAt && Date.now() - repUpdatedAt < sixHoursMs) {
-            const rep = (account as any).reputation_json;
-            reputation = {
-              level_id: rep.level_id ?? null,
-              power_seller_status: rep.power_seller_status ?? null,
-              transactions_total: rep.transactions?.total ?? 0,
-              transactions_completed: rep.transactions?.completed ?? 0,
-              ratings_positive: rep.metrics?.sales?.fulfilled ?? 0,
-              ratings_negative: rep.metrics?.claims?.rate ?? 0,
-              ratings_neutral: 0,
-              delayed_handling_time: rep.metrics?.delayed_handling_time?.rate ?? 0,
-              claims: rep.metrics?.claims?.rate ?? 0,
-              cancellations: rep.metrics?.cancellations?.rate ?? 0,
-              immediate_payment: false,
-            };
-          } else if (account.access_token_enc) {
-            // Fetch desde MeLi API (fire & forget style, sin bloquear el dashboard)
+          if (account.access_token_enc) {
             try {
               const meliRes = await fetch(
                 `https://api.mercadolibre.com/users/${account.meli_user_id}?attributes=reputation`,
@@ -236,7 +214,7 @@ export async function GET(request: NextRequest) {
                   cancellations: rep.metrics?.cancellations?.rate ?? 0,
                   immediate_payment: false,
                 };
-                // Guardar en cache DB de forma async (sin await)
+                // Guardar en cache DB de forma async (ignorar si la columna no existe)
                 void Promise.resolve(
                   supabase
                     .from("linked_meli_accounts")
@@ -245,7 +223,7 @@ export async function GET(request: NextRequest) {
                 ).catch(() => {});
               }
             } catch {
-              // No bloquear el dashboard si la API de MeLi falla
+              // No bloquear el dashboard si la API de MeLi falla o token vencido
             }
           }
 

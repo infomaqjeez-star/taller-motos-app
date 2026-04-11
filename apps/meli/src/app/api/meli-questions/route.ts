@@ -61,8 +61,7 @@ export async function GET(request: NextRequest) {
         status,
         date_created,
         answer_text,
-        answer_date,
-        meli_accounts:meli_account_id (nickname)
+        answer_date
       `)
       .eq("status", "UNANSWERED")
       .order("date_created", { ascending: false });
