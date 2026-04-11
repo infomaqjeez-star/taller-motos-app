@@ -79,7 +79,7 @@ export async function GET(
         const validToken = await getValidToken(account as any);
         if (validToken) {
           const meliRes = await fetch(
-            `https://api.mercadolibre.com/users/${userId}?attributes=reputation,site_id,nickname`,
+            `https://api.mercadolibre.com/users/${userId}?attributes=seller_reputation,site_id,nickname`,
             {
               headers: { Authorization: `Bearer ${validToken}` },
               signal: AbortSignal.timeout(5000),
@@ -87,7 +87,7 @@ export async function GET(
           );
           if (meliRes.ok) {
             const meliUser = await meliRes.json();
-            reputationData = meliUser.reputation ?? null;
+            reputationData = meliUser.seller_reputation ?? null;
             repCache.set(userId, { data: reputationData, ts: Date.now() });
           }
         }

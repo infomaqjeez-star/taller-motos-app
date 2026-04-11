@@ -1,102 +1,127 @@
-import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
+import { getValidToken } from "@/lib/meli";
 
-// Forzar renderizado dinámico - evita error de generación estática
-export const dynamic = 'force-dynamic';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
-
-// Verificar que las variables de entorno estén configuradas
-if (!supabaseUrl || !supabaseServiceKey || supabaseUrl.includes("placeholder")) {
-  console.warn("[API meli-questions] Supabase no configurado correctamente");
-}
+export const dynamic = "force-dynamic";
 
 const supabase = createClient(
-  supabaseUrl || "https://placeholder.supabase.co",
-  supabaseServiceKey || "placeholder-key"
+  process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co",
+  process.env.SUPABASE_SERVICE_ROLE_KEY || "placeholder-key"
 );
 
 /**
  * GET /api/meli-questions
- * 
- * Obtiene todas las preguntas sin responder de todas las cuentas de Mercado Libre
- * vinculadas al usuario actual. Incluye información del producto y la cuenta.
- * 
- * Filtros aplicados:
- * - status = 'UNANSWERED' (solo preguntas pendientes)
- * - Ordenadas por date_created DESC (más recientes primero)
- * 
- * Respuesta: Array de preguntas con datos enriquecidos
+ *
+ * Obtiene preguntas sin responder de todas las cuentas MeLi del usuario,
+ * directamente desde la API de Mercado Libre.
  */
 export async function GET(request: NextRequest) {
   try {
-    // Obtener el usuario actual de la sesión
+    // Auth
     const authHeader = request.headers.get("authorization");
     let userId: string | null = null;
-
     if (authHeader?.startsWith("Bearer ")) {
-      const token = authHeader.slice(7);
-      const { data: { user }, error } = await supabase.auth.getUser(token);
-      if (!error && user) {
-        userId = user.id;
-      }
+      const { data: { user } } = await supabase.auth.getUser(authHeader.slice(7));
+      if (user) userId = user.id;
+    }
+    if (!userId) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
 
-    // Si no hay usuario autenticado, obtener todas las preguntas sin responder
-    // (para compatibilidad con el modo actual)
-    
-    const { data: questions, error } = await supabase
-      .from("meli_unified_questions")
-      .select(`
-        id,
-        meli_question_id,
-        meli_account_id,
-        item_id,
-        item_title,
-        item_thumbnail,
-        buyer_id,
-        buyer_nickname,
-        question_text,
-        status,
-        date_created,
-        answer_text,
-        answer_date
-      `)
-      .eq("status", "UNANSWERED")
-      .order("date_created", { ascending: false });
+    // Obtener cuentas activas
+    const { data: accounts } = await supabase
+      .from("linked_meli_accounts")
+      .select("id, meli_user_id, meli_nickname, access_token_enc, refresh_token_enc, token_expiry_date")
+      .eq("user_id", userId)
+      .eq("is_active", true);
 
-    if (error) {
-      console.error("[API meli-questions] Error:", error);
-      return NextResponse.json(
-        { error: "Error al obtener preguntas", details: error.message },
-        { status: 500 }
-      );
+    if (!accounts || accounts.length === 0) {
+      return NextResponse.json([]);
     }
 
-    // Transformar los datos para que coincidan con la interfaz esperada
-    const formattedQuestions = questions?.map((q: any) => ({
-      id: q.id,
-      meli_question_id: q.meli_question_id,
-      meli_account_id: q.meli_account_id,
-      item_id: q.item_id,
-      item_title: q.item_title,
-      item_thumbnail: q.item_thumbnail,
-      buyer_id: q.buyer_id,
-      buyer_nickname: q.buyer_nickname,
-      question_text: q.question_text,
-      status: q.status,
-      date_created: q.date_created,
-      answer_text: q.answer_text,
-      meli_accounts: q.meli_accounts,
-    })) || [];
+    // Fetch preguntas de todas las cuentas en paralelo
+    const allQuestions: any[] = [];
 
-    return NextResponse.json(formattedQuestions);
-  } catch (error) {
-    console.error("[API meli-questions] Error inesperado:", error);
-    return NextResponse.json(
-      { error: "Error interno del servidor" },
-      { status: 500 }
+    await Promise.all(
+      accounts.map(async (account: any) => {
+        try {
+          const validToken = await getValidToken(account);
+          if (!validToken) return;
+
+          const headers = { Authorization: `Bearer ${validToken}` };
+
+          // Preguntas sin responder
+          const qRes = await fetch(
+            "https://api.mercadolibre.com/my/questions?status=UNANSWERED&sort_fields=date_created&sort_types=DESC&limit=50",
+            { headers, signal: AbortSignal.timeout(6000) }
+          );
+          if (!qRes.ok) return;
+          const qData = await qRes.json();
+          const questions: any[] = qData.questions || [];
+
+          if (questions.length === 0) return;
+
+          // Obtener thumbnails de items en lotes de 20
+          const itemIds = [...new Set(questions.map((q: any) => q.item_id).filter(Boolean))] as string[];
+          const itemMap: Record<string, { title: string; thumbnail: string }> = {};
+
+          const chunks: string[][] = [];
+          for (let i = 0; i < itemIds.length; i += 20) {
+            chunks.push(itemIds.slice(i, i + 20));
+          }
+          await Promise.all(
+            chunks.map(async (chunk) => {
+              try {
+                const iRes = await fetch(
+                  `https://api.mercadolibre.com/items?ids=${chunk.join(",")}`,
+                  { headers, signal: AbortSignal.timeout(5000) }
+                );
+                if (!iRes.ok) return;
+                const items: any[] = await iRes.json();
+                for (const item of items) {
+                  if (item?.body?.id) {
+                    itemMap[item.body.id] = {
+                      title: item.body.title || "",
+                      thumbnail: item.body.thumbnail || "",
+                    };
+                  }
+                }
+              } catch { /* ignorar errores de batch */ }
+            })
+          );
+
+          // Mapear al formato que espera la página
+          for (const q of questions) {
+            const itemInfo = itemMap[q.item_id] || { title: "", thumbnail: "" };
+            allQuestions.push({
+              id:               String(q.id),
+              meli_question_id: q.id,
+              meli_account_id:  account.id,
+              item_id:          q.item_id || null,
+              item_title:       itemInfo.title,
+              item_thumbnail:   itemInfo.thumbnail,
+              buyer_id:         q.from?.id || null,
+              buyer_nickname:   q.from?.nickname || "Comprador",
+              question_text:    q.text || "",
+              status:           q.status || "UNANSWERED",
+              date_created:     q.date_created || new Date().toISOString(),
+              answer_text:      q.answer?.text || null,
+              answer_date:      q.answer?.date_created || null,
+              meli_accounts:    { nickname: account.meli_nickname },
+            });
+          }
+        } catch { /* token inválido — ignorar cuenta */ }
+      })
     );
+
+    // Ordenar por fecha descendente
+    allQuestions.sort((a, b) =>
+      new Date(b.date_created).getTime() - new Date(a.date_created).getTime()
+    );
+
+    return NextResponse.json(allQuestions);
+  } catch (error) {
+    console.error("[meli-questions] Error inesperado:", error);
+    return NextResponse.json({ error: "Error interno" }, { status: 500 });
   }
 }

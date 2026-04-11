@@ -10,6 +10,7 @@ import {
   Users, ShoppingBag, Mail, Bell, UserCircle
 } from "lucide-react";
 import QuestionSuggestion from "@/components/QuestionSuggestion";
+import { supabase } from "@/lib/supabase";
 
 const DEFAULT_TEMPLATES = [
   "¡Hola! Sí, el producto está disponible. ¿Tenés alguna consulta adicional?",
@@ -605,7 +606,11 @@ function MensajesInner() {
     if (sync) setQuestionsSyncing(true); else setQuestionsLoading(true);
     setQuestionsError(null);
     try {
-      const res = await fetch("/api/meli-questions");
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) { setQuestionsError("No autenticado"); return; }
+      const res = await fetch("/api/meli-questions", {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data: Question[] = await res.json();
 
@@ -630,7 +635,11 @@ function MensajesInner() {
     if (sync) setMessagesSyncing(true); else setMessagesLoading(true);
     setMessagesError(null);
     try {
-      const res = await fetch("/api/meli-messages?limit=50");
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) { setMessagesError("No autenticado"); return; }
+      const res = await fetch("/api/meli-messages?limit=50", {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data: Message[] = await res.json();
       setMessages(data);

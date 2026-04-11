@@ -135,7 +135,7 @@ export async function GET(request: NextRequest) {
           const [userRes, questionsRes, ordersReadyRes, itemsRes, claimsRes, unreadRes] =
             await Promise.allSettled([
               // 1. Reputacion + datos del vendedor
-              fetch(`https://api.mercadolibre.com/users/${meliId}?attributes=reputation,nickname`, {
+              fetch(`https://api.mercadolibre.com/users/${meliId}?attributes=seller_reputation,nickname`, {
                 headers: meliHeaders, signal: AbortSignal.timeout(5000),
               }),
               // 2. Preguntas sin responder
@@ -172,7 +172,7 @@ export async function GET(request: NextRequest) {
             await Promise.all([userRes, questionsRes, ordersReadyRes, itemsRes, claimsRes, unreadRes].map(safeJson));
 
           // Reputación
-          const rep = userData?.reputation ?? {};
+          const rep = userData?.seller_reputation ?? {};
           const reputation: Reputation = {
             level_id:               rep.level_id ?? null,
             power_seller_status:    rep.power_seller_status ?? null,
