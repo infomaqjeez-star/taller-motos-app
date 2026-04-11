@@ -56,7 +56,16 @@ export async function POST(request: NextRequest) {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`[meli-answer] Error: ${errorText}`);
+      console.error(`[meli-answer] Error ${response.status}: ${errorText}`);
+      
+      // Si es 400, puede ser que la pregunta ya fue respondida o datos incorrectos
+      if (response.status === 400) {
+        return NextResponse.json(
+          { error: "Datos incorrectos o pregunta ya respondida", details: errorText },
+          { status: 400 }
+        );
+      }
+      
       return NextResponse.json(
         { error: "Error al responder", details: errorText },
         { status: response.status }
