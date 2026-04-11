@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     // Obtener cuenta
     const { data: account } = await supabase
       .from("linked_meli_accounts")
-      .select("access_token_enc, meli_nickname")
+      .select("id, meli_user_id, meli_nickname, access_token_enc")
       .eq("id", meli_account_id)
       .single();
 
@@ -52,6 +52,16 @@ export async function POST(request: NextRequest) {
     
     const questionData = await questionCheck.json();
     console.log(`[meli-answer] Pregunta encontrada: ID=${questionData.id}, seller_id=${questionData.seller_id}, status=${questionData.status}`);
+    console.log(`[meli-answer] Cuenta usada: ${account.meli_nickname}, meli_user_id=${account.meli_user_id}`);
+
+    // Verificar que la pregunta pertenece a esta cuenta
+    if (String(questionData.seller_id) !== String(account.meli_user_id)) {
+      console.error(`[meli-answer] ERROR: La pregunta ${question_id} pertenece al seller ${questionData.seller_id}, pero estamos usando la cuenta ${account.meli_user_id}`);
+      return NextResponse.json(
+        { error: `Esta pregunta pertenece a otra cuenta. Seller ID: ${questionData.seller_id}, Cuenta usada: ${account.meli_user_id}` },
+        { status: 403 }
+      );
+    }
 
     // Responder en MeLi
     const response = await fetch(`https://api.mercadolibre.com/questions/${question_id}/answers`, {
