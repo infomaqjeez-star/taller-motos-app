@@ -276,7 +276,7 @@ function AccountPanel({ data, defaultOpen, editingNick, editNickVal, setEditingN
             <div className="p-4 rounded-xl text-sm" style={{ background: "#ef444422", color: "#ef4444", border: "1px solid #ef444455" }}>
               <p className="font-bold mb-1">⚠️ Error al cargar cuenta</p>
               {data.error === "token_expired" && (
-                <p>El token de acceso ha expirado. Por favor, reconecta la cuenta en <a href="/configuracion/meli/meli" className="underline hover:text-red-300">Configuración</a>.</p>
+                <p>El token de acceso ha expirado. Por favor, reconecta la cuenta en <a href="/configuracion/meli" className="underline hover:text-red-300">Configuración</a>.</p>
               )}
               {data.error === "http_451_blocked" && (
                 <p>MercadoLibre ha bloqueado el acceso a esta cuenta (HTTP 451). Verifica tu conexión o contacta al soporte de MeLi.</p>
@@ -529,7 +529,7 @@ function AppJeezInner() {
     { label: "Precios/Stock",   icon: <DollarSign className="w-4 h-4" />,     href: "/precios",       active: false },
     { label: "Promociones",     icon: <Zap className="w-4 h-4" />,            href: "/promociones",   active: false },
     { label: "Post-Venta",      icon: <AlertTriangle className="w-4 h-4" />,  href: "/post-venta",    active: false },
-    { label: "Cuentas MeLi",    icon: <Store className="w-4 h-4" />,           href: "/configuracion/meli/meli",    active: false },
+    { label: "Cuentas MeLi",    icon: <Store className="w-4 h-4" />,           href: "/configuracion/meli",    active: false },
   ];
 
   return (
