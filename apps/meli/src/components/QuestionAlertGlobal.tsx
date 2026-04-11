@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Bell, BellOff, ChevronDown } from "lucide-react";
 import { ALERT_MODES, type AlertMode, ALERT_MODE_STORAGE_KEY } from "@/lib/alertModes";
+import { supabase } from "@/lib/supabase";
 
 /**
  * Verifica si las credenciales de Supabase están configuradas correctamente
@@ -145,7 +146,14 @@ export default function QuestionAlertGlobal() {
   const pollQuestions = useCallback(async () => {
     try {
       console.log("[POLL] Verificando nuevas preguntas...");
-      const res = await fetch("/api/meli-questions");
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        console.log("[POLL] Sin sesion activa, omitiendo poll");
+        return;
+      }
+      const res = await fetch("/api/meli-questions", {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
       if (!res.ok) {
         console.error("[POLL] Error en respuesta:", res.status);
         return;

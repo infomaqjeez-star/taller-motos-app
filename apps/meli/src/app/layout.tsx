@@ -1,10 +1,11 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import Providers from "./providers";
+import QuestionAlertGlobal from "@/components/QuestionAlertGlobal";
 
 export const metadata: Metadata = {
   title: "Taller MAQJEEZ",
-  description: "Sistema de gestión para taller de Moto-Implementos y Motovehículos",
+  description: "Sistema de gestion para taller de Moto-Implementos y Motovehiculos",
   manifest: "/manifest.json",
 };
 
@@ -20,6 +21,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="es" suppressHydrationWarning>
       <body className="min-h-screen bg-gray-950 dark:bg-gray-950 light:bg-gray-50">
         <Providers>{children}</Providers>
+        <QuestionAlertGlobal />
       </body>
     </html>
   );
