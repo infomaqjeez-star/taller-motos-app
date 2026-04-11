@@ -8,8 +8,9 @@ import {
 } from "recharts";
 import {
   TrendingUp, ShoppingCart, MessageCircle, Package,
-  DollarSign, RefreshCw, BarChart2, CheckCircle,
+  DollarSign, RefreshCw, BarChart2, CheckCircle, ArrowLeft,
 } from "lucide-react";
+import Link from "next/link";
 
 type Periodo = "hoy" | "semana" | "mes" | "todo";
 
@@ -93,6 +94,9 @@ export default function EstadisticasMeliPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-6 pt-2">
           <div className="flex items-center gap-3">
+            <Link href="/" className="p-2 rounded-xl hover:bg-white/5 transition-colors">
+              <ArrowLeft className="w-5 h-5 text-white" />
+            </Link>
             <div className="p-2.5 rounded-xl" style={{ background: "#FFE60022" }}>
               <BarChart2 className="w-6 h-6" style={{ color: "#FFE600" }} />
             </div>
