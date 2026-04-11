@@ -9,7 +9,7 @@ import Link from "next/link";
 interface LinkedAccount {
   id: string;
   meli_user_id: string;
-  meli_nickname: string;
+  nickname: string;
   is_active: boolean;
   created_at: string;
 }
@@ -206,14 +206,14 @@ function ConfiguracionMeliPage() {
                       style={{ background: account.is_active ? "#34D399" : "#6B7280" }}
                     />
                     <div>
-                      <p className="text-white font-medium text-sm">{account.meli_nickname}</p>
+                      <p className="text-white font-medium text-sm">{account.nickname || `Cuenta ${account.meli_user_id}`}</p>
                       <p className="text-xs" style={{ color: "#6B7280" }}>
                         ID: {account.meli_user_id}
                       </p>
                     </div>
                   </div>
                   <button
-                    onClick={() => handleDisconnect(account.id, account.meli_nickname)}
+                    onClick={() => handleDisconnect(account.id, account.nickname || account.meli_user_id)}
                     className="p-2 rounded-lg hover:bg-white/10 transition-colors"
                     title="Desconectar cuenta"
                   >

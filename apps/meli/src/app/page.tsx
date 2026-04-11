@@ -364,7 +364,7 @@ function AppJeezInner() {
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
   const [editingNick, setEditingNick] = useState<string | null>(null);
   const [editNickVal, setEditNickVal] = useState("");
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<any>(undefined); // undefined = sesion no verificada aun
 
   // Obtener usuario actual
   useEffect(() => {
@@ -410,9 +410,10 @@ function AppJeezInner() {
     return () => window.removeEventListener('questionAnswered', handleQuestionAnswered);
   }, [load]);
 
+  // Cargar cuentas solo cuando el usuario está confirmado
   useEffect(() => {
-    load();
-  }, [load]);
+    if (user !== undefined) load();
+  }, [user, load]);
 
   // Inicializar selectedAccountId desde localStorage y preseleccionar primera cuenta
   useEffect(() => {
