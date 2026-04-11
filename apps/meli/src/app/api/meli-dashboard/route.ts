@@ -237,12 +237,12 @@ export async function GET(request: NextRequest) {
                   immediate_payment: false,
                 };
                 // Guardar en cache DB de forma async (sin await)
-                supabase
-                  .from("linked_meli_accounts")
-                  .update({ reputation_json: rep, reputation_updated_at: new Date().toISOString() })
-                  .eq("id", account.id)
-                  .then(() => {})
-                  .catch(() => {});
+                void Promise.resolve(
+                  supabase
+                    .from("linked_meli_accounts")
+                    .update({ reputation_json: rep, reputation_updated_at: new Date().toISOString() })
+                    .eq("id", account.id)
+                ).catch(() => {});
               }
             } catch {
               // No bloquear el dashboard si la API de MeLi falla
