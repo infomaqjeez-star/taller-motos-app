@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { getValidToken } from "@/lib/meli";
 
 export const dynamic = "force-dynamic";
 
@@ -79,8 +78,12 @@ export async function GET(request: NextRequest) {
         };
 
         try {
-          const validToken = await getValidToken(account);
-          if (!validToken) return base;
+          // Usar token directamente (ahora se guarda sin encriptar)
+          const validToken = account.access_token_enc;
+          if (!validToken || !validToken.startsWith('APP_USR')) {
+            console.log(`[meli-stats] Token inválido para ${account.meli_nickname}`);
+            return base;
+          }
 
           const headers = { Authorization: `Bearer ${validToken}` };
           const meliId = String(account.meli_user_id);
@@ -94,7 +97,7 @@ export async function GET(request: NextRequest) {
               { headers, signal: AbortSignal.timeout(7000) }
             ),
             fetch(
-              "https://api.mercadolibre.com/my/questions?limit=1",
+              `https://api.mercadolibre.com/questions/search?seller_id=${meliId}&limit=1`,
               { headers, signal: AbortSignal.timeout(5000) }
             ),
             fetch(
