@@ -114,17 +114,17 @@ export async function GET(request: NextRequest) {
     // Usar nickname por defecto
   }
 
-  // Guardar tokens sin encriptar para poder usarlos en endpoints
+  // Guardar tokens SIN encriptar para poder usarlos en endpoints
   const expiresAt = new Date(Date.now() + tokenData.expires_in * 1000).toISOString();
 
-  // Guardar en Supabase usando la funcion RPC
+  // Guardar en Supabase usando la funcion RPC PLAIN (sin encriptar)
   try {
-    const { error: rpcError } = await supabase.rpc("upsert_linked_meli_account", {
+    const { error: rpcError } = await supabase.rpc("upsert_linked_meli_account_plain", {
       p_user_id: userId,
       p_meli_user_id: String(tokenData.user_id),
       p_meli_nickname: meliNickname,
-      p_access_token_enc: tokenData.access_token, // Sin encriptar
-      p_refresh_token_enc: tokenData.refresh_token, // Sin encriptar
+      p_access_token: tokenData.access_token,
+      p_refresh_token: tokenData.refresh_token,
       p_token_expiry_date: expiresAt,
     });
 
