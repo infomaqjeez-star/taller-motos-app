@@ -11,63 +11,85 @@ const supabase = createClient(
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { question_id, answer_text, meli_account_id } = body;
+    const { question_id, answer_text } = body;
 
-    if (!question_id || !answer_text || !meli_account_id) {
+    if (!question_id || !answer_text) {
       return NextResponse.json(
-        { error: "Faltan campos requeridos" },
+        { error: "Faltan campos requeridos: question_id, answer_text" },
         { status: 400 }
       );
     }
 
-    // Obtener cuenta
-    const { data: account } = await supabase
+    console.log(`[meli-answer] Respondiendo pregunta ${question_id}`);
+
+    // OBTENER TODAS LAS CUENTAS ACTIVAS
+    const { data: accounts } = await supabase
       .from("linked_meli_accounts")
       .select("id, meli_user_id, meli_nickname, access_token_enc")
-      .eq("id", meli_account_id)
-      .single();
+      .eq("is_active", true);
 
-    if (!account?.access_token_enc) {
+    if (!accounts || accounts.length === 0) {
       return NextResponse.json(
-        { error: "Cuenta no encontrada" },
+        { error: "No hay cuentas activas" },
         { status: 404 }
       );
     }
 
-    console.log(`[meli-answer] Respondiendo pregunta ${question_id} para cuenta: ${account.meli_nickname} (ID: ${account.id})`);
-    console.log(`[meli-answer] Token preview: ${account.access_token_enc?.substring(0, 30)}...`);
+    console.log(`[meli-answer] ${accounts.length} cuentas disponibles:`, accounts.map(a => `${a.meli_nickname}(${a.meli_user_id})`).join(', '));
 
-    // Primero verificar que la pregunta existe y pertenece a esta cuenta
-    const questionCheck = await fetch(`https://api.mercadolibre.com/questions/${question_id}`, {
-      headers: { "Authorization": `Bearer ${account.access_token_enc}` },
-    });
-    
-    if (!questionCheck.ok) {
-      console.error(`[meli-answer] Pregunta ${question_id} no encontrada con el token de ${account.meli_nickname}`);
+    // BUSCAR LA CUENTA CORRECTA PROBANDO CADA UNA
+    let correctAccount = null;
+    let questionData = null;
+
+    for (const account of accounts) {
+      if (!account.access_token_enc?.startsWith('APP_USR')) {
+        console.log(`[meli-answer] Saltando ${account.meli_nickname} - token inválido`);
+        continue;
+      }
+
+      try {
+        console.log(`[meli-answer] Probando cuenta: ${account.meli_nickname} (meli_user_id: ${account.meli_user_id})`);
+        
+        const checkRes = await fetch(`https://api.mercadolibre.com/questions/${question_id}`, {
+          headers: { "Authorization": `Bearer ${account.access_token_enc}` },
+          signal: AbortSignal.timeout(5000),
+        });
+
+        if (checkRes.ok) {
+          const qData = await checkRes.json();
+          console.log(`[meli-answer] Pregunta encontrada con ${account.meli_nickname}! Seller ID: ${qData.seller_id}`);
+          
+          // Verificar que la pregunta pertenece a esta cuenta
+          if (String(qData.seller_id) === String(account.meli_user_id)) {
+            correctAccount = account;
+            questionData = qData;
+            console.log(`[meli-answer] ✅ CUENTA CORRECTA IDENTIFICADA: ${account.meli_nickname}`);
+            break;
+          } else {
+            console.log(`[meli-answer] ⚠️ Pregunta accesible pero seller_id ${qData.seller_id} != ${account.meli_user_id}`);
+          }
+        } else {
+          console.log(`[meli-answer] Cuenta ${account.meli_nickname} no puede acceder a la pregunta (status: ${checkRes.status})`);
+        }
+      } catch (e) {
+        console.log(`[meli-answer] Error probando ${account.meli_nickname}:`, e);
+      }
+    }
+
+    if (!correctAccount) {
       return NextResponse.json(
-        { error: `La pregunta no existe o no pertenece a la cuenta ${account.meli_nickname}. Verifica que estés usando la cuenta correcta.` },
+        { error: "No se encontró una cuenta con acceso a esta pregunta. Verifica que la pregunta exista y pertenezca a una de tus cuentas conectadas." },
         { status: 404 }
       );
     }
+
+    // RESPONDER CON LA CUENTA CORRECTA
+    console.log(`[meli-answer] Enviando respuesta con cuenta: ${correctAccount.meli_nickname}`);
     
-    const questionData = await questionCheck.json();
-    console.log(`[meli-answer] Pregunta encontrada: ID=${questionData.id}, seller_id=${questionData.seller_id}, status=${questionData.status}`);
-    console.log(`[meli-answer] Cuenta usada: ${account.meli_nickname}, meli_user_id=${account.meli_user_id}`);
-
-    // Verificar que la pregunta pertenece a esta cuenta
-    if (String(questionData.seller_id) !== String(account.meli_user_id)) {
-      console.error(`[meli-answer] ERROR: La pregunta ${question_id} pertenece al seller ${questionData.seller_id}, pero estamos usando la cuenta ${account.meli_user_id}`);
-      return NextResponse.json(
-        { error: `Esta pregunta pertenece a otra cuenta. Seller ID: ${questionData.seller_id}, Cuenta usada: ${account.meli_user_id}` },
-        { status: 403 }
-      );
-    }
-
-    // Responder en MeLi
     const response = await fetch(`https://api.mercadolibre.com/questions/${question_id}/answers`, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${account.access_token_enc}`,
+        "Authorization": `Bearer ${correctAccount.access_token_enc}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ text: answer_text }),
@@ -75,18 +97,22 @@ export async function POST(request: NextRequest) {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ message: "Error" }));
-      console.error(`[meli-answer] Error ${response.status}:`, errorData);
+      console.error(`[meli-answer] Error ${response.status} de MeLi:`, errorData);
       return NextResponse.json(
         { error: "Error al responder", details: errorData },
         { status: response.status }
       );
     }
 
-    return NextResponse.json({ status: "ok", message: "Respuesta enviada" });
+    return NextResponse.json({ 
+      status: "ok", 
+      message: "Respuesta enviada correctamente",
+      account: correctAccount.meli_nickname 
+    });
   } catch (error) {
-    console.error("[meli-answer] Error:", error);
+    console.error("[meli-answer] Error inesperado:", error);
     return NextResponse.json(
-      { error: "Error interno" },
+      { error: "Error interno del servidor" },
       { status: 500 }
     );
   }
