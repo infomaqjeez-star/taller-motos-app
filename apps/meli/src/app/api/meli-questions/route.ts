@@ -1,23 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { getValidToken } from "@/lib/meli";
 
 export const dynamic = "force-dynamic";
 
 const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co",
-  process.env.SUPABASE_SERVICE_ROLE_KEY || "placeholder-key"
+  process.env.NEXT_PUBLIC_SUPABASE_URL || "",
+  process.env.SUPABASE_SERVICE_ROLE_KEY || ""
 );
 
-/**
- * GET /api/meli-questions
- *
- * Obtiene preguntas sin responder de todas las cuentas MeLi del usuario,
- * directamente desde la API de Mercado Libre.
- */
 export async function GET(request: NextRequest) {
   try {
-    // Auth
     const authHeader = request.headers.get("authorization");
     let userId: string | null = null;
     if (authHeader?.startsWith("Bearer ")) {
@@ -25,13 +17,12 @@ export async function GET(request: NextRequest) {
       if (user) userId = user.id;
     }
     if (!userId) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+      return NextResponse.json([], { status: 200 });
     }
 
-    // Obtener cuentas activas
     const { data: accounts } = await supabase
       .from("linked_meli_accounts")
-      .select("id, meli_user_id, meli_nickname, access_token_enc, refresh_token_enc, token_expiry_date")
+      .select("id, meli_user_id, meli_nickname, access_token_enc")
       .eq("user_id", userId)
       .eq("is_active", true);
 
@@ -39,112 +30,51 @@ export async function GET(request: NextRequest) {
       return NextResponse.json([]);
     }
 
-    // Fetch preguntas de todas las cuentas en paralelo
     const allQuestions: any[] = [];
 
-    console.log(`[meli-questions] Procesando ${accounts.length} cuentas...`);
-
-    await Promise.all(
-      accounts.map(async (account: any) => {
-        try {
-          console.log(`[meli-questions] Cuenta: ${account.meli_nickname} (ID: ${account.meli_user_id})`);
-          
-          const validToken = await getValidToken(account);
-          if (!validToken) {
-            console.log(`[meli-questions] No se pudo obtener token válido para ${account.meli_nickname}`);
-            return;
-          }
-
-          const headers = { Authorization: `Bearer ${validToken}` };
-
-          // Preguntas sin responder - usar /questions/search con seller_id
-          // El seller_id es obligatorio para este endpoint
-          const url = `https://api.mercadolibre.com/questions/search?seller_id=${account.meli_user_id}&status=UNANSWERED&limit=50`;
-          console.log(`[meli-questions] Fetching: ${url}`);
-          
-          const qRes = await fetch(url, { headers, signal: AbortSignal.timeout(10000) });
-          
-          console.log(`[meli-questions] Response status: ${qRes.status} ${qRes.statusText}`);
-          
-          if (!qRes.ok) {
-            const errorText = await qRes.text().catch(() => "Unknown error");
-            console.error(`[meli-questions] Error ${qRes.status} para ${account.meli_nickname}: ${errorText}`);
-            return;
-          }
-          
-          const qData = await qRes.json();
-          // La respuesta tiene formato { questions: [...], total: N, ... }
-          const questions: any[] = qData.questions || [];
-          
-          console.log(`[meli-questions] ${account.meli_nickname}: ${questions.length} preguntas encontradas (total: ${qData.total || 0})`);
-
-          if (questions.length === 0) return;
-
-          // Obtener thumbnails de items en lotes de 20
-          const itemIds = Array.from(new Set(questions.map((q: any) => q.item_id).filter(Boolean))) as string[];
-          const itemMap: Record<string, { title: string; thumbnail: string }> = {};
-
-          const chunks: string[][] = [];
-          for (let i = 0; i < itemIds.length; i += 20) {
-            chunks.push(itemIds.slice(i, i + 20));
-          }
-          await Promise.all(
-            chunks.map(async (chunk) => {
-              try {
-                const iRes = await fetch(
-                  `https://api.mercadolibre.com/items?ids=${chunk.join(",")}`,
-                  { headers, signal: AbortSignal.timeout(5000) }
-                );
-                if (!iRes.ok) return;
-                const items: any[] = await iRes.json();
-                for (const item of items) {
-                  if (item?.body?.id) {
-                    itemMap[item.body.id] = {
-                      title: item.body.title || "",
-                      thumbnail: item.body.thumbnail || "",
-                    };
-                  }
-                }
-              } catch { /* ignorar errores de batch */ }
-            })
-          );
-
-          // Mapear al formato que espera la página
-          for (const q of questions) {
-            const itemInfo = itemMap[q.item_id] || { title: "", thumbnail: "" };
-            allQuestions.push({
-              id:               String(q.id),
-              meli_question_id: q.id,
-              meli_account_id:  account.id,
-              item_id:          q.item_id || null,
-              item_title:       itemInfo.title,
-              item_thumbnail:   itemInfo.thumbnail,
-              buyer_id:         q.from?.id || null,
-              buyer_nickname:   q.from?.nickname || "Comprador",
-              question_text:    q.text || "",
-              status:           q.status || "UNANSWERED",
-              date_created:     q.date_created || new Date().toISOString(),
-              answer_text:      q.answer?.text || null,
-              answer_date:      q.answer?.date_created || null,
-              meli_accounts:    { nickname: account.meli_nickname },
-            });
-          }
-        } catch (err) { 
-          console.error(`[meli-questions] Error procesando cuenta ${account.meli_nickname}:`, err);
+    for (const account of accounts) {
+      try {
+        if (!account.access_token_enc) continue;
+        
+        const headers = { Authorization: `Bearer ${account.access_token_enc}` };
+        const url = `https://api.mercadolibre.com/questions/search?seller_id=${account.meli_user_id}&status=UNANSWERED&limit=50`;
+        
+        const res = await fetch(url, { headers, signal: AbortSignal.timeout(10000) });
+        
+        if (!res.ok) {
+          console.error(`[meli-questions] Error ${res.status} para ${account.meli_nickname}`);
+          continue;
         }
-      })
-    );
+        
+        const data = await res.json();
+        const questions = data.questions || [];
+        
+        for (const q of questions) {
+          allQuestions.push({
+            meli_question_id: q.id,
+            meli_account_id: account.id,
+            item_id: q.item_id,
+            item_title: q.item_id,
+            item_thumbnail: "",
+            buyer_id: q.from?.id,
+            buyer_nickname: q.from?.nickname || "Comprador",
+            question_text: q.text,
+            status: q.status,
+            date_created: q.date_created,
+            answer_text: null,
+            answer_date: null,
+            meli_accounts: { nickname: account.meli_nickname },
+          });
+        }
+      } catch (e) {
+        console.error(`[meli-questions] Error cuenta ${account.meli_nickname}:`, e);
+      }
+    }
 
-    // Ordenar por fecha descendente
-    allQuestions.sort((a, b) =>
-      new Date(b.date_created).getTime() - new Date(a.date_created).getTime()
-    );
-
-    console.log(`[meli-questions] Total preguntas devueltas: ${allQuestions.length}`);
-
+    allQuestions.sort((a, b) => new Date(b.date_created).getTime() - new Date(a.date_created).getTime());
     return NextResponse.json(allQuestions);
   } catch (error) {
-    console.error("[meli-questions] Error inesperado:", error);
-    return NextResponse.json({ error: "Error interno" }, { status: 500 });
+    console.error("[meli-questions] Error:", error);
+    return NextResponse.json([]);
   }
 }
