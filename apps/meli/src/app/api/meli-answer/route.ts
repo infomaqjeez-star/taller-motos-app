@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     // Obtener cuenta - usando access_token directamente (sin _enc)
     const { data: account, error: accountError } = await supabase
       .from("linked_meli_accounts")
-      .select("access_token_enc")
+      .select("access_token_enc, meli_nickname")
       .eq("id", meli_account_id)
       .single();
 
@@ -33,6 +33,9 @@ export async function POST(request: NextRequest) {
         { status: 404 }
       );
     }
+
+    console.log(`[meli-answer] Cuenta: ${account.meli_nickname}`);
+    console.log(`[meli-answer] Token (primeros 50 chars):`, account.access_token_enc.substring(0, 50));
 
     // Intentar usar el token directamente
     // Si está encriptado, esto fallará con 401/403
