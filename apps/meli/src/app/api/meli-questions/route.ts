@@ -34,20 +34,32 @@ export async function GET(request: NextRequest) {
 
     for (const account of accounts) {
       try {
-        if (!account.access_token_enc) continue;
+        console.log(`[meli-questions] Procesando cuenta: ${account.meli_nickname}, meli_user_id: ${account.meli_user_id}`);
+        console.log(`[meli-questions] Token (primeros 30 chars): ${account.access_token_enc?.substring(0, 30)}...`);
+        
+        if (!account.access_token_enc) {
+          console.log(`[meli-questions] Sin token para ${account.meli_nickname}`);
+          continue;
+        }
         
         const headers = { Authorization: `Bearer ${account.access_token_enc}` };
         const url = `https://api.mercadolibre.com/questions/search?seller_id=${account.meli_user_id}&status=UNANSWERED&limit=50`;
         
+        console.log(`[meli-questions] Fetching: ${url}`);
         const res = await fetch(url, { headers, signal: AbortSignal.timeout(10000) });
         
+        console.log(`[meli-questions] Response status: ${res.status}`);
+        
         if (!res.ok) {
-          console.error(`[meli-questions] Error ${res.status} para ${account.meli_nickname}`);
+          const errorText = await res.text().catch(() => "Unknown");
+          console.error(`[meli-questions] Error ${res.status} para ${account.meli_nickname}: ${errorText}`);
           continue;
         }
         
         const data = await res.json();
+        console.log(`[meli-questions] Data keys: ${Object.keys(data).join(", ")}`);
         const questions = data.questions || [];
+        console.log(`[meli-questions] ${questions.length} preguntas encontradas`);
         
         for (const q of questions) {
           allQuestions.push({
