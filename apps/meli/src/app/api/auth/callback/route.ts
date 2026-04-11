@@ -130,12 +130,13 @@ export async function GET(request: NextRequest) {
   const expiresAt = new Date(Date.now() + tokenData.expires_in * 1000).toISOString();
 
   // Guardar en Supabase usando la funcion RPC
+  // NOTA: También guardamos el access_token sin encriptar para usar en endpoints
   try {
     const { error: rpcError } = await supabase.rpc("upsert_linked_meli_account", {
       p_user_id: userId,
       p_meli_user_id: String(tokenData.user_id),
       p_meli_nickname: meliNickname,
-      p_access_token_enc: accessTokenEnc,
+      p_access_token_enc: tokenData.access_token, // Guardar sin encriptar temporalmente
       p_refresh_token_enc: refreshTokenEnc,
       p_token_expiry_date: expiresAt,
     });
