@@ -26,6 +26,9 @@ export async function GET(request: NextRequest) {
       .eq("user_id", userId)
       .eq("is_active", true);
 
+    console.log(`[meli-questions] Cuentas encontradas: ${accounts?.length || 0}`);
+    console.log(`[meli-questions] Cuentas:`, accounts?.map(a => a.meli_nickname).join(', '));
+
     if (!accounts || accounts.length === 0) {
       return NextResponse.json([]);
     }
