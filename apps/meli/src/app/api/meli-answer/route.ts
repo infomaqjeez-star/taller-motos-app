@@ -15,11 +15,15 @@ const supabase = createClient(
  * Responde una pregunta de Mercado Libre.
  */
 export async function POST(request: NextRequest) {
+  console.log("[meli-answer] POST recibido");
   try {
     const body = await request.json();
     const { question_id, answer_text, meli_account_id } = body;
 
+    console.log(`[meli-answer] Datos recibidos: question_id=${question_id}, meli_account_id=${meli_account_id}`);
+
     if (!question_id || !answer_text || !meli_account_id) {
+      console.log("[meli-answer] Faltan campos requeridos");
       return NextResponse.json(
         { error: "Faltan campos requeridos: question_id, answer_text, meli_account_id" },
         { status: 400 }

@@ -333,18 +333,8 @@ function QuestionCard({ q, onAnswered }: { q: Question; onAnswered: (id: number)
 
       {open && !answered && (
         <div className="px-4 pb-4 space-y-3 border-t" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
-          {/* Context del producto - SIN IMAGEN DUPLICADA */}
+          {/* Pregunta completa */}
           <div className="pt-3 p-3 rounded-xl" style={{ background: "#121212" }}>
-            <p className="text-xs font-bold mb-1" style={{ color: "#FFE600" }}>
-              Producto
-            </p>
-            <p className="text-xs text-white line-clamp-2 mb-1">{q.item_title}</p>
-            <p className="text-[10px]" style={{ color: "#6B7280" }}>
-              ID: {q.item_id}
-            </p>
-          </div>
-
-          <div className="pt-2 p-3 rounded-xl" style={{ background: "#121212" }}>
             <p className="text-xs font-semibold mb-1" style={{ color: "#6B7280" }}>Pregunta completa:</p>
             <p className="text-sm text-white">{q.question_text}</p>
           </div>
