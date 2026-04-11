@@ -44,7 +44,18 @@ function StatCard({
 
 export default function EstadisticasMeliPage() {
   const router = useRouter();
-  const [periodo, setPeriodo] = useState<Periodo>("mes");
+  const [periodo, setPeriodo] = useState<Periodo>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("meli-stats-periodo");
+      if (saved && ["hoy", "semana", "mes", "todo"].includes(saved)) return saved as Periodo;
+    }
+    return "mes";
+  });
+
+  function changePeriodo(p: Periodo) {
+    setPeriodo(p);
+    localStorage.setItem("meli-stats-periodo", p);
+  }
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -104,7 +115,7 @@ export default function EstadisticasMeliPage() {
           {PERIODOS.map(({ key, label }) => (
             <button
               key={key}
-              onClick={() => setPeriodo(key)}
+              onClick={() => changePeriodo(key)}
               className="px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition-all"
               style={{
                 background: periodo === key ? "#FFE600" : "#1F1F1F",
