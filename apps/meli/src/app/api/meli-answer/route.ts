@@ -8,6 +8,32 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY || ""
 );
 
+// Decrypt function matching the one in lib/meli.ts
+async function decrypt(enc64: string): Promise<string> {
+  const ENC_KEY = process.env.APPJEEZ_MELI_ENCRYPTION_KEY || "";
+  
+  // Derive key using PBKDF2
+  const enc = new TextEncoder();
+  const km = await crypto.subtle.importKey("raw", enc.encode(ENC_KEY), "PBKDF2", false, ["deriveKey"]);
+  const key = await crypto.subtle.deriveKey(
+    { name: "PBKDF2", salt: enc.encode("appjeez-meli-salt"), iterations: 100000, hash: "SHA-256" },
+    km,
+    { name: "AES-GCM", length: 256 },
+    false,
+    ["decrypt"]
+  );
+  
+  // Decrypt
+  const combined = Uint8Array.from(atob(enc64), c => c.charCodeAt(0));
+  const plain = await crypto.subtle.decrypt(
+    { name: "AES-GCM", iv: combined.slice(0, 12) },
+    key,
+    combined.slice(12)
+  );
+  
+  return new TextDecoder().decode(plain);
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -20,7 +46,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Obtener cuenta con tokens
+    // Obtener cuenta
     const { data: account, error: accountError } = await supabase
       .from("linked_meli_accounts")
       .select("access_token_enc, refresh_token_enc, token_expiry_date")
@@ -34,43 +60,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verificar si el token está vencido
-    const isExpired = account.token_expiry_date && 
-      new Date(account.token_expiry_date).getTime() < Date.now() + 5 * 60 * 1000;
-
-    let token = account.access_token_enc;
-
-    // Si está vencido, intentar refresh (simplificado)
-    if (isExpired && account.refresh_token_enc) {
-      try {
-        const refreshRes = await fetch("https://api.mercadolibre.com/oauth/token", {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: new URLSearchParams({
-            grant_type: "refresh_token",
-            client_id: process.env.APPJEEZ_MELI_APP_ID || "",
-            client_secret: process.env.APPJEEZ_MELI_SECRET_KEY || "",
-            refresh_token: account.refresh_token_enc,
-          }),
-        });
-
-        if (refreshRes.ok) {
-          const newTokens = await refreshRes.json();
-          token = newTokens.access_token;
-          
-          // Actualizar en DB
-          await supabase
-            .from("linked_meli_accounts")
-            .update({
-              access_token_enc: newTokens.access_token,
-              refresh_token_enc: newTokens.refresh_token,
-              token_expiry_date: new Date(Date.now() + newTokens.expires_in * 1000).toISOString(),
-            })
-            .eq("id", meli_account_id);
-        }
-      } catch (e) {
-        console.error("[meli-answer] Error refresh:", e);
-      }
+    // Desencriptar token
+    let token: string;
+    try {
+      token = await decrypt(account.access_token_enc);
+    } catch (e) {
+      console.error("[meli-answer] Error desencriptando token:", e);
+      return NextResponse.json(
+        { error: "Error al desencriptar token" },
+        { status: 500 }
+      );
     }
 
     // Responder en MeLi
@@ -85,6 +84,7 @@ export async function POST(request: NextRequest) {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ message: "Error" }));
+      console.error("[meli-answer] Error MeLi:", errorData);
       return NextResponse.json(
         { error: "Error al responder", details: errorData },
         { status: response.status }
