@@ -128,8 +128,9 @@ export async function GET(request: NextRequest) {
             allMessages.push({ ...msg, account_nickname: account.meli_nickname });
 
             // Guardar en DB de forma async
-            supabase.from("meli_messages").upsert(msg, { onConflict: "meli_message_id" })
-              .then(() => {}).catch(() => {});
+            void Promise.resolve(
+              supabase.from("meli_messages").upsert(msg, { onConflict: "meli_message_id" })
+            ).catch(() => {});
           }
         } catch {
           // Si la cuenta tiene token vencido, ignorar silenciosamente
