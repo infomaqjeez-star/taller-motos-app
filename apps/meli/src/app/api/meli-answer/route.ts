@@ -1,84 +1,87 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
-import { getValidToken } from "@/lib/meli";
 
 export const dynamic = "force-dynamic";
 
 const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co",
-  process.env.SUPABASE_SERVICE_ROLE_KEY || "placeholder-key"
+  process.env.NEXT_PUBLIC_SUPABASE_URL || "",
+  process.env.SUPABASE_SERVICE_ROLE_KEY || ""
 );
 
-/**
- * POST /api/meli-answer
- *
- * Responde una pregunta de Mercado Libre.
- */
+// Simple decrypt function inline
+async function decryptToken(enc64: string): Promise<string> {
+  const ENC_KEY = process.env.APPJEEZ_MELI_ENCRYPTION_KEY || "";
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(ENC_KEY),
+    { name: "PBKDF2" },
+    false,
+    ["deriveKey"]
+  );
+  const derivedKey = await crypto.subtle.deriveKey(
+    { name: "PBKDF2", salt: new TextEncoder().encode("appjeez-meli-salt"), iterations: 100000, hash: "SHA-256" },
+    key,
+    { name: "AES-GCM", length: 256 },
+    false,
+    ["decrypt"]
+  );
+  const combined = Uint8Array.from(atob(enc64), c => c.charCodeAt(0));
+  const plain = await crypto.subtle.decrypt({ name: "AES-GCM", iv: combined.slice(0, 12) }, derivedKey, combined.slice(12));
+  return new TextDecoder().decode(plain);
+}
+
 export async function POST(request: NextRequest) {
-  console.log("[meli-answer] POST recibido");
   try {
     const body = await request.json();
     const { question_id, answer_text, meli_account_id } = body;
 
-    console.log(`[meli-answer] Datos recibidos: question_id=${question_id}, meli_account_id=${meli_account_id}`);
-
     if (!question_id || !answer_text || !meli_account_id) {
-      console.log("[meli-answer] Faltan campos requeridos");
       return NextResponse.json(
-        { error: "Faltan campos requeridos: question_id, answer_text, meli_account_id" },
+        { error: "Faltan campos requeridos" },
         { status: 400 }
       );
     }
 
-    // Obtener los datos de la cuenta desde linked_meli_accounts
+    // Obtener cuenta
     const { data: account, error: accountError } = await supabase
       .from("linked_meli_accounts")
-      .select("id, meli_user_id, meli_nickname, access_token_enc, refresh_token_enc, token_expiry_date")
+      .select("access_token_enc")
       .eq("id", meli_account_id)
       .single();
 
-    if (accountError || !account) {
-      console.error(`[meli-answer] Cuenta no encontrada: ${meli_account_id}`, accountError);
+    if (accountError || !account?.access_token_enc) {
       return NextResponse.json(
-        { error: "Cuenta de Mercado Libre no encontrada" },
+        { error: "Cuenta no encontrada" },
         { status: 404 }
       );
     }
 
-    // Obtener token válido (con auto-refresh si es necesario)
-    const validToken = await getValidToken(account as any);
-    
-    if (!validToken) {
-      return NextResponse.json(
-        { error: "No se pudo obtener token válido para la cuenta" },
-        { status: 401 }
-      );
-    }
+    // Desencriptar token
+    const token = await decryptToken(account.access_token_enc);
 
-    // Responder la pregunta en MeLi
+    // Responder en MeLi
     const response = await fetch(`https://api.mercadolibre.com/questions/${question_id}/answers`, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${validToken}`,
+        "Authorization": `Bearer ${token}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ text: answer_text }),
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ message: "Error desconocido" }));
-      console.error(`[meli-answer] Error al responder:`, errorData);
+      const errorData = await response.json().catch(() => ({ message: "Error" }));
       return NextResponse.json(
-        { error: "Error al responder en Mercado Libre", details: errorData },
+        { error: "Error al responder", details: errorData },
         { status: response.status }
       );
     }
 
-    return NextResponse.json({ status: "ok", message: "Respuesta enviada correctamente" });
+    return NextResponse.json({ status: "ok" });
   } catch (error) {
-    console.error("[meli-answer] Error inesperado:", error);
+    console.error("[meli-answer] Error:", error);
     return NextResponse.json(
-      { error: "Error interno del servidor" },
+      { error: "Error interno" },
       { status: 500 }
     );
   }
