@@ -561,6 +561,26 @@ function MensajesInner() {
   const [questionsSyncing, setQuestionsSyncing] = useState(false);
   const [questionsError, setQuestionsError] = useState<string | null>(null);
   
+  // Estado para rastrear preguntas respondidas recientemente (evita que vuelvan a aparecer)
+  const [recentlyAnswered, setRecentlyAnswered] = useState<Set<number>>(() => {
+    // Cargar desde localStorage al iniciar
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("recentlyAnsweredQuestions");
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          // Filtrar solo los que tienen menos de 10 minutos
+          const now = Date.now();
+          const valid = parsed.filter((item: any) => now - item.timestamp < 10 * 60 * 1000);
+          return new Set(valid.map((item: any) => item.id));
+        } catch {
+          return new Set();
+        }
+      }
+    }
+    return new Set();
+  });
+  
   // Estados para mensajes
   const [messages, setMessages] = useState<Message[]>([]);
   const [messagesLoading, setMessagesLoading] = useState(true);
@@ -643,9 +663,34 @@ function MensajesInner() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Handler cuando se responde una pregunta - remueve inmediatamente
+  // Handler cuando se responde una pregunta - remueve inmediatamente y marca como respondida
   const handleAnswered = useCallback((id: number) => {
     setQuestions(qs => qs.filter(q => q.meli_question_id !== id));
+    
+    // Agregar al set de respondidas recientemente
+    setRecentlyAnswered(prev => {
+      const newSet = new Set(prev).add(id);
+      
+      // Guardar en localStorage con timestamp
+      const toSave = Array.from(newSet).map(qId => ({ id: qId, timestamp: Date.now() }));
+      localStorage.setItem("recentlyAnsweredQuestions", JSON.stringify(toSave));
+      
+      return newSet;
+    });
+    
+    // Limpiar después de 10 minutos
+    setTimeout(() => {
+      setRecentlyAnswered(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(id);
+        
+        // Actualizar localStorage
+        const toSave = Array.from(newSet).map(qId => ({ id: qId, timestamp: Date.now() }));
+        localStorage.setItem("recentlyAnsweredQuestions", JSON.stringify(toSave));
+        
+        return newSet;
+      });
+    }, 10 * 60 * 1000);
   }, []);
 
   // Marcar mensaje como leído
@@ -666,9 +711,11 @@ function MensajesInner() {
   }, []);
 
   const filteredQuestions = questions.filter(q =>
-    q.question_text.toLowerCase().includes(search.toLowerCase()) ||
+    // Excluir preguntas respondidas recientemente
+    !recentlyAnswered.has(q.meli_question_id) &&
+    (q.question_text.toLowerCase().includes(search.toLowerCase()) ||
     (q.item_title ?? "").toLowerCase().includes(search.toLowerCase()) ||
-    (q.meli_accounts?.nickname ?? "").toLowerCase().includes(search.toLowerCase())
+    (q.meli_accounts?.nickname ?? "").toLowerCase().includes(search.toLowerCase()))
   );
 
   const filteredMessages = messages.filter(m =>
