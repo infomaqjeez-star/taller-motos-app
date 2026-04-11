@@ -57,9 +57,9 @@ export async function GET(request: NextRequest) {
 
           const headers = { Authorization: `Bearer ${validToken}` };
 
-          // Preguntas sin responder - intentar con formato alternativo
-          // Opción 1: /questions/search (sin seller_id en query, usa el token)
-          const url = "https://api.mercadolibre.com/questions/search?status=UNANSWERED&limit=50";
+          // Preguntas sin responder - usar /questions/search con seller_id
+          // El seller_id es obligatorio para este endpoint
+          const url = `https://api.mercadolibre.com/questions/search?seller_id=${account.meli_user_id}&status=UNANSWERED&limit=50`;
           console.log(`[meli-questions] Fetching: ${url}`);
           
           const qRes = await fetch(url, { headers, signal: AbortSignal.timeout(10000) });
@@ -73,9 +73,10 @@ export async function GET(request: NextRequest) {
           }
           
           const qData = await qRes.json();
+          // La respuesta tiene formato { questions: [...], total: N, ... }
           const questions: any[] = qData.questions || [];
           
-          console.log(`[meli-questions] ${account.meli_nickname}: ${questions.length} preguntas encontradas`);
+          console.log(`[meli-questions] ${account.meli_nickname}: ${questions.length} preguntas encontradas (total: ${qData.total || 0})`);
 
           if (questions.length === 0) return;
 
