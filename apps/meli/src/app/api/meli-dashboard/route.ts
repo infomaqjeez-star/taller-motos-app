@@ -124,45 +124,58 @@ export async function GET(request: NextRequest) {
           const validToken = account.access_token_enc;
 
           if (!validToken || !validToken.startsWith('APP_USR')) {
-            console.log(`[meli-dashboard] Token inválido para ${account.meli_nickname}`);
+            console.log(`[meli-dashboard] ❌ Token inválido para ${account.meli_nickname}`);
             return defaultReturn("Token inválido");
           }
 
           const meliHeaders = { Authorization: `Bearer ${validToken}` };
           const meliId = String(account.meli_user_id);
 
+          console.log(`[meli-dashboard] ✅ Token válido para ${account.meli_nickname}, consultando API...`);
+
           // ── Llamadas paralelas a MeLi API ───────────────────────────────
-          const [userRes, questionsRes, ordersReadyRes, itemsRes, claimsRes, unreadRes, todayOrdersRes] =
-            await Promise.allSettled([
-              // 1. Reputacion + datos del vendedor
-              fetch(`https://api.mercadolibre.com/users/${meliId}?attributes=seller_reputation,nickname`, {
-                headers: meliHeaders, signal: AbortSignal.timeout(5000),
-              }),
-              // 2. Preguntas sin responder
-              fetch(`https://api.mercadolibre.com/my/questions?status=UNANSWERED&limit=1`, {
-                headers: meliHeaders, signal: AbortSignal.timeout(5000),
-              }),
-              // 3. Órdenes listas para enviar
-              fetch(`https://api.mercadolibre.com/orders/search?seller=${meliId}&order.status=ready_to_ship&limit=1`, {
-                headers: meliHeaders, signal: AbortSignal.timeout(5000),
-              }),
-              // 4. Publicaciones activas
-              fetch(`https://api.mercadolibre.com/users/${meliId}/items/search?status=active&limit=1`, {
-                headers: meliHeaders, signal: AbortSignal.timeout(5000),
-              }),
-              // 5. Reclamos abiertos
-              fetch(`https://api.mercadolibre.com/post-sale/v2/claims/search?role=seller&status=opened&limit=1`, {
-                headers: meliHeaders, signal: AbortSignal.timeout(5000),
-              }),
-              // 6. Mensajes no leídos
-              fetch(`https://api.mercadolibre.com/messages/unread?role=seller&limit=1`, {
-                headers: meliHeaders, signal: AbortSignal.timeout(5000),
-              }),
-              // 7. Órdenes de hoy (pagadas) - usar zona horaria Argentina
-              fetch(`https://api.mercadolibre.com/orders/search?seller=${meliId}&order.status=paid&order.date_created.from=${new Date().toISOString().split('T')[0]}T00:00:00.000Z&limit=50`, {
-                headers: meliHeaders, signal: AbortSignal.timeout(10000),
-              }),
-            ]);
+          let userRes, questionsRes, ordersReadyRes, itemsRes, claimsRes, unreadRes, todayOrdersRes;
+          
+          try {
+            [userRes, questionsRes, ordersReadyRes, itemsRes, claimsRes, unreadRes, todayOrdersRes] =
+              await Promise.allSettled([
+                fetch(`https://api.mercadolibre.com/users/${meliId}?attributes=seller_reputation,nickname`, {
+                  headers: meliHeaders, signal: AbortSignal.timeout(5000),
+                }),
+                fetch(`https://api.mercadolibre.com/questions/search?seller_id=${meliId}&status=UNANSWERED&limit=1`, {
+                  headers: meliHeaders, signal: AbortSignal.timeout(5000),
+                }),
+                fetch(`https://api.mercadolibre.com/orders/search?seller=${meliId}&order.status=ready_to_ship&limit=1`, {
+                  headers: meliHeaders, signal: AbortSignal.timeout(5000),
+                }),
+                fetch(`https://api.mercadolibre.com/users/${meliId}/items/search?status=active&limit=1`, {
+                  headers: meliHeaders, signal: AbortSignal.timeout(5000),
+                }),
+                fetch(`https://api.mercadolibre.com/post-sale/v2/claims/search?role=seller&status=opened&limit=1`, {
+                  headers: meliHeaders, signal: AbortSignal.timeout(5000),
+                }),
+                fetch(`https://api.mercadolibre.com/messages/unread?role=seller&limit=1`, {
+                  headers: meliHeaders, signal: AbortSignal.timeout(5000),
+                }),
+                fetch(`https://api.mercadolibre.com/orders/search?seller=${meliId}&order.status=paid&order.date_created.from=${new Date().toISOString().split('T')[0]}T00:00:00.000Z&limit=50`, {
+                  headers: meliHeaders, signal: AbortSignal.timeout(10000),
+                }),
+              ]);
+          } catch (fetchError) {
+            console.error(`[meli-dashboard] ❌ Error en fetch para ${account.meli_nickname}:`, fetchError);
+            return defaultReturn("Error en llamadas API");
+          }
+
+          // Log de resultados
+          console.log(`[meli-dashboard] 📊 Resultados para ${account.meli_nickname}:`, {
+            user: userRes?.status,
+            questions: questionsRes?.status,
+            orders: ordersReadyRes?.status,
+            items: itemsRes?.status,
+            claims: claimsRes?.status,
+            unread: unreadRes?.status,
+            todayOrders: todayOrdersRes?.status,
+          });
 
           // ── Parsear resultados ──────────────────────────────────────────
           const safeJson = async (r: PromiseSettledResult<Response>) => {
