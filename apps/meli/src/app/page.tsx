@@ -469,9 +469,15 @@ function AppJeezInner() {
   const handleRenameAccount = useCallback(async (meliUserId: string, newName: string) => {
     if (!newName.trim()) return;
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("No hay sesión");
+      
       const res = await fetch("/api/meli-accounts", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session.access_token}`
+        },
         body: JSON.stringify({ meli_user_id: meliUserId, nickname: newName.trim() }),
       });
       if (!res.ok) throw new Error("Error al renombrar");
