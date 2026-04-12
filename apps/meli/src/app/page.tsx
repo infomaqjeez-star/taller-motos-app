@@ -472,7 +472,7 @@ function AppJeezInner() {
       const res = await fetch("/api/meli-accounts", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: meliUserId, nickname: newName.trim() }),
+        body: JSON.stringify({ meli_user_id: meliUserId, nickname: newName.trim() }),
       });
       if (!res.ok) throw new Error("Error al renombrar");
       setAccounts(prev => prev.map(a =>

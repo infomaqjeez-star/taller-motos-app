@@ -77,15 +77,16 @@ export async function GET(request: NextRequest) {
  * PATCH /api/meli-accounts
  * 
  * Actualiza el nickname de una cuenta de Mercado Libre.
+ * Acepta tanto 'id' (UUID) como 'meli_user_id' (número de MeLi)
  */
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json();
-    const { id, nickname } = body;
+    const { id, meli_user_id, nickname } = body;
 
-    if (!id || !nickname) {
+    if ((!id && !meli_user_id) || !nickname) {
       return NextResponse.json(
-        { error: "ID y nickname son requeridos" },
+        { error: "ID (o meli_user_id) y nickname son requeridos" },
         { status: 400 }
       );
     }
@@ -109,14 +110,20 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    // Actualizar el nickname de la cuenta
-    const { data, error } = await supabase
+    // Construir la query de actualización
+    let query = supabase
       .from("linked_meli_accounts")
       .update({ meli_nickname: nickname, updated_at: new Date().toISOString() })
-      .eq("id", id)
-      .eq("user_id", userId)
-      .select()
-      .single();
+      .eq("user_id", userId);
+    
+    // Usar id o meli_user_id según lo que se proporcione
+    if (id) {
+      query = query.eq("id", id);
+    } else if (meli_user_id) {
+      query = query.eq("meli_user_id", meli_user_id);
+    }
+
+    const { data, error } = await query.select().single();
 
     if (error) {
       console.error("[meli-accounts] Error al actualizar cuenta:", error);
