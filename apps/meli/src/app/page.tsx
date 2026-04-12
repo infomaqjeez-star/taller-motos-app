@@ -488,7 +488,29 @@ function AppJeezInner() {
       ));
       
       // Recargar datos desde el servidor para confirmar el cambio
-      await loadAccounts(session.access_token);
+      const dashboardRes = await fetch("/api/meli-dashboard", {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      if (dashboardRes.ok) {
+        const dashboardData = await dashboardRes.json();
+        // Actualizar accounts con los datos frescos del servidor
+        if (Array.isArray(dashboardData)) {
+          setAccounts(dashboardData.map((acc: any) => ({
+            meli_user_id: String(acc.meli_user_id),
+            account: acc.nickname || acc.account,
+            reputation: acc.reputation,
+            level: acc.level,
+            color: acc.color,
+            today_orders: acc.today_orders,
+            today_sales_amount: acc.today_sales_amount,
+            unanswered_questions: acc.unanswered_questions,
+            pending_messages: acc.pending_messages,
+            ready_to_ship: acc.ready_to_ship,
+            total_items: acc.total_items,
+            claims: acc.claims,
+          })));
+        }
+      }
       
       setEditingNick(null);
     } catch (e) {
