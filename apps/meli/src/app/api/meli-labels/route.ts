@@ -62,15 +62,19 @@ export async function GET(request: NextRequest) {
         const headers = { Authorization: `Bearer ${account.access_token_enc}` };
         
         // OBTENER ÓRDENES SEGÚN EL ESTADO
-        // Para etiquetas, usamos order.status=ready_to_ship (listas para enviar)
+        // Para etiquetas, buscamos en múltiples estados: pagado, confirmado, listo para enviar
         let ordersUrl = `https://api.mercadolibre.com/orders/search?seller=${account.meli_user_id}`;
         
         if (status === "ready_to_ship") {
-          ordersUrl += `&order.status=ready_to_ship`;
+          // Buscar órdenes pagadas Y listas para enviar
+          ordersUrl += `&order.status=paid&order.status=ready_to_ship`;
         } else if (status === "shipped") {
           ordersUrl += `&order.status=shipped`;
         } else if (status === "delivered") {
           ordersUrl += `&order.status=delivered`;
+        } else {
+          // Por defecto, buscar todas las órdenes activas (pagadas, confirmadas, listas para enviar)
+          ordersUrl += `&order.status=paid`;
         }
         
         ordersUrl += `&sort=date_desc&limit=${limit}`;
