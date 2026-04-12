@@ -481,9 +481,15 @@ function AppJeezInner() {
         body: JSON.stringify({ meli_user_id: meliUserId, nickname: newName.trim() }),
       });
       if (!res.ok) throw new Error("Error al renombrar");
+      
+      // Actualizar el estado local
       setAccounts(prev => prev.map(a =>
         a.meli_user_id === meliUserId ? { ...a, account: newName.trim() } : a
       ));
+      
+      // Recargar datos desde el servidor para confirmar el cambio
+      await loadAccounts(session.access_token);
+      
       setEditingNick(null);
     } catch (e) {
       console.error("Rename error:", e);
