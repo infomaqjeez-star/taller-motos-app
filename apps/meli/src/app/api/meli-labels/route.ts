@@ -11,7 +11,11 @@ const supabase = createClient(
 /**
  * GET /api/meli-labels
  * 
- * Obtiene shipments/etiquetas de todas las cuentas de MeLi conectadas.
+ * Obtiene shipments/etiquetas listas para imprimir de todas las cuentas.
+ * Según API de MeLi:
+ * - /orders/search con order.status=ready_to_ship (órdenes listas para enviar)
+ * - /shipments/{id} para obtener detalles del envío
+ * - /shipments/{id}/label para obtener el PDF de la etiqueta
  */
 export async function GET(request: NextRequest) {
   try {
@@ -43,7 +47,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ shipments: [], summary: {} });
     }
 
-    console.log(`[meli-labels] Procesando ${accounts.length} cuentas...`);
+    console.log(`[meli-labels] Procesando ${accounts.length} cuentas para status=${status}...`);
 
     const allShipments: any[] = [];
 
@@ -57,112 +61,187 @@ export async function GET(request: NextRequest) {
 
         const headers = { Authorization: `Bearer ${account.access_token_enc}` };
         
-        // Obtener shipments según el estado
-        let url = `https://api.mercadolibre.com/orders/search?seller=${account.meli_user_id}`;
+        // OBTENER ÓRDENES SEGÚN EL ESTADO
+        // Para etiquetas, usamos order.status=ready_to_ship (listas para enviar)
+        let ordersUrl = `https://api.mercadolibre.com/orders/search?seller=${account.meli_user_id}`;
         
         if (status === "ready_to_ship") {
-          url += `&order.status=ready_to_ship`;
+          ordersUrl += `&order.status=ready_to_ship`;
         } else if (status === "shipped") {
-          url += `&order.status=shipped`;
+          ordersUrl += `&order.status=shipped`;
         } else if (status === "delivered") {
-          url += `&order.status=delivered`;
-        } else if (status === "cancelled") {
-          url += `&order.status=cancelled`;
+          ordersUrl += `&order.status=delivered`;
         }
         
-        url += `&sort=date_desc&limit=${limit}`;
+        ordersUrl += `&sort=date_desc&limit=${limit}`;
 
-        console.log(`[meli-labels] Fetching: ${url}`);
+        console.log(`[meli-labels] [${account.meli_nickname}] GET ${ordersUrl}`);
         
-        const res = await fetch(url, { headers, signal: AbortSignal.timeout(10000) });
+        const ordersRes = await fetch(ordersUrl, { 
+          headers, 
+          signal: AbortSignal.timeout(15000) 
+        });
         
-        if (!res.ok) {
-          console.error(`[meli-labels] Error ${res.status} para ${account.meli_nickname}`);
+        if (!ordersRes.ok) {
+          const errorText = await ordersRes.text().catch(() => "Unknown");
+          console.error(`[meli-labels] [${account.meli_nickname}] Error ${ordersRes.status}: ${errorText.substring(0, 200)}`);
           continue;
         }
 
-        const data = await res.json();
-        const orders = data.results || [];
+        const ordersData = await ordersRes.json();
+        const orders = ordersData.results || [];
         
-        console.log(`[meli-labels] ${account.meli_nickname}: ${orders.length} órdenes`);
+        console.log(`[meli-labels] [${account.meli_nickname}] ${orders.length} órdenes encontradas`);
 
-        // Obtener detalles de shipments
+        if (orders.length === 0) continue;
+
+        // Procesar cada orden
         for (const order of orders) {
           try {
-            if (!order.shipping?.id) continue;
-
-            // Obtener detalles del shipment
-            const shipRes = await fetch(
-              `https://api.mercadolibre.com/shipments/${order.shipping.id}`,
-              { headers, signal: AbortSignal.timeout(5000) }
-            );
-            
-            if (!shipRes.ok) continue;
-            const shipData = await shipRes.json();
-
-            // Obtener detalles del item
-            let itemTitle = "Producto";
-            let itemThumbnail = null;
-            let quantity = 1;
-            
-            if (order.order_items?.[0]?.item?.id) {
-              const itemRes = await fetch(
-                `https://api.mercadolibre.com/items/${order.order_items[0].item.id}`,
-                { headers, signal: AbortSignal.timeout(5000) }
-              );
-              if (itemRes.ok) {
-                const itemData = await itemRes.json();
-                itemTitle = itemData.title;
-                itemThumbnail = itemData.thumbnail;
-              }
-              quantity = order.order_items[0].quantity || 1;
+            // Verificar que tenga shipping
+            if (!order.shipping?.id) {
+              console.log(`[meli-labels] [${account.meli_nickname}] Orden ${order.id} sin shipping`);
+              continue;
             }
 
-            // Determinar tipo de envío
-            let type = "correo";
-            if (shipData.logistic_type === "self_service") type = "flex";
-            else if (shipData.logistic_type === "cross_docking") type = "turbo";
-            else if (shipData.logistic_type === "fulfillment") type = "full";
+            const shipmentId = order.shipping.id;
 
-            // Verificar si ya fue impresa
-            const { data: printedLabel } = await supabase
+            // OBTENER DETALLES DEL SHIPMENT
+            console.log(`[meli-labels] [${account.meli_nickname}] Obteniendo shipment ${shipmentId}...`);
+            
+            const shipRes = await fetch(
+              `https://api.mercadolibre.com/shipments/${shipmentId}`,
+              { headers, signal: AbortSignal.timeout(10000) }
+            );
+            
+            if (!shipRes.ok) {
+              const errorText = await shipRes.text().catch(() => "Unknown");
+              console.error(`[meli-labels] [${account.meli_nickname}] Error shipment ${shipmentId}: ${errorText.substring(0, 200)}`);
+              continue;
+            }
+            
+            const shipData = await shipRes.json();
+
+            // Solo incluir shipments que tengan etiqueta disponible
+            // status: ready_to_ship, handling, etc.
+            const validStatuses = ["ready_to_ship", "handling", "pending", "shipped"];
+            if (!validStatuses.includes(shipData.status)) {
+              console.log(`[meli-labels] [${account.meli_nickname}] Shipment ${shipmentId} status=${shipData.status} - no incluido`);
+              continue;
+            }
+
+            // OBTENER DETALLES DEL ITEM
+            let itemTitle = "Producto sin título";
+            let itemThumbnail = null;
+            let quantity = 1;
+            let itemId = null;
+            
+            if (order.order_items && order.order_items.length > 0) {
+              const orderItem = order.order_items[0];
+              itemId = orderItem.item?.id;
+              quantity = orderItem.quantity || 1;
+              
+              if (itemId) {
+                console.log(`[meli-labels] [${account.meli_nickname}] Obteniendo item ${itemId}...`);
+                const itemRes = await fetch(
+                  `https://api.mercadolibre.com/items/${itemId}`,
+                  { headers, signal: AbortSignal.timeout(8000) }
+                );
+                
+                if (itemRes.ok) {
+                  const itemData = await itemRes.json();
+                  itemTitle = itemData.title || itemTitle;
+                  itemThumbnail = itemData.thumbnail || itemData.pictures?.[0]?.url || null;
+                } else {
+                  console.log(`[meli-labels] [${account.meli_nickname}] Error obteniendo item ${itemId}: ${itemRes.status}`);
+                }
+              }
+            }
+
+            // DETERMINAR TIPO DE ENVÍO
+            let type = "correo";
+            const logisticType = shipData.logistic_type || "";
+            
+            if (logisticType === "self_service" || logisticType === "self_service_flex") {
+              type = "flex";
+            } else if (logisticType === "cross_docking") {
+              type = "turbo";
+            } else if (logisticType === "fulfillment") {
+              type = "full";
+            } else if (logisticType === "drop_off") {
+              type = "correo";
+            }
+
+            // OBTENER DIRECCIÓN DEL COMPRADOR
+            const receiverAddress = shipData.receiver_address || {};
+            const address = [
+              receiverAddress.address_line,
+              receiverAddress.street_name,
+              receiverAddress.comment
+            ].filter(Boolean).join(" ") || "Sin dirección";
+
+            // VERIFICAR SI YA FUE IMPRESA
+            const { data: printedLabel, error: printedError } = await supabase
               .from("printed_labels")
               .select("id, print_date")
-              .eq("shipment_id", String(order.shipping.id))
+              .eq("shipment_id", String(shipmentId))
               .eq("account_id", account.id)
-              .single();
+              .maybeSingle();
 
-            allShipments.push({
-              shipment_id: order.shipping.id,
+            if (printedError) {
+              console.error(`[meli-labels] Error consultando printed_labels:`, printedError);
+            }
+
+            // CONSTRUIR OBJETO DE SHIPMENT
+            const shipment = {
+              shipment_id: shipmentId,
               order_id: order.id,
               account: account.meli_nickname,
               account_id: account.id,
+              meli_user_id: String(account.meli_user_id),
               type: type,
               buyer: order.buyer?.nickname || "Comprador",
               buyer_nickname: order.buyer?.nickname,
+              buyer_phone: receiverAddress.receiver_phone || order.buyer?.phone?.number || null,
               title: itemTitle,
               quantity: quantity,
               thumbnail: itemThumbnail,
-              delivery_date: shipData.estimated_delivery_time?.date || null,
-              dispatch_date: shipData.estimated_dispatch_time?.date || null,
-              delivery_address: shipData.receiver_address?.address_line,
-              delivery_city: shipData.receiver_address?.city?.name,
-              delivery_state: shipData.receiver_address?.state?.name,
-              total_price: order.total_amount,
-              shipping_cost: order.shipping_cost,
-              status: order.status,
-              status_label: shipData.status,
-              meli_user_id: String(account.meli_user_id),
+              item_id: itemId,
+              
+              // Fechas
+              delivery_date: shipData.estimated_delivery_time?.date || shipData.estimated_delivery?.date || null,
+              dispatch_date: shipData.estimated_dispatch_time?.date || shipData.estimated_handling_limit?.date || null,
+              date_created: order.date_created,
+              
+              // Dirección
+              delivery_address: address,
+              delivery_city: receiverAddress.city?.name || null,
+              delivery_state: receiverAddress.state?.name || null,
+              delivery_zip: receiverAddress.zip_code || null,
+              delivery_country: receiverAddress.country?.name || null,
+              
+              // Información de envío
+              status: shipData.status,
+              status_label: getStatusLabel(shipData.status),
+              tracking_number: shipData.tracking_number || shipData.tracking_method || null,
+              shipping_cost: order.shipping_cost || 0,
+              total_price: order.total_amount || 0,
+              
+              // Etiqueta
+              label_url: shipData.label?.url || null,
               printed_at: printedLabel?.print_date || null,
-              item_id: order.order_items?.[0]?.item?.id || null,
-              tracking_number: shipData.tracking_number || null,
-            });
-          } catch (e) {
-            console.error(`[meli-labels] Error procesando orden:`, e);
+              printed: !!printedLabel,
+            };
+
+            allShipments.push(shipment);
+            console.log(`[meli-labels] [${account.meli_nickname}] ✅ Shipment ${shipmentId} agregado (${type})`);
+
+          } catch (orderError) {
+            console.error(`[meli-labels] [${account.meli_nickname}] Error procesando orden ${order.id}:`, orderError);
           }
         }
       } catch (err) {
-        console.error(`[meli-labels] Error cuenta ${account.meli_nickname}:`, err);
+        console.error(`[meli-labels] [${account.meli_nickname}] Error general:`, err);
       }
     }
 
@@ -173,10 +252,12 @@ export async function GET(request: NextRequest) {
       correo: allShipments.filter(s => s.type === "correo").length,
       turbo: allShipments.filter(s => s.type === "turbo").length,
       full: allShipments.filter(s => s.type === "full").length,
-      printed: allShipments.filter(s => s.printed_at).length,
+      printed: allShipments.filter(s => s.printed).length,
+      pending: allShipments.filter(s => !s.printed).length,
     };
 
-    console.log(`[meli-labels] Total shipments: ${allShipments.length}`);
+    console.log(`[meli-labels] ✅ TOTAL: ${allShipments.length} shipments`);
+    console.log(`[meli-labels] Resumen:`, summary);
 
     return NextResponse.json({
       shipments: allShipments,
@@ -184,7 +265,11 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("[meli-labels] Error inesperado:", error);
-    return NextResponse.json({ shipments: [], summary: {} });
+    return NextResponse.json({ 
+      shipments: [], 
+      summary: {},
+      error: error instanceof Error ? error.message : "Error interno"
+    }, { status: 500 });
   }
 }
 
@@ -196,7 +281,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { shipment_ids, account_id } = body;
+    const { shipment_ids, account_id, shipping_method = "unknown" } = body;
 
     if (!Array.isArray(shipment_ids) || shipment_ids.length === 0) {
       return NextResponse.json(
@@ -218,7 +303,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
 
-    // Guardar en el historial usando la función SQL
+    // Guardar en el historial
     const results = [];
     
     for (const shipment_id of shipment_ids) {
@@ -230,7 +315,7 @@ export async function POST(request: NextRequest) {
           p_order_id: null,
           p_tracking_number: null,
           p_buyer_nickname: null,
-          p_shipping_method: "unknown",
+          p_shipping_method: shipping_method,
           p_printed_by: "appjeez",
         });
 
@@ -238,7 +323,7 @@ export async function POST(request: NextRequest) {
         results.push({ shipment_id, saved: true, id: data });
       } catch (e) {
         console.error(`[meli-labels] Error guardando ${shipment_id}:`, e);
-        results.push({ shipment_id, saved: false, error: e });
+        results.push({ shipment_id, saved: false, error: String(e) });
       }
     }
 
@@ -247,4 +332,18 @@ export async function POST(request: NextRequest) {
     console.error("[meli-labels] Error:", error);
     return NextResponse.json({ error: "Error interno" }, { status: 500 });
   }
+}
+
+// Helper para obtener etiqueta legible del estado
+function getStatusLabel(status: string): string {
+  const labels: Record<string, string> = {
+    "ready_to_ship": "Listo para enviar",
+    "handling": "En preparación",
+    "pending": "Pendiente",
+    "shipped": "En camino",
+    "delivered": "Entregado",
+    "cancelled": "Cancelado",
+    "returned": "Devuelto",
+  };
+  return labels[status] || status;
 }
