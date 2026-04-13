@@ -86,6 +86,8 @@ export async function GET(request: NextRequest) {
           signal: AbortSignal.timeout(15000) 
         });
         
+        console.log(`[meli-labels] [${account.meli_nickname}] Response status: ${ordersRes.status}`);
+        
         if (!ordersRes.ok) {
           const errorText = await ordersRes.text().catch(() => "Unknown");
           console.error(`[meli-labels] [${account.meli_nickname}] Error ${ordersRes.status}: ${errorText.substring(0, 200)}`);
@@ -96,6 +98,12 @@ export async function GET(request: NextRequest) {
         const orders = ordersData.results || [];
         
         console.log(`[meli-labels] [${account.meli_nickname}] ${orders.length} órdenes encontradas`);
+        console.log(`[meli-labels] [${account.meli_nickname}] Primeras órdenes:`, orders.slice(0, 3).map((o: any) => ({ 
+          id: o.id, 
+          status: o.status,
+          shipping: o.shipping?.status,
+          logistic_type: o.shipping?.logistic_type 
+        })));
 
         if (orders.length === 0) continue;
 
