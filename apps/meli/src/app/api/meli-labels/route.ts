@@ -62,19 +62,19 @@ export async function GET(request: NextRequest) {
         const headers = { Authorization: `Bearer ${account.access_token_enc}` };
         
         // OBTENER ÓRDENES SEGÚN EL ESTADO
-        // Para etiquetas, buscamos en múltiples estados: pagado, confirmado, listo para enviar
+        // Para etiquetas, buscamos órdenes pagadas, en preparación o listas para enviar
         let ordersUrl = `https://api.mercadolibre.com/orders/search?seller=${account.meli_user_id}`;
         
-        if (status === "ready_to_ship") {
-          // Buscar órdenes pagadas Y listas para enviar
-          ordersUrl += `&order.status=paid&order.status=ready_to_ship`;
+        // Buscar en múltiples estados: handling (en preparación), ready_to_ship (listo para enviar), paid (pagado)
+        if (status === "ready_to_ship" || status === "handling") {
+          ordersUrl += `&order.status=handling&order.status=ready_to_ship`;
         } else if (status === "shipped") {
           ordersUrl += `&order.status=shipped`;
         } else if (status === "delivered") {
           ordersUrl += `&order.status=delivered`;
         } else {
-          // Por defecto, buscar todas las órdenes activas (pagadas, confirmadas, listas para enviar)
-          ordersUrl += `&order.status=paid`;
+          // Por defecto, buscar órdenes en preparación o listas para enviar
+          ordersUrl += `&order.status=handling&order.status=ready_to_ship`;
         }
         
         ordersUrl += `&sort=date_desc&limit=${limit}`;
@@ -110,36 +110,54 @@ export async function GET(request: NextRequest) {
         // Procesar cada orden
         for (const order of orders) {
           try {
-            // Verificar que tenga shipping
-            if (!order.shipping?.id) {
-              console.log(`[meli-labels] [${account.meli_nickname}] Orden ${order.id} sin shipping`);
+            // Verificar que tenga shipping o sea Flex listo para enviar
+            const logisticType = order.shipping?.logistic_type || order.logistic_type || "";
+            const isFlexReady = (logisticType === "self_service" || logisticType === "self_service_flex") && 
+              (order.status === "handling" || order.status === "ready_to_ship");
+            
+            if (!order.shipping?.id && !isFlexReady) {
+              console.log(`[meli-labels] [${account.meli_nickname}] Orden ${order.id} sin shipping y no es Flex listo`);
               continue;
             }
 
-            const shipmentId = order.shipping.id;
+            // Para Flex sin shipping.id, crear datos simulados del shipment
+            let shipmentId = order.shipping?.id || `flex-${order.id}`;
+            let shipData: any;
+            
+            if (order.shipping?.id) {
+              // OBTENER DETALLES DEL SHIPMENT
+              console.log(`[meli-labels] [${account.meli_nickname}] Obteniendo shipment ${shipmentId}...`);
+              
+              const shipRes = await fetch(
+                `https://api.mercadolibre.com/shipments/${shipmentId}`,
+                { headers, signal: AbortSignal.timeout(10000) }
+              );
+              
+              if (!shipRes.ok) {
+                const errorText = await shipRes.text().catch(() => "Unknown");
+                console.error(`[meli-labels] [${account.meli_nickname}] Error shipment ${shipmentId}: ${errorText.substring(0, 200)}`);
+                continue;
+              }
+              
+              shipData = await shipRes.json();
 
-            // OBTENER DETALLES DEL SHIPMENT
-            console.log(`[meli-labels] [${account.meli_nickname}] Obteniendo shipment ${shipmentId}...`);
-            
-            const shipRes = await fetch(
-              `https://api.mercadolibre.com/shipments/${shipmentId}`,
-              { headers, signal: AbortSignal.timeout(10000) }
-            );
-            
-            if (!shipRes.ok) {
-              const errorText = await shipRes.text().catch(() => "Unknown");
-              console.error(`[meli-labels] [${account.meli_nickname}] Error shipment ${shipmentId}: ${errorText.substring(0, 200)}`);
-              continue;
-            }
-            
-            const shipData = await shipRes.json();
-
-            // Solo incluir shipments que tengan etiqueta disponible
-            // status: ready_to_ship, handling, etc.
-            const validStatuses = ["ready_to_ship", "handling", "pending", "shipped"];
-            if (!validStatuses.includes(shipData.status)) {
-              console.log(`[meli-labels] [${account.meli_nickname}] Shipment ${shipmentId} status=${shipData.status} - no incluido`);
-              continue;
+              // Solo incluir shipments que tengan etiqueta disponible
+              const validStatuses = ["ready_to_ship", "handling", "pending", "shipped"];
+              if (!validStatuses.includes(shipData.status)) {
+                console.log(`[meli-labels] [${account.meli_nickname}] Shipment ${shipmentId} status=${shipData.status} - no incluido`);
+                continue;
+              }
+            } else {
+              // Flex sin shipping.id aún - usar datos de la orden
+              console.log(`[meli-labels] [${account.meli_nickname}] Orden ${order.id} es Flex sin shipping.id`);
+              shipData = {
+                status: order.status,
+                logistic_type: logisticType,
+                receiver_address: order.shipping?.receiver_address || order.buyer?.billing_info?.address || {},
+                estimated_delivery_time: order.shipping?.estimated_delivery_time || {},
+                tracking_number: null,
+                label: null
+              };
             }
 
             // OBTENER DETALLES DEL ITEM
