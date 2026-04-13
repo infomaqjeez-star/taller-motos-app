@@ -190,15 +190,15 @@ export async function GET(request: NextRequest) {
 
             // DETERMINAR TIPO DE ENVÍO
             let type = "correo";
-            const logisticType = shipData.logistic_type || "";
+            const shipLogisticType = shipData.logistic_type || "";
             
-            if (logisticType === "self_service" || logisticType === "self_service_flex") {
+            if (shipLogisticType === "self_service" || shipLogisticType === "self_service_flex") {
               type = "flex";
-            } else if (logisticType === "cross_docking") {
+            } else if (shipLogisticType === "cross_docking") {
               type = "turbo";
-            } else if (logisticType === "fulfillment") {
+            } else if (shipLogisticType === "fulfillment") {
               type = "full";
-            } else if (logisticType === "drop_off") {
+            } else if (shipLogisticType === "drop_off") {
               type = "correo";
             }
 
