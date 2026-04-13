@@ -123,9 +123,15 @@ function PreciosInner() {
       };
       if (selectedAcc !== "all") payload.account_ids = [selectedAcc];
 
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("No hay sesión activa");
+
       const res = await fetch("/api/meli-price-update", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session.access_token}`
+        },
         body: JSON.stringify(payload),
         signal: ctrl.signal,
       });
