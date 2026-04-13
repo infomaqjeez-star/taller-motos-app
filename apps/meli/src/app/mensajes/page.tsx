@@ -199,6 +199,7 @@ function QuestionCard({ q, onAnswered }: { q: Question; onAnswered: (id: number)
   const [text, setText]       = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError]     = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [answered, setAnswered] = useState(false);
 
   const FIRMA = "Atte.: MaqJeez de Carlos Spegazzini Ezeiza";
@@ -234,6 +235,9 @@ function QuestionCard({ q, onAnswered }: { q: Question; onAnswered: (id: number)
       const data = await res.json();
       if (data.status === "ok") {
         setAnswered(true);
+        // Mostrar mensaje de éxito
+        setSuccessMessage(`✅ Respuesta enviada exitosamente a ${q.meli_accounts?.nickname || 'comprador'}`);
+        setTimeout(() => setSuccessMessage(null), 3000);
         // Notificar inmediatamente al componente padre para remover la pregunta
         onAnswered(q.meli_question_id);
       } else {
@@ -371,6 +375,11 @@ function QuestionCard({ q, onAnswered }: { q: Question; onAnswered: (id: number)
             style={{ background: "#121212", border: "1px solid rgba(255,255,255,0.1)" }}
           />
 
+          {successMessage && (
+            <div className="mb-3 p-2 rounded-lg text-center text-sm font-medium" style={{ backgroundColor: "#10b981", color: "white" }}>
+              {successMessage}
+            </div>
+          )}
           {error && <p className="text-xs" style={{ color: "#ef4444" }}>Error: {error}</p>}
 
           <button onClick={handleSend} disabled={sending || !text.trim()}
