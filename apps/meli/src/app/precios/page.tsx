@@ -1,11 +1,17 @@
 "use client";
 import { useState, useEffect, useRef, useCallback, Suspense } from "react";
 import Link from "next/link";
+import { createClient } from "@supabase/supabase-js";
 import {
   ArrowLeft, Search, DollarSign, RefreshCw, AlertTriangle,
   XCircle, Tag, ShieldAlert, Eye, Percent, Plus, TrendingUp,
   Square, Play, Ban,
 } from "lucide-react";
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL || "",
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
+);
 
 type AdjustmentType = "percentage" | "fixed_floor" | "fixed_add";
 
