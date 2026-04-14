@@ -45,6 +45,9 @@ export async function GET(request: NextRequest) {
         }
 
         const headers = { Authorization: `Bearer ${token}` };
+        
+        // Intentar endpoint primario
+        let questions: any[] = [];
         const url = `https://api.mercadolibre.com/questions/search?seller_id=${account.meli_user_id}&status=UNANSWERED&limit=50`;
         
         console.log(`[meli-questions] [${account.meli_nickname}] GET ${url}`);
@@ -53,31 +56,25 @@ export async function GET(request: NextRequest) {
         
         console.log(`[meli-questions] [${account.meli_nickname}] Response status: ${res.status}`);
         
-        if (!res.ok) {
+        if (res.ok) {
+          const data = await res.json();
+          questions = data.questions || [];
+          console.log(`[meli-questions] [${account.meli_nickname}] ${questions.length} preguntas encontradas`);
+        } else {
           const errorText = await res.text().catch(() => "Unknown error");
           console.error(`[meli-questions] [${account.meli_nickname}] Error ${res.status}: ${errorText.substring(0, 200)}`);
-          continue;
-        }
-
-        const data = await res.json();
-        const questions = data.questions || [];
-        
-        console.log(`[meli-questions] [${account.meli_nickname}] ${questions.length} preguntas encontradas`);
-        console.log(`[meli-questions] [${account.meli_nickname}] Total preguntas en respuesta:`, data.total || questions.length);
-        console.log(`[meli-questions] [${account.meli_nickname}] Filters aplicados:`, data.filters);
-        
-        if (questions.length === 0) {
-          // Intentar sin filtro de status para ver si hay preguntas con otro estado
-          const urlAll = `https://api.mercadolibre.com/questions/search?seller_id=${account.meli_user_id}&limit=10`;
-          console.log(`[meli-questions] [${account.meli_nickname}] Intentando sin filtro: ${urlAll}`);
-          const resAll = await fetch(urlAll, { headers, signal: AbortSignal.timeout(10000) });
-          if (resAll.ok) {
-            const dataAll = await resAll.json();
-            console.log(`[meli-questions] [${account.meli_nickname}] Sin filtro: ${dataAll.questions?.length || 0} preguntas`);
-            if (dataAll.questions?.length > 0) {
-              console.log(`[meli-questions] [${account.meli_nickname}] Estados encontrados:`, 
-                [...new Set(dataAll.questions.map((q: any) => q.status))]);
-            }
+          
+          // Fallback: intentar endpoint alternativo
+          console.log(`[meli-questions] [${account.meli_nickname}] Intentando endpoint alternativo...`);
+          const fallbackUrl = `https://api.mercadolibre.com/my/received_questions?status=UNANSWERED&limit=50`;
+          const fallbackRes = await fetch(fallbackUrl, { headers, signal: AbortSignal.timeout(15000) });
+          
+          if (fallbackRes.ok) {
+            const fallbackData = await fallbackRes.json();
+            questions = fallbackData.questions || [];
+            console.log(`[meli-questions] [${account.meli_nickname}] Fallback: ${questions.length} preguntas`);
+          } else {
+            console.error(`[meli-questions] [${account.meli_nickname}] Fallback tambien fallo: ${fallbackRes.status}`);
           }
         }
         
