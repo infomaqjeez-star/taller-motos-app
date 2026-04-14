@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { getValidToken, meliGet, type LinkedMeliAccount } from "@/lib/meli";
+import { getValidToken, type LinkedMeliAccount } from "@/lib/meli";
 
 export const dynamic = "force-dynamic";
 
@@ -38,63 +38,97 @@ export async function GET(request: NextRequest) {
         const token = await getValidToken(account as LinkedMeliAccount);
         if (!token) continue;
 
-        // Intentar ambos paths de la API
-        let claimsData: any = null;
-        
-        // Path 1: post-purchase
-        claimsData = await meliGet(
-          `/post-purchase/v2/claims/search?role=seller&status=opened&limit=50`,
-          token, 15000
-        );
+        const headers = { Authorization: `Bearer ${token}` };
+        const meliId = String(account.meli_user_id);
 
-        // Fallback path 2: post-sale
-        if (!claimsData) {
-          claimsData = await meliGet(
-            `/post-sale/v2/claims/search?role=seller&status=opened&limit=50`,
-            token, 15000
-          );
+        // Intentar multiples endpoints de claims
+        const claimsPaths = [
+          `/post-purchase/v2/claims/search?role=seller&status=opened&limit=50`,
+          `/v1/claims/search?status=opened&limit=50`,
+          `/post-sale/v2/claims/search?role=seller&status=opened&limit=50`,
+        ];
+
+        let claimsData: any = null;
+        let usedPath = "";
+
+        for (const path of claimsPaths) {
+          try {
+            console.log(`[meli-claims] [${account.meli_nickname}] Intentando ${path}`);
+            const res = await fetch(`https://api.mercadolibre.com${path}`, {
+              headers,
+              signal: AbortSignal.timeout(10000),
+            });
+            if (res.ok) {
+              claimsData = await res.json();
+              usedPath = path;
+              console.log(`[meli-claims] [${account.meli_nickname}] OK con ${path}: ${JSON.stringify(claimsData).substring(0, 200)}`);
+              break;
+            } else {
+              const errText = await res.text().catch(() => "");
+              console.log(`[meli-claims] [${account.meli_nickname}] ${res.status} en ${path}: ${errText.substring(0, 100)}`);
+            }
+          } catch (e) {
+            console.log(`[meli-claims] [${account.meli_nickname}] Error en ${path}: ${(e as Error).message}`);
+          }
         }
 
-        if (!claimsData) continue;
-        const claims = claimsData.data || claimsData.results || [];
+        if (!claimsData) {
+          console.log(`[meli-claims] [${account.meli_nickname}] No se pudieron obtener reclamos`);
+          continue;
+        }
+
+        const claims = claimsData.data || claimsData.results || claimsData.claims || [];
+        console.log(`[meli-claims] [${account.meli_nickname}] ${claims.length} reclamos encontrados`);
 
         for (const claim of claims) {
-          // Obtener detalle del claim con mensajes
-          let detail: any = null;
-          detail = await meliGet(`/post-purchase/v2/claims/${claim.id}`, token, 10000);
-          if (!detail) {
-            detail = await meliGet(`/post-sale/v2/claims/${claim.id}`, token, 10000);
-          }
+          const claimId = claim.id || claim.claim_id;
+          const isMediation = claim.stage === "mediation" || claim.type === "mediation";
 
-          const messages = detail?.messages || [];
-          const isMediation = detail?.stage === "mediation" || claim.stage === "mediation";
+          // Intentar obtener detalle con mensajes
+          let messages: any[] = [];
+          try {
+            for (const detailPath of [
+              `/post-purchase/v2/claims/${claimId}`,
+              `/v1/claims/${claimId}`,
+            ]) {
+              const detRes = await fetch(`https://api.mercadolibre.com${detailPath}`, {
+                headers,
+                signal: AbortSignal.timeout(8000),
+              });
+              if (detRes.ok) {
+                const detail = await detRes.json();
+                messages = detail.messages || [];
+                break;
+              }
+            }
+          } catch { /* skip detail */ }
 
           allClaims.push({
-            id: claim.id,
-            claim_id: claim.id,
+            id: claimId,
+            claim_id: claimId,
             meli_account_id: account.id,
-            meli_user_id: String(account.meli_user_id),
+            meli_user_id: meliId,
             account_nickname: account.meli_nickname,
             type: isMediation ? "mediation" : "claim",
-            status: detail?.status || claim.status || "opened",
-            stage: detail?.stage || claim.stage || "claim",
-            reason_id: detail?.reason_id || claim.reason_id,
-            reason: detail?.reason || claim.reason || "Sin razon especificada",
-            resource_id: detail?.resource_id || claim.resource_id,
-            date_created: detail?.date_created || claim.date_created,
-            last_updated: detail?.last_updated || claim.last_updated,
+            status: claim.status || "opened",
+            stage: claim.stage || "claim",
+            reason_id: claim.reason_id || "",
+            reason: claim.reason || claim.reason_id || "Reclamo abierto",
+            resource_id: claim.resource_id || claim.order_id || "",
+            date_created: claim.date_created || new Date().toISOString(),
+            last_updated: claim.last_updated || claim.date_created,
             buyer: {
-              id: detail?.players?.complainant?.user_id || claim.players?.complainant?.user_id,
-              nickname: detail?.players?.complainant?.nickname || "Comprador",
+              id: claim.players?.complainant?.user_id || claim.complainant?.id || 0,
+              nickname: claim.players?.complainant?.nickname || claim.complainant?.nickname || "Comprador",
             },
             messages: messages.map((msg: any) => ({
-              id: msg.id,
+              id: msg.id || String(Math.random()),
               sender_role: msg.role || msg.sender_role || "unknown",
               text: msg.message || msg.text || "",
-              date_created: msg.date_created,
+              date_created: msg.date_created || "",
               attachments: msg.attachments || [],
             })),
-            resolution: detail?.resolution || null,
+            resolution: claim.resolution || null,
             meli_accounts: { nickname: account.meli_nickname },
           });
         }
@@ -104,6 +138,7 @@ export async function GET(request: NextRequest) {
     }
 
     allClaims.sort((a, b) => new Date(b.date_created).getTime() - new Date(a.date_created).getTime());
+    console.log(`[meli-claims] Total reclamos: ${allClaims.length}`);
     return NextResponse.json(allClaims);
   } catch (error) {
     console.error("[meli-claims] Error:", error);
