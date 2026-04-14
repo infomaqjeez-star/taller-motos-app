@@ -4,8 +4,8 @@ import { createClient } from "@supabase/supabase-js";
 export const dynamic = "force-dynamic";
 
 const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-  process.env.SUPABASE_SERVICE_ROLE_KEY || ""
+  process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co",
+  process.env.SUPABASE_SERVICE_ROLE_KEY || "placeholder-key"
 );
 
 /**
@@ -67,14 +67,14 @@ export async function GET(request: NextRequest) {
         
         // Buscar en múltiples estados: handling (en preparación), ready_to_ship (listo para enviar), paid (pagado)
         if (status === "ready_to_ship" || status === "handling") {
-          ordersUrl += `&order.status=handling&order.status=ready_to_ship`;
+          ordersUrl += `&order.status=handling&order.status=ready_to_ship&order.status=paid`;
         } else if (status === "shipped") {
           ordersUrl += `&order.status=shipped`;
         } else if (status === "delivered") {
           ordersUrl += `&order.status=delivered`;
         } else {
           // Por defecto, buscar órdenes en preparación o listas para enviar
-          ordersUrl += `&order.status=handling&order.status=ready_to_ship`;
+          ordersUrl += `&order.status=handling&order.status=ready_to_ship&order.status=paid`;
         }
         
         ordersUrl += `&sort=date_desc&limit=${limit}`;

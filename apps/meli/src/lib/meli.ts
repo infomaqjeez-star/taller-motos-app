@@ -89,7 +89,8 @@ interface RefreshResult {
 export async function refreshMeliToken(refreshTokenEnc: string): Promise<RefreshResult | null> {
   if (!APP_ID || !SECRET_KEY) return null;
   try {
-    const rt = await decrypt(refreshTokenEnc);
+    // Tokens se guardan como texto plano (sin encriptar)
+    const rt = refreshTokenEnc;
     const body = new URLSearchParams({
       grant_type: "refresh_token",
       client_id: APP_ID,
@@ -112,18 +113,15 @@ export async function updateLinkedAccountTokens(
   accountId: string,
   newTokens: RefreshResult
 ): Promise<string> {
-  const [encAt, encRt] = await Promise.all([
-    encrypt(newTokens.access_token),
-    encrypt(newTokens.refresh_token),
-  ]);
+  // Tokens se guardan como texto plano
   const expiresAt = new Date(Date.now() + newTokens.expires_in * 1000).toISOString();
   const supabase = getSupabase();
   
   const { error } = await supabase
     .from("linked_meli_accounts")
     .update({
-      access_token_enc: encAt,
-      refresh_token_enc: encRt,
+      access_token_enc: newTokens.access_token,
+      refresh_token_enc: newTokens.refresh_token,
       token_expiry_date: expiresAt,
       updated_at: new Date().toISOString(),
     })
@@ -172,7 +170,9 @@ export async function getValidToken(
 
     if (!isExpired) {
       try {
-        const token = await decrypt(account.access_token_enc);
+        // Tokens se guardan como texto plano
+        const token = account.access_token_enc;
+        if (!token) return null;
         // Verificar que el token funcione
         const testUserId = typeof meliUserId === 'string' ? meliUserId : String(meliUserId);
         const test = await fetch(`https://api.mercadolibre.com/users/${testUserId}`, {
@@ -181,7 +181,7 @@ export async function getValidToken(
         });
         if (test.ok) return token;
       } catch {
-        // Si falla el decrypt o el test, continuar a refresh
+        // Si falla el test, continuar a refresh
       }
     }
 
@@ -353,17 +353,14 @@ export async function updateAccountTokens(
   nickname: string,
   newTokens: RefreshResult
 ): Promise<string> {
-  const [encAt, encRt] = await Promise.all([
-    encrypt(newTokens.access_token),
-    encrypt(newTokens.refresh_token),
-  ]);
+  // Tokens se guardan como texto plano
   const expiresAt = new Date(Date.now() + newTokens.expires_in * 1000).toISOString();
   const supabase = getSupabase();
   await supabase.rpc("upsert_meli_account", {
     p_meli_user_id: Number(meliUserId),
     p_nickname: nickname,
-    p_access_token: encAt,
-    p_refresh_token: encRt,
+    p_access_token: newTokens.access_token,
+    p_refresh_token: newTokens.refresh_token,
     p_expires_at: expiresAt,
   });
   return newTokens.access_token;

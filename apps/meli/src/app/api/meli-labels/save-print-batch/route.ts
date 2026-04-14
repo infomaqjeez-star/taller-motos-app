@@ -4,8 +4,8 @@ import { createClient } from "@supabase/supabase-js";
 // Forzar renderizado dinamico - evita error de generacion estatica
 export const dynamic = 'force-dynamic';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co";
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "placeholder-key";
 
 const supabase = createClient(
   supabaseUrl || "https://placeholder.supabase.co",

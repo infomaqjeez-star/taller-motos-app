@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
+import { supabase } from "@/lib/supabase";
 
 interface MeliNotification {
   user_id: string;
@@ -30,12 +31,14 @@ export function useNotificationStream(
   const isCleaningUp = useRef(false);
   const reconnectAttempts = useRef(0);
 
-  const connect = useCallback(() => {
+  const connect = useCallback(async () => {
     if (!enabled || isCleaningUp.current) return;
 
     try {
-      // Obtener URL base - IMPORTANTE: usar solo la ruta relativa
-      const url = "/api/notifications/stream";
+      // Obtener token para auth
+      const { data: { session } } = await supabase.auth.getSession();
+      const tokenParam = session?.access_token ? `?token=${session.access_token}` : "";
+      const url = `/api/notifications/stream${tokenParam}`;
 
       console.log(`[SSE] Intentando conectar a ${url}...`);
 

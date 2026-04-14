@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "postbuild": "cp -r public .next/standalone/ 2>/dev/null || true",
+    "postbuild": "node -e \"try{require('fs').cpSync('public','.next/standalone/public',{recursive:true})}catch(e){}\"",
     "start": "next start",
     "lint": "next lint"
   },

@@ -222,9 +222,14 @@ function QuestionCard({ q, onAnswered }: { q: Question; onAnswered: (id: number)
 
     setSending(true); setError(null);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const authHeaders: Record<string, string> = { "Content-Type": "application/json" };
+      if (session?.access_token) {
+        authHeaders["Authorization"] = `Bearer ${session.access_token}`;
+      }
       const res = await fetch("/api/meli-answer", {
         method:  "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders,
         body:    JSON.stringify({
           question_id: q.meli_question_id,
           answer_text: finalText,

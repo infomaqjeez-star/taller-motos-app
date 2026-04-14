@@ -41,8 +41,8 @@ export class MeliClient {
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: new URLSearchParams({
           grant_type: "refresh_token",
-          client_id: process.env.MELI_APP_ID!,
-          client_secret: process.env.MELI_SECRET_KEY!,
+          client_id: process.env.APPJEEZ_MELI_APP_ID!,
+          client_secret: process.env.APPJEEZ_MELI_SECRET_KEY!,
           refresh_token: this.account.refresh_token,
         }),
       });

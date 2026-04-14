@@ -1,37 +1,47 @@
 import { NextRequest } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 
-// Forzar renderizado dinámico - evita error de generación estática y timeout
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co",
+  process.env.SUPABASE_SERVICE_ROLE_KEY || "placeholder-key"
+);
+
 /**
- * GET /api/notifications/stream
+ * GET /api/notifications/stream?token=xxx
  * 
- * Endpoint SSE (Server-Sent Events) para notificaciones en tiempo real.
- * Envía notificaciones de Mercado Libre a los clientes conectados.
+ * Endpoint SSE con autenticacion via query param (EventSource no soporta headers).
  */
 export async function GET(request: NextRequest) {
+  // Auth via query param (EventSource no soporta Authorization header)
+  const { searchParams } = new URL(request.url);
+  const token = searchParams.get("token");
+  
+  if (token) {
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+    if (error || !user) {
+      return new Response("No autorizado", { status: 401 });
+    }
+  }
+
   const encoder = new TextEncoder();
 
-  // Crear stream SSE
   const stream = new ReadableStream({
     start(controller) {
-      // Enviar evento inicial de conexión
       const initialEvent = `event: connected\ndata: ${JSON.stringify({ status: "connected", timestamp: new Date().toISOString() })}\n\n`;
       controller.enqueue(encoder.encode(initialEvent));
 
-      // Enviar heartbeat cada 30 segundos para mantener la conexión viva
       const heartbeatInterval = setInterval(() => {
         try {
           const heartbeat = `event: heartbeat\ndata: ${JSON.stringify({ timestamp: new Date().toISOString() })}\n\n`;
           controller.enqueue(encoder.encode(heartbeat));
         } catch {
-          // Cliente desconectado
           clearInterval(heartbeatInterval);
         }
       }, 30000);
 
-      // Cerrar stream cuando el cliente se desconecte
       request.signal.addEventListener("abort", () => {
         clearInterval(heartbeatInterval);
         controller.close();
