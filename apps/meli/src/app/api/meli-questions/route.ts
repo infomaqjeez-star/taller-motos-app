@@ -47,15 +47,39 @@ export async function GET(request: NextRequest) {
         const headers = { Authorization: `Bearer ${token}` };
         const url = `https://api.mercadolibre.com/questions/search?seller_id=${account.meli_user_id}&status=UNANSWERED&limit=50`;
         
+        console.log(`[meli-questions] [${account.meli_nickname}] GET ${url}`);
+        
         const res = await fetch(url, { headers, signal: AbortSignal.timeout(15000) });
         
+        console.log(`[meli-questions] [${account.meli_nickname}] Response status: ${res.status}`);
+        
         if (!res.ok) {
-          console.error(`[meli-questions] Error ${res.status} para ${account.meli_nickname}`);
+          const errorText = await res.text().catch(() => "Unknown error");
+          console.error(`[meli-questions] [${account.meli_nickname}] Error ${res.status}: ${errorText.substring(0, 200)}`);
           continue;
         }
 
         const data = await res.json();
         const questions = data.questions || [];
+        
+        console.log(`[meli-questions] [${account.meli_nickname}] ${questions.length} preguntas encontradas`);
+        console.log(`[meli-questions] [${account.meli_nickname}] Total preguntas en respuesta:`, data.total || questions.length);
+        console.log(`[meli-questions] [${account.meli_nickname}] Filters aplicados:`, data.filters);
+        
+        if (questions.length === 0) {
+          // Intentar sin filtro de status para ver si hay preguntas con otro estado
+          const urlAll = `https://api.mercadolibre.com/questions/search?seller_id=${account.meli_user_id}&limit=10`;
+          console.log(`[meli-questions] [${account.meli_nickname}] Intentando sin filtro: ${urlAll}`);
+          const resAll = await fetch(urlAll, { headers, signal: AbortSignal.timeout(10000) });
+          if (resAll.ok) {
+            const dataAll = await resAll.json();
+            console.log(`[meli-questions] [${account.meli_nickname}] Sin filtro: ${dataAll.questions?.length || 0} preguntas`);
+            if (dataAll.questions?.length > 0) {
+              console.log(`[meli-questions] [${account.meli_nickname}] Estados encontrados:`, 
+                [...new Set(dataAll.questions.map((q: any) => q.status))]);
+            }
+          }
+        }
         
         for (const q of questions) {
           // Obtener detalles del item
