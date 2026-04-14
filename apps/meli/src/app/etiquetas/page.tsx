@@ -152,14 +152,15 @@ function LabelCard({
           )}
         </button>
       )}
-      {/* Imagen 100x100px */}
+      {/* Imagen 100x100px - Link al producto público de MeLi */}
       <a
-        href={shipment.purchase_url || `https://www.mercadolibre.com.ar/compras/${shipment.order_id}`}
+        href={shipment.item_id ? `https://articulo.mercadolibre.com.ar/${shipment.item_id}` : '#'}
         target="_blank"
         rel="noopener noreferrer"
         className="w-24 h-24 rounded-xl flex-shrink-0 overflow-hidden flex items-center justify-center cursor-pointer group relative"
         style={{ background: "#2a2a2a", border: "1px solid rgba(255,255,255,0.1)" }}
-        title="Ver compra en Mercado Libre"
+        title={shipment.item_id ? "Ver producto en Mercado Libre" : "Producto no disponible"}
+        onClick={(e) => !shipment.item_id && e.preventDefault()}
       >
         {thumb ? (
           <Image

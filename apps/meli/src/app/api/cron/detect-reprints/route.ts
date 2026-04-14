@@ -56,16 +56,31 @@ export async function GET(request: NextRequest) {
         const headers = { Authorization: `Bearer ${token}` };
         const meliId = String(account.meli_user_id);
 
-        // Buscar ordenes recientes enviadas (ultimas 24h)
+        // Buscar ordenes con envio en diferentes estados (ultimas 24h)
         const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-        const ordersRes = await fetch(
-          `https://api.mercadolibre.com/orders/search?seller=${meliId}&order.status=shipped&order.date_created.from=${since}&limit=50`,
-          { headers, signal: AbortSignal.timeout(15000) }
-        );
-
-        if (!ordersRes.ok) continue;
-        const ordersData = await ordersRes.json();
-        const orders = ordersData.results || [];
+        const statuses = ["shipped", "ready_to_ship", "paid"];
+        let allOrders: any[] = [];
+        
+        for (const status of statuses) {
+          try {
+            const ordersRes = await fetch(
+              `https://api.mercadolibre.com/orders/search?seller=${meliId}&order.status=${status}&order.date_created.from=${since}&limit=50`,
+              { headers, signal: AbortSignal.timeout(15000) }
+            );
+            if (ordersRes.ok) {
+              const data = await ordersRes.json();
+              allOrders = allOrders.concat(data.results || []);
+            }
+          } catch { /* ignore */ }
+        }
+        
+        // Deduplicar ordenes
+        const seenOrders = new Set<string>();
+        const orders = allOrders.filter(o => {
+          if (seenOrders.has(String(o.id))) return false;
+          seenOrders.add(String(o.id));
+          return true;
+        });
 
         for (const order of orders) {
           if (!order.shipping?.id) continue;
@@ -88,8 +103,18 @@ export async function GET(request: NextRequest) {
           if (!shipRes.ok) continue;
           const shipData = await shipRes.json();
 
-          // Solo guardar si tiene label (fue impresa en MeLi)
-          if (!shipData.label?.url && shipData.status !== "shipped") continue;
+          // Solo guardar si tiene label disponible para reimprimir
+          // shipped = ya enviado (etiqueta usada)
+          // ready_to_ship = etiqueta lista para reimprimir
+          const hasLabel = shipData.label?.url || shipData.label?.pdf || shipData.label?.zpl;
+          const canReprint = shipData.status === "ready_to_ship" || shipData.substatus === "printed";
+          
+          if (!hasLabel || (!canReprint && shipData.status !== "shipped")) {
+            console.log(`[detect-reprints] Shipment ${shipmentId} sin label reimprimible (status: ${shipData.status}, hasLabel: ${!!hasLabel})`);
+            continue;
+          }
+
+          console.log(`[detect-reprints] Etiqueta reimprimible detectada: ${shipmentId} (status: ${shipData.status})`);
 
           const logisticType = classifyLogisticType(shipData.logistic_type || "");
 
