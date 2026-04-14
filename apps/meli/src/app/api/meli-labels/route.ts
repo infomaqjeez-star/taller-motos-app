@@ -64,61 +64,69 @@ export async function GET(request: NextRequest) {
 
         const headers = { Authorization: `Bearer ${validToken}` };
         
-        // OBTENER ÓRDENES SEGÚN EL ESTADO
-        // Para etiquetas, buscamos órdenes pagadas, en preparación o listas para enviar
-        let ordersUrl = `https://api.mercadolibre.com/orders/search?seller=${account.meli_user_id}`;
+        // OBTENER ÓRDENES - Hacer llamadas separadas por estado (MeLi no soporta múltiples status en un param)
+        const meliId = account.meli_user_id;
+        const statusesToSearch = status === "shipped" 
+          ? ["shipped"] 
+          : status === "delivered" 
+          ? ["delivered"]
+          : ["paid", "handling", "ready_to_ship"];
         
-        // Buscar en múltiples estados: handling (en preparación), ready_to_ship (listo para enviar), paid (pagado)
-        if (status === "ready_to_ship" || status === "handling") {
-          ordersUrl += `&order.status=handling&order.status=ready_to_ship&order.status=paid`;
-        } else if (status === "shipped") {
-          ordersUrl += `&order.status=shipped`;
-        } else if (status === "delivered") {
-          ordersUrl += `&order.status=delivered`;
-        } else {
-          // Por defecto, buscar órdenes en preparación o listas para enviar
-          ordersUrl += `&order.status=handling&order.status=ready_to_ship&order.status=paid`;
+        let allOrders: any[] = [];
+        
+        for (const orderStatus of statusesToSearch) {
+          try {
+            const ordersUrl = `https://api.mercadolibre.com/orders/search?seller=${meliId}&order.status=${orderStatus}&sort=date_desc&limit=${limit}`;
+            console.log(`[meli-labels] [${account.meli_nickname}] GET orders status=${orderStatus}`);
+            
+            const ordersRes = await fetch(ordersUrl, { 
+              headers, 
+              signal: AbortSignal.timeout(15000) 
+            });
+            
+            if (ordersRes.ok) {
+              const ordersData = await ordersRes.json();
+              const orders = ordersData.results || [];
+              console.log(`[meli-labels] [${account.meli_nickname}] ${orders.length} ordenes en status=${orderStatus}`);
+              allOrders = allOrders.concat(orders);
+            } else {
+              console.error(`[meli-labels] [${account.meli_nickname}] Error ${ordersRes.status} para status=${orderStatus}`);
+            }
+          } catch (e) {
+            console.error(`[meli-labels] [${account.meli_nickname}] Timeout/error para status=${orderStatus}`);
+          }
         }
         
-        ordersUrl += `&sort=date_desc&limit=${limit}`;
-
-        console.log(`[meli-labels] [${account.meli_nickname}] GET ${ordersUrl}`);
-        
-        const ordersRes = await fetch(ordersUrl, { 
-          headers, 
-          signal: AbortSignal.timeout(15000) 
+        // Deduplicar ordenes por ID
+        const seenOrderIds = new Set<number>();
+        const orders = allOrders.filter(o => {
+          if (seenOrderIds.has(o.id)) return false;
+          seenOrderIds.add(o.id);
+          return true;
         });
-        
-        console.log(`[meli-labels] [${account.meli_nickname}] Response status: ${ordersRes.status}`);
-        
-        if (!ordersRes.ok) {
-          const errorText = await ordersRes.text().catch(() => "Unknown");
-          console.error(`[meli-labels] [${account.meli_nickname}] Error ${ordersRes.status}: ${errorText.substring(0, 200)}`);
-          continue;
-        }
 
-        const ordersData = await ordersRes.json();
-        const orders = ordersData.results || [];
-        
-        console.log(`[meli-labels] [${account.meli_nickname}] ${orders.length} órdenes encontradas`);
-        console.log(`[meli-labels] [${account.meli_nickname}] Primeras órdenes:`, orders.slice(0, 3).map((o: any) => ({ 
-          id: o.id, 
-          status: o.status,
-          shipping: o.shipping?.status,
-          logistic_type: o.shipping?.logistic_type 
-        })));
+        console.log(`[meli-labels] [${account.meli_nickname}] ${orders.length} ordenes totales (deduplicadas)`);
+        if (orders.length > 0) {
+          console.log(`[meli-labels] [${account.meli_nickname}] Primeras ordenes:`, orders.slice(0, 3).map((o: any) => ({ 
+            id: o.id, 
+            status: o.status,
+            shipping_status: o.shipping?.status,
+            logistic_type: o.shipping?.logistic_type 
+          })));
+        }
 
         if (orders.length === 0) continue;
 
         // Procesar cada orden
         for (const order of orders) {
           try {
-            // Verificar que tenga shipping o sea Flex listo para enviar
+            // Verificar que tenga shipping o sea Flex/Full listo para enviar
             const logisticType = order.shipping?.logistic_type || order.logistic_type || "";
+            const isFulfillment = logisticType === "fulfillment";
             const isFlexReady = (logisticType === "self_service" || logisticType === "self_service_flex") && 
               (order.status === "handling" || order.status === "ready_to_ship");
             
-            if (!order.shipping?.id && !isFlexReady) {
+            if (!order.shipping?.id && !isFlexReady && !isFulfillment) {
               console.log(`[meli-labels] [${account.meli_nickname}] Orden ${order.id} sin shipping y no es Flex listo`);
               continue;
             }
@@ -150,9 +158,9 @@ export async function GET(request: NextRequest) {
                 console.log(`[meli-labels] [${account.meli_nickname}] Shipment ${shipmentId} status=${shipData.status} - no incluido`);
                 continue;
               }
-            } else {
-              // Flex sin shipping.id aún - usar datos de la orden
-              console.log(`[meli-labels] [${account.meli_nickname}] Orden ${order.id} es Flex sin shipping.id`);
+            } else if (!order.shipping?.id) {
+              // Flex/Fulfillment sin shipping.id - usar datos de la orden
+              console.log(`[meli-labels] [${account.meli_nickname}] Orden ${order.id} es ${logisticType} sin shipping.id`);
               shipData = {
                 status: order.status,
                 logistic_type: logisticType,

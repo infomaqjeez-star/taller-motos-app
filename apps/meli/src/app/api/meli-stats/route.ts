@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
           respondidas: 0,
           publicaciones: 0,
           mensajes: 0,
-          ordenes: [] as { date_created: string; total_amount: number }[],
+          ordenes: [] as { date_created: string; total_amount: number; logistic_type: string }[],
         };
 
         try {
@@ -158,6 +158,7 @@ export async function GET(request: NextRequest) {
             ordenes:      allOrders.map((o: any) => ({
               date_created: o.date_created || "",
               total_amount: o.total_amount || 0,
+              logistic_type: o.shipping?.logistic_type || "",
             })),
           };
         } catch {
@@ -188,6 +189,22 @@ export async function GET(request: NextRequest) {
       .map(([dia, total]) => ({ dia, total }))
       .sort((a, b) => a.dia.localeCompare(b.dia));
 
+    // Ventas por tipo de envio (todas las cuentas)
+    const ventasPorTipo: Record<string, { ventas: number; facturacion: number }> = {};
+    for (const cuenta of porCuentaRaw) {
+      for (const o of cuenta.ordenes) {
+        let tipo = "correo";
+        const lt = o.logistic_type || "";
+        if (lt === "self_service" || lt === "self_service_flex") tipo = "flex";
+        else if (lt === "cross_docking") tipo = "turbo";
+        else if (lt === "fulfillment") tipo = "full";
+        else if (lt === "drop_off") tipo = "correo";
+        if (!ventasPorTipo[tipo]) ventasPorTipo[tipo] = { ventas: 0, facturacion: 0 };
+        ventasPorTipo[tipo].ventas++;
+        ventasPorTipo[tipo].facturacion += o.total_amount || 0;
+      }
+    }
+
     // Por cuenta (sin el campo ordenes — no necesario en respuesta)
     const por_cuenta = porCuentaRaw.map(({ ordenes: _o, ...rest }) => rest);
 
@@ -200,6 +217,7 @@ export async function GET(request: NextRequest) {
       totales,
       por_cuenta,
       ventas_por_dia,
+      ventas_por_tipo: ventasPorTipo,
     });
   } catch (err) {
     console.error("[meli-stats] Error:", err);

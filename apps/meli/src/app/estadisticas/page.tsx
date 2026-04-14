@@ -5,10 +5,11 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
+  PieChart, Pie, Cell, Legend,
 } from "recharts";
 import {
   TrendingUp, ShoppingCart, MessageCircle, Package,
-  DollarSign, RefreshCw, BarChart2, CheckCircle, ArrowLeft,
+  DollarSign, RefreshCw, BarChart2, CheckCircle, ArrowLeft, Truck,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -209,6 +210,40 @@ export default function EstadisticasMeliPage() {
                     <Bar dataKey="total" fill="#FFE600" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
+              </div>
+            )}
+
+            {/* Ventas por tipo de envio */}
+            {data.ventas_por_tipo && Object.keys(data.ventas_por_tipo).length > 0 && (
+              <div className="rounded-2xl p-5 mb-6" style={{ background: "#1F1F1F" }}>
+                <div className="flex items-center gap-2 mb-4">
+                  <Truck className="w-4 h-4" style={{ color: "#00E5FF" }} />
+                  <h2 className="text-white font-semibold text-sm">Ventas por tipo de envio</h2>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {[
+                    { key: "full", label: "Full", color: "#FFE600", icon: "⚡" },
+                    { key: "flex", label: "Flex", color: "#00E5FF", icon: "🚚" },
+                    { key: "turbo", label: "Turbo", color: "#A855F7", icon: "⚡" },
+                    { key: "correo", label: "Correo", color: "#FF9800", icon: "📦" },
+                  ].map(({ key, label, color, icon }) => {
+                    const d = data.ventas_por_tipo[key];
+                    if (!d) return (
+                      <div key={key} className="rounded-xl p-3 text-center" style={{ background: "#2A2A2A" }}>
+                        <p className="text-lg font-black" style={{ color: "#374151" }}>0</p>
+                        <p className="text-[10px]" style={{ color: "#6B7280" }}>{icon} {label}</p>
+                        <p className="text-[10px] font-bold" style={{ color: "#374151" }}>$0</p>
+                      </div>
+                    );
+                    return (
+                      <div key={key} className="rounded-xl p-3 text-center" style={{ background: color + "15", border: `1px solid ${color}33` }}>
+                        <p className="text-lg font-black" style={{ color }}>{d.ventas}</p>
+                        <p className="text-[10px]" style={{ color: "#9CA3AF" }}>{icon} {label}</p>
+                        <p className="text-[10px] font-bold" style={{ color }}>{fmt(d.facturacion)}</p>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             )}
 
