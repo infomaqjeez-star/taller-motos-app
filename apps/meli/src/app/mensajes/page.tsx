@@ -778,12 +778,16 @@ function MensajesInner() {
 
       const seen = new Set<number>();
       const unique = data.filter(q => {
-        if (seen.has(q.meli_question_id)) return false;
-        seen.add(q.meli_question_id);
+        const qId = Number(q.meli_question_id);
+        if (seen.has(qId)) return false;
+        seen.add(qId);
         return true;
       });
 
-      setQuestions(unique.filter(q => !recentlyAnsweredRef.current.has(q.meli_question_id)));
+      // Filtrar preguntas ya respondidas (convertir a número para comparación)
+      const answeredIds = Array.from(recentlyAnsweredRef.current).map(id => Number(id));
+      const answeredSet = new Set(answeredIds);
+      setQuestions(unique.filter(q => !answeredSet.has(Number(q.meli_question_id))));
       setLastSync(new Date());
     } catch (e) {
       setQuestionsError((e as Error).message);
@@ -902,14 +906,14 @@ function MensajesInner() {
   }, []);
 
   const filteredQuestions = questions.filter(q =>
-    // Excluir preguntas respondidas recientemente
-    !recentlyAnswered.has(q.meli_question_id) &&
+    // Excluir preguntas respondidas recientemente (convertir a número para comparación)
+    !recentlyAnswered.has(Number(q.meli_question_id)) &&
     (q.question_text.toLowerCase().includes(search.toLowerCase()) ||
     (q.item_title ?? "").toLowerCase().includes(search.toLowerCase()) ||
     (q.meli_accounts?.nickname ?? "").toLowerCase().includes(search.toLowerCase()))
   );
 
-  const pendingQuestions = questions.filter(q => !recentlyAnswered.has(q.meli_question_id));
+  const pendingQuestions = questions.filter(q => !recentlyAnswered.has(Number(q.meli_question_id)));
 
   const filteredMessages = messages.filter(m =>
     m.message_text.toLowerCase().includes(search.toLowerCase()) ||
