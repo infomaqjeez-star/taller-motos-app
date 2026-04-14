@@ -47,6 +47,7 @@ export async function GET(request: NextRequest) {
 
     let totalSaved = 0;
     const errors: string[] = [];
+    const savedByType: Record<string, number> = { flex: 0, correo: 0, turbo: 0, full: 0 };
 
     for (const account of accounts) {
       try {
@@ -81,6 +82,11 @@ export async function GET(request: NextRequest) {
           seenOrders.add(String(o.id));
           return true;
         });
+
+        console.log(`[detect-reprints] [${account.meli_nickname}] ${orders.length} ordenes unicas para procesar`);
+
+        // Contadores por tipo
+        const cuentaPorTipo: Record<string, number> = { flex: 0, correo: 0, turbo: 0, full: 0 };
 
         for (const order of orders) {
           if (!order.shipping?.id) continue;
@@ -119,13 +125,14 @@ export async function GET(request: NextRequest) {
           const logisticType = classifyLogisticType(shipData.logistic_type || "");
 
           // Obtener info del item
-          let sku = null;
+          const firstItem = order.order_items?.[0];
+          let sku = firstItem?.item?.seller_custom_field || null;
+          let itemTitle = firstItem?.item?.title || "Producto";
+          let itemId = firstItem?.item?.id || null;
+          let itemThumbnail = firstItem?.item?.thumbnail || null;
           let buyerNickname = order.buyer?.nickname || null;
-          if (order.order_items?.[0]?.item?.seller_custom_field) {
-            sku = order.order_items[0].item.seller_custom_field;
-          }
 
-          // Guardar en historial
+          // Guardar en historial con toda la info
           const { error: insertError } = await supabase
             .from("meli_printed_labels")
             .insert({
@@ -134,10 +141,14 @@ export async function GET(request: NextRequest) {
               tracking_number: shipData.tracking_number || null,
               buyer_nickname: buyerNickname,
               sku: sku,
-              quantity: order.order_items?.[0]?.quantity || 1,
+              item_title: itemTitle,
+              item_id: itemId,
+              item_thumbnail: itemThumbnail,
+              quantity: firstItem?.quantity || 1,
               account_id: account.id,
               meli_user_id: meliId,
               shipping_method: logisticType,
+              shipment_status: shipData.status,
               source: "meli-auto",
               print_date: new Date().toISOString(),
               user_id: account.user_id,
@@ -145,7 +156,9 @@ export async function GET(request: NextRequest) {
 
           if (!insertError) {
             totalSaved++;
-            console.log(`[detect-reprints] Guardada etiqueta ${shipmentId} de ${account.meli_nickname}`);
+            cuentaPorTipo[logisticType] = (cuentaPorTipo[logisticType] || 0) + 1;
+            savedByType[logisticType] = (savedByType[logisticType] || 0) + 1;
+            console.log(`[detect-reprints] Guardada etiqueta ${shipmentId} tipo=${logisticType} de ${account.meli_nickname}`);
           }
         }
       } catch (err) {
@@ -156,6 +169,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       message: `Proceso completado`,
       saved: totalSaved,
+      by_type: savedByType,
       accounts_processed: accounts.length,
       errors: errors.length > 0 ? errors : undefined,
     });

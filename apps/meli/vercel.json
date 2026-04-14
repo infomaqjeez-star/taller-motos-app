@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/detect-reprints",
+      "schedule": "*/10 * * * *"
+    },
+    {
+      "path": "/api/cron/cleanup-history",
+      "schedule": "0 3 * * *"
+    }
+  ]
+}
