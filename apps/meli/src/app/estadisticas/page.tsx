@@ -237,12 +237,49 @@ export default function EstadisticasMeliPage() {
                     );
                     return (
                       <div key={key} className="rounded-xl p-3 text-center" style={{ background: color + "15", border: `1px solid ${color}33` }}>
-                        <p className="text-lg font-black" style={{ color }}>{d.ventas}</p>
+                        <p className="text-2xl font-black" style={{ color }}>{d.ventas}</p>
                         <p className="text-[10px]" style={{ color: "#9CA3AF" }}>{icon} {label}</p>
-                        <p className="text-[10px] font-bold" style={{ color }}>{fmt(d.facturacion)}</p>
+                        <p className="text-xs font-bold" style={{ color }}>{fmt(d.facturacion)}</p>
                       </div>
                     );
                   })}
+                </div>
+              </div>
+            )}
+
+            {/* Top 30 productos mas vendidos */}
+            {data.top_productos?.length > 0 && (
+              <div className="rounded-2xl p-5 mb-6" style={{ background: "#1F1F1F" }}>
+                <div className="flex items-center gap-2 mb-4">
+                  <ShoppingCart className="w-4 h-4" style={{ color: "#FFE600" }} />
+                  <h2 className="text-white font-semibold text-sm">Top {Math.min(data.top_productos.length, 30)} productos mas vendidos</h2>
+                </div>
+                <div className="space-y-2">
+                  {data.top_productos.map((p: any, i: number) => (
+                    <div key={p.item_id || i} className="flex items-center gap-3 p-3 rounded-xl" style={{ background: "#2A2A2A" }}>
+                      <span className="text-xs font-black w-6 text-center" style={{ color: i < 3 ? "#FFE600" : "#6B7280" }}>
+                        #{i + 1}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-bold text-white truncate">{p.title || p.item_id}</p>
+                        <div className="flex gap-2 mt-1">
+                          {p.por_tipo && Object.entries(p.por_tipo).map(([tipo, cant]: [string, any]) => (
+                            <span key={tipo} className="text-[9px] px-1.5 py-0.5 rounded"
+                              style={{
+                                background: tipo === "full" ? "#FFE60022" : tipo === "flex" ? "#00E5FF22" : tipo === "turbo" ? "#A855F722" : "#FF980022",
+                                color: tipo === "full" ? "#FFE600" : tipo === "flex" ? "#00E5FF" : tipo === "turbo" ? "#A855F7" : "#FF9800",
+                              }}>
+                              {tipo.toUpperCase()} x{cant}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="text-right flex-shrink-0">
+                        <p className="text-sm font-black text-white">{p.cantidad}</p>
+                        <p className="text-[10px]" style={{ color: "#34D399" }}>{fmt(p.facturacion)}</p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}

@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
           respondidas: 0,
           publicaciones: 0,
           mensajes: 0,
-          ordenes: [] as { date_created: string; total_amount: number; logistic_type: string }[],
+          ordenes: [] as { date_created: string; total_amount: number; logistic_type: string; item_title: string; item_id: string; quantity: number }[],
         };
 
         try {
@@ -155,11 +155,26 @@ export async function GET(request: NextRequest) {
             respondidas:  0, // MeLi no da respondidas fácilmente
             publicaciones: itemsData?.paging?.total ?? 0,
             mensajes:     msgData?.total ?? 0,
-            ordenes:      allOrders.map((o: any) => ({
-              date_created: o.date_created || "",
-              total_amount: o.total_amount || 0,
-              logistic_type: o.shipping?.logistic_type || "",
-            })),
+            ordenes:      allOrders.map((o: any) => {
+              // Detectar logistic_type de multiples fuentes
+              let lt = o.shipping?.logistic_type || "";
+              if (!lt && o.tags) {
+                // MeLi pone tags como "fulfillment", "self_service", etc.
+                const tags = Array.isArray(o.tags) ? o.tags : [];
+                if (tags.includes("fulfillment")) lt = "fulfillment";
+                else if (tags.includes("self_service")) lt = "self_service";
+              }
+              // Extraer info del primer item
+              const firstItem = o.order_items?.[0];
+              return {
+                date_created: o.date_created || "",
+                total_amount: o.total_amount || 0,
+                logistic_type: lt,
+                item_title: firstItem?.item?.title || "",
+                item_id: firstItem?.item?.id || "",
+                quantity: firstItem?.quantity || 1,
+              };
+            }),
           };
         } catch {
           return base;
@@ -205,6 +220,30 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Top 30 productos mas vendidos (todas las cuentas)
+    const productoMap: Record<string, { title: string; item_id: string; cantidad: number; facturacion: number; por_tipo: Record<string, number> }> = {};
+    for (const cuenta of porCuentaRaw) {
+      for (const o of cuenta.ordenes) {
+        if (!o.item_title || !o.item_id) continue;
+        const key = o.item_id;
+        if (!productoMap[key]) {
+          productoMap[key] = { title: o.item_title, item_id: o.item_id, cantidad: 0, facturacion: 0, por_tipo: {} };
+        }
+        productoMap[key].cantidad += o.quantity || 1;
+        productoMap[key].facturacion += o.total_amount || 0;
+        // Clasificar por tipo de envio
+        let tipo = "correo";
+        const lt = o.logistic_type || "";
+        if (lt === "self_service" || lt === "self_service_flex") tipo = "flex";
+        else if (lt === "cross_docking") tipo = "turbo";
+        else if (lt === "fulfillment") tipo = "full";
+        productoMap[key].por_tipo[tipo] = (productoMap[key].por_tipo[tipo] || 0) + (o.quantity || 1);
+      }
+    }
+    const top_productos = Object.values(productoMap)
+      .sort((a, b) => b.cantidad - a.cantidad)
+      .slice(0, 30);
+
     // Por cuenta (sin el campo ordenes — no necesario en respuesta)
     const por_cuenta = porCuentaRaw.map(({ ordenes: _o, ...rest }) => rest);
 
@@ -218,6 +257,7 @@ export async function GET(request: NextRequest) {
       por_cuenta,
       ventas_por_dia,
       ventas_por_tipo: ventasPorTipo,
+      top_productos,
     });
   } catch (err) {
     console.error("[meli-stats] Error:", err);
