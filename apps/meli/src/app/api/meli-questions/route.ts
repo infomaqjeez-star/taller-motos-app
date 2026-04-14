@@ -141,7 +141,14 @@ export async function GET(request: NextRequest) {
       new Date(b.date_created).getTime() - new Date(a.date_created).getTime()
     );
     
-    return NextResponse.json(allQuestions);
+    console.log(`[meli-questions] TOTAL: ${allQuestions.length} preguntas para el usuario`);
+    
+    // Agregar headers de no-caché
+    const response = NextResponse.json(allQuestions);
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    response.headers.set('Pragma', 'no-cache');
+    response.headers.set('Expires', '0');
+    return response;
   } catch (error) {
     console.error("[meli-questions] Error fatal:", error);
     return NextResponse.json([]);

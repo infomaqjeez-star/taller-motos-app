@@ -770,7 +770,7 @@ function MensajesInner() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { setQuestionsError("No autenticado"); return; }
-      const res = await fetch("/api/meli-questions", {
+      const res = await fetch(`/api/meli-questions?_t=${Date.now()}`, {
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -850,8 +850,8 @@ function MensajesInner() {
   useEffect(() => {
     loadAll();
 
-    // Polling cada 3 minutos para mantener actualizado
-    const interval = setInterval(() => loadRef.current?.(true), 180000);
+    // Polling cada 1 minuto para mantener actualizado
+    const interval = setInterval(() => loadRef.current?.(true), 60000);
     return () => clearInterval(interval);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
