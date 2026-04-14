@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
           ? ["shipped"] 
           : status === "delivered" 
           ? ["delivered"]
-          : ["paid", "handling", "ready_to_ship"];
+          : ["paid", "handling", "ready_to_ship", "shipped"];
         
         let allOrders: any[] = [];
         
@@ -287,22 +287,72 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Clasificar shipments en categorias separadas
+    const pending: any[] = [];     // Pendientes de imprimir (handling, ready_to_ship, paid)
+    const printed: any[] = [];     // Ya impresas en nuestra app
+    const in_transit: any[] = [];  // En camino (shipped)
+    const full: any[] = [];        // Fulfillment (MeLi maneja el envio)
+    const returns: any[] = [];     // Devoluciones
+
+    for (const s of allShipments) {
+      const shipStatus = s.status;
+      const isFull = s.type === "full";
+      
+      // Full siempre va a su propia seccion
+      if (isFull) {
+        full.push(s);
+        continue;
+      }
+
+      // Shipped = en transito (no debe estar en pendientes)
+      if (shipStatus === "shipped") {
+        in_transit.push(s);
+        continue;
+      }
+
+      // Delivered o returned
+      if (shipStatus === "delivered") continue; // No mostrar entregados
+      if (shipStatus === "returned" || shipStatus === "cancelled") {
+        returns.push(s);
+        continue;
+      }
+
+      // Si ya fue impresa en nuestra app, va a impresas
+      if (s.printed) {
+        printed.push(s);
+        continue;
+      }
+
+      // Pendientes (handling, ready_to_ship, paid, pending) - solo si tiene label disponible
+      if (s.label_url || shipStatus === "ready_to_ship" || shipStatus === "handling") {
+        pending.push(s);
+      } else if (shipStatus === "paid" || shipStatus === "pending") {
+        // Pagado pero sin etiqueta todavia - igual mostrar como pendiente
+        pending.push(s);
+      }
+    }
+
     // Calcular resumen
     const summary = {
       total: allShipments.length,
-      flex: allShipments.filter(s => s.type === "flex").length,
-      correo: allShipments.filter(s => s.type === "correo").length,
-      turbo: allShipments.filter(s => s.type === "turbo").length,
-      full: allShipments.filter(s => s.type === "full").length,
-      printed: allShipments.filter(s => s.printed).length,
-      pending: allShipments.filter(s => !s.printed).length,
+      pending: pending.length,
+      printed: printed.length,
+      in_transit: in_transit.length,
+      full: full.length,
+      returns: returns.length,
+      flex: pending.filter(s => s.type === "flex").length,
+      correo: pending.filter(s => s.type === "correo").length,
+      turbo: pending.filter(s => s.type === "turbo").length,
     };
 
-    console.log(`[meli-labels] ✅ TOTAL: ${allShipments.length} shipments`);
-    console.log(`[meli-labels] Resumen:`, summary);
+    console.log(`[meli-labels] TOTAL: ${allShipments.length} | Pendientes: ${pending.length} | Impresas: ${printed.length} | En transito: ${in_transit.length} | Full: ${full.length}`);
 
     return NextResponse.json({
-      shipments: allShipments,
+      shipments: pending,
+      printed,
+      in_transit,
+      full,
+      returns,
       summary,
     });
   } catch (error) {
