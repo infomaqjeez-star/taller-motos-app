@@ -268,6 +268,34 @@ export async function meliPost(path: string, token: string, body: unknown, timeo
   }
 }
 
+// Helper para fechas en zona horaria de Buenos Aires (UTC-3)
+export function getBuenosAiresDate(): Date {
+  const now = new Date();
+  // Buenos Aires es UTC-3 (sin horario de verano desde 2024)
+  const offset = -3 * 60; // minutos
+  const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+  return new Date(utc + (offset * 60000));
+}
+
+export function getBuenosAiresISOString(): string {
+  return getBuenosAiresDate().toISOString();
+}
+
+export function getBuenosAiresDateString(): string {
+  const d = getBuenosAiresDate();
+  return d.toISOString().split('T')[0];
+}
+
+export function getStartOfDayBuenosAires(): string {
+  const d = getBuenosAiresDate();
+  return `${d.toISOString().split('T')[0]}T00:00:00.000-03:00`;
+}
+
+export function getEndOfDayBuenosAires(): string {
+  const d = getBuenosAiresDate();
+  return `${d.toISOString().split('T')[0]}T23:59:59.999-03:00`;
+}
+
 export async function meliGetWithRetry(
   path: string,
   token: string,

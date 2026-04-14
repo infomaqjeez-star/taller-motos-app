@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { getValidToken, type LinkedMeliAccount } from "@/lib/meli";
+import { getValidToken, getBuenosAiresDate, getStartOfDayBuenosAires, getEndOfDayBuenosAires, type LinkedMeliAccount } from "@/lib/meli";
 
 export const dynamic = "force-dynamic";
 
@@ -31,8 +31,8 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const periodo = searchParams.get("periodo") || "mes";
 
-    // Calcular fecha desde
-    const now = new Date();
+    // Calcular fecha desde (en zona horaria de Buenos Aires)
+    const now = getBuenosAiresDate();
     let fechaDesde: Date;
     if (periodo === "hoy") {
       fechaDesde = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -91,10 +91,11 @@ export async function GET(request: NextRequest) {
           const desde = fechaDesde.toISOString();
 
           // Llamadas iniciales en paralelo
+          const desdeStr = fechaDesde.toISOString().split('T')[0] + 'T00:00:00.000-03:00';
           const [ordRes, qRes, itemsRes, msgRes] = await Promise.allSettled([
             fetch(
               `https://api.mercadolibre.com/orders/search?seller=${meliId}&order.status=paid` +
-              `&order.date_created.from=${desde}&sort=date_desc&limit=50`,
+              `&order.date_created.from=${encodeURIComponent(desdeStr)}&sort=date_desc&limit=50`,
               { headers, signal: AbortSignal.timeout(7000) }
             ),
             fetch(
@@ -133,7 +134,7 @@ export async function GET(request: NextRequest) {
               Array.from({ length: totalPages - 1 }, (_, i) =>
                 fetch(
                   `https://api.mercadolibre.com/orders/search?seller=${meliId}&order.status=paid` +
-                  `&order.date_created.from=${desde}&sort=date_desc&limit=50&offset=${(i + 1) * 50}`,
+                  `&order.date_created.from=${encodeURIComponent(desdeStr)}&sort=date_desc&limit=50&offset=${(i + 1) * 50}`,
                   { headers, signal: AbortSignal.timeout(7000) }
                 ).then(r => r.ok ? r.json() : null).catch(() => null)
               )

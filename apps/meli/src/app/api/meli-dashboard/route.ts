@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { getValidToken, type LinkedMeliAccount } from "@/lib/meli";
+import { getValidToken, getBuenosAiresDateString, getStartOfDayBuenosAires, type LinkedMeliAccount } from "@/lib/meli";
 
 // Forzar renderizado dinámico - evita error de generación estática
 export const dynamic = 'force-dynamic';
@@ -158,7 +158,7 @@ export async function GET(request: NextRequest) {
                 fetch(`https://api.mercadolibre.com/messages/unread?role=seller&limit=1`, {
                   headers: meliHeaders, signal: AbortSignal.timeout(5000),
                 }),
-                fetch(`https://api.mercadolibre.com/orders/search?seller=${meliId}&order.status=paid&order.date_created.from=${new Date().toISOString().split('T')[0]}T00:00:00.000Z&limit=50`, {
+                fetch(`https://api.mercadolibre.com/orders/search?seller=${meliId}&order.status=paid&order.date_created.from=${getStartOfDayBuenosAires()}&limit=50`, {
                   headers: meliHeaders, signal: AbortSignal.timeout(10000),
                 }),
               ]);
