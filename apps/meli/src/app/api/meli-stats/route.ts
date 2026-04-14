@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { getValidToken, type LinkedMeliAccount } from "@/lib/meli";
 
 export const dynamic = "force-dynamic";
 
@@ -48,7 +49,7 @@ export async function GET(request: NextRequest) {
     // Obtener cuentas del usuario
     const { data: accounts } = await supabase
       .from("linked_meli_accounts")
-      .select("id, meli_user_id, meli_nickname, access_token_enc, refresh_token_enc, token_expiry_date")
+      .select("id, user_id, meli_user_id, meli_nickname, access_token_enc, refresh_token_enc, token_expiry_date, is_active")
       .eq("user_id", userId)
       .eq("is_active", true);
 
@@ -78,10 +79,10 @@ export async function GET(request: NextRequest) {
         };
 
         try {
-          // Usar token directamente (ahora se guarda sin encriptar)
-          const validToken = account.access_token_enc;
-          if (!validToken || !validToken.startsWith('APP_USR')) {
-            console.log(`[meli-stats] Token inválido para ${account.meli_nickname}`);
+          // Usar getValidToken con auto-refresh
+          const validToken = await getValidToken(account as LinkedMeliAccount);
+          if (!validToken) {
+            console.log(`[meli-stats] No se pudo obtener token para ${account.meli_nickname}`);
             return base;
           }
 

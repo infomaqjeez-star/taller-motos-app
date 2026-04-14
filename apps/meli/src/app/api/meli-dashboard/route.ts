@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { getValidToken, type LinkedMeliAccount } from "@/lib/meli";
 
 // Forzar renderizado dinámico - evita error de generación estática
 export const dynamic = 'force-dynamic';
@@ -73,7 +74,7 @@ export async function GET(request: NextRequest) {
     
     const { data: accounts, error: accountsError } = await supabase
       .from("linked_meli_accounts")
-      .select("id, meli_user_id, meli_nickname, is_active, access_token_enc, refresh_token_enc, token_expiry_date")
+      .select("id, user_id, meli_user_id, meli_nickname, is_active, access_token_enc, refresh_token_enc, token_expiry_date")
       .eq("user_id", userId)
       .eq("is_active", true);
 
@@ -120,12 +121,12 @@ export async function GET(request: NextRequest) {
         });
 
         try {
-          // ── Usar token directamente (ahora se guarda sin encriptar) ──────────────────────────
-          const validToken = account.access_token_enc;
+          // ── Usar getValidToken con auto-refresh ──────────────────────────
+          const validToken = await getValidToken(account as LinkedMeliAccount);
 
-          if (!validToken || !validToken.startsWith('APP_USR')) {
-            console.log(`[meli-dashboard] ❌ Token inválido para ${account.meli_nickname}`);
-            return defaultReturn("Token inválido");
+          if (!validToken) {
+            console.log(`[meli-dashboard] ❌ No se pudo obtener token para ${account.meli_nickname}`);
+            return defaultReturn("token_expired");
           }
 
           const meliHeaders = { Authorization: `Bearer ${validToken}` };

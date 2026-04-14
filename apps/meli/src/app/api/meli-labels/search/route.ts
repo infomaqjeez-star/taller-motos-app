@@ -65,10 +65,10 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Filtro TTL: solo etiquetas de los ultimos 90 dias
-    const ninetyDaysAgo = new Date();
-    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
-    query = query.gte("printed_at", ninetyDaysAgo.toISOString());
+    // Filtro TTL: solo etiquetas de los ultimos 60 dias
+    const sixtyDaysAgo = new Date();
+    sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+    query = query.gte("printed_at", sixtyDaysAgo.toISOString());
 
     const { data: labels, error } = await query;
 
@@ -95,10 +95,10 @@ export async function GET(request: NextRequest) {
       print_date:      l.printed_at,
       printed_at:      l.printed_at,
       file_path:       "",
-      // Dias restantes antes de expirar (90 dias desde printed_at)
+      // Dias restantes antes de expirar (60 dias desde printed_at)
       days_remaining:  l.printed_at
-        ? Math.max(0, 90 - Math.floor((Date.now() - new Date(l.printed_at).getTime()) / 86_400_000))
-        : 90,
+        ? Math.max(0, 60 - Math.floor((Date.now() - new Date(l.printed_at).getTime()) / 86_400_000))
+        : 60,
     }));
 
     return NextResponse.json({ results, total: results.length });

@@ -2,6 +2,7 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { ArrowLeft, Download, Search, Loader2, RefreshCw } from "lucide-react";
+import { getAuthHeaders } from "@/lib/supabase";
 
 type ShippingMethod = "todas" | "correo" | "flex" | "turbo";
 
@@ -38,7 +39,8 @@ export default function HistorialEtiquetasPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/meli-labels/search?q=&limit=200&all=true");
+      const authHeaders = await getAuthHeaders();
+      const res = await fetch("/api/meli-labels/search?q=&limit=200&all=true", { headers: authHeaders });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setAllLabels((data.results as PrintedLabel[]) || []);
@@ -121,9 +123,10 @@ export default function HistorialEtiquetasPage() {
     if (selectedIds.size === 0) return;
     setDownloading(true);
     try {
+      const authHeaders = await getAuthHeaders();
       const res = await fetch("/api/meli-labels/download-combined", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...authHeaders },
         body: JSON.stringify({
           ids: Array.from(selectedIds),
           meli_user_id: "",

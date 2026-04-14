@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { ArrowLeft, User, Mail, LogOut, Save, RefreshCw } from "lucide-react";
+import { ArrowLeft, User, Mail, LogOut, Save, RefreshCw, Store } from "lucide-react";
 import Link from "next/link";
 
 export default function ConfiguracionUsuarioPage() {
@@ -13,6 +13,7 @@ export default function ConfiguracionUsuarioPage() {
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
   const [displayName, setDisplayName] = useState("");
+  const [meliAccounts, setMeliAccounts] = useState<any[]>([]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -26,6 +27,13 @@ export default function ConfiguracionUsuarioPage() {
         session.user.user_metadata?.name ||
         ""
       );
+      // Cargar cuentas MeLi vinculadas
+      fetch("/api/meli-accounts", {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      })
+        .then(r => r.ok ? r.json() : [])
+        .then(data => setMeliAccounts(Array.isArray(data) ? data : []))
+        .catch(() => setMeliAccounts([]));
       setLoading(false);
     });
   }, [router]);
@@ -163,17 +171,61 @@ export default function ConfiguracionUsuarioPage() {
         </div>
 
         {/* Cuentas MeLi vinculadas */}
-        <Link
-          href="/configuracion/meli"
-          className="flex items-center justify-between p-4 rounded-2xl mb-4 hover:opacity-80 transition-opacity"
-          style={{ background: "#1F1F1F" }}
-        >
-          <div>
-            <p className="text-white font-semibold text-sm">Cuentas de Mercado Libre</p>
-            <p className="text-xs mt-0.5" style={{ color: "#6B7280" }}>Ver y administrar cuentas conectadas</p>
+        <div className="rounded-2xl p-6 mb-4" style={{ background: "#1F1F1F" }}>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-white font-semibold flex items-center gap-2">
+              <Store className="w-4 h-4" style={{ color: "#FFE600" }} />
+              Cuentas de Mercado Libre ({meliAccounts.length})
+            </h2>
+            <Link
+              href="/configuracion/meli"
+              className="text-xs font-semibold px-3 py-1.5 rounded-lg"
+              style={{ background: "#FFE60022", color: "#FFE600" }}
+            >
+              Administrar
+            </Link>
           </div>
-          <ArrowLeft className="w-4 h-4 rotate-180" style={{ color: "#FFE600" }} />
-        </Link>
+          {meliAccounts.length === 0 ? (
+            <p className="text-sm text-center py-4" style={{ color: "#6B7280" }}>
+              No hay cuentas vinculadas
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {meliAccounts.map((acc: any) => (
+                <div
+                  key={acc.id}
+                  className="flex items-center justify-between p-3 rounded-xl"
+                  style={{ background: "#2A2A2A" }}
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="w-2 h-2 rounded-full"
+                      style={{ background: acc.is_active ? "#34D399" : "#6B7280" }}
+                    />
+                    <div>
+                      <p className="text-white font-medium text-sm">
+                        @{acc.nickname || acc.meli_nickname || `Cuenta ${acc.meli_user_id}`}
+                      </p>
+                      <p className="text-[10px]" style={{ color: "#6B7280" }}>
+                        ID: {acc.meli_user_id}
+                        {acc.created_at && ` · Conectada ${new Date(acc.created_at).toLocaleDateString("es-AR")}`}
+                      </p>
+                    </div>
+                  </div>
+                  <span
+                    className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                    style={{
+                      background: acc.is_active ? "#1a3a1a" : "#3a1a1a",
+                      color: acc.is_active ? "#34D399" : "#F87171",
+                    }}
+                  >
+                    {acc.is_active ? "Activa" : "Inactiva"}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
         {/* Cerrar sesion */}
         <button

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { getValidToken, type LinkedMeliAccount } from "@/lib/meli";
 
 export const dynamic = "force-dynamic";
 
@@ -39,7 +40,7 @@ export async function GET(request: NextRequest) {
     // Obtener cuentas activas
     const { data: accounts } = await supabase
       .from("linked_meli_accounts")
-      .select("id, meli_user_id, meli_nickname, access_token_enc")
+      .select("id, user_id, meli_user_id, meli_nickname, access_token_enc, refresh_token_enc, token_expiry_date, is_active")
       .eq("user_id", userId)
       .eq("is_active", true);
 
@@ -54,12 +55,14 @@ export async function GET(request: NextRequest) {
     // Procesar cada cuenta
     for (const account of accounts) {
       try {
-        if (!account.access_token_enc?.startsWith('APP_USR')) {
-          console.log(`[meli-labels] Token inválido para ${account.meli_nickname}`);
+        // Usar getValidToken con auto-refresh
+        const validToken = await getValidToken(account as LinkedMeliAccount);
+        if (!validToken) {
+          console.log(`[meli-labels] No se pudo obtener token para ${account.meli_nickname}`);
           continue;
         }
 
-        const headers = { Authorization: `Bearer ${account.access_token_enc}` };
+        const headers = { Authorization: `Bearer ${validToken}` };
         
         // OBTENER ÓRDENES SEGÚN EL ESTADO
         // Para etiquetas, buscamos órdenes pagadas, en preparación o listas para enviar
@@ -155,6 +158,7 @@ export async function GET(request: NextRequest) {
                 logistic_type: logisticType,
                 receiver_address: order.shipping?.receiver_address || order.buyer?.billing_info?.address || {},
                 estimated_delivery_time: order.shipping?.estimated_delivery_time || {},
+                estimated_handling_limit: order.shipping?.estimated_handling_limit || {},
                 tracking_number: null,
                 label: null
               };

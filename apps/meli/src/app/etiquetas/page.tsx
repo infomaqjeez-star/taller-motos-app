@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import { classifyFlexZone, ZONE_CFG } from "@/lib/zone-calc";
 import { ZoneIndicator } from "@/components/ZoneIndicator";
-import { supabase } from "@/lib/supabase";
+import { supabase, getAuthHeaders } from "@/lib/supabase";
 
 type StatusTab = "pending" | "printed" | "in_transit" | "returns";
 type LogisticType = "todas" | "flex" | "correo" | "turbo" | "full";
@@ -386,7 +386,8 @@ function EtiquetasInner() {
     setLoading(true);
     try {
       const tzOffset = -new Date().getTimezoneOffset() / 60;
-      const res = await fetch(`/api/meli-labels?action=list&tz_offset=${tzOffset}`);
+      const authHeaders = await getAuthHeaders();
+      const res = await fetch(`/api/meli-labels?action=list&tz_offset=${tzOffset}`, { headers: { ...authHeaders } });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const d: LabelData = await res.json();
       
@@ -506,9 +507,10 @@ function EtiquetasInner() {
   const handlePrintTest = async () => {
     setTestLoading(true);
     try {
+      const authHeaders = await getAuthHeaders();
       const res = await fetch("/api/meli-labels/test-print", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...authHeaders },
       });
 
       if (!res.ok) {
@@ -646,9 +648,10 @@ function EtiquetasInner() {
     setPrinting(true);
     try {
       // Marcar como impresa en Supabase
+      const authHeaders = await getAuthHeaders();
       const res = await fetch("/api/meli-labels", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...authHeaders },
         body: JSON.stringify({ shipment_id: shipmentId, status: "printed" }),
       });
 
@@ -683,9 +686,10 @@ function EtiquetasInner() {
       const meli_user_id = selectedShipments[0]?.meli_user_id || "";
 
       // PASO 1: Validar que los IDs seleccionados aún estén en estado ready_to_print
+      const authHeaders = await getAuthHeaders();
       const validateRes = await fetch("/api/meli-labels/validate", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...authHeaders },
         body: JSON.stringify({
           shipment_ids: Array.from(selectedIds),
           meli_user_id,
@@ -719,7 +723,7 @@ function EtiquetasInner() {
       // PASO 2: Generar PDF
       const ids = valid.join(",");
       const tzOffset = -new Date().getTimezoneOffset() / 60;
-      const pdfRes = await fetch(`/api/meli-labels?ids=${ids}&tz_offset=${tzOffset}`);
+      const pdfRes = await fetch(`/api/meli-labels?ids=${ids}&tz_offset=${tzOffset}`, { headers: { ...authHeaders } });
 
       if (!pdfRes.ok) {
         throw new Error("Failed to generate PDF");
@@ -774,7 +778,7 @@ function EtiquetasInner() {
       // POST a save-print-batch
       const saveRes = await fetch("/api/meli-labels/save-print-batch", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...authHeaders },
         body: JSON.stringify({
           shipments: shipmentsToSave,
           pdf_base64: base64,
@@ -794,7 +798,7 @@ function EtiquetasInner() {
       // PASO 5: Solo después de guardar exitosamente, marcar como impresas
       const markRes = await fetch("/api/meli-labels", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...authHeaders },
         body: JSON.stringify({
           action: "mark-printed",
           shipment_ids: valid,
