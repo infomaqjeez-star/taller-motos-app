@@ -459,10 +459,10 @@ function AppJeezInner() {
     setTotalQuestionsAlert(prev => prev + 1);
   }, []);
 
-  // Conectar a SSE para notificaciones en tiempo real
+  // Conectar a SSE para notificaciones en tiempo real (DESACTIVADO temporalmente)
   const { connected: streamConnected } = useNotificationStream(
     handleNotification,
-    true // Enabled por defecto
+    false // DESACTIVADO - causa re-renders constantes
   );
 
   // Handler para renombrar cuenta
