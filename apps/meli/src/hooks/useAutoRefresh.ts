@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useRef, useCallback } from "react";
 
 interface UseAutoRefreshReturn {
   isRefreshing: boolean;
@@ -9,64 +9,69 @@ interface UseAutoRefreshReturn {
 }
 
 /**
- * Hook para refresh MANUAL de datos (sin polling automático)
- * Con SSE/Webhooks activos, ya no necesitamos polling automático
- * Este hook solo proporciona función de refresh manual bajo demanda
+ * Hook para auto-refresh de datos con polling
  * 
- * enableAutomatic: DESACTIVADO por defecto (era 60s antes)
+ * @param fetchFn - Función asíncrona para cargar datos
+ * @param enableAutomatic - Si debe hacer polling automático
+ * @param interval - Intervalo en ms (default: 180000 = 3 min)
  */
 export function useAutoRefresh(
   fetchFn: () => Promise<void>,
-  enableAutomatic: boolean = false, // ⚠️ Ahora DESACTIVADO por defecto
-  interval: number = 60000 // 60 segundos (no se usa si enableAutomatic=false)
+  enableAutomatic: boolean = false,
+  interval: number = 180000
 ): UseAutoRefreshReturn {
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const isRefreshingRef = useRef(false);
+  const lastRefreshRef = useRef<Date | null>(null);
+  const fetchFnRef = useRef(fetchFn);
+  
+  // Actualizar la referencia de fetchFn cuando cambie
+  useEffect(() => {
+    fetchFnRef.current = fetchFn;
+  }, [fetchFn]);
 
   const manualRefresh = useCallback(async () => {
-    if (isRefreshing) return; // Evitar multiples llamadas simultáneas
+    if (isRefreshingRef.current) return;
 
-    setIsRefreshing(true);
+    isRefreshingRef.current = true;
     try {
-      await fetchFn();
-      setLastRefresh(new Date());
-      console.log(`[REFRESH] Sincronización manual completada a las ${new Date().toLocaleTimeString("es-AR")}`);
+      await fetchFnRef.current();
+      lastRefreshRef.current = new Date();
+      console.log(`[REFRESH] Sincronización completada a las ${new Date().toLocaleTimeString("es-AR")}`);
     } catch (error) {
       console.error("[REFRESH] Error:", error);
     } finally {
-      setIsRefreshing(false);
+      isRefreshingRef.current = false;
     }
-  }, [fetchFn, isRefreshing]);
+  }, []); // Sin dependencias - usa la ref
 
   useEffect(() => {
-    // Si automatic está desactivado, no iniciar polling
     if (!enableAutomatic) {
-      console.log("[REFRESH] Polling automático DESACTIVADO (usando SSE/Webhooks)");
+      console.log("[REFRESH] Polling automático DESACTIVADO");
       return;
     }
 
-    // Si está habilitado (caso legacy), hacer polling
+    console.log(`[REFRESH] Polling automático ACTIVADO cada ${interval/1000}s`);
+    
+    // Ejecutar inmediatamente la primera vez
     manualRefresh();
 
+    // Configurar intervalo
     intervalRef.current = setInterval(() => {
       manualRefresh();
     }, interval);
 
-    console.warn("[REFRESH] ⚠️ Polling automático ACTIVADO (modo legacy)");
-
-    // Cleanup
     return () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
+        intervalRef.current = null;
       }
     };
-  }, [enableAutomatic, interval, manualRefresh]);
+  }, [enableAutomatic, interval]); // Sin manualRefresh en dependencias
 
   return {
-    isRefreshing,
-    lastRefresh,
+    isRefreshing: isRefreshingRef.current,
+    lastRefresh: lastRefreshRef.current,
     manualRefresh,
   };
 }
-

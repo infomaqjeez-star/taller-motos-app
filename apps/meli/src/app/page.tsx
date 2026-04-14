@@ -435,11 +435,11 @@ function AppJeezInner() {
     }
   }, [selectedAccountId]);
 
-  // ✅ Polling automático DESACTIVADO temporalmente para debug
+  // ✅ Polling automático ACTIVADO - Cada 3 minutos
   const { isRefreshing, manualRefresh } = useAutoRefresh(
     load,
-    false, // DESACTIVADO - causando refrescos constantes
-    180000
+    true, // Automático cada 3 min
+    180000 // 3 minutos = 180,000 ms
   );
 
   const handleNotification = useCallback((notification: any) => {
