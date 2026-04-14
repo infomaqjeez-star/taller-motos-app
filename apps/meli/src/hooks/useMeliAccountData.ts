@@ -65,7 +65,7 @@ export function useMeliAccountData(userId: string | null): UseMeliAccountDataRet
     }
 
     // Evitar refetch innecesarios si ya se cargó este usuario
-    if (lastFetchedUserId === userId && data) {
+    if (lastFetchedUserId === userId) {
       console.log(`[useMeliAccountData] Usando datos cacheados para ${userId}`);
       return;
     }
@@ -97,7 +97,7 @@ export function useMeliAccountData(userId: string | null): UseMeliAccountDataRet
     } finally {
       setLoading(false);
     }
-  }, [userId, lastFetchedUserId, data]);
+  }, [userId, lastFetchedUserId]); // Eliminada dependencia 'data' que causaba ciclo infinito
 
   // Cargar datos cuando cambia userId
   useEffect(() => {
