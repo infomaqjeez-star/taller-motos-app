@@ -64,13 +64,14 @@ export async function GET(request: NextRequest) {
 
         const headers = { Authorization: `Bearer ${validToken}` };
         
-        // OBTENER ÓRDENES - Hacer llamadas separadas por estado (MeLi no soporta múltiples status en un param)
+        // OBTENER ORDENES - Solo estados validos de orden en MeLi API
+        // (handling/ready_to_ship son estados de SHIPMENT, no de ORDER)
         const meliId = account.meli_user_id;
         const statusesToSearch = status === "shipped" 
           ? ["shipped"] 
           : status === "delivered" 
           ? ["delivered"]
-          : ["paid", "handling", "ready_to_ship", "shipped"];
+          : ["paid", "shipped"];
         
         let allOrders: any[] = [];
         
@@ -224,10 +225,9 @@ export async function GET(request: NextRequest) {
 
             // VERIFICAR SI YA FUE IMPRESA
             const { data: printedLabel, error: printedError } = await supabase
-              .from("printed_labels")
-              .select("id, print_date")
+              .from("meli_printed_labels")
+              .select("shipment_id, printed_at")
               .eq("shipment_id", String(shipmentId))
-              .eq("account_id", account.id)
               .maybeSingle();
 
             if (printedError) {
@@ -271,7 +271,7 @@ export async function GET(request: NextRequest) {
               
               // Etiqueta
               label_url: shipData.label?.url || null,
-              printed_at: printedLabel?.print_date || null,
+              printed_at: printedLabel?.printed_at || null,
               printed: !!printedLabel,
             };
 

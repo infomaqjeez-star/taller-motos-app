@@ -73,8 +73,8 @@ export async function GET(request: NextRequest) {
 
           // Verificar si ya existe en historial
           const { data: existing } = await supabase
-            .from("printed_labels")
-            .select("id")
+            .from("meli_printed_labels")
+            .select("shipment_id")
             .eq("shipment_id", shipmentId)
             .maybeSingle();
 
@@ -102,7 +102,7 @@ export async function GET(request: NextRequest) {
 
           // Guardar en historial
           const { error: insertError } = await supabase
-            .from("printed_labels")
+            .from("meli_printed_labels")
             .insert({
               shipment_id: shipmentId,
               order_id: String(order.id),

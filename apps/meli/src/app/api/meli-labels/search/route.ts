@@ -34,22 +34,7 @@ export async function GET(request: NextRequest) {
     // Construir la consulta base desde meli_printed_labels
     let query = supabase
       .from("meli_printed_labels")
-      .select(`
-        id,
-        shipment_id,
-        order_id,
-        tracking_number,
-        buyer_nickname,
-        sku,
-        variation,
-        quantity,
-        account_id,
-        meli_user_id,
-        type,
-        source,
-        printed_at,
-        created_at
-      `)
+      .select("*")
       .order("printed_at", { ascending: false })
       .limit(limit);
 
@@ -79,7 +64,7 @@ export async function GET(request: NextRequest) {
     }
 
     const results = (labels || []).map((l: any) => ({
-      id:              l.id,
+      id:              l.id || l.shipment_id || String(Math.random()),
       shipment_id:     l.shipment_id,
       order_id:        l.order_id,
       tracking_number: l.tracking_number,
@@ -89,15 +74,14 @@ export async function GET(request: NextRequest) {
       quantity:        l.quantity,
       account_id:      l.account_id,
       meli_user_id:    l.meli_user_id,
-      shipping_method: l.type,   // alias para compatibilidad con la UI
-      tipo:            l.type,
+      shipping_method: l.type || l.shipping_method,
+      tipo:            l.type || l.shipping_method,
       source:          l.source || "app",
-      print_date:      l.printed_at,
-      printed_at:      l.printed_at,
-      file_path:       "",
-      // Dias restantes antes de expirar (60 dias desde printed_at)
-      days_remaining:  l.printed_at
-        ? Math.max(0, 60 - Math.floor((Date.now() - new Date(l.printed_at).getTime()) / 86_400_000))
+      print_date:      l.printed_at || l.print_date,
+      printed_at:      l.printed_at || l.print_date,
+      file_path:       l.file_path || "",
+      days_remaining:  (l.printed_at || l.print_date)
+        ? Math.max(0, 60 - Math.floor((Date.now() - new Date(l.printed_at || l.print_date).getTime()) / 86_400_000))
         : 60,
     }));
 

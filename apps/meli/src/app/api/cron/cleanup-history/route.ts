@@ -28,10 +28,10 @@ export async function GET(request: NextRequest) {
     const cutoff = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString();
 
     const { data, error } = await supabase
-      .from("printed_labels")
+      .from("meli_printed_labels")
       .delete()
-      .lt("print_date", cutoff)
-      .select("id");
+      .lt("printed_at", cutoff)
+      .select("shipment_id");
 
     if (error) {
       console.error("[cleanup-history] Error:", error);
