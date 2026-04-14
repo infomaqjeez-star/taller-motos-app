@@ -60,11 +60,14 @@ export async function GET(request: NextRequest) {
           const data = await res.json();
           questions = data.questions || [];
           console.log(`[meli-questions] [${account.meli_nickname}] ${questions.length} preguntas encontradas`);
+          console.log(`[meli-questions] [${account.meli_nickname}] Total: ${data.total}, Available: ${data.available}, Filters: ${JSON.stringify(data.filters)}`);
         } else {
           const errorText = await res.text().catch(() => "Unknown error");
           console.error(`[meli-questions] [${account.meli_nickname}] Error ${res.status}: ${errorText.substring(0, 200)}`);
-          
-          // Fallback: intentar endpoint alternativo
+        }
+        
+        // Si no hay preguntas, intentar endpoint alternativo
+        if (questions.length === 0) {
           console.log(`[meli-questions] [${account.meli_nickname}] Intentando endpoint alternativo...`);
           const fallbackUrl = `https://api.mercadolibre.com/my/received_questions?status=UNANSWERED&limit=50`;
           const fallbackRes = await fetch(fallbackUrl, { headers, signal: AbortSignal.timeout(15000) });
@@ -75,6 +78,23 @@ export async function GET(request: NextRequest) {
             console.log(`[meli-questions] [${account.meli_nickname}] Fallback: ${questions.length} preguntas`);
           } else {
             console.error(`[meli-questions] [${account.meli_nickname}] Fallback tambien fallo: ${fallbackRes.status}`);
+          }
+        }
+        
+        // Si sigue sin haber preguntas, intentar sin filtro de status
+        if (questions.length === 0) {
+          console.log(`[meli-questions] [${account.meli_nickname}] Intentando sin filtro de status...`);
+          const noFilterUrl = `https://api.mercadolibre.com/questions/search?seller_id=${account.meli_user_id}&limit=10`;
+          const noFilterRes = await fetch(noFilterUrl, { headers, signal: AbortSignal.timeout(10000) });
+          
+          if (noFilterRes.ok) {
+            const noFilterData = await noFilterRes.json();
+            const allQuestions = noFilterData.questions || [];
+            console.log(`[meli-questions] [${account.meli_nickname}] Sin filtro: ${allQuestions.length} preguntas totales`);
+            if (allQuestions.length > 0) {
+              const statuses = [...new Set(allQuestions.map((q: any) => q.status))];
+              console.log(`[meli-questions] [${account.meli_nickname}] Estados disponibles: ${statuses.join(', ')}`);
+            }
           }
         }
         
