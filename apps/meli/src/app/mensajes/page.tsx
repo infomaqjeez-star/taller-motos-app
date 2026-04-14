@@ -846,8 +846,8 @@ function MensajesInner() {
   useEffect(() => {
     loadAll();
 
-    // Polling cada 30 segundos para mantener actualizado
-    const interval = setInterval(() => loadRef.current?.(true), 30000);
+    // Polling cada 3 minutos para mantener actualizado
+    const interval = setInterval(() => loadRef.current?.(true), 180000);
     return () => clearInterval(interval);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
