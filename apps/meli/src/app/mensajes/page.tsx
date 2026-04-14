@@ -775,6 +775,7 @@ function MensajesInner() {
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data: Question[] = await res.json();
+      console.log(`[PREGUNTAS] Recibidas ${data.length} preguntas de la API`);
 
       const seen = new Set<number>();
       const unique = data.filter(q => {
@@ -783,11 +784,15 @@ function MensajesInner() {
         seen.add(qId);
         return true;
       });
+      console.log(`[PREGUNTAS] ${unique.length} preguntas unicas despues de filtrar duplicados`);
 
       // Filtrar preguntas ya respondidas (convertir a número para comparación)
       const answeredIds = Array.from(recentlyAnsweredRef.current).map(id => Number(id));
       const answeredSet = new Set(answeredIds);
-      setQuestions(unique.filter(q => !answeredSet.has(Number(q.meli_question_id))));
+      const filtered = unique.filter(q => !answeredSet.has(Number(q.meli_question_id)));
+      console.log(`[PREGUNTAS] ${filtered.length} preguntas despues de filtrar respondidas. Respondidas en localStorage: ${answeredIds.length}`);
+      
+      setQuestions(filtered);
       setLastSync(new Date());
     } catch (e) {
       setQuestionsError((e as Error).message);
