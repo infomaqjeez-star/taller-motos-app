@@ -435,10 +435,10 @@ function AppJeezInner() {
     }
   }, [selectedAccountId]);
 
-  // ⚠️ Polling automático DESACTIVADO - Usando SSE/Webhooks en su lugar
+  // ✅ Polling automático ACTIVADO - Cada 60 segundos
   const { isRefreshing, manualRefresh } = useAutoRefresh(
     load,
-    false, // NO automático (era true cada 60s antes)
+    true, // Automático cada 60s
     60000
   );
 
