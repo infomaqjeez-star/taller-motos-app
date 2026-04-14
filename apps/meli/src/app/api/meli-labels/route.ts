@@ -65,17 +65,13 @@ export async function GET(request: NextRequest) {
         const headers = { Authorization: `Bearer ${validToken}` };
         
         // OBTENER ORDENES - Solo estados validos de orden en MeLi API
-        // (handling/ready_to_ship son estados de SHIPMENT, no de ORDER)
+        // Estados de orden: paid, confirmed, payment_required, payment_in_process, cancelled
+        // (shipped/ready_to_ship son estados de SHIPMENT, no de ORDER)
         const meliId = account.meli_user_id;
-        const statusesToSearch = status === "shipped" 
-          ? ["shipped"] 
-          : status === "delivered" 
-          ? ["delivered"]
-          : ["paid", "shipped"];
-        
+        const orderStatuses = ["paid", "confirmed"];
         let allOrders: any[] = [];
         
-        for (const orderStatus of statusesToSearch) {
+        for (const orderStatus of orderStatuses) {
           try {
             const ordersUrl = `https://api.mercadolibre.com/orders/search?seller=${meliId}&order.status=${orderStatus}&sort=date_desc&limit=${limit}`;
             console.log(`[meli-labels] [${account.meli_nickname}] GET orders status=${orderStatus}`);

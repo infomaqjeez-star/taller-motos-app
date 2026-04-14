@@ -57,15 +57,17 @@ export async function GET(request: NextRequest) {
         const headers = { Authorization: `Bearer ${token}` };
         const meliId = String(account.meli_user_id);
 
-        // Buscar ordenes con envio en diferentes estados (ultimas 24h)
+        // Buscar ordenes con envio en estados validos de ORDEN (ultimas 24h)
+        // Estados de orden validos: paid, confirmed
+        // shipped/ready_to_ship son estados de SHIPMENT, no de ORDER
         const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-        const statuses = ["shipped", "ready_to_ship", "paid"];
+        const orderStatuses = ["paid", "confirmed"];
         let allOrders: any[] = [];
         
-        for (const status of statuses) {
+        for (const orderStatus of orderStatuses) {
           try {
             const ordersRes = await fetch(
-              `https://api.mercadolibre.com/orders/search?seller=${meliId}&order.status=${status}&order.date_created.from=${since}&limit=50`,
+              `https://api.mercadolibre.com/orders/search?seller=${meliId}&order.status=${orderStatus}&order.date_created.from=${since}&limit=50`,
               { headers, signal: AbortSignal.timeout(15000) }
             );
             if (ordersRes.ok) {
