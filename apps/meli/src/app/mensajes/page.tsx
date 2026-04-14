@@ -7,7 +7,7 @@ import {
   ArrowLeft, RefreshCw, MessageCircle, Send, Clock,
   CheckCircle2, AlertCircle, ChevronDown, ChevronUp,
   Search, Package, Settings, Plus, Trash2, Edit2, Check, X,
-  Users, ShoppingBag, Mail, Bell, UserCircle
+  Users, ShoppingBag, Mail, Bell, UserCircle, AlertTriangle, Shield
 } from "lucide-react";
 import QuestionSuggestion from "@/components/QuestionSuggestion";
 import { supabase } from "@/lib/supabase";
@@ -74,7 +74,34 @@ interface Message {
   order: { order_id: string; status: string; total_amount: number } | null;
 }
 
-type TabType = "questions" | "messages";
+type TabType = "questions" | "messages" | "claims";
+
+interface ClaimMessage {
+  id: string;
+  sender_role: string;
+  text: string;
+  date_created: string;
+}
+
+interface Claim {
+  id: string;
+  claim_id: string;
+  meli_account_id: string;
+  meli_user_id: string;
+  account_nickname: string;
+  type: "claim" | "mediation";
+  status: string;
+  stage: string;
+  reason_id: string;
+  reason: string;
+  resource_id: string;
+  date_created: string;
+  last_updated: string;
+  buyer: { id: number; nickname: string };
+  messages: ClaimMessage[];
+  resolution: any;
+  meli_accounts: { nickname: string } | null;
+}
 
 function timeAgo(date: string) {
   const diff = Date.now() - new Date(date).getTime();
@@ -565,6 +592,124 @@ function MessageCard({ m, onMarkAsRead }: { m: Message; onMarkAsRead: (id: strin
   );
 }
 
+/* ── Tarjeta de reclamo ── */
+function ClaimCard({ claim, onResponded }: { claim: Claim; onResponded: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [replyText, setReplyText] = useState("");
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const isMediation = claim.type === "mediation";
+
+  async function handleReply() {
+    if (!replyText.trim()) return;
+    setSending(true); setError(null);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch("/api/meli-claims/respond", {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
+        body: JSON.stringify({
+          claim_id: claim.claim_id,
+          message_text: replyText,
+          meli_account_id: claim.meli_account_id,
+          action: "message",
+        }),
+      });
+      const data = await res.json();
+      if (data.status === "ok") {
+        setReplyText("");
+        onResponded();
+      } else {
+        setError(data.error ?? "Error al enviar");
+      }
+    } catch { setError("Error de red"); }
+    finally { setSending(false); }
+  }
+
+  const account = claim.meli_accounts?.nickname ?? claim.account_nickname ?? "-";
+
+  return (
+    <div className="rounded-2xl overflow-hidden" style={{ 
+      background: isMediation ? "#FF980018" : "#EF444418", 
+      border: `1px solid ${isMediation ? "#FF980044" : "#EF444444"}` 
+    }}>
+      <button onClick={() => setOpen(o => !o)} className="w-full text-left p-4">
+        <div className="flex items-start gap-3">
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
+            style={{ background: isMediation ? "#FF980033" : "#EF444433" }}>
+            {isMediation 
+              ? <Shield className="w-6 h-6" style={{ color: "#FF9800" }} />
+              : <AlertTriangle className="w-6 h-6" style={{ color: "#EF4444" }} />
+            }
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                style={{ background: isMediation ? "#FF980033" : "#EF444433", color: isMediation ? "#FF9800" : "#EF4444" }}>
+                {isMediation ? "Mediacion" : "Reclamo"}
+              </span>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                style={{ background: "#FFE60018", color: "#FFE600" }}>
+                @{account}
+              </span>
+            </div>
+            <p className="text-sm font-bold text-white mb-1">{claim.reason}</p>
+            <p className="text-xs text-gray-400">
+              De: {claim.buyer?.nickname || "Comprador"} - {timeAgo(claim.date_created)}
+            </p>
+          </div>
+          <div className="flex-shrink-0">
+            {open ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
+          </div>
+        </div>
+      </button>
+
+      {open && (
+        <div className="px-4 pb-4 space-y-3 border-t" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+          {claim.messages.length > 0 && (
+            <div className="pt-3 space-y-2">
+              <p className="text-xs font-semibold" style={{ color: "#6B7280" }}>Hilo de mensajes:</p>
+              {claim.messages.map((msg, i) => (
+                <div key={msg.id || i} className="p-2 rounded-lg" style={{ 
+                  background: msg.sender_role === "respondent" ? "#1a3a1a" : msg.sender_role === "mediator" ? "#3a3a1a" : "#121212" 
+                }}>
+                  <p className="text-[10px] font-bold mb-1" style={{ 
+                    color: msg.sender_role === "respondent" ? "#34D399" : msg.sender_role === "mediator" ? "#FFE600" : "#9CA3AF" 
+                  }}>
+                    {msg.sender_role === "respondent" ? "Tu respuesta" : msg.sender_role === "mediator" ? "Mediador MeLi" : "Comprador"}
+                    <span className="font-normal ml-2">{timeAgo(msg.date_created)}</span>
+                  </p>
+                  <p className="text-sm text-white">{msg.text}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <textarea
+            rows={2}
+            value={replyText}
+            onChange={e => setReplyText(e.target.value)}
+            placeholder="Escribi tu respuesta al reclamo..."
+            className="w-full px-3 py-2.5 rounded-xl text-sm text-white placeholder-gray-500 outline-none resize-none"
+            style={{ background: "#121212", border: "1px solid rgba(255,255,255,0.1)" }}
+          />
+          {error && <p className="text-xs" style={{ color: "#ef4444" }}>Error: {error}</p>}
+          <div className="flex gap-2">
+            <button onClick={handleReply} disabled={sending || !replyText.trim()}
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-sm text-black disabled:opacity-40"
+              style={{ background: "#FFE600" }}>
+              {sending ? <><RefreshCw className="w-4 h-4 animate-spin" /> Enviando...</> : <><Send className="w-4 h-4" /> Responder</>}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ── Página principal ── */
 function MensajesInner() {
   const [activeTab, setActiveTab] = useState<TabType>("questions");
@@ -594,17 +739,26 @@ function MensajesInner() {
     }
     return new Set();
   });
+
+  const recentlyAnsweredRef = useRef<Set<number>>(recentlyAnswered);
+  useEffect(() => { recentlyAnsweredRef.current = recentlyAnswered; }, [recentlyAnswered]);
   
   // Estados para mensajes
   const [messages, setMessages] = useState<Message[]>([]);
   const [messagesLoading, setMessagesLoading] = useState(true);
   const [messagesSyncing, setMessagesSyncing] = useState(false);
   const [messagesError, setMessagesError] = useState<string | null>(null);
+
+  // Estados para reclamos
+  const [claims, setClaims] = useState<Claim[]>([]);
+  const [claimsLoading, setClaimsLoading] = useState(true);
+  const [claimsError, setClaimsError] = useState<string | null>(null);
   
   const [search, setSearch] = useState("");
   const [lastSync, setLastSync] = useState<Date | null>(null);
   const [showTemplates, setShowTemplates] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [successToast, setSuccessToast] = useState<string | null>(null);
 
   const initialLoadDone = useRef(false);
   const loadRef = useRef<((sync?: boolean) => Promise<void>) | null>(null);
@@ -629,7 +783,7 @@ function MensajesInner() {
         return true;
       });
 
-      setQuestions(unique);
+      setQuestions(unique.filter(q => !recentlyAnsweredRef.current.has(q.meli_question_id)));
       setLastSync(new Date());
     } catch (e) {
       setQuestionsError((e as Error).message);
@@ -660,10 +814,31 @@ function MensajesInner() {
     }
   }, []);
 
+  // Cargar reclamos
+  const loadClaims = useCallback(async (sync = false) => {
+    if (sync) setClaimsLoading(true);
+    else setClaimsLoading(true);
+    setClaimsError(null);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) { setClaimsError("No autenticado"); return; }
+      const res = await fetch("/api/meli-claims", {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data: Claim[] = await res.json();
+      setClaims(data);
+    } catch (e) {
+      setClaimsError((e as Error).message);
+    } finally {
+      setClaimsLoading(false);
+    }
+  }, []);
+
   // Cargar todo
   const loadAll = useCallback(async (sync = false) => {
-    await Promise.all([loadQuestions(sync), loadMessages(sync)]);
-  }, [loadQuestions, loadMessages]);
+    await Promise.all([loadQuestions(sync), loadMessages(sync), loadClaims(sync)]);
+  }, [loadQuestions, loadMessages, loadClaims]);
 
   // Mantener ref de load siempre actualizada para el Worker
   useEffect(() => { loadRef.current = loadAll; }, [loadAll]);
@@ -680,6 +855,8 @@ function MensajesInner() {
   // Handler cuando se responde una pregunta - remueve inmediatamente y marca como respondida
   const handleAnswered = useCallback((id: number) => {
     setQuestions(qs => qs.filter(q => q.meli_question_id !== id));
+    setSuccessToast("Pregunta respondida exitosamente");
+    setTimeout(() => setSuccessToast(null), 4000);
     
     // Agregar al set de respondidas recientemente
     setRecentlyAnswered(prev => {
@@ -732,6 +909,8 @@ function MensajesInner() {
     (q.meli_accounts?.nickname ?? "").toLowerCase().includes(search.toLowerCase()))
   );
 
+  const pendingQuestions = questions.filter(q => !recentlyAnswered.has(q.meli_question_id));
+
   const filteredMessages = messages.filter(m =>
     m.message_text.toLowerCase().includes(search.toLowerCase()) ||
     (m.item_title ?? "").toLowerCase().includes(search.toLowerCase()) ||
@@ -739,13 +918,20 @@ function MensajesInner() {
     (m.meli_accounts?.nickname ?? "").toLowerCase().includes(search.toLowerCase())
   );
 
-  const isLoading = activeTab === "questions" ? questionsLoading : messagesLoading;
-  const isSyncing = activeTab === "questions" ? questionsSyncing : messagesSyncing;
-  const error = activeTab === "questions" ? questionsError : messagesError;
-  const currentData = activeTab === "questions" ? filteredQuestions : filteredMessages;
+  const isLoading = activeTab === "questions" ? questionsLoading : activeTab === "messages" ? messagesLoading : claimsLoading;
+  const isSyncing = activeTab === "questions" ? questionsSyncing : activeTab === "messages" ? messagesSyncing : false;
+  const error = activeTab === "questions" ? questionsError : activeTab === "messages" ? messagesError : claimsError;
+  const currentData = activeTab === "questions" ? filteredQuestions : activeTab === "messages" ? filteredMessages : claims;
 
   return (
     <main className="min-h-screen pb-24" style={{ background: "#121212" }}>
+      {successToast && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-xl font-bold text-sm text-black flex items-center gap-2 shadow-2xl animate-pulse"
+          style={{ background: "#39FF14" }}>
+          <CheckCircle2 className="w-5 h-5" />
+          {successToast}
+        </div>
+      )}
       {showTemplates && <TemplatesManager onClose={() => setShowTemplates(false)} />}
 
       {/* Header */}
@@ -795,10 +981,10 @@ function MensajesInner() {
             }}>
             <Users className="w-4 h-4" />
             Preguntas
-            {questions.length > 0 && (
+            {pendingQuestions.length > 0 && (
               <span className="ml-1 px-1.5 py-0.5 rounded-full text-xs"
                 style={{ background: "rgba(0,0,0,0.3)" }}>
-                {questions.length}
+                {pendingQuestions.length}
               </span>
             )}
           </button>
@@ -816,6 +1002,23 @@ function MensajesInner() {
               <span className="ml-1 px-1.5 py-0.5 rounded-full text-xs"
                 style={{ background: "rgba(0,0,0,0.3)" }}>
                 {unreadCount}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab("claims")}
+            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all"
+            style={{ 
+              background: activeTab === "claims" ? "#EF4444" : "#1F1F1F",
+              color: activeTab === "claims" ? "#fff" : "#9CA3AF",
+              border: activeTab === "claims" ? "none" : "1px solid rgba(255,255,255,0.1)"
+            }}>
+            <AlertTriangle className="w-4 h-4" />
+            Reclamos
+            {claims.length > 0 && (
+              <span className="ml-1 px-1.5 py-0.5 rounded-full text-xs"
+                style={{ background: "rgba(0,0,0,0.3)" }}>
+                {claims.length}
               </span>
             )}
           </button>
@@ -839,14 +1042,14 @@ function MensajesInner() {
                   : "#2a2a2a", 
                 color: currentData.length > 0 && activeTab === "messages" ? "#000" : "#fff"
               }}>
-              {activeTab === "questions" ? questions.length : messages.length}
+              {activeTab === "questions" ? pendingQuestions.length : messages.length}
             </div>
             <div>
               <p className="font-black text-white">
                 {activeTab === "questions" 
-                  ? (questions.length === 0 
+                  ? (pendingQuestions.length === 0 
                       ? "Sin preguntas pendientes" 
-                      : `Pregunta${questions.length > 1 ? "s" : ""} sin responder`)
+                      : `Pregunta${pendingQuestions.length > 1 ? "s" : ""} sin responder`)
                   : (messages.length === 0 
                       ? "Sin mensajes de compradores" 
                       : `${messages.length} mensaje${messages.length > 1 ? "s" : ""} de compradores`)
@@ -854,7 +1057,7 @@ function MensajesInner() {
               </p>
               <p className="text-xs" style={{ color: "#6B7280" }}>
                 {activeTab === "questions"
-                  ? (questions.length > 0 ? "Respondelas rápido para mejorar tu reputación" : "¡Al día con todas tus cuentas!")
+                  ? (pendingQuestions.length > 0 ? "Respondelas rápido para mejorar tu reputación" : "¡Al día con todas tus cuentas!")
                   : (unreadCount > 0 ? `${unreadCount} mensaje${unreadCount > 1 ? "s" : ""} sin leer` : "Todos los mensajes leídos")
                 }
               </p>
@@ -920,6 +1123,10 @@ function MensajesInner() {
             
             {activeTab === "messages" && filteredMessages.map(m => (
               <MessageCard key={m.id} m={m} onMarkAsRead={handleMarkAsRead} />
+            ))}
+            
+            {activeTab === "claims" && claims.map(c => (
+              <ClaimCard key={c.claim_id} claim={c} onResponded={() => loadClaims(true)} />
             ))}
           </div>
         )}

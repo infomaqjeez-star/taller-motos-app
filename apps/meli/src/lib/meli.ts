@@ -244,6 +244,30 @@ export async function meliGet(path: string, token: string, timeoutMs = 12000) {
   }
 }
 
+export async function meliPost(path: string, token: string, body: unknown, timeoutMs = 12000) {
+  try {
+    const res = await fetch(`https://api.mercadolibre.com${path}`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    if (!res.ok) {
+      const errorText = await res.text().catch(() => "");
+      console.error(`[meliPost] HTTP ${res.status} en ${path}`, errorText);
+      return { ok: false, status: res.status, error: errorText };
+    }
+    const data = await res.json().catch(() => ({}));
+    return { ok: true, status: res.status, data };
+  } catch (err) {
+    console.error(`[meliPost] Error en ${path}:`, err);
+    return { ok: false, status: 0, error: (err as Error).message };
+  }
+}
+
 export async function meliGetWithRetry(
   path: string,
   token: string,
