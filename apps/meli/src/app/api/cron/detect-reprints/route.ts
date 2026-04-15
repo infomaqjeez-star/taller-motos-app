@@ -11,10 +11,28 @@ const supabase = createClient(
 
 const CRON_SECRET = process.env.CRON_SECRET || "";
 
-function classifyLogisticType(logistic_type: string): string {
+function classifyLogisticType(logistic_type: string, shipping_option?: string, tags?: string[]): string {
+  // Primero verificar logistic_type del shipment
   if (logistic_type === "self_service" || logistic_type === "self_service_flex") return "flex";
   if (logistic_type === "cross_docking") return "turbo";
   if (logistic_type === "fulfillment") return "full";
+  
+  // Luego verificar shipping_option de la orden
+  if (shipping_option) {
+    const opt = shipping_option.toLowerCase();
+    if (opt.includes("flex")) return "flex";
+    if (opt.includes("turbo")) return "turbo";
+    if (opt.includes("full")) return "full";
+  }
+  
+  // Finalmente verificar tags
+  if (tags && tags.length > 0) {
+    const tagStr = tags.join(" ").toLowerCase();
+    if (tagStr.includes("flex") || tagStr.includes("self_service")) return "flex";
+    if (tagStr.includes("turbo") || tagStr.includes("cross_docking")) return "turbo";
+    if (tagStr.includes("full") || tagStr.includes("fulfillment")) return "full";
+  }
+  
   return "correo";
 }
 
@@ -117,7 +135,11 @@ export async function GET(request: NextRequest) {
               );
               if (shipRes.ok) {
                 shipData = await shipRes.json();
-                logisticType = classifyLogisticType(shipData.logistic_type || "");
+                logisticType = classifyLogisticType(
+                  shipData.logistic_type || "",
+                  order.shipping_option?.name,
+                  order.tags
+                );
                 console.log(`[detect-reprints] Shipment ${shipmentId} obtenido, tipo: ${logisticType}`);
               }
             } catch (e) {
@@ -127,15 +149,12 @@ export async function GET(request: NextRequest) {
 
           // Si no hay shipData, usar datos de la orden para clasificar
           if (!shipData) {
-            // Intentar clasificar por tags de la orden
-            const tags = order.tags || [];
-            if (tags.includes("self_service") || tags.includes("self_service_flex")) {
-              logisticType = "flex";
-            } else if (tags.includes("cross_docking")) {
-              logisticType = "turbo";
-            } else if (tags.includes("fulfillment")) {
-              logisticType = "full";
-            }
+            logisticType = classifyLogisticType(
+              "",
+              order.shipping_option?.name,
+              order.tags
+            );
+            console.log(`[detect-reprints] Clasificado por orden: tipo=${logisticType}, shipping_option=${order.shipping_option?.name}, tags=${order.tags?.join(',')}`);
           }
 
           console.log(`[detect-reprints] Guardando etiqueta: orden=${orderId}, shipment=${shipmentId}, tipo=${logisticType}`);
