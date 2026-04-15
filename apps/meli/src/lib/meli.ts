@@ -294,23 +294,28 @@ export function getBuenosAiresDate(): Date {
   return new Date(utc + (offset * 60000));
 }
 
+// Formatear fecha de Buenos Aires a YYYY-MM-DD usando componentes locales
+function formatBuenosAiresDate(d: Date): string {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 export function getBuenosAiresISOString(): string {
   return getBuenosAiresDate().toISOString();
 }
 
 export function getBuenosAiresDateString(): string {
-  const d = getBuenosAiresDate();
-  return d.toISOString().split('T')[0];
+  return formatBuenosAiresDate(getBuenosAiresDate());
 }
 
 export function getStartOfDayBuenosAires(): string {
-  const d = getBuenosAiresDate();
-  return `${d.toISOString().split('T')[0]}T00:00:00.000-03:00`;
+  return `${formatBuenosAiresDate(getBuenosAiresDate())}T00:00:00.000-03:00`;
 }
 
 export function getEndOfDayBuenosAires(): string {
-  const d = getBuenosAiresDate();
-  return `${d.toISOString().split('T')[0]}T23:59:59.999-03:00`;
+  return `${formatBuenosAiresDate(getBuenosAiresDate())}T23:59:59.999-03:00`;
 }
 
 export async function meliGetWithRetry(

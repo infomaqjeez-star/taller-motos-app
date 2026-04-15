@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { getValidToken, getBuenosAiresDate, getStartOfDayBuenosAires, getEndOfDayBuenosAires, type LinkedMeliAccount } from "@/lib/meli";
+import { getValidToken, getBuenosAiresDate, getBuenosAiresDateString, type LinkedMeliAccount } from "@/lib/meli";
 
 export const dynamic = "force-dynamic";
 
