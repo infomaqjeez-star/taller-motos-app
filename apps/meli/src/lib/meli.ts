@@ -87,7 +87,10 @@ interface RefreshResult {
 
 // ── REFRESH TOKEN ─────────────────────────────────────────────
 export async function refreshMeliToken(refreshTokenEnc: string): Promise<RefreshResult | null> {
-  if (!APP_ID || !SECRET_KEY) return null;
+  if (!APP_ID || !SECRET_KEY) {
+    console.error("[refreshMeliToken] Faltan APP_ID o SECRET_KEY");
+    return null;
+  }
   try {
     // Tokens se guardan como texto plano (sin encriptar)
     const rt = refreshTokenEnc;
@@ -97,15 +100,29 @@ export async function refreshMeliToken(refreshTokenEnc: string): Promise<Refresh
       client_secret: SECRET_KEY,
       refresh_token: rt,
     });
+    
+    console.log("[refreshMeliToken] Intentando refresh con MeLi...");
+    
     const res = await fetch("https://api.mercadolibre.com/oauth/token", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: body.toString(),
       signal: AbortSignal.timeout(10000),
     });
-    if (!res.ok) return null;
-    return res.json();
-  } catch { return null; }
+    
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error(`[refreshMeliToken] Error ${res.status}: ${errorText}`);
+      return null;
+    }
+    
+    const data = await res.json();
+    console.log("[refreshMeliToken] Token refrescado exitosamente");
+    return data;
+  } catch (e) {
+    console.error("[refreshMeliToken] Error en fetch:", e);
+    return null;
+  }
 }
 
 // ── ACTUALIZAR TOKENS EN BD ───────────────────────────────────
