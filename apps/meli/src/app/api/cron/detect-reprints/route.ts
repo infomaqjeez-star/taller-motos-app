@@ -136,7 +136,7 @@ export async function GET(request: NextRequest) {
               if (shipRes.ok) {
                 shipData = await shipRes.json();
                 logisticType = classifyLogisticType(
-                  shipData.logistic_type || "",
+                  shipData.logistic_type || order.logistic_type || "",
                   order.shipping_option?.name,
                   order.tags
                 );
@@ -149,12 +149,20 @@ export async function GET(request: NextRequest) {
 
           // Si no hay shipData, usar datos de la orden para clasificar
           if (!shipData) {
+            // Log detallado para debug
+            console.log(`[detect-reprints] Datos de orden ${orderId}:`, {
+              shipping_option: order.shipping_option,
+              tags: order.tags,
+              logistic_type: order.logistic_type,
+              shipping: order.shipping
+            });
+            
             logisticType = classifyLogisticType(
-              "",
+              order.logistic_type || "",
               order.shipping_option?.name,
               order.tags
             );
-            console.log(`[detect-reprints] Clasificado por orden: tipo=${logisticType}, shipping_option=${order.shipping_option?.name}, tags=${order.tags?.join(',')}`);
+            console.log(`[detect-reprints] Clasificado por orden: tipo=${logisticType}`);
           }
 
           console.log(`[detect-reprints] Guardando etiqueta: orden=${orderId}, shipment=${shipmentId}, tipo=${logisticType}`);
