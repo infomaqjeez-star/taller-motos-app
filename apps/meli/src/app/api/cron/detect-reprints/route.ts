@@ -68,16 +68,35 @@ export async function GET(request: NextRequest) {
         const headers = { Authorization: `Bearer ${token}` };
         const meliId = String(account.meli_user_id);
 
-        // Buscar TODAS las ordenes de los ultimos 30 dias
-        const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-        const ordersRes = await fetch(
-          `https://api.mercadolibre.com/orders/search?seller=${meliId}&order.status=paid&order.date_created.from=${since}&limit=100`,
-          { headers, signal: AbortSignal.timeout(15000) }
-        );
-
-        if (!ordersRes.ok) continue;
-        const ordersData = await ordersRes.json();
-        const orders = ordersData.results || [];
+        // Buscar TODAS las ordenes de los ultimos 60 dias (mas tiempo)
+        const since = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString();
+        
+        // Buscar en multiples estados: paid, confirmed, shipped, delivered
+        const statuses = ["paid", "confirmed", "shipped", "delivered"];
+        let allOrders: any[] = [];
+        
+        for (const status of statuses) {
+          try {
+            const ordersRes = await fetch(
+              `https://api.mercadolibre.com/orders/search?seller=${meliId}&order.status=${status}&order.date_created.from=${since}&limit=100`,
+              { headers, signal: AbortSignal.timeout(15000) }
+            );
+            if (ordersRes.ok) {
+              const data = await ordersRes.json();
+              allOrders = allOrders.concat(data.results || []);
+            }
+          } catch {}
+        }
+        
+        // Deduplicar por order.id
+        const seen = new Set<string>();
+        const orders = allOrders.filter(o => {
+          if (seen.has(String(o.id))) return false;
+          seen.add(String(o.id));
+          return true;
+        });
+        
+        console.log(`[detect-reprints] ${account.meli_nickname}: ${orders.length} ordenes unicas encontradas`);
 
         for (const order of orders) {
           const orderId = String(order.id);
