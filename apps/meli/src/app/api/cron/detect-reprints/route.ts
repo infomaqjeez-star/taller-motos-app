@@ -57,9 +57,9 @@ export async function GET(request: NextRequest) {
         const headers = { Authorization: `Bearer ${token}` };
         const meliId = String(account.meli_user_id);
 
-        // Buscar TODAS las ordenes con envio (ultimas 48h para capturar mas)
-        const since = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
-        const orderStatuses = ["paid", "confirmed", "shipped", "delivered"];
+        // Buscar TODAS las ordenes (ultimos 7 dias para capturar todas las etiquetas)
+        const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+        const orderStatuses = ["pending", "paid", "confirmed", "shipped", "delivered", "cancelled"];
         let allOrders: any[] = [];
         
         for (const orderStatus of orderStatuses) {
@@ -89,79 +89,89 @@ export async function GET(request: NextRequest) {
         const cuentaPorTipo: Record<string, number> = { flex: 0, correo: 0, turbo: 0, full: 0 };
 
         for (const order of orders) {
-          if (!order.shipping?.id) continue;
-          const shipmentId = String(order.shipping.id);
+          // Usar order.id como identificador principal (shipping.id puede no existir todavia)
+          const orderId = String(order.id);
+          const shipmentId = order.shipping?.id ? String(order.shipping.id) : orderId;
 
-          // Verificar si ya existe en historial
+          // Verificar si ya existe en historial (por order_id o shipment_id)
           const { data: existing } = await supabase
             .from("meli_printed_labels")
-            .select("shipment_id")
-            .eq("shipment_id", shipmentId)
+            .select("order_id, shipment_id")
+            .or(`order_id.eq.${orderId},shipment_id.eq.${shipmentId}`)
             .maybeSingle();
 
-          if (existing) continue; // Ya guardada
-
-          // Obtener info del shipment
-          const shipRes = await fetch(
-            `https://api.mercadolibre.com/shipments/${shipmentId}`,
-            { headers, signal: AbortSignal.timeout(10000) }
-          );
-          if (!shipRes.ok) {
-            console.log(`[detect-reprints] Error obteniendo shipment ${shipmentId}: ${shipRes.status}`);
+          if (existing) {
+            console.log(`[detect-reprints] Orden ${orderId} ya existe en historial`);
             continue;
           }
-          const shipData = await shipRes.json();
 
-          // Guardar TODAS las etiquetas con shipment válido
-          const hasLabel = shipData.label?.url || shipData.label?.pdf || shipData.label?.zpl || shipData.id;
+          // Intentar obtener info del shipment si existe
+          let shipData: any = null;
+          let logisticType = "correo";
           
-          // Solo requerir que tenga un shipment ID válido
-          if (!shipmentId) {
-            console.log(`[detect-reprints] Orden ${order.id} sin shipment ID`);
-            continue;
+          if (order.shipping?.id) {
+            try {
+              const shipRes = await fetch(
+                `https://api.mercadolibre.com/shipments/${shipmentId}`,
+                { headers, signal: AbortSignal.timeout(10000) }
+              );
+              if (shipRes.ok) {
+                shipData = await shipRes.json();
+                logisticType = classifyLogisticType(shipData.logistic_type || "");
+                console.log(`[detect-reprints] Shipment ${shipmentId} obtenido, tipo: ${logisticType}`);
+              }
+            } catch (e) {
+              console.log(`[detect-reprints] No se pudo obtener shipment ${shipmentId}, usando datos de orden`);
+            }
           }
 
-          console.log(`[detect-reprints] Guardando etiqueta: ${shipmentId} (status: ${shipData.status}, hasLabel: ${!!hasLabel})`);
+          // Si no hay shipData, usar datos de la orden para clasificar
+          if (!shipData) {
+            // Intentar clasificar por tags de la orden
+            const tags = order.tags || [];
+            if (tags.includes("self_service") || tags.includes("self_service_flex")) {
+              logisticType = "flex";
+            } else if (tags.includes("cross_docking")) {
+              logisticType = "turbo";
+            } else if (tags.includes("fulfillment")) {
+              logisticType = "full";
+            }
+          }
 
-          const logisticType = classifyLogisticType(shipData.logistic_type || "");
+          console.log(`[detect-reprints] Guardando etiqueta: orden=${orderId}, shipment=${shipmentId}, tipo=${logisticType}`);
 
           // Obtener info del item
           const firstItem = order.order_items?.[0];
-          let sku = firstItem?.item?.seller_custom_field || null;
-          let itemTitle = firstItem?.item?.title || "Producto";
-          let itemId = firstItem?.item?.id || null;
-          let itemThumbnail = firstItem?.item?.thumbnail || null;
-          let buyerNickname = order.buyer?.nickname || null;
 
           // Guardar en historial con toda la info
           const { error: insertError } = await supabase
             .from("meli_printed_labels")
             .insert({
               shipment_id: shipmentId,
-              order_id: String(order.id),
-              tracking_number: shipData.tracking_number || null,
-              buyer_nickname: buyerNickname,
-              sku: sku,
-              item_title: itemTitle,
-              item_id: itemId,
-              item_thumbnail: itemThumbnail,
+              order_id: orderId,
+              tracking_number: shipData?.tracking_number || order.shipping?.tracking_number || null,
+              buyer_nickname: order.buyer?.nickname || null,
+              sku: firstItem?.item?.seller_custom_field || null,
+              item_title: firstItem?.item?.title || "Producto",
+              item_id: firstItem?.item?.id || null,
+              item_thumbnail: firstItem?.item?.thumbnail || null,
               quantity: firstItem?.quantity || 1,
               account_id: account.id,
               meli_user_id: meliId,
               shipping_method: logisticType,
-              shipment_status: shipData.status,
+              shipment_status: shipData?.status || order.shipping?.status || order.status,
               source: "meli-auto",
-              print_date: shipData.date_created || shipData.ship_date || new Date().toISOString(),
+              print_date: shipData?.date_created || shipData?.ship_date || order.date_created || new Date().toISOString(),
               user_id: account.user_id,
             });
 
           if (insertError) {
-            console.error(`[detect-reprints] Error insertando ${shipmentId}:`, insertError.message);
+            console.error(`[detect-reprints] Error insertando orden ${orderId}:`, insertError.message);
           } else {
             totalSaved++;
             cuentaPorTipo[logisticType] = (cuentaPorTipo[logisticType] || 0) + 1;
             savedByType[logisticType] = (savedByType[logisticType] || 0) + 1;
-            console.log(`[detect-reprints] Guardada etiqueta ${shipmentId} tipo=${logisticType} de ${account.meli_nickname}`);
+            console.log(`[detect-reprints] ✓ Guardada etiqueta tipo=${logisticType}: orden=${orderId}`);
           }
         }
       } catch (err) {
