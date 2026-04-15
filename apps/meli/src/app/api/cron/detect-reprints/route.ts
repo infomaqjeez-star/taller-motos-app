@@ -57,11 +57,9 @@ export async function GET(request: NextRequest) {
         const headers = { Authorization: `Bearer ${token}` };
         const meliId = String(account.meli_user_id);
 
-        // Buscar ordenes con envio en estados validos de ORDEN (ultimas 24h)
-        // Estados de orden validos: paid, confirmed
-        // shipped/ready_to_ship son estados de SHIPMENT, no de ORDER
-        const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-        const orderStatuses = ["paid", "confirmed"];
+        // Buscar TODAS las ordenes con envio (ultimas 48h para capturar mas)
+        const since = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+        const orderStatuses = ["paid", "confirmed", "shipped", "delivered"];
         let allOrders: any[] = [];
         
         for (const orderStatus of orderStatuses) {
@@ -114,16 +112,16 @@ export async function GET(request: NextRequest) {
           }
           const shipData = await shipRes.json();
 
-          // Guardar etiquetas que tienen label generado (shipped, ready_to_ship, etc.)
-          const hasLabel = shipData.label?.url || shipData.label?.pdf || shipData.label?.zpl;
-          const validStatus = ["ready_to_ship", "shipped", "delivered"].includes(shipData.status);
+          // Guardar TODAS las etiquetas con shipment válido
+          const hasLabel = shipData.label?.url || shipData.label?.pdf || shipData.label?.zpl || shipData.id;
           
-          if (!hasLabel || !validStatus) {
-            console.log(`[detect-reprints] Shipment ${shipmentId} sin label valido (status: ${shipData.status}, hasLabel: ${!!hasLabel})`);
+          // Solo requerir que tenga un shipment ID válido
+          if (!shipmentId) {
+            console.log(`[detect-reprints] Orden ${order.id} sin shipment ID`);
             continue;
           }
 
-          console.log(`[detect-reprints] Etiqueta valida detectada: ${shipmentId} (status: ${shipData.status})`);
+          console.log(`[detect-reprints] Guardando etiqueta: ${shipmentId} (status: ${shipData.status}, hasLabel: ${!!hasLabel})`);
 
           const logisticType = classifyLogisticType(shipData.logistic_type || "");
 
