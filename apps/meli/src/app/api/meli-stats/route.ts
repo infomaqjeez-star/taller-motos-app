@@ -33,17 +33,26 @@ export async function GET(request: NextRequest) {
 
     // Calcular fecha desde (en zona horaria de Buenos Aires)
     const now = getBuenosAiresDate();
-    let fechaDesde: Date;
+    
+    // Formato YYYY-MM-DD para la fecha de Buenos Aires
+    const formatDate = (d: Date) => {
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    };
+    
+    let fechaDesdeStr: string;
     if (periodo === "hoy") {
-      fechaDesde = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      fechaDesdeStr = formatDate(now) + 'T00:00:00.000-03:00';
     } else if (periodo === "semana") {
-      fechaDesde = new Date(now); fechaDesde.setDate(now.getDate() - 7);
+      const semanaAtras = new Date(now);
+      semanaAtras.setDate(now.getDate() - 7);
+      fechaDesdeStr = formatDate(semanaAtras) + 'T00:00:00.000-03:00';
     } else if (periodo === "mes") {
-      fechaDesde = new Date(now.getFullYear(), now.getMonth(), 1);
+      const inicioMes = new Date(now.getFullYear(), now.getMonth(), 1);
+      fechaDesdeStr = formatDate(inicioMes) + 'T00:00:00.000-03:00';
     } else if (periodo === "anio") {
-      fechaDesde = new Date(now.getFullYear(), 0, 1);
+      fechaDesdeStr = `${now.getFullYear()}-01-01T00:00:00.000-03:00`;
     } else {
-      fechaDesde = new Date("2020-01-01");
+      fechaDesdeStr = '2020-01-01T00:00:00.000-03:00';
     }
 
     // Obtener cuentas del usuario
@@ -88,14 +97,12 @@ export async function GET(request: NextRequest) {
 
           const headers = { Authorization: `Bearer ${validToken}` };
           const meliId = String(account.meli_user_id);
-          const desde = fechaDesde.toISOString();
 
           // Llamadas iniciales en paralelo
-          const desdeStr = fechaDesde.toISOString().split('T')[0] + 'T00:00:00.000-03:00';
           const [ordRes, qRes, itemsRes, msgRes] = await Promise.allSettled([
             fetch(
               `https://api.mercadolibre.com/orders/search?seller=${meliId}&order.status=paid` +
-              `&order.date_created.from=${encodeURIComponent(desdeStr)}&sort=date_desc&limit=50`,
+              `&order.date_created.from=${encodeURIComponent(fechaDesdeStr)}&sort=date_desc&limit=50`,
               { headers, signal: AbortSignal.timeout(7000) }
             ),
             fetch(
@@ -134,7 +141,7 @@ export async function GET(request: NextRequest) {
               Array.from({ length: totalPages - 1 }, (_, i) =>
                 fetch(
                   `https://api.mercadolibre.com/orders/search?seller=${meliId}&order.status=paid` +
-                  `&order.date_created.from=${encodeURIComponent(desdeStr)}&sort=date_desc&limit=50&offset=${(i + 1) * 50}`,
+                  `&order.date_created.from=${encodeURIComponent(fechaDesdeStr)}&sort=date_desc&limit=50&offset=${(i + 1) * 50}`,
                   { headers, signal: AbortSignal.timeout(7000) }
                 ).then(r => r.ok ? r.json() : null).catch(() => null)
               )
