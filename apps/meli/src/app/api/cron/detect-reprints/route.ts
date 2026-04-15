@@ -68,24 +68,34 @@ export async function GET(request: NextRequest) {
         const headers = { Authorization: `Bearer ${token}` };
         const meliId = String(account.meli_user_id);
 
-        // Buscar TODAS las ordenes de los ultimos 60 dias (mas tiempo)
-        const since = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString();
+        console.log(`[detect-reprints] === PROCESANDO CUENTA: ${account.meli_nickname} ===`);
         
-        // Buscar en multiples estados: paid, confirmed, shipped, delivered
-        const statuses = ["paid", "confirmed", "shipped", "delivered"];
+        // Buscar TODAS las ordenes de los ultimos 90 dias (mas tiempo)
+        const since = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
+        console.log(`[detect-reprints] Buscando desde: ${since}`);
+        
+        // Buscar en TODOS los estados posibles
+        const statuses = ["pending", "paid", "confirmed", "shipped", "delivered", "cancelled"];
         let allOrders: any[] = [];
         
         for (const status of statuses) {
           try {
+            console.log(`[detect-reprints] Buscando estado: ${status}`);
             const ordersRes = await fetch(
               `https://api.mercadolibre.com/orders/search?seller=${meliId}&order.status=${status}&order.date_created.from=${since}&limit=100`,
               { headers, signal: AbortSignal.timeout(15000) }
             );
             if (ordersRes.ok) {
               const data = await ordersRes.json();
+              const count = data.results?.length || 0;
+              console.log(`[detect-reprints] Estado ${status}: ${count} ordenes`);
               allOrders = allOrders.concat(data.results || []);
+            } else {
+              console.log(`[detect-reprints] Error estado ${status}: ${ordersRes.status}`);
             }
-          } catch {}
+          } catch (e) {
+            console.log(`[detect-reprints] Error buscando ${status}:`, (e as Error).message);
+          }
         }
         
         // Deduplicar por order.id
@@ -109,7 +119,12 @@ export async function GET(request: NextRequest) {
             .eq("order_id", orderId)
             .maybeSingle();
 
-          if (existing) continue;
+          if (existing) {
+            console.log(`[detect-reprints] Orden ${orderId} YA EXISTE en historial`);
+            continue;
+          }
+
+          console.log(`[detect-reprints] GUARDANDO orden ${orderId}, tipo=${tipo}`);
 
           // Obtener shipment si existe
           let shipData: any = null;
@@ -153,6 +168,9 @@ export async function GET(request: NextRequest) {
           if (!insertError) {
             totalSaved++;
             savedByType[tipo]++;
+            console.log(`[detect-reprints] ✓ GUARDADA: ${orderId} tipo=${tipo}`);
+          } else {
+            console.error(`[detect-reprints] ✗ ERROR guardando ${orderId}:`, insertError.message);
           }
         }
       } catch (err) {
