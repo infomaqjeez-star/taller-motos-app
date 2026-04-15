@@ -143,7 +143,12 @@ export async function GET(request: NextRequest) {
           // Obtener info del item
           const firstItem = order.order_items?.[0];
 
-          // Guardar en historial con toda la info
+          // Calcular fechas correctamente
+          const orderDate = order.date_created || new Date().toISOString();
+          const shipDate = shipData?.date_created || shipData?.ship_date || null;
+          const printDate = shipDate || orderDate;
+          
+          // Guardar en historial con fechas y tipo bien identificados
           const { error: insertError } = await supabase
             .from("meli_printed_labels")
             .insert({
@@ -158,10 +163,13 @@ export async function GET(request: NextRequest) {
               quantity: firstItem?.quantity || 1,
               account_id: account.id,
               meli_user_id: meliId,
-              shipping_method: logisticType,
+              shipping_method: logisticType, // flex, turbo, full, correo
               shipment_status: shipData?.status || order.shipping?.status || order.status,
               source: "meli-auto",
-              print_date: shipData?.date_created || shipData?.ship_date || order.date_created || new Date().toISOString(),
+              order_date: orderDate, // Fecha de la orden
+              ship_date: shipDate,   // Fecha del envio
+              print_date: printDate, // Fecha para filtrar/historial
+              created_at: new Date().toISOString(), // Cuando se guardo en nuestra app
               user_id: account.user_id,
             });
 
@@ -171,7 +179,7 @@ export async function GET(request: NextRequest) {
             totalSaved++;
             cuentaPorTipo[logisticType] = (cuentaPorTipo[logisticType] || 0) + 1;
             savedByType[logisticType] = (savedByType[logisticType] || 0) + 1;
-            console.log(`[detect-reprints] ✓ Guardada etiqueta tipo=${logisticType}: orden=${orderId}`);
+            console.log(`[detect-reprints] ✓ Guardada: orden=${orderId}, tipo=${logisticType}, fecha=${printDate.split('T')[0]}`);
           }
         }
       } catch (err) {
