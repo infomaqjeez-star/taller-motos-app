@@ -108,21 +108,22 @@ export async function GET(request: NextRequest) {
             `https://api.mercadolibre.com/shipments/${shipmentId}`,
             { headers, signal: AbortSignal.timeout(10000) }
           );
-          if (!shipRes.ok) continue;
+          if (!shipRes.ok) {
+            console.log(`[detect-reprints] Error obteniendo shipment ${shipmentId}: ${shipRes.status}`);
+            continue;
+          }
           const shipData = await shipRes.json();
 
-          // Solo guardar si tiene label disponible para reimprimir
-          // shipped = ya enviado (etiqueta usada)
-          // ready_to_ship = etiqueta lista para reimprimir
+          // Guardar etiquetas que tienen label generado (shipped, ready_to_ship, etc.)
           const hasLabel = shipData.label?.url || shipData.label?.pdf || shipData.label?.zpl;
-          const canReprint = shipData.status === "ready_to_ship" || shipData.substatus === "printed";
+          const validStatus = ["ready_to_ship", "shipped", "delivered"].includes(shipData.status);
           
-          if (!hasLabel || (!canReprint && shipData.status !== "shipped")) {
-            console.log(`[detect-reprints] Shipment ${shipmentId} sin label reimprimible (status: ${shipData.status}, hasLabel: ${!!hasLabel})`);
+          if (!hasLabel || !validStatus) {
+            console.log(`[detect-reprints] Shipment ${shipmentId} sin label valido (status: ${shipData.status}, hasLabel: ${!!hasLabel})`);
             continue;
           }
 
-          console.log(`[detect-reprints] Etiqueta reimprimible detectada: ${shipmentId} (status: ${shipData.status})`);
+          console.log(`[detect-reprints] Etiqueta valida detectada: ${shipmentId} (status: ${shipData.status})`);
 
           const logisticType = classifyLogisticType(shipData.logistic_type || "");
 
@@ -152,11 +153,13 @@ export async function GET(request: NextRequest) {
               shipping_method: logisticType,
               shipment_status: shipData.status,
               source: "meli-auto",
-              print_date: new Date().toISOString(),
+              print_date: shipData.date_created || shipData.ship_date || new Date().toISOString(),
               user_id: account.user_id,
             });
 
-          if (!insertError) {
+          if (insertError) {
+            console.error(`[detect-reprints] Error insertando ${shipmentId}:`, insertError.message);
+          } else {
             totalSaved++;
             cuentaPorTipo[logisticType] = (cuentaPorTipo[logisticType] || 0) + 1;
             savedByType[logisticType] = (savedByType[logisticType] || 0) + 1;
