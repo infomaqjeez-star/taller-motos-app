@@ -151,11 +151,19 @@ export async function POST(request: NextRequest) {
                 let newPrice = oldPrice;
 
                 if (adjustment_type === "percentage") {
+                  // Aumento porcentaje
                   newPrice = oldPrice * (1 + adjustment_value / 100);
+                } else if (adjustment_type === "percentage_decrease") {
+                  // Descuento porcentaje
+                  newPrice = oldPrice * (1 - adjustment_value / 100);
                 } else if (adjustment_type === "fixed_add") {
+                  // Suma fija
                   newPrice = oldPrice + adjustment_value;
+                } else if (adjustment_type === "fixed_subtract") {
+                  // Resta fija
+                  newPrice = oldPrice - adjustment_value;
                 } else if (adjustment_type === "fixed_floor") {
-                  // Solo sube si está por debajo
+                  // Precio piso - solo sube si está por debajo
                   if (oldPrice < adjustment_value) {
                     newPrice = adjustment_value;
                   } else {
@@ -169,7 +177,28 @@ export async function POST(request: NextRequest) {
                       status: "skipped",
                       account: account.meli_nickname,
                       old_price: oldPrice,
-                      new_price: oldPrice
+                      new_price: oldPrice,
+                      reason: "Ya está por encima del piso"
+                    });
+                    continue;
+                  }
+                } else if (adjustment_type === "fixed_ceiling") {
+                  // Precio techo - solo baja si está por encima
+                  if (oldPrice > adjustment_value) {
+                    newPrice = adjustment_value;
+                  } else {
+                    skipped++;
+                    send({
+                      type: "progress",
+                      current: totalScanned,
+                      total: itemIds.length,
+                      item_id: itemId,
+                      title: item.title,
+                      status: "skipped",
+                      account: account.meli_nickname,
+                      old_price: oldPrice,
+                      new_price: oldPrice,
+                      reason: "Ya está por debajo del techo"
                     });
                     continue;
                   }

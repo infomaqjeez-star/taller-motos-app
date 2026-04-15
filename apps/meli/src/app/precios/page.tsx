@@ -13,7 +13,7 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-key"
 );
 
-type AdjustmentType = "percentage" | "fixed_floor" | "fixed_add";
+type AdjustmentType = "percentage" | "percentage_decrease" | "fixed_floor" | "fixed_ceiling" | "fixed_add" | "fixed_subtract";
 
 interface PriceResult {
   account: string;
@@ -59,12 +59,20 @@ const ADJ_TYPES: Array<{
   value: AdjustmentType; label: string; desc: string;
   icon: React.ReactNode; color: string; placeholder: string; prefix: string;
 }> = [
+  // SUBIR PRECIOS
   { value: "fixed_floor", label: "Precio Piso",  desc: "Solo sube si está por debajo",
     icon: <TrendingUp className="w-4 h-4" />, color: "#39FF14", placeholder: "15000", prefix: "$" },
   { value: "percentage",  label: "Porcentaje",    desc: "Multiplica el precio actual",
     icon: <Percent className="w-4 h-4" />,   color: "#FFE600", placeholder: "10",    prefix: "%" },
   { value: "fixed_add",   label: "Suma Fija",     desc: "Agrega un monto exacto",
     icon: <Plus className="w-4 h-4" />,      color: "#00E5FF", placeholder: "500",   prefix: "$+" },
+  // BAJAR PRECIOS
+  { value: "fixed_ceiling", label: "Precio Techo", desc: "Solo baja si está por encima",
+    icon: <TrendingUp className="w-4 h-4" style={{transform: "rotate(180deg)"}} />, color: "#FF9800", placeholder: "15000", prefix: "$" },
+  { value: "percentage_decrease", label: "Descuento %", desc: "Reduce el precio actual",
+    icon: <Percent className="w-4 h-4" />,   color: "#F97316", placeholder: "10",    prefix: "-%" },
+  { value: "fixed_subtract",   label: "Resta Fija",     desc: "Quita un monto exacto",
+    icon: <Plus className="w-4 h-4" style={{transform: "rotate(45deg)"}} />,      color: "#EF4444", placeholder: "500",   prefix: "$-" },
 ];
 
 function PreciosInner() {
