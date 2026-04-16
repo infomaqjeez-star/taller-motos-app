@@ -33,24 +33,24 @@ export async function GET(request: NextRequest) {
 
     // Calcular fecha desde (en zona horaria de Buenos Aires)
     const now = getBuenosAiresDate();
-    
-    // Formato YYYY-MM-DD para la fecha de Buenos Aires
-    const formatDate = (d: Date) => {
-      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    };
+    const todayStr = getBuenosAiresDateString();
     
     let fechaDesdeStr: string;
     if (periodo === "hoy") {
-      fechaDesdeStr = formatDate(now) + 'T00:00:00.000-03:00';
+      fechaDesdeStr = `${todayStr}T00:00:00.000-03:00`;
     } else if (periodo === "semana") {
-      const semanaAtras = new Date(now);
-      semanaAtras.setDate(now.getDate() - 7);
-      fechaDesdeStr = formatDate(semanaAtras) + 'T00:00:00.000-03:00';
+      const semanaAtras = new Date();
+      semanaAtras.setDate(semanaAtras.getDate() - 7);
+      const semanaStr = getBuenosAiresDateString();
+      fechaDesdeStr = `${semanaStr}T00:00:00.000-03:00`;
     } else if (periodo === "mes") {
-      const inicioMes = new Date(now.getFullYear(), now.getMonth(), 1);
-      fechaDesdeStr = formatDate(inicioMes) + 'T00:00:00.000-03:00';
+      const inicioMes = new Date();
+      inicioMes.setDate(1);
+      const mesStr = getBuenosAiresDateString();
+      fechaDesdeStr = `${mesStr}T00:00:00.000-03:00`;
     } else if (periodo === "anio") {
-      fechaDesdeStr = `${now.getFullYear()}-01-01T00:00:00.000-03:00`;
+      const anioStr = getBuenosAiresDateString().split('-')[0];
+      fechaDesdeStr = `${anioStr}-01-01T00:00:00.000-03:00`;
     } else {
       fechaDesdeStr = '2020-01-01T00:00:00.000-03:00';
     }
