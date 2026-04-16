@@ -141,22 +141,6 @@ export async function GET(request: NextRequest) {
 
           console.log(`[detect-reprints] GUARDANDO orden ${orderId}, tipo=${tipo}`);
 
-          // Verificar si ya existe por order_id
-          const { data: existing, error: checkError } = await supabase
-            .from("meli_printed_labels")
-            .select("id")
-            .eq("order_id", orderId)
-            .maybeSingle();
-
-          if (checkError) {
-            console.log(`[detect-reprints] Error verificando ${orderId}:`, checkError.message);
-          }
-
-          if (existing) {
-            console.log(`[detect-reprints] Orden ${orderId} YA EXISTE, saltando`);
-            continue;
-          }
-
           // Insertar nueva etiqueta
           const firstItem = order.order_items?.[0];
           
