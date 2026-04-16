@@ -141,36 +141,43 @@ export async function GET(request: NextRequest) {
 
           console.log(`[detect-reprints] GUARDANDO orden ${orderId}, tipo=${tipo}`);
 
-          // Guardar en historial
+          // Guardar en historial con upsert (evita duplicados)
           const firstItem = order.order_items?.[0];
-          const { error: insertError } = await supabase
+          
+          const labelData = {
+            shipment_id: shipmentId,
+            order_id: orderId,
+            tracking_number: shipData?.tracking_number || order.shipping?.tracking_number || null,
+            buyer_nickname: order.buyer?.nickname || null,
+            sku: firstItem?.item?.seller_custom_field || null,
+            item_title: firstItem?.item?.title || "Producto",
+            item_id: firstItem?.item?.id || null,
+            item_thumbnail: firstItem?.item?.thumbnail || null,
+            quantity: firstItem?.quantity || 1,
+            account_id: account.id,
+            meli_user_id: meliId,
+            shipping_method: tipo,
+            shipment_status: shipData?.status || order.shipping?.status || "unknown",
+            source: "meli-auto",
+            order_date: order.date_created,
+            print_date: shipData?.date_created || order.date_created,
+            user_id: account.user_id,
+          };
+
+          // Usar upsert con onConflict para evitar errores de duplicados
+          const { error: upsertError } = await supabase
             .from("meli_printed_labels")
-            .insert({
-              shipment_id: shipmentId,
-              order_id: orderId,
-              tracking_number: shipData?.tracking_number || order.shipping?.tracking_number || null,
-              buyer_nickname: order.buyer?.nickname || null,
-              sku: firstItem?.item?.seller_custom_field || null,
-              item_title: firstItem?.item?.title || "Producto",
-              item_id: firstItem?.item?.id || null,
-              item_thumbnail: firstItem?.item?.thumbnail || null,
-              quantity: firstItem?.quantity || 1,
-              account_id: account.id,
-              meli_user_id: meliId,
-              shipping_method: tipo,
-              shipment_status: shipData?.status || order.shipping?.status || "unknown",
-              source: "meli-auto",
-              order_date: order.date_created,
-              print_date: shipData?.date_created || order.date_created,
-              user_id: account.user_id,
+            .upsert(labelData, { 
+              onConflict: "order_id",
+              ignoreDuplicates: false // Actualiza si existe
             });
 
-          if (!insertError) {
+          if (!upsertError) {
             totalSaved++;
             savedByType[tipo]++;
             console.log(`[detect-reprints] ✓ GUARDADA: ${orderId} tipo=${tipo}`);
           } else {
-            console.error(`[detect-reprints] ✗ ERROR guardando ${orderId}:`, insertError.message);
+            console.error(`[detect-reprints] ✗ ERROR guardando ${orderId}:`, upsertError.message);
           }
         }
       } catch (err) {
