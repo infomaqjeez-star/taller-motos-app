@@ -124,8 +124,6 @@ export async function GET(request: NextRequest) {
             continue;
           }
 
-          console.log(`[detect-reprints] GUARDANDO orden ${orderId}, tipo=${tipo}`);
-
           // Obtener shipment si existe
           let shipData: any = null;
           if (order.shipping?.id) {
@@ -140,6 +138,8 @@ export async function GET(request: NextRequest) {
 
           // Clasificar tipo
           const tipo = classifyType(order, shipData);
+
+          console.log(`[detect-reprints] GUARDANDO orden ${orderId}, tipo=${tipo}`);
 
           // Guardar en historial
           const firstItem = order.order_items?.[0];

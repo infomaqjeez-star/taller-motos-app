@@ -10,7 +10,7 @@ import {
   ChevronDown, ChevronUp, ShoppingCart, DollarSign,
   Package, Clock, XCircle, BarChart2, ExternalLink,
   Bell, Store, Menu, X, Copy, Pencil, Check, Zap,
-  LogOut, User, Home
+  LogOut, User, Home, Share2
 } from "lucide-react";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import { useNotificationStream } from "@/hooks/useNotificationStream";
@@ -538,6 +538,7 @@ function AppJeezInner() {
     { label: "Precios/Stock",   icon: <DollarSign className="w-4 h-4" />,     href: "/precios",       active: false },
     { label: "Promociones",     icon: <Zap className="w-4 h-4" />,            href: "/promociones",   active: false },
     { label: "Post-Venta",      icon: <AlertTriangle className="w-4 h-4" />,  href: "/post-venta",    active: false },
+    { label: "Marketing",       icon: <Share2 className="w-4 h-4" />,          href: "/marketing-social", active: false },
     { label: "Cuentas MeLi",    icon: <Store className="w-4 h-4" />,           href: "/configuracion/meli",    active: false },
   ];
 
