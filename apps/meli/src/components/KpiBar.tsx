@@ -1,6 +1,7 @@
 "use client";
 
 import { Store, ShoppingCart, DollarSign, AlertTriangle } from "lucide-react";
+import { StatCard } from "./StatCard";
 
 interface Props {
   accountsCount: number;
@@ -15,64 +16,38 @@ function fmt(n: number) {
 
 export default function KpiBar({ accountsCount, salesToday, totalAmount, urgentAlerts }: Props) {
   return (
-    <div
-      className="rounded-lg mb-4 p-3 flex items-center justify-between gap-2"
-      style={{ background: "linear-gradient(90deg, #1F1F1F, #181818)", border: "1px solid rgba(255,255,255,0.08)" }}
-    >
-      {/* KPI 1: Cuentas */}
-      <div className="flex-1 flex items-center gap-2 px-3">
-        <Store className="w-4 h-4" style={{ color: "#FFE600" }} />
-        <div>
-          <p className="text-[10px] text-gray-500">Cuentas</p>
-          <p className="text-sm font-bold text-white">{accountsCount}</p>
-        </div>
-      </div>
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      {/* Cuentas Activas */}
+      <StatCard
+        icon={<Store className="w-16 h-16 text-white" />}
+        label="Cuentas Activas"
+        value={accountsCount}
+      />
 
-      {/* Separator */}
-      <div style={{ width: "1px", height: "40px", background: "rgba(255,255,255,0.08)" }} />
+      {/* Ventas Hoy */}
+      <StatCard
+        icon={<ShoppingCart className="w-16 h-16 text-jeez-success" />}
+        label="Ventas Hoy"
+        value={salesToday}
+        sublabel={salesToday > 0 ? `↑ ${salesToday}` : undefined}
+        variant="success"
+      />
 
-      {/* KPI 2: Ventas */}
-      <div className="flex-1 flex items-center gap-2 px-3">
-        <ShoppingCart className="w-4 h-4" style={{ color: "#39FF14" }} />
-        <div>
-          <p className="text-[10px] text-gray-500">Ventas Hoy</p>
-          <p className="text-sm font-bold text-white">{salesToday}</p>
-        </div>
-      </div>
+      {/* Facturado Hoy */}
+      <StatCard
+        icon={<DollarSign className="w-16 h-16 text-jeez-gold" />}
+        label="Facturado Hoy"
+        value={fmt(totalAmount)}
+        variant="gold"
+      />
 
-      {/* Separator */}
-      <div style={{ width: "1px", height: "40px", background: "rgba(255,255,255,0.08)" }} />
-
-      {/* KPI 3: Facturado */}
-      <div className="flex-1 flex items-center gap-2 px-3">
-        <DollarSign className="w-4 h-4" style={{ color: "#00E5FF" }} />
-        <div>
-          <p className="text-[10px] text-gray-500">Facturado</p>
-          <p className="text-sm font-bold text-white">{fmt(totalAmount)}</p>
-        </div>
-      </div>
-
-      {/* Separator */}
-      <div style={{ width: "1px", height: "40px", background: "rgba(255,255,255,0.08)" }} />
-
-      {/* KPI 4: Alertas Urgentes - NUEVO */}
-      <div className="flex-1 flex items-center gap-2 px-3">
-        <div
-          className={urgentAlerts > 0 ? "animate-pulse" : ""}
-          style={{ color: urgentAlerts > 0 ? "#EF4444" : "#6B7280" }}
-        >
-          <AlertTriangle className="w-4 h-4" />
-        </div>
-        <div>
-          <p className="text-[10px] text-gray-500">Urgentes</p>
-          <p
-            className="text-sm font-bold"
-            style={{ color: urgentAlerts > 0 ? "#EF4444" : "#6B7280" }}
-          >
-            {urgentAlerts}
-          </p>
-        </div>
-      </div>
+      {/* Pendientes Urgentes */}
+      <StatCard
+        icon={<AlertTriangle className="w-16 h-16 text-jeez-danger" />}
+        label="Pendientes Urgentes"
+        value={urgentAlerts}
+        variant={urgentAlerts > 0 ? "danger" : "default"}
+      />
     </div>
   );
 }
