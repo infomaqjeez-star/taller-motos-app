@@ -1,5 +1,7 @@
 "use client";
 
+import { ProgressBar } from "./ProgressBar";
+
 interface MetricsBarProps {
   claims: number;                    // Tasa de reclamos (0-1, ej: 0.0126 = 1.26%)
   cancellations: number;             // Tasa de cancelaciones (0-1)
@@ -19,82 +21,54 @@ export default function MetricsBar({
   delayLimit = 0.10,
   measurementPeriod = "Últimos 60 días",
 }: MetricsBarProps) {
-  // Determinar estado visual (rojo si crítico, amarillo si advertencia, verde si OK)
-  const getStatus = (value: number, warn: number, critical: number) => {
-    if (value >= critical) return { color: "#ef4444", icon: "🔴", label: "Crítico" };
-    if (value >= warn) return { color: "#FFE600", icon: "🟡", label: "Advertencia" };
-    return { color: "#39FF14", icon: "🟢", label: "OK" };
+  // Determinar color basado en el valor
+  const getColor = (value: number, limit: number) => {
+    const percentage = value / limit;
+    if (percentage >= 0.9) return "danger";
+    if (percentage >= 0.7) return "warning";
+    return "success";
   };
-
-  const claimsStatus = getStatus(claims, claimsLimit * 0.75, claimsLimit);
-  const cancellationsStatus = getStatus(cancellations, cancellationsLimit, cancellationsLimit * 2);
-  const delayStatus = getStatus(delayedHandlingTime, delayLimit, delayLimit);
 
   const metrics = [
     {
       label: "Reclamos",
-      value: claims,
-      limit: claimsLimit,
-      status: claimsStatus,
+      value: claims * 100,
+      limit: claimsLimit * 100,
+      color: getColor(claims, claimsLimit) as "success" | "warning" | "danger",
     },
     {
       label: "Canceladas",
-      value: cancellations,
-      limit: cancellationsLimit,
-      status: getStatus(cancellations, cancellationsLimit, cancellationsLimit * 2),
+      value: cancellations * 100,
+      limit: cancellationsLimit * 100,
+      color: getColor(cancellations, cancellationsLimit) as "success" | "warning" | "danger",
     },
     {
       label: "Demora Envíos",
-      value: delayedHandlingTime,
-      limit: delayLimit,
-      status: delayStatus,
+      value: delayedHandlingTime * 100,
+      limit: delayLimit * 100,
+      color: getColor(delayedHandlingTime, delayLimit) as "success" | "warning" | "danger",
     },
   ];
 
   return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "#6B7280" }}>
-          Reputación ({measurementPeriod})
-        </p>
-      </div>
-
-      <div className="space-y-2">
-        {metrics.map((metric, idx) => (
-          <div key={idx} className="flex items-center gap-2">
-            <div className="flex-1">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-xs font-semibold text-gray-300 flex items-center gap-1">
-                  {metric.status.icon}
-                  {metric.label}
-                </span>
-                <span
-                  className="text-xs font-bold"
-                  style={{ color: metric.status.color }}
-                >
-                  {(metric.value * 100).toFixed(2)}%
-                </span>
-              </div>
-              {/* Barra de progreso */}
-              <div
-                className="h-2 rounded-full overflow-hidden"
-                style={{ background: "rgba(255,255,255,0.1)" }}
-              >
-                <div
-                  className="h-full rounded-full transition-all"
-                  style={{
-                    width: `${Math.min((metric.value / metric.limit) * 100, 100)}%`,
-                    background: metric.status.color,
-                  }}
-                />
-              </div>
-              <span className="text-[9px] text-gray-500">
-                Límite: {(metric.limit * 100).toFixed(2)}%
-              </span>
-            </div>
-          </div>
-        ))}
-      </div>
+    <div className="space-y-8">
+      <h3 className="text-xs font-black text-gray-400 uppercase tracking-[0.2em]">
+        Salud de la Cuenta ({measurementPeriod})
+      </h3>
+      
+      {metrics.map((metric, idx) => (
+        <ProgressBar
+          key={idx}
+          label={metric.label}
+          value={metric.value}
+          maxValue={metric.limit * 1.5}
+          unit="%"
+          limit={`${metric.limit.toFixed(2)}%`}
+          color={metric.color}
+          showMarker={true}
+          markerPosition={(metric.limit / (metric.limit * 1.5)) * 100}
+        />
+      ))}
     </div>
   );
 }
