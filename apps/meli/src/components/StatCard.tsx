@@ -1,13 +1,16 @@
 "use client";
 
 import { ReactNode } from "react";
+import { InteractiveCard } from "./InteractiveCard";
 
 interface StatCardProps {
   icon: ReactNode;
   label: string;
   value: string | number;
   sublabel?: string;
-  variant?: "default" | "gold" | "success" | "danger";
+  trend?: string;
+  variant?: "neutral" | "green" | "amber" | "red";
+  delay?: string;
   className?: string;
 }
 
@@ -15,56 +18,75 @@ export function StatCard({
   icon, 
   label, 
   value, 
-  sublabel, 
-  variant = "default",
+  sublabel,
+  trend,
+  variant = "neutral",
+  delay = "0ms",
   className = "" 
 }: StatCardProps) {
-  const variantStyles = {
-    default: "",
-    gold: "border-jeez-gold/20 shadow-[inset_0_0_20px_rgba(223,181,90,0.05)]",
-    success: "",
-    danger: "border-jeez-danger/40 bg-jeez-danger/5 shadow-[0_0_30px_rgba(239,68,68,0.1)]"
+  const colors = {
+    neutral: { 
+      bg: 'bg-[#0f0f13]/80', 
+      text: 'text-zinc-300', 
+      iconBg: 'bg-zinc-800/50', 
+      border: 'border-white/[0.04]', 
+      glow: 'rgba(255,255,255,0.03)',
+      valueColor: 'text-white'
+    },
+    green: { 
+      bg: 'bg-[#061810]/80', 
+      text: 'text-emerald-400', 
+      iconBg: 'bg-emerald-500/10', 
+      border: 'border-emerald-500/20', 
+      glow: 'rgba(52,211,153,0.1)',
+      valueColor: 'text-emerald-400'
+    },
+    amber: { 
+      bg: 'bg-[#1a1205]/80', 
+      text: 'text-amber-400', 
+      iconBg: 'bg-amber-500/10', 
+      border: 'border-amber-500/20', 
+      glow: 'rgba(251,191,36,0.1)',
+      valueColor: 'text-amber-400'
+    },
+    red: { 
+      bg: 'bg-[#1a0505]/80', 
+      text: 'text-red-400', 
+      iconBg: 'bg-red-500/10', 
+      border: 'border-red-500/20', 
+      glow: 'rgba(239,68,68,0.1)',
+      valueColor: 'text-red-400'
+    }
   };
 
-  const labelStyles = {
-    default: "text-gray-500",
-    gold: "text-jeez-gold",
-    success: "text-jeez-success",
-    danger: "text-jeez-danger drop-shadow-md"
-  };
-
-  const valueStyles = {
-    default: "text-white",
-    gold: "text-white",
-    success: "text-white",
-    danger: "text-white drop-shadow-[0_0_10px_rgba(239,68,68,0.8)]"
-  };
+  const style = colors[variant];
 
   return (
-    <div 
-      className={`glass-panel rounded-[1.5rem] p-6 card-hover transition-all duration-300 relative overflow-hidden group ${variantStyles[variant]} ${className}`}
+    <InteractiveCard 
+      className={`rounded-[1.5rem] p-7 border backdrop-blur-2xl ${style.bg} ${style.border} group ${className}`} 
+      glowColor={style.glow} 
+      delay={delay}
     >
-      {variant === "danger" && (
-        <div className="absolute inset-0 bg-gradient-to-r from-jeez-danger/0 via-jeez-danger/10 to-jeez-danger/0 animate-glow-sweep pointer-events-none" />
-      )}
-      <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-        {icon}
+      <div className="absolute -right-12 -top-12 w-40 h-40 rounded-full blur-[50px] opacity-30 group-hover:opacity-50 transition-opacity" style={{ backgroundColor: style.glow }} />
+      <div className="flex justify-between items-start mb-5 relative z-10">
+        <div>
+          <h4 className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] mb-1.5">{label}</h4>
+          <div className="flex items-baseline gap-2.5">
+            <h2 className={`text-3xl md:text-[2.5rem] font-black tracking-tight drop-shadow-lg ${style.valueColor}`}>
+              {value}
+            </h2>
+            {trend && (
+              <span className="text-[10px] font-black text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded shadow-[0_2px_10px_rgba(52,211,153,0.15)]">
+                ↑ {trend}
+              </span>
+            )}
+          </div>
+        </div>
+        <div className={`p-3.5 rounded-2xl ${style.iconBg} ${style.text} border border-white/5 shadow-inner`}>
+          {icon}
+        </div>
       </div>
-      <p className={`text-[10px] font-black uppercase tracking-widest mb-1 relative z-10 ${labelStyles[variant]}`}>
-        {label}
-      </p>
-      <div className="flex items-end gap-3 relative z-10">
-        <h3 className={`text-4xl font-black tracking-tight ${valueStyles[variant]}`}>
-          {value}
-        </h3>
-        {sublabel && (
-          <span className={`text-xs font-bold px-2 py-1 rounded mb-1 ${
-            variant === "success" ? "text-jeez-success bg-jeez-success/10" : ""
-          }`}>
-            {sublabel}
-          </span>
-        )}
-      </div>
-    </div>
+      {sublabel && <p className="text-[11px] text-zinc-500 font-medium relative z-10">{sublabel}</p>}
+    </InteractiveCard>
   );
 }
