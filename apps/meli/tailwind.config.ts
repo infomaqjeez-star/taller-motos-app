@@ -9,6 +9,10 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['Inter', 'sans-serif'],
+        mono: ['JetBrains Mono', 'monospace'],
+      },
       colors: {
         brand: {
           50: "#fff7ed", 100: "#ffedd5", 200: "#fed7aa", 300: "#fdba74",
@@ -29,9 +33,16 @@ const config: Config = {
           "cyan-glow": "rgba(0,229,255,0.20)",
           gold:        "#FFD700",
           "gold-glow": "rgba(255,215,0,0.20)",
-          base:        "#121212",
-          card:        "#1F1F1F",
+          base:        "#050505",
+          card:        "#121212",
         },
+        jeez: {
+          gold: '#dfb55a',
+          dark: '#0a0a0a',
+          panel: '#121212',
+          danger: '#ef4444',
+          success: '#22c55e'
+        }
       },
       boxShadow: {
         "neon-orange": "0 0 16px 2px rgba(255,87,34,0.45)",
@@ -42,6 +53,17 @@ const config: Config = {
       backdropBlur: {
         xs: "2px",
       },
+      animation: {
+        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'glow-sweep': 'glowSweep 3s ease-in-out infinite',
+      },
+      keyframes: {
+        glowSweep: {
+          '0%': { transform: 'translateX(-100%) skewX(15deg)', opacity: '0' },
+          '50%': { opacity: '1' },
+          '100%': { transform: 'translateX(200%) skewX(15deg)', opacity: '0' },
+        }
+      }
     },
   },
   plugins: [],

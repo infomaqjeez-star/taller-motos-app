@@ -7,7 +7,7 @@
 
   /* ── Deep Space Dark Mode (default) ── */
   body {
-    background-color: #121212;
+    background-color: #050505;
     color: #F3F4F6;
     @apply antialiased;
   }
@@ -22,15 +22,33 @@
 @layer components {
   /* ── Glass Card (Deep Space) ── */
   .card {
-    background: rgba(31, 31, 31, 0.85);
+    background: rgba(18, 18, 18, 0.7);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    @apply border border-white/10 rounded-2xl p-4;
+    @apply border border-white/5 rounded-2xl p-4;
   }
   html.light .card {
     background: #ffffff;
     backdrop-filter: none;
     @apply border-gray-200 shadow-sm;
+  }
+
+  /* ── Glass Panel (Nuevo diseño AAA) ── */
+  .glass-panel {
+    background: rgba(18, 18, 18, 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  /* ── Card Hover Effects ── */
+  .card-hover {
+    @apply transition-all duration-300;
+  }
+  .card-hover:hover {
+    transform: translateY(-2px);
+    border-color: rgba(223, 181, 90, 0.3);
+    box-shadow: 0 10px 30px -10px rgba(223, 181, 90, 0.1);
   }
 
   /* ── Neon stat cards ── */
@@ -136,6 +154,22 @@
   .text-cyan    { color: #00E5FF; text-shadow: 0 0 8px rgba(0,229,255,0.70); }
   .text-orange-neon { color: #FF5722; text-shadow: 0 0 8px rgba(255,87,34,0.70); }
   .text-gold    { color: #FFD700; text-shadow: 0 0 8px rgba(255,215,0,0.70); }
+
+  /* ── Animaciones ── */
+  @keyframes glowSweep {
+    '0%': { transform: translateX(-100%) skewX(15deg); opacity: 0; }
+    '50%': { opacity: 1; }
+    '100%': { transform: translateX(200%) skewX(15deg); opacity: 0; }
+  }
+  .animate-glow-sweep {
+    animation: glowSweep 3s ease-in-out infinite;
+  }
+
+  /* ── Custom Scrollbar ── */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: #0a0a0a; }
+  ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+  ::-webkit-scrollbar-thumb:hover { background: #dfb55a; }
 
   /* ── Print styles ── */
   @media print {
