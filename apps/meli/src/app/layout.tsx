@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+import "./animations.css";
 import Providers from "./providers";
 import QuestionAlertGlobal from "@/components/QuestionAlertGlobal";
 
@@ -32,7 +33,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es" suppressHydrationWarning className={`${inter.variable} ${jetbrainsMono.variable}`}>
-      <body className="min-h-screen bg-gray-950 dark:bg-gray-950 light:bg-gray-50 font-sans">
+      <body className="min-h-screen bg-[#020203] text-zinc-200 font-sans antialiased selection:bg-amber-400/30">
         <Providers>{children}</Providers>
         <QuestionAlertGlobal />
       </body>
