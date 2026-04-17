@@ -34,7 +34,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 # Crear carpeta public si no existe
 RUN mkdir -p public
-COPY --from=builder --chown=nextjs:nodejs /app/public ./public 2>/dev/null || true
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
 USER nextjs
 
