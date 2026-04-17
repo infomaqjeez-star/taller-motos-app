@@ -1,5 +1,5 @@
 # Dockerfile para Railway - Next.js App Router (apps/meli)
-# Version: 5.0 - Force rebuild 2024-04-10 - Fix dynamic routes
+# Version: 6.0 - Fix env vars in build
 FROM node:20-alpine AS base
 
 # Instalar dependencias
@@ -15,6 +15,14 @@ RUN npm ci
 # Build
 FROM base AS builder
 WORKDIR /app
+
+# Pasar variables de entorno al build (Railway las inyecta como ARG)
+ARG NEXT_PUBLIC_SUPABASE_URL
+ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
+ARG NEXT_PUBLIC_MELI_APP_ID
+ENV NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+ENV NEXT_PUBLIC_MELI_APP_ID=${NEXT_PUBLIC_MELI_APP_ID}
 
 # Copiar node_modules y código fuente de meli
 COPY --from=deps /app/node_modules ./node_modules
