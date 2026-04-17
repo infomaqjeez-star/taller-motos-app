@@ -310,6 +310,10 @@ export function getBuenosAiresDateString(): string {
   return formatBuenosAiresDate(getBuenosAiresDate());
 }
 
+export function formatDateToBuenosAiresString(date: Date): string {
+  return formatBuenosAiresDate(date);
+}
+
 export function getStartOfDayBuenosAires(): string {
   return `${formatBuenosAiresDate(getBuenosAiresDate())}T00:00:00.000-03:00`;
 }

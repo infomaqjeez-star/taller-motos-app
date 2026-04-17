@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { getValidToken, getBuenosAiresDate, getBuenosAiresDateString, type LinkedMeliAccount } from "@/lib/meli";
+import { getValidToken, getBuenosAiresDate, getBuenosAiresDateString, formatDateToBuenosAiresString, type LinkedMeliAccount } from "@/lib/meli";
 
 export const dynamic = "force-dynamic";
 
@@ -39,17 +39,17 @@ export async function GET(request: NextRequest) {
     if (periodo === "hoy") {
       fechaDesdeStr = `${todayStr}T00:00:00.000-03:00`;
     } else if (periodo === "semana") {
-      const semanaAtras = new Date();
+      const semanaAtras = new Date(now);
       semanaAtras.setDate(semanaAtras.getDate() - 7);
-      const semanaStr = getBuenosAiresDateString();
+      const semanaStr = formatDateToBuenosAiresString(semanaAtras);
       fechaDesdeStr = `${semanaStr}T00:00:00.000-03:00`;
     } else if (periodo === "mes") {
-      const inicioMes = new Date();
+      const inicioMes = new Date(now);
       inicioMes.setDate(1);
-      const mesStr = getBuenosAiresDateString();
+      const mesStr = formatDateToBuenosAiresString(inicioMes);
       fechaDesdeStr = `${mesStr}T00:00:00.000-03:00`;
     } else if (periodo === "anio") {
-      const anioStr = getBuenosAiresDateString().split('-')[0];
+      const anioStr = formatDateToBuenosAiresString(now).split('-')[0];
       fechaDesdeStr = `${anioStr}-01-01T00:00:00.000-03:00`;
     } else {
       fechaDesdeStr = '2020-01-01T00:00:00.000-03:00';
