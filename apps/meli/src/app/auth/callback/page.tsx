@@ -1,31 +1,30 @@
 "use client";
 
 import { useEffect, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
 function AuthCallback() {
   const router = useRouter();
-  const searchParams = useSearchParams();
 
   useEffect(() => {
-    const code = searchParams.get("code");
-    if (code) {
-      supabase.auth.exchangeCodeForSession(code).then(({ error }) => {
-        if (error) {
-          console.error("[auth/callback] Error intercambiando code:", error.message);
-          router.replace("/login?error=auth_failed");
-        } else {
-          router.replace("/");
-        }
-      });
-    } else {
-      // Flujo implícito: tokens en hash, el SDK ya los proceso
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        router.replace(session ? "/" : "/login");
-      });
-    }
-  }, [router, searchParams]);
+    // Flujo implícito: Supabase SDK maneja los tokens en el hash
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (error) {
+        console.error("[auth/callback] Error:", error.message);
+        router.replace("/login?error=auth_failed");
+      } else if (session) {
+        router.replace("/");
+      } else {
+        // Intentar procesar el hash si existe
+        supabase.auth.onAuthStateChange((event, session) => {
+          if (event === "SIGNED_IN" && session) {
+            router.replace("/");
+          }
+        });
+      }
+    });
+  }, [router]);
 
   return (
     <div className="min-h-screen flex items-center justify-center" style={{ background: "#121212" }}>
