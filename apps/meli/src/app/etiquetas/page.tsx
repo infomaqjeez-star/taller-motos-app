@@ -5,11 +5,11 @@ import Image from "next/image";
 import {
   ArrowLeft, RefreshCw, Printer, Download, CheckCircle2,
   Package, Truck, Zap, AlertCircle, ChevronDown, ChevronRight, Send,
+  History
 } from "lucide-react";
 import { classifyFlexZone, ZONE_CFG } from "@/lib/zone-calc";
 import { ZoneIndicator } from "@/components/ZoneIndicator";
 import { supabase, getAuthHeaders } from "@/lib/supabase";
-import { EtiquetasHistorial } from "@/components/EtiquetasHistorial";
 
 type StatusTab = "pending" | "printed" | "in_transit" | "returns";
 type LogisticType = "todas" | "flex" | "correo" | "turbo" | "full";
@@ -911,10 +911,17 @@ function EtiquetasInner() {
               🧪 MODO PRUEBA
             </span>
           )}
-          {/* Botón Historial (60 días) */}
-          <EtiquetasHistorial 
-            accountName={Array.from(summaryByAccount.keys())[0] || undefined}
-          />
+          {/* Botón Historial - Link a página separada */}
+          <Link
+            href="/historial-etiquetas"
+            className="flex items-center gap-2 bg-gradient-to-r from-amber-500/20 to-amber-600/20 
+                       border border-amber-500/40 text-amber-400 hover:text-amber-300
+                       px-4 py-2 rounded-xl font-bold text-xs uppercase tracking-widest
+                       transition-all hover:scale-105 shadow-[0_0_20px_rgba(251,191,36,0.15)]"
+          >
+            <History className="w-4 h-4" />
+            Historial
+          </Link>
           {/* Botón Modo Test */}
           <button
             onClick={handlePrintTest}
