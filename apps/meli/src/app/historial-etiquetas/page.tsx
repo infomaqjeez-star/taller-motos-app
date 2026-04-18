@@ -234,67 +234,47 @@ export default function HistorialEtiquetasPage() {
     setSelectedIds(newSelected);
   };
 
-  // DESCARGAR etiquetas seleccionadas
+  // DESCARGAR etiquetas seleccionadas - usando API del backend
   const descargarSeleccionadas = async () => {
     if (selectedIds.size === 0) return;
     setProcesando(true);
     
     const seleccionadas = etiquetas.filter(e => selectedIds.has(e.id));
     
-    // Agrupar por cuenta para pedir tokens
-    const porCuenta: Record<string, EtiquetaHistorial[]> = {};
-    seleccionadas.forEach(e => {
-      if (!porCuenta[e.cuenta_origen]) porCuenta[e.cuenta_origen] = [];
-      porCuenta[e.cuenta_origen].push(e);
-    });
-    
-    // Descargar cada grupo
-    for (const [cuenta, etiquetasCuenta] of Object.entries(porCuenta)) {
-      try {
-        // Obtener token de la cuenta
-        const tokenRes = await fetch(`/api/meli-accounts?account=${encodeURIComponent(cuenta)}`);
-        if (!tokenRes.ok) {
-          console.error(`No se pudo obtener token para ${cuenta}`);
-          continue;
-        }
-        const tokenData = await tokenRes.json();
-        const accessToken = tokenData.access_token;
+    try {
+      const res = await fetch("/api/etiquetas-download", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ etiquetas: seleccionadas }),
+      });
+      
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
         
-        if (!accessToken) {
-          console.error(`No hay token para ${cuenta}`);
-          continue;
+        // Si hay múltiples, descargar como zip en el futuro
+        if (seleccionadas.length === 1) {
+          a.download = `etiqueta-${seleccionadas[0].order_id}.pdf`;
+        } else {
+          a.download = `etiquetas-${seleccionadas.length}.pdf`;
         }
         
-        // Descargar cada etiqueta
-        for (const etiqueta of etiquetasCuenta) {
-          try {
-            const pdfRes = await fetch(
-              `/api/etiquetas-pdf?shipping_id=${etiqueta.shipping_id}&access_token=${accessToken}`
-            );
-            
-            if (pdfRes.ok) {
-              const blob = await pdfRes.blob();
-              const url = window.URL.createObjectURL(blob);
-              const a = document.createElement("a");
-              a.href = url;
-              a.download = `etiqueta-${etiqueta.order_id}.pdf`;
-              document.body.appendChild(a);
-              a.click();
-              window.URL.revokeObjectURL(url);
-              document.body.removeChild(a);
-            } else {
-              console.error(`Error descargando ${etiqueta.order_id}`);
-            }
-          } catch (err) {
-            console.error(`Error con etiqueta ${etiqueta.order_id}:`, err);
-          }
-        }
-      } catch (err) {
-        console.error(`Error con cuenta ${cuenta}:`, err);
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } else {
+        const error = await res.json();
+        alert(`Error: ${error.error || "No se pudieron descargar las etiquetas"}`);
       }
+    } catch (err) {
+      console.error("Error descargando:", err);
+      alert("Error al descargar etiquetas");
+    } finally {
+      setProcesando(false);
     }
-    
-    setProcesando(false);
   };
 
   // IMPRIMIR etiquetas seleccionadas
