@@ -12,6 +12,7 @@ import ClientDataForm from "@/components/ClientDataForm";
 import TicketPrinter from "@/components/TicketPrinter";
 import { ventasDb } from "@/lib/db";
 import { generateId } from "@/lib/utils";
+import { getNowBA, getTodayStringBA } from "@/lib/date-utils";
 import {
   VentaRepuesto, VentaItem, MetodoPago, VentasStats,
   VentasPorDia, TopProducto, METODO_PAGO_LABELS, METODO_PAGO_ICONS,
@@ -26,16 +27,16 @@ import {
 const fmt = (n: number) =>
   "$" + n.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
-function todayStr() { return new Date().toISOString().slice(0, 10); }
+function todayStr() { return getTodayStringBA(); }
 function weekRange(): [string, string] {
-  const d = new Date();
+  const d = getNowBA();
   const day = d.getDay() || 7;
   const mon = new Date(d); mon.setDate(d.getDate() - day + 1);
   const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
   return [mon.toISOString().slice(0, 10), sun.toISOString().slice(0, 10)];
 }
 function monthRange(): [string, string] {
-  const d = new Date();
+  const d = getNowBA();
   const from = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
   const last = new Date(d.getFullYear(), d.getMonth() + 1, 0);
   const to = last.toISOString().slice(0, 10);
@@ -649,7 +650,7 @@ export default function VentasPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs text-gray-500 font-semibold uppercase flex items-center gap-1">
-                    <Calendar className="w-3.5 h-3.5" /> Hoy — {new Date().toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" })}
+                    <Calendar className="w-3.5 h-3.5" /> Hoy — {getNowBA().toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" })}
                   </p>
                   <p className="text-3xl font-black text-[#FDB71A] mt-1"
                     style={{ textShadow: "0 0 10px rgba(253,183,26,0.50)" }}>

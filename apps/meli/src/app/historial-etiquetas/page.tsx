@@ -8,6 +8,7 @@ import {
   CheckSquare, Square, Printer, ChevronDown, Trash2, ChevronLeft, ChevronRight,
   Clock
 } from "lucide-react";
+import { getNowBA, getTodayBA, isSameDayBA } from "@/lib/date-utils";
 
 interface EtiquetaHistorial {
   id: number;
@@ -64,13 +65,12 @@ function CalendarioPicker({
   onChange: (fecha: Date) => void;
   onCerrar: () => void;
 }) {
-  const [mesActual, setMesActual] = useState(new Date());
+  const [mesActual, setMesActual] = useState(getNowBA());
   
-  const hoy = new Date();
-  hoy.setHours(0, 0, 0, 0);
+  const hoy = getTodayBA();
   
-  const maxFecha = new Date();
-  const minFecha = new Date();
+  const maxFecha = getNowBA();
+  const minFecha = getNowBA();
   minFecha.setDate(minFecha.getDate() - 60);
   
   const diasEnMes = new Date(mesActual.getFullYear(), mesActual.getMonth() + 1, 0).getDate();
@@ -84,13 +84,13 @@ function CalendarioPicker({
   };
   
   const seleccionarFecha = (dia: number) => {
-    const fecha = new Date(mesActual.getFullYear(), mesActual.getMonth(), dia);
+    const fecha = new Date(mesActual.getFullYear(), mesActual.getMonth(), dia, 12, 0, 0);
     onChange(fecha);
     onCerrar();
   };
   
   const esFechaValida = (dia: number) => {
-    const fecha = new Date(mesActual.getFullYear(), mesActual.getMonth(), dia);
+    const fecha = new Date(mesActual.getFullYear(), mesActual.getMonth(), dia, 12, 0, 0);
     return fecha >= minFecha && fecha <= maxFecha;
   };
   
@@ -188,7 +188,7 @@ export default function HistorialEtiquetasPage() {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setEtiquetas(data.data || []);
-      setUltimaActualizacion(new Date());
+      setUltimaActualizacion(getNowBA());
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -352,7 +352,7 @@ export default function HistorialEtiquetasPage() {
         </head>
         <body>
           <h1>Etiquetas a Imprimir (${seleccionadas.length})</h1>
-          <p>Fecha: ${new Date().toLocaleString('es-AR')}</p>
+          <p>Fecha: ${getNowBA().toLocaleString('es-AR')}</p>
           ${seleccionadas.map(e => `
             <div class="etiqueta">
               <div class="header">

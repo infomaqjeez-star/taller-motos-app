@@ -15,6 +15,7 @@ import {
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import { useNotificationStream } from "@/hooks/useNotificationStream";
 import { supabase } from "@/lib/supabase";
+import { getNowBA } from "@/lib/date-utils";
 import AccountSelector from "@/components/AccountSelector";
 import AccountDetailsPanel from "@/components/AccountDetailsPanel";
 import UnifiedPostSalePanel from "@/components/UnifiedPostSalePanel";
@@ -393,7 +394,7 @@ function AppJeezInner() {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data: AccountDash[] = await res.json();
       setAccounts(data);
-      setLastUpdate(new Date());
+      setLastUpdate(getNowBA());
       const q = data.reduce((s, a) => s + (a.unanswered_questions ?? 0), 0);
       setTotalQuestionsAlert(q);
     } catch (e) { setError((e as Error).message); }

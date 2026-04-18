@@ -10,6 +10,7 @@ import {
 import { classifyFlexZone, ZONE_CFG } from "@/lib/zone-calc";
 import { ZoneIndicator } from "@/components/ZoneIndicator";
 import { supabase, getAuthHeaders } from "@/lib/supabase";
+import { getNowBA, getTodayStringBA } from "@/lib/date-utils";
 
 type StatusTab = "pending" | "printed" | "in_transit" | "returns";
 type LogisticType = "todas" | "flex" | "correo" | "turbo" | "full";
@@ -117,13 +118,13 @@ function LabelCard({
   // Calcular si está demorada (dispatch_date pasó de las 00:00 del día)
   const isDelayed = (() => {
     if (!shipment.dispatch_date) return false;
-    const today = new Date();
+    const today = getNowBA();
     today.setHours(0, 0, 0, 0);
     const dispDate = new Date(shipment.dispatch_date);
     return dispDate < today;
   })();
   const delayDays = isDelayed && shipment.dispatch_date
-    ? Math.floor((new Date().setHours(0,0,0,0) - new Date(shipment.dispatch_date).getTime()) / 86400000)
+    ? Math.floor((getNowBA().setHours(0,0,0,0) - new Date(shipment.dispatch_date).getTime()) / 86400000)
     : 0;
 
   return (
@@ -601,8 +602,8 @@ function EtiquetasInner() {
     // Filtrar por tiempo (solo para pendientes)
     // Regla: después de las 13:00, los envíos de "hoy" pasan a "próximos"
     if (statusTab === "pending" && timeFilter !== "all") {
-      const now = new Date();
-      const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+      const now = getNowBA();
+      const todayStr = getTodayStringBA();
       const cutoffPassed = now.getHours() >= 13;
       if (timeFilter === "today") {
         source = source.filter(s => {
@@ -639,8 +640,8 @@ function EtiquetasInner() {
   // Regla: después de las 13:00 Argentina, los envíos de "hoy" pasan a "próximos"
   const timeCounts = useMemo(() => {
     const source = data?.shipments ?? [];
-    const now = new Date();
-    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    const now = getNowBA();
+    const todayStr = getTodayStringBA();
     const cutoffPassed = now.getHours() >= 13; // Corte 13:00 - después ya no se despacha hoy
     const today = source.filter(s => {
       if (!s.dispatch_date) return !cutoffPassed;
@@ -1246,11 +1247,8 @@ function EtiquetasInner() {
             ) : statusTab === "pending" ? (() => {
               // Agrupar pendientes: DEMORADAS → HOY → PRÓXIMOS
               // Regla: después de las 13:00, envíos de hoy pasan a "próximos"
-              const now = new Date();
-              const localYear = now.getFullYear();
-              const localMonth = String(now.getMonth() + 1).padStart(2, "0");
-              const localDay = String(now.getDate()).padStart(2, "0");
-              const todayStr = `${localYear}-${localMonth}-${localDay}`;
+              const now = getNowBA();
+              const todayStr = getTodayStringBA();
               const cutoffPassed = now.getHours() >= 13;
 
               // Demoradas: dispatch_date estrictamente antes de hoy (a las 00:00 ya son demoradas)
