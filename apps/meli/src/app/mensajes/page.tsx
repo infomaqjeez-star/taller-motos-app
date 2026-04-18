@@ -956,7 +956,7 @@ function MensajesInner() {
               Mensajería Unificada
             </h1>
             <p className="text-[10px]" style={{ color: "#6B7280" }}>
-              {lastSync ? `Sync ${lastSync.toLocaleTimeString("es-AR")}` : "Cargando..."}
+              {lastSync ? `Sync ${lastSync.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", hour12: false })}` : "Cargando..."}
               {" · "}<Clock className="w-3 h-3 inline" /> auto cada 30s
             </p>
           </div>

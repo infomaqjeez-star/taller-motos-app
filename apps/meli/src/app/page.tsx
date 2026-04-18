@@ -636,7 +636,7 @@ function AppJeezInner() {
                 ) : (
                   <span style={{ color: "#ef4444" }}>🔴 Desconectado</span>
                 )}
-                {" "} • {lastUpdate ? `Cargado ${lastUpdate.toLocaleTimeString("es-AR")}` : "Cargando..."}
+                {" "} • {lastUpdate ? `Cargado ${lastUpdate.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", hour12: false })}` : "Cargando..."}
               </p>
             </div>
           </div>

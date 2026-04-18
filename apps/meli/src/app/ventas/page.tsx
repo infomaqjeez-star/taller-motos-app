@@ -126,7 +126,7 @@ function VentaCard({
   onPrintTicket: (venta: VentaRepuesto) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const hora = new Date(venta.createdAt).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
+  const hora = new Date(venta.createdAt).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", hour12: false });
   const cancelada = venta.status === "cancelada";
 
   return (

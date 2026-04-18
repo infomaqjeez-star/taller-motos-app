@@ -213,7 +213,7 @@ function PublicacionesInner() {
             <h1 className="font-black text-white text-base flex items-center gap-2">
               <Package className="w-5 h-5" style={{ color: "#FFE600" }} /> Publicaciones
             </h1>
-            <p className="text-[10px]" style={{ color: "#6B7280" }}>{lastUpdate ? `Actualizado ${lastUpdate.toLocaleTimeString("es-AR")}` : "Cargando..."}</p>
+            <p className="text-[10px]" style={{ color: "#6B7280" }}>{lastUpdate ? `Actualizado ${lastUpdate.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", hour12: false })}` : "Cargando..."}</p>
           </div>
         </div>
         <button onClick={load} disabled={loading}

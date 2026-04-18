@@ -37,7 +37,7 @@ export function useAutoRefresh(
     try {
       await fetchFnRef.current();
       lastRefreshRef.current = new Date();
-      console.log(`[REFRESH] Sincronización completada a las ${new Date().toLocaleTimeString("es-AR")}`);
+      console.log(`[REFRESH] Sincronización completada a las ${new Date().toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false })}`);
     } catch (error) {
       console.error("[REFRESH] Error:", error);
     } finally {

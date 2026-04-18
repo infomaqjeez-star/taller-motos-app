@@ -451,7 +451,7 @@ export default function PromocionesPage() {
                   </p>
                   {nextRun && (
                     <p className="text-[10px] mt-0.5" style={{ color: "#39FF14" }}>
-                      Próxima: {nextRun.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}
+                      Próxima: {nextRun.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", hour12: false })}
                     </p>
                   )}
                   {!autoEnabled && (
@@ -595,7 +595,7 @@ export default function PromocionesPage() {
                           {log.requested_discount_pct}%
                         </p>
                         <p className="text-[10px]" style={{ color: "#4B5563" }}>
-                          {new Date(log.created_at).toLocaleString("es-AR", { dateStyle: "short", timeStyle: "short" })}
+                          {new Date(log.created_at).toLocaleString("es-AR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false })}
                         </p>
                       </div>
                     </div>

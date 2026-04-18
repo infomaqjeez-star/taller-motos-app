@@ -423,7 +423,7 @@ export default function HistorialEtiquetasPage() {
               {etiquetas.length} etiquetas · {selectedIds.size} seleccionadas
               {ultimaActualizacion && (
                 <span className="ml-2 text-zinc-600">
-                  · Actualizado {ultimaActualizacion.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+                  · Actualizado {ultimaActualizacion.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false })}
                 </span>
               )}
             </p>
