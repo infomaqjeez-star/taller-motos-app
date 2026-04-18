@@ -288,10 +288,18 @@ export async function meliPost(path: string, token: string, body: unknown, timeo
 // Helper para fechas en zona horaria de Buenos Aires (UTC-3)
 export function getBuenosAiresDate(): Date {
   const now = new Date();
-  // Buenos Aires es UTC-3 (sin horario de verano desde 2024)
-  const offset = -3 * 60; // minutos
-  const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
-  return new Date(utc + (offset * 60000));
+  // Convertir a string en timezone de Buenos Aires y parsear
+  const baDateStr = now.toLocaleString('en-US', { 
+    timeZone: 'America/Argentina/Buenos_Aires',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  });
+  return new Date(baDateStr);
 }
 
 // Formatear fecha de Buenos Aires a YYYY-MM-DD usando componentes locales
@@ -303,7 +311,15 @@ function formatBuenosAiresDate(d: Date): string {
 }
 
 export function getBuenosAiresISOString(): string {
-  return getBuenosAiresDate().toISOString();
+  const d = getBuenosAiresDate();
+  // Formatear manualmente a ISO con offset -03:00
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  const hours = String(d.getHours()).padStart(2, '0');
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+  const seconds = String(d.getSeconds()).padStart(2, '0');
+  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}.000-03:00`;
 }
 
 export function getBuenosAiresDateString(): string {
