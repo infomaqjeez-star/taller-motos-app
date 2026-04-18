@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { 
   ArrowLeft, Download, Search, Loader2, RefreshCw, 
@@ -68,7 +68,7 @@ function CalendarioPicker({
   const hoy = new Date();
   const maxFecha = new Date();
   const minFecha = new Date();
-  minFecha.setDate(minFecha.getDate() - 60); // 60 días atrás
+  minFecha.setDate(minFecha.getDate() - 60);
   
   const diasEnMes = new Date(mesActual.getFullYear(), mesActual.getMonth() + 1, 0).getDate();
   const primerDiaSemana = new Date(mesActual.getFullYear(), mesActual.getMonth(), 1).getDay();
@@ -100,42 +100,28 @@ function CalendarioPicker({
   
   return (
     <div className="absolute top-full left-0 mt-2 bg-[#1a1a1f] border border-white/10 rounded-xl p-4 shadow-2xl z-50 w-[280px]">
-      {/* Header del calendario */}
       <div className="flex items-center justify-between mb-4">
-        <button 
-          onClick={() => cambiarMes(-1)}
-          className="p-1 hover:bg-white/10 rounded-lg transition-colors"
-        >
+        <button onClick={() => cambiarMes(-1)} className="p-1 hover:bg-white/10 rounded-lg transition-colors">
           <ChevronLeft className="w-5 h-5 text-zinc-400" />
         </button>
         <span className="text-sm font-bold text-white">
           {meses[mesActual.getMonth()]} {mesActual.getFullYear()}
         </span>
-        <button 
-          onClick={() => cambiarMes(1)}
-          className="p-1 hover:bg-white/10 rounded-lg transition-colors"
-        >
+        <button onClick={() => cambiarMes(1)} className="p-1 hover:bg-white/10 rounded-lg transition-colors">
           <ChevronRight className="w-5 h-5 text-zinc-400" />
         </button>
       </div>
       
-      {/* Días de la semana */}
       <div className="grid grid-cols-7 gap-1 mb-2">
         {diasSemana.map(dia => (
-          <div key={dia} className="text-center text-[10px] text-zinc-500 font-bold py-1">
-            {dia}
-          </div>
+          <div key={dia} className="text-center text-[10px] text-zinc-500 font-bold py-1">{dia}</div>
         ))}
       </div>
       
-      {/* Días del mes */}
       <div className="grid grid-cols-7 gap-1">
-        {/* Espacios vacíos antes del primer día */}
         {Array.from({ length: primerDiaSemana }).map((_, i) => (
           <div key={`empty-${i}`} className="h-8" />
         ))}
-        
-        {/* Días */}
         {Array.from({ length: diasEnMes }).map((_, i) => {
           const dia = i + 1;
           const valida = esFechaValida(dia);
@@ -147,11 +133,7 @@ function CalendarioPicker({
               onClick={() => valida && seleccionarFecha(dia)}
               disabled={!valida}
               className={`h-8 w-8 rounded-lg text-xs font-bold transition-all
-                ${seleccionada 
-                  ? "bg-amber-500 text-black" 
-                  : valida 
-                    ? "hover:bg-white/10 text-white" 
-                    : "text-zinc-700 cursor-not-allowed"}`}
+                ${seleccionada ? "bg-amber-500 text-black" : valida ? "hover:bg-white/10 text-white" : "text-zinc-700 cursor-not-allowed"}`}
             >
               {dia}
             </button>
@@ -159,7 +141,6 @@ function CalendarioPicker({
         })}
       </div>
       
-      {/* Leyenda */}
       <div className="mt-3 pt-3 border-t border-white/10 text-[10px] text-zinc-500">
         Rango: Últimos 60 días
       </div>
@@ -176,10 +157,8 @@ export default function HistorialEtiquetasPage() {
   const [fechaFiltro, setFechaFiltro] = useState<Date | null>(null);
   const [mostrarCalendario, setMostrarCalendario] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
-  const [descargando, setDescargando] = useState(false);
-  const [imprimiendo, setImprimiendo] = useState(false);
+  const [procesando, setProcesando] = useState(false);
 
-  // Cargar todas las etiquetas del historial (60 días)
   const loadEtiquetas = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -199,21 +178,16 @@ export default function HistorialEtiquetasPage() {
     loadEtiquetas();
   }, [loadEtiquetas]);
 
-  // Filtrar por fecha específica
   const filtrarPorFecha = (etiquetas: EtiquetaHistorial[]) => {
     if (!fechaFiltro) return etiquetas;
-    
     return etiquetas.filter(e => {
       const fechaEtiqueta = new Date(e.fecha_creacion);
       return fechaEtiqueta.toDateString() === fechaFiltro.toDateString();
     });
   };
 
-  // Filtrar por búsqueda, tipo y fecha
   const filteredEtiquetas = useMemo(() => {
     let filtered = etiquetas;
-
-    // Filtro de búsqueda
     if (query.length >= 2) {
       const q = query.toLowerCase();
       filtered = filtered.filter((e) =>
@@ -224,19 +198,13 @@ export default function HistorialEtiquetasPage() {
         (e.cuenta_origen || "").toLowerCase().includes(q)
       );
     }
-
-    // Filtro por tipo de envío
     if (activeTab !== "todas") {
       filtered = filtered.filter((e) => e.tipo_envio === activeTab);
     }
-
-    // Filtro por fecha específica
     filtered = filtrarPorFecha(filtered);
-
     return filtered;
   }, [etiquetas, query, activeTab, fechaFiltro]);
 
-  // Contar por tipo
   const typeCounts = useMemo(() => {
     const filtradasPorFecha = filtrarPorFecha(etiquetas);
     return {
@@ -248,7 +216,6 @@ export default function HistorialEtiquetasPage() {
     };
   }, [etiquetas, fechaFiltro]);
 
-  // Seleccionar/Deseleccionar todas
   const toggleSeleccionarTodas = () => {
     if (selectedIds.size === filteredEtiquetas.length) {
       setSelectedIds(new Set());
@@ -257,7 +224,6 @@ export default function HistorialEtiquetasPage() {
     }
   };
 
-  // Seleccionar/Deseleccionar una etiqueta
   const toggleSeleccionar = (id: number) => {
     const newSelected = new Set(selectedIds);
     if (newSelected.has(id)) {
@@ -268,7 +234,125 @@ export default function HistorialEtiquetasPage() {
     setSelectedIds(newSelected);
   };
 
-  // Limpiar filtro de fecha
+  // DESCARGAR etiquetas seleccionadas
+  const descargarSeleccionadas = async () => {
+    if (selectedIds.size === 0) return;
+    setProcesando(true);
+    
+    const seleccionadas = etiquetas.filter(e => selectedIds.has(e.id));
+    
+    // Agrupar por cuenta para pedir tokens
+    const porCuenta: Record<string, EtiquetaHistorial[]> = {};
+    seleccionadas.forEach(e => {
+      if (!porCuenta[e.cuenta_origen]) porCuenta[e.cuenta_origen] = [];
+      porCuenta[e.cuenta_origen].push(e);
+    });
+    
+    // Descargar cada grupo
+    for (const [cuenta, etiquetasCuenta] of Object.entries(porCuenta)) {
+      try {
+        // Obtener token de la cuenta
+        const tokenRes = await fetch(`/api/meli-accounts?account=${encodeURIComponent(cuenta)}`);
+        if (!tokenRes.ok) {
+          console.error(`No se pudo obtener token para ${cuenta}`);
+          continue;
+        }
+        const tokenData = await tokenRes.json();
+        const accessToken = tokenData.access_token;
+        
+        if (!accessToken) {
+          console.error(`No hay token para ${cuenta}`);
+          continue;
+        }
+        
+        // Descargar cada etiqueta
+        for (const etiqueta of etiquetasCuenta) {
+          try {
+            const pdfRes = await fetch(
+              `/api/etiquetas-pdf?shipping_id=${etiqueta.shipping_id}&access_token=${accessToken}`
+            );
+            
+            if (pdfRes.ok) {
+              const blob = await pdfRes.blob();
+              const url = window.URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = `etiqueta-${etiqueta.order_id}.pdf`;
+              document.body.appendChild(a);
+              a.click();
+              window.URL.revokeObjectURL(url);
+              document.body.removeChild(a);
+            } else {
+              console.error(`Error descargando ${etiqueta.order_id}`);
+            }
+          } catch (err) {
+            console.error(`Error con etiqueta ${etiqueta.order_id}:`, err);
+          }
+        }
+      } catch (err) {
+        console.error(`Error con cuenta ${cuenta}:`, err);
+      }
+    }
+    
+    setProcesando(false);
+  };
+
+  // IMPRIMIR etiquetas seleccionadas
+  const imprimirSeleccionadas = () => {
+    if (selectedIds.size === 0) return;
+    
+    const seleccionadas = etiquetas.filter(e => selectedIds.has(e.id));
+    
+    const ventana = window.open('', '_blank');
+    if (!ventana) {
+      alert("Permite ventanas emergentes para imprimir");
+      return;
+    }
+    
+    ventana.document.write(`
+      <html>
+        <head>
+          <title>Imprimir Etiquetas (${seleccionadas.length})</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
+            .etiqueta { background: white; padding: 15px; margin-bottom: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); page-break-inside: avoid; }
+            .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+            .tipo { padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; }
+            .tipo-FLEX { background: #06b6d4; color: white; }
+            .tipo-CORREO { background: #f97316; color: white; }
+            .tipo-TURBO { background: #8b5cf6; color: white; }
+            .tipo-FULL { background: #10b981; color: white; }
+            .titulo { font-size: 16px; font-weight: bold; margin-bottom: 8px; }
+            .info { font-size: 12px; color: #666; }
+            .qr-placeholder { width: 100px; height: 100px; background: #e5e5e5; display: flex; align-items: center; justify-content: center; margin-top: 10px; }
+            @media print { body { background: white; } .etiqueta { box-shadow: none; border: 1px solid #ddd; } }
+          </style>
+        </head>
+        <body>
+          <h1>Etiquetas a Imprimir (${seleccionadas.length})</h1>
+          <p>Fecha: ${new Date().toLocaleString('es-AR')}</p>
+          ${seleccionadas.map(e => `
+            <div class="etiqueta">
+              <div class="header">
+                <span class="tipo tipo-${e.tipo_envio}">${e.tipo_envio}</span>
+                <span>#${e.order_id}</span>
+              </div>
+              <div class="titulo">${e.titulo_producto || 'Sin título'}</div>
+              <div class="info">
+                <strong>Comprador:</strong> ${e.comprador_nombre || 'N/A'} <br/>
+                <strong>Cuenta:</strong> ${e.cuenta_origen} <br/>
+                <strong>Fecha:</strong> ${new Date(e.fecha_creacion).toLocaleString('es-AR')}
+              </div>
+              <div class="qr-placeholder">QR Code</div>
+            </div>
+          `).join('')}
+          <script>window.print();</script>
+        </body>
+      </html>
+    `);
+    ventana.document.close();
+  };
+
   const limpiarFiltroFecha = () => {
     setFechaFiltro(null);
   };
@@ -296,7 +380,6 @@ export default function HistorialEtiquetasPage() {
 
   return (
     <div className="min-h-screen bg-[#020203] text-zinc-200">
-      {/* Header */}
       <header className="sticky top-0 z-30 px-4 py-3 flex items-center justify-between border-b bg-[#121212]/95 backdrop-blur border-white/[0.06]">
         <div className="flex items-center gap-3">
           <Link href="/etiquetas" className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
@@ -324,35 +407,33 @@ export default function HistorialEtiquetasPage() {
       <main className="max-w-6xl mx-auto p-4">
         {/* Barra de acciones */}
         <div className="flex flex-wrap items-center gap-2 mb-4">
-          {/* Seleccionar todas */}
           <button
             onClick={toggleSeleccionarTodas}
             disabled={filteredEtiquetas.length === 0}
             className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-all
-              ${todasSeleccionadas 
-                ? "bg-amber-500 text-black" 
-                : "bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white"}`}
+              ${todasSeleccionadas ? "bg-amber-500 text-black" : "bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white"}`}
           >
             {todasSeleccionadas ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
             {todasSeleccionadas ? "Desmarcar Todas" : "Marcar Todas"}
           </button>
 
-          {/* Acciones sobre seleccionadas */}
           {algunaSeleccionada && (
             <>
               <button
-                disabled={descargando}
-                className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 hover:bg-emerald-500/30 transition-all"
+                onClick={descargarSeleccionadas}
+                disabled={procesando}
+                className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 hover:bg-emerald-500/30 transition-all disabled:opacity-50"
               >
-                {descargando ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                {procesando ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
                 Descargar ({selectedIds.size})
               </button>
               
               <button
-                disabled={imprimiendo}
-                className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold bg-blue-500/20 text-blue-400 border border-blue-500/40 hover:bg-blue-500/30 transition-all"
+                onClick={imprimirSeleccionadas}
+                disabled={procesando}
+                className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold bg-blue-500/20 text-blue-400 border border-blue-500/40 hover:bg-blue-500/30 transition-all disabled:opacity-50"
               >
-                {imprimiendo ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4" />}
+                {procesando ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4" />}
                 Imprimir ({selectedIds.size})
               </button>
               
@@ -369,7 +450,6 @@ export default function HistorialEtiquetasPage() {
 
         {/* Búsqueda y filtros */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
-          {/* Búsqueda */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
             <input
@@ -381,7 +461,6 @@ export default function HistorialEtiquetasPage() {
             />
           </div>
 
-          {/* Selector de fecha con calendario */}
           <div className="relative">
             <button
               onClick={() => setMostrarCalendario(!mostrarCalendario)}
@@ -393,10 +472,7 @@ export default function HistorialEtiquetasPage() {
               </span>
               {fechaFiltro && (
                 <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    limpiarFiltroFecha();
-                  }}
+                  onClick={(e) => { e.stopPropagation(); limpiarFiltroFecha(); }}
                   className="ml-auto text-zinc-500 hover:text-white"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
@@ -427,28 +503,22 @@ export default function HistorialEtiquetasPage() {
                 key={tipo}
                 onClick={() => setActiveTab(tipo)}
                 className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap
-                  ${isActive 
-                    ? "bg-amber-500 text-black" 
-                    : "bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white"}`}
+                  ${isActive ? "bg-amber-500 text-black" : "bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white"}`}
               >
                 {tipo !== "todas" && config && <config.icon className="w-3.5 h-3.5" />}
                 {tipo === "todas" ? "Todas" : config?.label}
-                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-black/20">
-                  {count}
-                </span>
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-black/20">{count}</span>
               </button>
             );
           })}
         </div>
 
-        {/* Error */}
         {error && (
           <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 mb-4 text-red-400 text-sm">
             Error: {error}
           </div>
         )}
 
-        {/* Lista */}
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-8 h-8 text-amber-500 animate-spin" />
@@ -458,10 +528,7 @@ export default function HistorialEtiquetasPage() {
             <Package className="w-16 h-16 mx-auto mb-4 opacity-30" />
             <p className="text-lg font-bold">No hay etiquetas en el historial</p>
             <p className="text-sm mt-2">Las etiquetas se guardan automáticamente desde la página de Etiquetas</p>
-            <Link 
-              href="/etiquetas"
-              className="inline-block mt-4 px-4 py-2 bg-amber-500 text-black rounded-xl font-bold text-sm"
-            >
+            <Link href="/etiquetas" className="inline-block mt-4 px-4 py-2 bg-amber-500 text-black rounded-xl font-bold text-sm">
               Ir a Etiquetas
             </Link>
           </div>
@@ -480,13 +547,8 @@ export default function HistorialEtiquetasPage() {
                     ${isSelected ? "border-amber-500/50 bg-amber-500/5" : "border-white/10 hover:border-amber-500/30"}`}
                 >
                   <div className="flex items-start gap-3">
-                    {/* Checkbox */}
                     <div className="flex-shrink-0 pt-0.5">
-                      {isSelected ? (
-                        <CheckSquare className="w-5 h-5 text-amber-400" />
-                      ) : (
-                        <Square className="w-5 h-5 text-zinc-600" />
-                      )}
+                      {isSelected ? <CheckSquare className="w-5 h-5 text-amber-400" /> : <Square className="w-5 h-5 text-zinc-600" />}
                     </div>
                     
                     <div className="flex-1 min-w-0">
@@ -496,29 +558,15 @@ export default function HistorialEtiquetasPage() {
                           <Icon className="w-3 h-3 inline mr-1" />
                           {config.label}
                         </span>
-                        <span className="text-[10px] text-zinc-500 font-mono">
-                          #{etiqueta.order_id}
-                        </span>
-                        <span className="text-[9px] text-zinc-600">
-                          {etiqueta.cuenta_origen}
-                        </span>
+                        <span className="text-[10px] text-zinc-500 font-mono">#{etiqueta.order_id}</span>
+                        <span className="text-[9px] text-zinc-600">{etiqueta.cuenta_origen}</span>
                       </div>
                       
-                      <h3 className="text-sm font-bold text-white mb-1 truncate"
-                      >
-                        {etiqueta.titulo_producto || "Sin título"}
-                      </h3>
+                      <h3 className="text-sm font-bold text-white mb-1 truncate">{etiqueta.titulo_producto || "Sin título"}</h3>
                       
-                      <div className="flex items-center gap-3 text-[10px] text-zinc-500"
-                      >
-                        <span className="flex items-center gap-1">
-                          <User className="w-3 h-3" />
-                          {etiqueta.comprador_nombre || "Sin nombre"}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Calendar className="w-3 h-3" />
-                          {formatearFecha(etiqueta.fecha_creacion)}
-                        </span>
+                      <div className="flex items-center gap-3 text-[10px] text-zinc-500">
+                        <span className="flex items-center gap-1"><User className="w-3 h-3" />{etiqueta.comprador_nombre || "Sin nombre"}</span>
+                        <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />{formatearFecha(etiqueta.fecha_creacion)}</span>
                       </div>
                     </div>
                   </div>
