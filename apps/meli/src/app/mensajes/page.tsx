@@ -740,7 +740,25 @@ function MensajesInner() {
     return new Set();
   });
 
-  const recentlyAnsweredRef = useRef<Set<number>>(recentlyAnswered);
+  const recentlyAnsweredRef = useRef<Set<number>>(new Set());
+  
+  // Inicializar el ref desde localStorage al montar el componente
+  useEffect(() => {
+    const saved = localStorage.getItem("recentlyAnsweredQuestions");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        const now = Date.now();
+        const valid = parsed.filter((item: any) => now - item.timestamp < 30 * 60 * 1000);
+        const validSet = new Set<number>(valid.map((item: any) => item.id));
+        recentlyAnsweredRef.current = validSet;
+      } catch {
+        recentlyAnsweredRef.current = new Set();
+      }
+    }
+  }, []);
+  
+  // Sincronizar el ref cuando cambia el estado
   useEffect(() => { recentlyAnsweredRef.current = recentlyAnswered; }, [recentlyAnswered]);
   
   // Estados para mensajes
@@ -863,13 +881,18 @@ function MensajesInner() {
 
   // Handler cuando se responde una pregunta - remueve inmediatamente y marca como respondida
   const handleAnswered = useCallback((id: number) => {
+    // Remover inmediatamente de la lista visible
     setQuestions(qs => qs.filter(q => q.meli_question_id !== id));
     setSuccessToast("Pregunta respondida exitosamente");
     setTimeout(() => setSuccessToast(null), 4000);
     
-    // Agregar al set de respondidas recientemente
+    // Agregar al set de respondidas recientemente (también actualizar el ref inmediatamente)
+    const newId = Number(id);
     setRecentlyAnswered(prev => {
-      const newSet = new Set(prev).add(id);
+      const newSet = new Set(prev).add(newId);
+      
+      // Actualizar el ref inmediatamente para que el polling lo vea
+      recentlyAnsweredRef.current = newSet;
       
       // Guardar en localStorage con timestamp
       const toSave = Array.from(newSet).map(qId => ({ id: qId, timestamp: Date.now() }));
@@ -878,11 +901,14 @@ function MensajesInner() {
       return newSet;
     });
     
-    // Limpiar después de 10 minutos
+    // Limpiar después de 30 minutos (aumentado de 10)
     setTimeout(() => {
       setRecentlyAnswered(prev => {
         const newSet = new Set(prev);
-        newSet.delete(id);
+        newSet.delete(newId);
+        
+        // Actualizar el ref
+        recentlyAnsweredRef.current = newSet;
         
         // Actualizar localStorage
         const toSave = Array.from(newSet).map(qId => ({ id: qId, timestamp: Date.now() }));
@@ -890,7 +916,7 @@ function MensajesInner() {
         
         return newSet;
       });
-    }, 10 * 60 * 1000);
+    }, 30 * 60 * 1000);
   }, []);
 
   // Marcar mensaje como leído
