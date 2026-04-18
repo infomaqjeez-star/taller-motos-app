@@ -32,38 +32,55 @@ export async function POST(req: NextRequest) {
     const tokens: Record<string, string> = {};
 
     for (const cuenta of cuentasNecesarias) {
-      console.log(`[etiquetas-download] Buscando token para: ${cuenta}`);
+      console.log(`[etiquetas-download] Buscando token para: "${cuenta}"`);
       
-      // Intentar buscar por meli_nickname
-      let { data, error } = await supabase
+      let data = null;
+      let error = null;
+      
+      // Intentar buscar por meli_nickname exacto
+      const result1 = await supabase
         .from("linked_meli_accounts")
         .select("access_token, meli_nickname, meli_user_id")
         .eq("meli_nickname", cuenta)
         .single();
-
-      // Si no se encuentra, intentar buscar por account_name o cualquier campo similar
-      if (error || !data) {
-        console.log(`[etiquetas-download] No encontrado por nickname, intentando búsqueda alternativa`);
-        
-        // Intentar con ilike para búsqueda case-insensitive
-        const { data: data2, error: error2 } = await supabase
+      
+      if (!result1.error && result1.data) {
+        data = result1.data;
+        console.log(`[etiquetas-download] Encontrado por meli_nickname exacto`);
+      } else {
+        // Intentar con ilike (case-insensitive)
+        const result2 = await supabase
           .from("linked_meli_accounts")
           .select("access_token, meli_nickname, meli_user_id")
           .ilike("meli_nickname", cuenta)
           .single();
           
-        if (!error2 && data2) {
-          data = data2;
-          error = null;
+        if (!result2.error && result2.data) {
+          data = result2.data;
+          console.log(`[etiquetas-download] Encontrado por meli_nickname (case-insensitive)`);
+        } else {
+          // Intentar buscando si el nickname contiene el nombre de la cuenta
+          const result3 = await supabase
+            .from("linked_meli_accounts")
+            .select("access_token, meli_nickname, meli_user_id")
+            .ilike("meli_nickname", `%${cuenta}%`)
+            .single();
+            
+          if (!result3.error && result3.data) {
+            data = result3.data;
+            console.log(`[etiquetas-download] Encontrado por partial match`);
+          } else {
+            error = result3.error;
+          }
         }
       }
 
       if (error || !data?.access_token) {
-        console.error(`[etiquetas-download] No se encontró token para ${cuenta}:`, error);
+        console.error(`[etiquetas-download] No se encontró token para "${cuenta}":`, error);
         continue;
       }
 
-      console.log(`[etiquetas-download] Token encontrado para ${cuenta}`);
+      console.log(`[etiquetas-download] Token encontrado para "${cuenta}" (meli_nickname: ${data.meli_nickname})`);
       tokens[cuenta] = data.access_token;
     }
 
