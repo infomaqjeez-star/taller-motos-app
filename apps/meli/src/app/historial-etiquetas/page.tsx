@@ -148,7 +148,7 @@ export default function HistorialEtiquetasPage() {
           </Link>
           <div>
             <h1 className="font-black text-white text-lg flex items-center gap-2">
-              <History className="w-5 h-5 text-amber-400" /
+              <History className="w-5 h-5 text-amber-400" />
               Historial de Etiquetas
             </h1>
             <p className="text-[10px] text-zinc-500 uppercase tracking-widest">
