@@ -26,27 +26,27 @@ export default function KpiBar({ accountsCount, salesToday, totalAmount, urgentA
 
       {/* Ventas Hoy */}
       <StatCard
-        icon={<ShoppingCart className="w-16 h-16 text-jeez-success" />}
+        icon={<ShoppingCart className="w-16 h-16 text-emerald-400" />}
         label="Ventas Hoy"
         value={salesToday}
         sublabel={salesToday > 0 ? `↑ ${salesToday}` : undefined}
-        variant="success"
+        variant="green"
       />
 
       {/* Facturado Hoy */}
       <StatCard
-        icon={<DollarSign className="w-16 h-16 text-jeez-gold" />}
+        icon={<DollarSign className="w-16 h-16 text-amber-400" />}
         label="Facturado Hoy"
         value={fmt(totalAmount)}
-        variant="gold"
+        variant="amber"
       />
 
       {/* Pendientes Urgentes */}
       <StatCard
-        icon={<AlertTriangle className="w-16 h-16 text-jeez-danger" />}
+        icon={<AlertTriangle className="w-16 h-16 text-red-400" />}
         label="Pendientes Urgentes"
         value={urgentAlerts}
-        variant={urgentAlerts > 0 ? "danger" : "default"}
+        variant={urgentAlerts > 0 ? "red" : "neutral"}
       />
     </div>
   );
