@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { 
   ArrowLeft, Download, Search, Loader2, RefreshCw, 
   Package, Zap, Truck, Warehouse, Filter, Calendar, User, History,
-  CheckSquare, Square, Printer, ChevronDown, Trash2
+  CheckSquare, Square, Printer, ChevronDown, Trash2, ChevronLeft, ChevronRight
 } from "lucide-react";
 
 interface EtiquetaHistorial {
@@ -21,7 +21,6 @@ interface EtiquetaHistorial {
 }
 
 type TipoEnvio = "todas" | "FLEX" | "CORREO" | "TURBO" | "FULL";
-type FiltroFecha = "todos" | "hoy" | "semana" | "mes";
 
 const tipoEnvioConfig = {
   FLEX: { 
@@ -54,13 +53,128 @@ const tipoEnvioConfig = {
   }
 };
 
+// Componente Calendario personalizado
+function CalendarioPicker({ 
+  fechaSeleccionada, 
+  onChange, 
+  onCerrar 
+}: { 
+  fechaSeleccionada: Date | null; 
+  onChange: (fecha: Date) => void;
+  onCerrar: () => void;
+}) {
+  const [mesActual, setMesActual] = useState(new Date());
+  
+  const hoy = new Date();
+  const maxFecha = new Date();
+  const minFecha = new Date();
+  minFecha.setDate(minFecha.getDate() - 60); // 60 días atrás
+  
+  const diasEnMes = new Date(mesActual.getFullYear(), mesActual.getMonth() + 1, 0).getDate();
+  const primerDiaSemana = new Date(mesActual.getFullYear(), mesActual.getMonth(), 1).getDay();
+  
+  const meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+  const diasSemana = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+  
+  const cambiarMes = (direccion: number) => {
+    setMesActual(new Date(mesActual.getFullYear(), mesActual.getMonth() + direccion, 1));
+  };
+  
+  const seleccionarFecha = (dia: number) => {
+    const fecha = new Date(mesActual.getFullYear(), mesActual.getMonth(), dia);
+    onChange(fecha);
+    onCerrar();
+  };
+  
+  const esFechaValida = (dia: number) => {
+    const fecha = new Date(mesActual.getFullYear(), mesActual.getMonth(), dia);
+    return fecha >= minFecha && fecha <= maxFecha;
+  };
+  
+  const esFechaSeleccionada = (dia: number) => {
+    if (!fechaSeleccionada) return false;
+    return fechaSeleccionada.getDate() === dia && 
+           fechaSeleccionada.getMonth() === mesActual.getMonth() &&
+           fechaSeleccionada.getFullYear() === mesActual.getFullYear();
+  };
+  
+  return (
+    <div className="absolute top-full left-0 mt-2 bg-[#1a1a1f] border border-white/10 rounded-xl p-4 shadow-2xl z-50 w-[280px]">
+      {/* Header del calendario */}
+      <div className="flex items-center justify-between mb-4">
+        <button 
+          onClick={() => cambiarMes(-1)}
+          className="p-1 hover:bg-white/10 rounded-lg transition-colors"
+        >
+          <ChevronLeft className="w-5 h-5 text-zinc-400" />
+        </button>
+        <span className="text-sm font-bold text-white">
+          {meses[mesActual.getMonth()]} {mesActual.getFullYear()}
+        </span>
+        <button 
+          onClick={() => cambiarMes(1)}
+          className="p-1 hover:bg-white/10 rounded-lg transition-colors"
+        >
+          <ChevronRight className="w-5 h-5 text-zinc-400" />
+        </button>
+      </div>
+      
+      {/* Días de la semana */}
+      <div className="grid grid-cols-7 gap-1 mb-2">
+        {diasSemana.map(dia => (
+          <div key={dia} className="text-center text-[10px] text-zinc-500 font-bold py-1">
+            {dia}
+          </div>
+        ))}
+      </div>
+      
+      {/* Días del mes */}
+      <div className="grid grid-cols-7 gap-1">
+        {/* Espacios vacíos antes del primer día */}
+        {Array.from({ length: primerDiaSemana }).map((_, i) => (
+          <div key={`empty-${i}`} className="h-8" />
+        ))}
+        
+        {/* Días */}
+        {Array.from({ length: diasEnMes }).map((_, i) => {
+          const dia = i + 1;
+          const valida = esFechaValida(dia);
+          const seleccionada = esFechaSeleccionada(dia);
+          
+          return (
+            <button
+              key={dia}
+              onClick={() => valida && seleccionarFecha(dia)}
+              disabled={!valida}
+              className={`h-8 w-8 rounded-lg text-xs font-bold transition-all
+                ${seleccionada 
+                  ? "bg-amber-500 text-black" 
+                  : valida 
+                    ? "hover:bg-white/10 text-white" 
+                    : "text-zinc-700 cursor-not-allowed"}`}
+            >
+              {dia}
+            </button>
+          );
+        })}
+      </div>
+      
+      {/* Leyenda */}
+      <div className="mt-3 pt-3 border-t border-white/10 text-[10px] text-zinc-500">
+        Rango: Últimos 60 días
+      </div>
+    </div>
+  );
+}
+
 export default function HistorialEtiquetasPage() {
   const [etiquetas, setEtiquetas] = useState<EtiquetaHistorial[]>([]);
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TipoEnvio>("todas");
-  const [filtroFecha, setFiltroFecha] = useState<FiltroFecha>("todos");
+  const [fechaFiltro, setFechaFiltro] = useState<Date | null>(null);
+  const [mostrarCalendario, setMostrarCalendario] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [descargando, setDescargando] = useState(false);
   const [imprimiendo, setImprimiendo] = useState(false);
@@ -85,21 +199,13 @@ export default function HistorialEtiquetasPage() {
     loadEtiquetas();
   }, [loadEtiquetas]);
 
-  // Filtrar por fecha
+  // Filtrar por fecha específica
   const filtrarPorFecha = (etiquetas: EtiquetaHistorial[]) => {
-    if (filtroFecha === "todos") return etiquetas;
+    if (!fechaFiltro) return etiquetas;
     
-    const ahora = new Date();
     return etiquetas.filter(e => {
-      const fecha = new Date(e.fecha_creacion);
-      const diffDias = Math.floor((ahora.getTime() - fecha.getTime()) / (1000 * 60 * 60 * 24));
-      
-      switch (filtroFecha) {
-        case "hoy": return diffDias === 0;
-        case "semana": return diffDias <= 7;
-        case "mes": return diffDias <= 30;
-        default: return true;
-      }
+      const fechaEtiqueta = new Date(e.fecha_creacion);
+      return fechaEtiqueta.toDateString() === fechaFiltro.toDateString();
     });
   };
 
@@ -124,11 +230,11 @@ export default function HistorialEtiquetasPage() {
       filtered = filtered.filter((e) => e.tipo_envio === activeTab);
     }
 
-    // Filtro por fecha
+    // Filtro por fecha específica
     filtered = filtrarPorFecha(filtered);
 
     return filtered;
-  }, [etiquetas, query, activeTab, filtroFecha]);
+  }, [etiquetas, query, activeTab, fechaFiltro]);
 
   // Contar por tipo
   const typeCounts = useMemo(() => {
@@ -140,7 +246,7 @@ export default function HistorialEtiquetasPage() {
       TURBO: filtradasPorFecha.filter((e) => e.tipo_envio === "TURBO").length,
       FULL: filtradasPorFecha.filter((e) => e.tipo_envio === "FULL").length,
     };
-  }, [etiquetas, filtroFecha]);
+  }, [etiquetas, fechaFiltro]);
 
   // Seleccionar/Deseleccionar todas
   const toggleSeleccionarTodas = () => {
@@ -162,56 +268,9 @@ export default function HistorialEtiquetasPage() {
     setSelectedIds(newSelected);
   };
 
-  // Descargar seleccionadas
-  const descargarSeleccionadas = async () => {
-    if (selectedIds.size === 0) return;
-    
-    setDescargando(true);
-    const seleccionadas = etiquetas.filter(e => selectedIds.has(e.id));
-    
-    // Descargar una por una
-    for (const etiqueta of seleccionadas) {
-      try {
-        // Aquí iría la lógica para descargar el PDF
-        console.log(`Descargando etiqueta ${etiqueta.order_id}`);
-      } catch (error) {
-        console.error(`Error descargando ${etiqueta.order_id}:`, error);
-      }
-    }
-    
-    setDescargando(false);
-  };
-
-  // Imprimir seleccionadas
-  const imprimirSeleccionadas = async () => {
-    if (selectedIds.size === 0) return;
-    
-    setImprimiendo(true);
-    const seleccionadas = etiquetas.filter(e => selectedIds.has(e.id));
-    
-    // Abrir ventana de impresión con las etiquetas seleccionadas
-    const ventanaImpresion = window.open('', '_blank');
-    if (ventanaImpresion) {
-      ventanaImpresion.document.write(`
-        <html>
-          <head><title>Etiquetas a imprimir</title></head>
-          <body>
-            <h1>Etiquetas seleccionadas (${seleccionadas.length})</h1>
-            <ul>
-              ${seleccionadas.map(e => `
-                <li>
-                  Orden: ${e.order_id} - ${e.titulo_producto} - ${e.comprador_nombre}
-                </li>
-              `).join('')}
-            </ul>
-            <p>Funcionalidad de impresión en desarrollo...</p>
-          </body>
-        </html>
-      `);
-      ventanaImpresion.document.close();
-    }
-    
-    setImprimiendo(false);
+  // Limpiar filtro de fecha
+  const limpiarFiltroFecha = () => {
+    setFechaFiltro(null);
   };
 
   const formatearFecha = (fecha: string) => {
@@ -221,6 +280,14 @@ export default function HistorialEtiquetasPage() {
       year: "numeric",
       hour: "2-digit",
       minute: "2-digit"
+    });
+  };
+
+  const formatearFechaCorta = (fecha: Date) => {
+    return fecha.toLocaleDateString("es-AR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric"
     });
   };
 
@@ -274,7 +341,6 @@ export default function HistorialEtiquetasPage() {
           {algunaSeleccionada && (
             <>
               <button
-                onClick={descargarSeleccionadas}
                 disabled={descargando}
                 className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 hover:bg-emerald-500/30 transition-all"
               >
@@ -283,7 +349,6 @@ export default function HistorialEtiquetasPage() {
               </button>
               
               <button
-                onClick={imprimirSeleccionadas}
                 disabled={imprimiendo}
                 className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold bg-blue-500/20 text-blue-400 border border-blue-500/40 hover:bg-blue-500/30 transition-all"
               >
@@ -303,9 +368,9 @@ export default function HistorialEtiquetasPage() {
         </div>
 
         {/* Búsqueda y filtros */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
           {/* Búsqueda */}
-          <div className="relative md:col-span-2">
+          <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
             <input
               type="text"
@@ -316,20 +381,36 @@ export default function HistorialEtiquetasPage() {
             />
           </div>
 
-          {/* Filtro de fecha */}
+          {/* Selector de fecha con calendario */}
           <div className="relative">
-            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
-            <select
-              value={filtroFecha}
-              onChange={(e) => setFiltroFecha(e.target.value as FiltroFecha)}
-              className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 pl-10 pr-4 text-sm text-white focus:border-amber-500 focus:outline-none appearance-none cursor-pointer"
+            <button
+              onClick={() => setMostrarCalendario(!mostrarCalendario)}
+              className="w-full flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl py-2.5 px-3 text-sm text-white hover:bg-white/10 transition-colors"
             >
-              <option value="todos">Todas las fechas</option>
-              <option value="hoy">Hoy</option>
-              <option value="semana">Última semana</option>
-              <option value="mes">Último mes</option>
-            </select>
-            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 pointer-events-none" />
+              <Calendar className="w-4 h-4 text-zinc-500" />
+              <span className={fechaFiltro ? "text-amber-400" : "text-zinc-400"}>
+                {fechaFiltro ? formatearFechaCorta(fechaFiltro) : "Seleccionar fecha..."}
+              </span>
+              {fechaFiltro && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    limpiarFiltroFecha();
+                  }}
+                  className="ml-auto text-zinc-500 hover:text-white"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </button>
+            
+            {mostrarCalendario && (
+              <CalendarioPicker
+                fechaSeleccionada={fechaFiltro}
+                onChange={setFechaFiltro}
+                onCerrar={() => setMostrarCalendario(false)}
+              />
+            )}
           </div>
         </div>
 
