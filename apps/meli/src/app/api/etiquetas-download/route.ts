@@ -25,133 +25,100 @@ export async function POST(req: NextRequest) {
 
     console.log(`[etiquetas-download] Descargando ${etiquetas.length} etiquetas`);
 
-    // Obtener tokens de las cuentas necesarias
-    const cuentasNecesarias = [...new Set(etiquetas.map((e: any) => e.cuenta_origen))];
-    console.log(`[etiquetas-download] Cuentas necesarias:`, cuentasNecesarias);
-    
-    const tokens: Record<string, string> = {};
+    // Obtener TODAS las cuentas vinculadas de una vez
+    const { data: todasLasCuentas, error: errorCuentas } = await supabase
+      .from("linked_meli_accounts")
+      .select("meli_nickname, access_token");
 
-    for (const cuenta of cuentasNecesarias) {
-      console.log(`[etiquetas-download] Buscando token para: "${cuenta}"`);
-      
-      let data = null;
-      let error = null;
-      
-      // Intentar buscar por meli_nickname exacto
-      const result1 = await supabase
-        .from("linked_meli_accounts")
-        .select("access_token, meli_nickname, meli_user_id")
-        .eq("meli_nickname", cuenta)
-        .single();
-      
-      if (!result1.error && result1.data) {
-        data = result1.data;
-        console.log(`[etiquetas-download] Encontrado por meli_nickname exacto`);
-      } else {
-        // Intentar con ilike (case-insensitive)
-        const result2 = await supabase
-          .from("linked_meli_accounts")
-          .select("access_token, meli_nickname, meli_user_id")
-          .ilike("meli_nickname", cuenta)
-          .single();
-          
-        if (!result2.error && result2.data) {
-          data = result2.data;
-          console.log(`[etiquetas-download] Encontrado por meli_nickname (case-insensitive)`);
-        } else {
-          // Intentar buscando si el nickname contiene el nombre de la cuenta
-          const result3 = await supabase
-            .from("linked_meli_accounts")
-            .select("access_token, meli_nickname, meli_user_id")
-            .ilike("meli_nickname", `%${cuenta}%`)
-            .single();
-            
-          if (!result3.error && result3.data) {
-            data = result3.data;
-            console.log(`[etiquetas-download] Encontrado por partial match`);
-          } else {
-            error = result3.error;
-          }
-        }
-      }
-
-      if (error || !data?.access_token) {
-        console.error(`[etiquetas-download] No se encontró token para "${cuenta}":`, error);
-        continue;
-      }
-
-      console.log(`[etiquetas-download] Token encontrado para "${cuenta}" (meli_nickname: ${data.meli_nickname})`);
-      tokens[cuenta] = data.access_token;
-    }
-
-    console.log(`[etiquetas-download] Tokens encontrados:`, Object.keys(tokens));
-
-    if (Object.keys(tokens).length === 0) {
+    if (errorCuentas || !todasLasCuentas || todasLasCuentas.length === 0) {
+      console.error("[etiquetas-download] No hay cuentas vinculadas:", errorCuentas);
       return NextResponse.json(
-        { error: "No se encontraron tokens válidos para las cuentas seleccionadas" },
+        { error: "No hay cuentas de Mercado Libre vinculadas" },
         { status: 401 }
       );
     }
+
+    console.log(`[etiquetas-download] Cuentas disponibles:`, todasLasCuentas.map(c => c.meli_nickname));
+
+    // Crear mapa de cuentas (normalizando nombres)
+    const cuentasMap: Record<string, string> = {};
+    todasLasCuentas.forEach(c => {
+      if (c.meli_nickname && c.access_token) {
+        // Guardar con varias formas del nombre para facilitar búsqueda
+        const nombre = c.meli_nickname.trim();
+        cuentasMap[nombre.toLowerCase()] = c.access_token;
+        cuentasMap[nombre.toUpperCase()] = c.access_token;
+        cuentasMap[nombre] = c.access_token;
+        
+        // También sin espacios
+        cuentasMap[nombre.replace(/\s+/g, '').toLowerCase()] = c.access_token;
+      }
+    });
+
+    console.log(`[etiquetas-download] Mapa de cuentas:`, Object.keys(cuentasMap));
 
     // Descargar PDFs
     const pdfsDescargados: { order_id: string; blob: Blob; cuenta: string }[] = [];
 
     for (const etiqueta of etiquetas) {
-      const token = tokens[etiqueta.cuenta_origen];
+      const cuentaNombre = etiqueta.cuenta_origen?.trim() || "";
+      
+      // Buscar token de varias formas
+      let token = cuentasMap[cuentaNombre] || 
+                  cuentasMap[cuentaNombre.toLowerCase()] || 
+                  cuentasMap[cuentaNombre.toUpperCase()] ||
+                  cuentasMap[cuentaNombre.replace(/\s+/g, '').toLowerCase()];
+
+      // Si no se encuentra exacto, buscar parcial
       if (!token) {
-        console.log(`[etiquetas-download] Saltando ${etiqueta.order_id} - no hay token para ${etiqueta.cuenta_origen}`);
+        const cuentaEncontrada = todasLasCuentas.find(c => 
+          c.meli_nickname?.toLowerCase().includes(cuentaNombre.toLowerCase()) ||
+          cuentaNombre.toLowerCase().includes(c.meli_nickname?.toLowerCase() || '')
+        );
+        if (cuentaEncontrada) {
+          token = cuentaEncontrada.access_token;
+          console.log(`[etiquetas-download] Match parcial: "${cuentaNombre}" -> "${cuentaEncontrada.meli_nickname}"`);
+        }
+      }
+
+      if (!token) {
+        console.log(`[etiquetas-download] No hay token para cuenta: "${cuentaNombre}"`);
         continue;
       }
 
       try {
-        console.log(`[etiquetas-download] Descargando etiqueta ${etiqueta.order_id} (shipping: ${etiqueta.shipping_id})`);
+        console.log(`[etiquetas-download] Descargando ${etiqueta.order_id}...`);
         
         const pdfRes = await fetch(
           `https://api.mercadolibre.com/shipment_labels?shipment_ids=${etiqueta.shipping_id}&response_type=pdf`,
           {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
+            headers: { Authorization: `Bearer ${token}` },
           }
         );
 
         if (pdfRes.ok) {
           const blob = await pdfRes.blob();
-          pdfsDescargados.push({ 
-            order_id: etiqueta.order_id, 
-            blob,
-            cuenta: etiqueta.cuenta_origen 
-          });
-          console.log(`[etiquetas-download] Éxito: ${etiqueta.order_id}`);
+          pdfsDescargados.push({ order_id: etiqueta.order_id, blob, cuenta: cuentaNombre });
+          console.log(`[etiquetas-download] ✓ Éxito: ${etiqueta.order_id}`);
         } else {
           const errorText = await pdfRes.text();
-          console.error(`[etiquetas-download] Error MeLi ${etiqueta.order_id}:`, pdfRes.status, errorText);
+          console.error(`[etiquetas-download] ✗ Error MeLi ${etiqueta.order_id}:`, pdfRes.status, errorText.substring(0, 200));
         }
       } catch (err) {
-        console.error(`[etiquetas-download] Error descargando ${etiqueta.order_id}:`, err);
+        console.error(`[etiquetas-download] ✗ Error descargando ${etiqueta.order_id}:`, err);
       }
     }
 
-    console.log(`[etiquetas-download] Total descargadas: ${pdfsDescargados.length}`);
+    console.log(`[etiquetas-download] Total descargadas: ${pdfsDescargados.length}/${etiquetas.length}`);
 
     if (pdfsDescargados.length === 0) {
       return NextResponse.json(
-        { error: "No se pudo descargar ninguna etiqueta. Verifica que las cuentas estén vinculadas y los tokens sean válidos." },
+        { error: "No se pudo descargar ninguna etiqueta. Verifica que las cuentas estén vinculadas." },
         { status: 500 }
       );
     }
 
-    // Si solo hay un PDF, devolverlo directamente
-    if (pdfsDescargados.length === 1) {
-      return new NextResponse(pdfsDescargados[0].blob, {
-        headers: {
-          "Content-Type": "application/pdf",
-          "Content-Disposition": `attachment; filename="etiqueta-${pdfsDescargados[0].order_id}.pdf"`,
-        },
-      });
-    }
-
-    // Si hay múltiples, devolver el primero por ahora (TODO: implementar ZIP)
+    // Devolver el primer PDF (por ahora)
     return new NextResponse(pdfsDescargados[0].blob, {
       headers: {
         "Content-Type": "application/pdf",
