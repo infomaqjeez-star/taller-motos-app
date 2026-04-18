@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import Link from "next/link";
 import { 
   ArrowLeft, Download, Search, Loader2, RefreshCw, 
   Package, Zap, Truck, Warehouse, Filter, Calendar, User, History,
-  CheckSquare, Square, Printer, ChevronDown, Trash2, ChevronLeft, ChevronRight
+  CheckSquare, Square, Printer, ChevronDown, Trash2, ChevronLeft, ChevronRight,
+  Clock
 } from "lucide-react";
 
 interface EtiquetaHistorial {
@@ -53,7 +54,7 @@ const tipoEnvioConfig = {
   }
 };
 
-// Componente Calendario personalizado
+// Componente Calendario personalizado con día vigente marcado
 function CalendarioPicker({ 
   fechaSeleccionada, 
   onChange, 
@@ -66,6 +67,8 @@ function CalendarioPicker({
   const [mesActual, setMesActual] = useState(new Date());
   
   const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
+  
   const maxFecha = new Date();
   const minFecha = new Date();
   minFecha.setDate(minFecha.getDate() - 60);
@@ -98,6 +101,12 @@ function CalendarioPicker({
            fechaSeleccionada.getFullYear() === mesActual.getFullYear();
   };
   
+  const esHoy = (dia: number) => {
+    return hoy.getDate() === dia && 
+           hoy.getMonth() === mesActual.getMonth() &&
+           hoy.getFullYear() === mesActual.getFullYear();
+  };
+  
   return (
     <div className="absolute top-full left-0 mt-2 bg-[#1a1a1f] border border-white/10 rounded-xl p-4 shadow-2xl z-50 w-[280px]">
       <div className="flex items-center justify-between mb-4">
@@ -126,23 +135,30 @@ function CalendarioPicker({
           const dia = i + 1;
           const valida = esFechaValida(dia);
           const seleccionada = esFechaSeleccionada(dia);
+          const diaHoy = esHoy(dia);
           
           return (
             <button
               key={dia}
               onClick={() => valida && seleccionarFecha(dia)}
               disabled={!valida}
-              className={`h-8 w-8 rounded-lg text-xs font-bold transition-all
-                ${seleccionada ? "bg-amber-500 text-black" : valida ? "hover:bg-white/10 text-white" : "text-zinc-700 cursor-not-allowed"}`}
+              className={`h-8 w-8 rounded-lg text-xs font-bold transition-all relative
+                ${seleccionada ? "bg-amber-500 text-black" : valida ? "hover:bg-white/10 text-white" : "text-zinc-700 cursor-not-allowed"}
+                ${diaHoy && !seleccionada ? "border-2 border-emerald-500 text-emerald-400" : ""}`}
             >
               {dia}
+              {diaHoy && <span className="absolute -top-1 -right-1 w-2 h-2 bg-emerald-500 rounded-full" />}
             </button>
           );
         })}
       </div>
       
-      <div className="mt-3 pt-3 border-t border-white/10 text-[10px] text-zinc-500">
-        Rango: Últimos 60 días
+      <div className="mt-3 pt-3 border-t border-white/10 text-[10px] text-zinc-500 flex items-center justify-between">
+        <span>Rango: Últimos 60 días</span>
+        <div className="flex items-center gap-2">
+          <span className="w-2 h-2 bg-emerald-500 rounded-full"></span>
+          <span>Hoy</span>
+        </div>
       </div>
     </div>
   );
@@ -158,24 +174,56 @@ export default function HistorialEtiquetasPage() {
   const [mostrarCalendario, setMostrarCalendario] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [procesando, setProcesando] = useState(false);
+  const [ultimaActualizacion, setUltimaActualizacion] = useState<Date | null>(null);
+  
+  // Ref para el intervalo de polling
+  const pollingRef = useRef<NodeJS.Timeout | null>(null);
 
-  const loadEtiquetas = useCallback(async () => {
-    setLoading(true);
+  // Cargar todas las etiquetas del historial (60 días)
+  const loadEtiquetas = useCallback(async (showLoading = true) => {
+    if (showLoading) setLoading(true);
     setError(null);
     try {
       const res = await fetch("/api/etiquetas-historial");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setEtiquetas(data.data || []);
+      setUltimaActualizacion(new Date());
     } catch (err) {
       setError((err as Error).message);
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   }, []);
 
+  // Cargar inicialmente
   useEffect(() => {
     loadEtiquetas();
+  }, [loadEtiquetas]);
+
+  // Polling cada 15 minutos (900000 ms)
+  useEffect(() => {
+    pollingRef.current = setInterval(() => {
+      console.log("[Historial] Polling cada 15 minutos...");
+      loadEtiquetas(false); // No mostrar loading en polling automático
+    }, 900000); // 15 minutos
+
+    return () => {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+      }
+    };
+  }, [loadEtiquetas]);
+
+  // También recargar cuando la ventana vuelve a tener foco
+  useEffect(() => {
+    const handleFocus = () => {
+      console.log("[Historial] Ventana enfocada, recargando...");
+      loadEtiquetas(false);
+    };
+    
+    window.addEventListener("focus", handleFocus);
+    return () => window.removeEventListener("focus", handleFocus);
   }, [loadEtiquetas]);
 
   const filtrarPorFecha = (etiquetas: EtiquetaHistorial[]) => {
@@ -234,7 +282,6 @@ export default function HistorialEtiquetasPage() {
     setSelectedIds(newSelected);
   };
 
-  // DESCARGAR etiquetas seleccionadas - usando API del backend
   const descargarSeleccionadas = async () => {
     if (selectedIds.size === 0) return;
     setProcesando(true);
@@ -253,14 +300,11 @@ export default function HistorialEtiquetasPage() {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        
-        // Si hay múltiples, descargar como zip en el futuro
         if (seleccionadas.length === 1) {
           a.download = `etiqueta-${seleccionadas[0].order_id}.pdf`;
         } else {
           a.download = `etiquetas-${seleccionadas.length}.pdf`;
         }
-        
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
@@ -277,7 +321,6 @@ export default function HistorialEtiquetasPage() {
     }
   };
 
-  // IMPRIMIR etiquetas seleccionadas
   const imprimirSeleccionadas = () => {
     if (selectedIds.size === 0) return;
     
@@ -304,7 +347,6 @@ export default function HistorialEtiquetasPage() {
             .tipo-FULL { background: #10b981; color: white; }
             .titulo { font-size: 16px; font-weight: bold; margin-bottom: 8px; }
             .info { font-size: 12px; color: #666; }
-            .qr-placeholder { width: 100px; height: 100px; background: #e5e5e5; display: flex; align-items: center; justify-content: center; margin-top: 10px; }
             @media print { body { background: white; } .etiqueta { box-shadow: none; border: 1px solid #ddd; } }
           </style>
         </head>
@@ -323,7 +365,6 @@ export default function HistorialEtiquetasPage() {
                 <strong>Cuenta:</strong> ${e.cuenta_origen} <br/>
                 <strong>Fecha:</strong> ${new Date(e.fecha_creacion).toLocaleString('es-AR')}
               </div>
-              <div class="qr-placeholder">QR Code</div>
             </div>
           `).join('')}
           <script>window.print();</script>
@@ -372,16 +413,27 @@ export default function HistorialEtiquetasPage() {
             </h1>
             <p className="text-[10px] text-zinc-500 uppercase tracking-widest">
               {etiquetas.length} etiquetas · {selectedIds.size} seleccionadas
+              {ultimaActualizacion && (
+                <span className="ml-2 text-zinc-600">
+                  · Actualizado {ultimaActualizacion.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+                </span>
+              )}
             </p>
           </div>
         </div>
-        <button
-          onClick={loadEtiquetas}
-          disabled={loading}
-          className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
-        >
-          <RefreshCw className={`w-5 h-5 text-zinc-400 ${loading ? "animate-spin" : ""}`} />
-        </button>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 text-[10px] text-zinc-500">
+            <Clock className="w-3 h-3" />
+            <span>Auto: 15min</span>
+          </div>
+          <button
+            onClick={() => loadEtiquetas()}
+            disabled={loading}
+            className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
+          >
+            <RefreshCw className={`w-5 h-5 text-zinc-400 ${loading ? "animate-spin" : ""}`} />
+          </button>
+        </div>
       </header>
 
       <main className="max-w-6xl mx-auto p-4">
