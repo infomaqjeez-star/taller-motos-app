@@ -707,7 +707,7 @@ function AppJeezInner() {
           </div>
         </header>
 
-        <main className="flex-1 p-4 pb-24 sm:pb-6 max-w-5xl w-full mx-auto">
+        <main className="flex-1 p-2 pb-24 sm:pb-6 w-full mx-auto">
           {/* Welcome */}
           {connected && (
             <div
