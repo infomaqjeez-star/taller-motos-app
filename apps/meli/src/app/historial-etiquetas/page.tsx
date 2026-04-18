@@ -1,49 +1,74 @@
 "use client";
+
 import { useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
-import { ArrowLeft, Download, Search, Loader2, RefreshCw } from "lucide-react";
-import { getAuthHeaders } from "@/lib/supabase";
+import { 
+  ArrowLeft, Download, Search, Loader2, RefreshCw, 
+  Package, Zap, Truck, Warehouse, Filter, Calendar, User 
+} from "lucide-react";
 
-type ShippingMethod = "todas" | "correo" | "flex" | "turbo";
-
-interface PrintedLabel {
-  id: string;
-  shipment_id: number;
-  order_id: number | null;
-  tracking_number: string | null;
-  buyer_nickname: string | null;
-  sku: string | null;
-  variation: string | null;
-  quantity: number | null;
-  account_id: string | null;
-  meli_user_id: string;
-  shipping_method: string | null;
-  tipo: string | null;
-  source: string | null;
-  file_path: string;
-  print_date: string;
-  days_remaining: number;
+interface EtiquetaHistorial {
+  id: number;
+  order_id: string;
+  shipping_id: string;
+  cuenta_origen: string;
+  comprador_nombre: string;
+  titulo_producto: string;
+  tipo_envio: "FLEX" | "CORREO" | "TURBO" | "FULL";
+  fecha_creacion: string;
+  pdf_generado: boolean;
 }
 
+type TipoEnvio = "todas" | "FLEX" | "CORREO" | "TURBO" | "FULL";
+
+const tipoEnvioConfig = {
+  FLEX: { 
+    color: "text-cyan-400", 
+    bg: "bg-cyan-500/10", 
+    border: "border-cyan-500/30",
+    icon: Zap,
+    label: "⚡ Flex"
+  },
+  CORREO: { 
+    color: "text-orange-400", 
+    bg: "bg-orange-500/10", 
+    border: "border-orange-500/30",
+    icon: Package,
+    label: "📦 Correo"
+  },
+  TURBO: { 
+    color: "text-purple-400", 
+    bg: "bg-purple-500/10", 
+    border: "border-purple-500/30",
+    icon: Truck,
+    label: "🚀 Turbo"
+  },
+  FULL: { 
+    color: "text-emerald-400", 
+    bg: "bg-emerald-500/10", 
+    border: "border-emerald-500/30",
+    icon: Warehouse,
+    label: "🏭 Full"
+  }
+};
+
 export default function HistorialEtiquetasPage() {
-  const [allLabels, setAllLabels] = useState<PrintedLabel[]>([]);
+  const [etiquetas, setEtiquetas] = useState<EtiquetaHistorial[]>([]);
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [downloading, setDownloading] = useState(false);
-  const [activeTab, setActiveTab] = useState<ShippingMethod>("todas");
+  const [activeTab, setActiveTab] = useState<TipoEnvio>("todas");
+  const [descargando, setDescargando] = useState<string | null>(null);
 
-  // Cargar todas las etiquetas recientes via API (server-side, sin problemas de API key)
-  const loadLabels = useCallback(async () => {
+  // Cargar todas las etiquetas del historial (60 días)
+  const loadEtiquetas = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const authHeaders = await getAuthHeaders();
-      const res = await fetch("/api/meli-labels/search?q=&limit=200&all=true", { headers: authHeaders });
+      const res = await fetch("/api/etiquetas-historial");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      setAllLabels((data.results as PrintedLabel[]) || []);
+      setEtiquetas(data.data || []);
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -52,358 +77,227 @@ export default function HistorialEtiquetasPage() {
   }, []);
 
   useEffect(() => {
-    loadLabels();
-  }, [loadLabels]);
+    loadEtiquetas();
+  }, [loadEtiquetas]);
 
   // Filtrar por búsqueda y tipo
-  const filteredResults = useMemo(() => {
-    let filtered = allLabels;
+  const filteredEtiquetas = useMemo(() => {
+    let filtered = etiquetas;
 
     // Filtro de búsqueda
     if (query.length >= 2) {
       const q = query.toLowerCase();
-      filtered = filtered.filter((r) =>
-        String(r.shipment_id).toLowerCase().includes(q) ||
-        (r.sku || "").toLowerCase().includes(q) ||
-        (r.buyer_nickname || "").toLowerCase().includes(q) ||
-        (r.tracking_number || "").toLowerCase().includes(q) ||
-        (r.account_id || "").toLowerCase().includes(q)
+      filtered = filtered.filter((e) =>
+        e.order_id.toLowerCase().includes(q) ||
+        e.shipping_id.toLowerCase().includes(q) ||
+        (e.comprador_nombre || "").toLowerCase().includes(q) ||
+        (e.titulo_producto || "").toLowerCase().includes(q) ||
+        (e.cuenta_origen || "").toLowerCase().includes(q)
       );
     }
 
     // Filtro por tipo de envío
     if (activeTab !== "todas") {
-      filtered = filtered.filter((r) => r.shipping_method === activeTab);
+      filtered = filtered.filter((e) => e.tipo_envio === activeTab);
     }
 
     return filtered;
-  }, [allLabels, query, activeTab]);
+  }, [etiquetas, query, activeTab]);
 
   // Contar por tipo
   const typeCounts = useMemo(() => {
-    const base = query.length >= 2
-      ? allLabels.filter((r) => {
-          const q = query.toLowerCase();
-          return (
-            String(r.shipment_id).toLowerCase().includes(q) ||
-            (r.sku || "").toLowerCase().includes(q) ||
-            (r.buyer_nickname || "").toLowerCase().includes(q) ||
-            (r.tracking_number || "").toLowerCase().includes(q)
-          );
-        })
-      : allLabels;
-
     return {
-      todas: base.length,
-      correo: base.filter((r) => r.shipping_method === "correo").length,
-      flex: base.filter((r) => r.shipping_method === "flex").length,
-      turbo: base.filter((r) => r.shipping_method === "turbo").length,
+      todas: etiquetas.length,
+      FLEX: etiquetas.filter((e) => e.tipo_envio === "FLEX").length,
+      CORREO: etiquetas.filter((e) => e.tipo_envio === "CORREO").length,
+      TURBO: etiquetas.filter((e) => e.tipo_envio === "TURBO").length,
+      FULL: etiquetas.filter((e) => e.tipo_envio === "FULL").length,
     };
-  }, [allLabels, query]);
+  }, [etiquetas]);
 
-  const toggleSelection = (id: string) => {
-    const newSelection = new Set(selectedIds);
-    if (newSelection.has(id)) {
-      newSelection.delete(id);
-    } else {
-      newSelection.add(id);
-    }
-    setSelectedIds(newSelection);
-  };
-
-  const selectAll = () => {
-    if (selectedIds.size === filteredResults.length) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(filteredResults.map((r) => r.id)));
-    }
-  };
-
-  const downloadSelected = async () => {
-    if (selectedIds.size === 0) return;
-    setDownloading(true);
+  const descargarPDF = async (etiqueta: EtiquetaHistorial) => {
+    setDescargando(etiqueta.shipping_id);
     try {
-      const authHeaders = await getAuthHeaders();
-      const res = await fetch("/api/meli-labels/download-combined", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...authHeaders },
-        body: JSON.stringify({
-          ids: Array.from(selectedIds),
-          meli_user_id: "",
-        }),
-      });
-
-      if (!res.ok) throw new Error("Download failed");
-
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `historial-etiquetas-${new Date().toISOString().split("T")[0]}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-
-      setSelectedIds(new Set());
-    } catch (err) {
-      alert(`Error: ${err instanceof Error ? err.message : "Unknown error"}`);
+      // Obtener el access_token de alguna cuenta vinculada
+      // Por ahora, mostramos un mensaje indicando que debe imprimirse desde la página de etiquetas
+      alert(`Para descargar el PDF de la etiqueta ${etiqueta.order_id}, por favor ve a la página de Etiquetas y selecciona la cuenta ${etiqueta.cuenta_origen}`);
+    } catch (error) {
+      console.error("Error:", error);
     } finally {
-      setDownloading(false);
+      setDescargando(null);
     }
   };
 
-  const downloadIndividual = (filePath: string) => {
-    window.open(filePath, "_blank");
+  const formatearFecha = (fecha: string) => {
+    return new Date(fecha).toLocaleDateString("es-AR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit"
+    });
   };
 
   return (
-    <main className="min-h-screen" style={{ background: "#121212" }}>
+    <div className="min-h-screen bg-[#020203] text-zinc-200">
       {/* Header */}
-      <div
-        className="sticky top-0 z-30 px-4 py-3 flex items-center gap-3 border-b"
-        style={{ background: "#181818", borderColor: "rgba(255,255,255,0.06)" }}
-      >
-        <Link
-          href="/etiquetas"
-          className="p-1.5 rounded-lg"
-          style={{ color: "#6B7280" }}
-        >
-          <ArrowLeft className="w-4 h-4" />
-        </Link>
-        <h1 className="font-black text-white flex-1">Historial de Etiquetas</h1>
+      <header className="sticky top-0 z-30 px-4 py-3 flex items-center justify-between border-b bg-[#121212]/95 backdrop-blur border-white/[0.06]">
+        <div className="flex items-center gap-3">
+          <Link href="/etiquetas" className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
+            <ArrowLeft className="w-5 h-5 text-zinc-400" />
+          </Link>
+          <div>
+            <h1 className="font-black text-white text-lg flex items-center gap-2">
+              <History className="w-5 h-5 text-amber-400" /
+              Historial de Etiquetas
+            </h1>
+            <p className="text-[10px] text-zinc-500 uppercase tracking-widest">
+              Últimos 60 días · {etiquetas.length} etiquetas guardadas
+            </p>
+          </div>
+        </div>
         <button
-          onClick={loadLabels}
+          onClick={loadEtiquetas}
           disabled={loading}
-          className="p-2 rounded-lg transition-all"
-          style={{ background: "rgba(255,255,255,0.05)" }}
+          className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
         >
-          <RefreshCw className={`w-4 h-4 text-gray-400 ${loading ? "animate-spin" : ""}`} />
+          <RefreshCw className={`w-5 h-5 text-zinc-400 ${loading ? "animate-spin" : ""}`} />
         </button>
-      </div>
+      </header>
 
-      {/* Main */}
-      <div className="max-w-7xl mx-auto p-4 space-y-4">
-        {/* Tabs por Tipo de Envío */}
-        <div className="flex gap-2 flex-wrap">
-          {(["todas", "correo", "flex", "turbo"] as ShippingMethod[]).map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className="px-4 py-2 rounded-lg text-sm font-semibold transition-all"
-              style={{
-                background: activeTab === tab ? "#39FF14" : "rgba(255,255,255,0.05)",
-                color: activeTab === tab ? "#121212" : "#9CA3AF",
-                border: activeTab === tab ? "1px solid #39FF14" : "1px solid rgba(255,255,255,0.1)",
-              }}
-            >
-              {tab === "todas" && "Todas"}
-              {tab === "correo" && "Correo"}
-              {tab === "flex" && "Flex"}
-              {tab === "turbo" && "Turbo"}
-              <span className="ml-2 text-xs opacity-75">({typeCounts[tab]})</span>
-            </button>
-          ))}
+      <main className="max-w-6xl mx-auto p-4">
+        {/* Búsqueda */}
+        <div className="relative mb-4">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+          <input
+            type="text"
+            placeholder="Buscar por orden, producto, comprador o cuenta..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-sm text-white placeholder-zinc-500 focus:border-amber-500 focus:outline-none"
+          />
         </div>
 
-        {/* Search Bar */}
-        <div className="flex gap-2">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-            <input
-              type="text"
-              placeholder="Buscar por SKU, tracking, comprador, shipment..."
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 rounded-lg text-sm"
-              style={{
-                background: "#1F1F1F",
-                color: "#fff",
-                border: "1px solid rgba(255,255,255,0.1)",
-              }}
-            />
-          </div>
-          {selectedIds.size > 0 && (
-            <button
-              onClick={downloadSelected}
-              disabled={downloading}
-              className="px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 transition-all"
-              style={{
-                background: "#39FF14",
-                color: "#121212",
-              }}
-            >
-              {downloading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Descargando...
-                </>
-              ) : (
-                <>
-                  <Download className="w-4 h-4" />
-                  Descargar {selectedIds.size}
-                </>
-              )}
-            </button>
-          )}
+        {/* Filtros por tipo */}
+        <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-2">
+          <Filter className="w-4 h-4 text-zinc-500 flex-shrink-0" />
+          {(["todas", "FLEX", "CORREO", "TURBO", "FULL"] as TipoEnvio[]).map((tipo) => {
+            const count = typeCounts[tipo];
+            const isActive = activeTab === tipo;
+            const config = tipoEnvioConfig[tipo as keyof typeof tipoEnvioConfig];
+            
+            return (
+              <button
+                key={tipo}
+                onClick={() => setActiveTab(tipo)}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap
+                  ${isActive 
+                    ? "bg-amber-500 text-black" 
+                    : "bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white"}`}
+              >
+                {tipo !== "todas" && config && <config.icon className="w-3.5 h-3.5" />}
+                {tipo === "todas" ? "Todas" : config?.label}
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-black/20">
+                  {count}
+                </span>
+              </button>
+            );
+          })}
         </div>
-
-        {/* Loading */}
-        {loading && (
-          <div className="text-center py-12">
-            <Loader2 className="w-8 h-8 animate-spin mx-auto text-gray-500" />
-            <p className="text-sm text-gray-500 mt-2">Cargando historial...</p>
-          </div>
-        )}
 
         {/* Error */}
         {error && (
-          <div className="p-4 rounded-lg" style={{ background: "#FF6B6B20", borderLeft: "2px solid #FF6B6B" }}>
-            <p className="text-sm text-red-400">Error: {error}</p>
+          <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 mb-4 text-red-400 text-sm">
+            Error: {error}
           </div>
         )}
 
-        {/* Empty state */}
-        {!loading && filteredResults.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-sm" style={{ color: "#6B7280" }}>
-              {allLabels.length === 0
-                ? "No hay etiquetas en el historial"
-                : "No se encontraron resultados para la busqueda"}
-            </p>
+        {/* Lista */}
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="w-8 h-8 text-amber-500 animate-spin" />
           </div>
-        )}
-
-        {/* Table */}
-        {filteredResults.length > 0 && (
-          <div className="overflow-x-auto rounded-lg border" style={{ borderColor: "rgba(255,255,255,0.1)" }}>
-            <table className="w-full text-sm">
-              <thead style={{ background: "#1F1F1F" }}>
-                <tr>
-                  <th className="px-4 py-3 text-left">
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.size === filteredResults.length && filteredResults.length > 0}
-                      onChange={selectAll}
-                      className="w-4 h-4"
-                    />
-                  </th>
-                  <th className="px-4 py-3 text-left" style={{ color: "#9CA3AF" }}>
-                    Envio
-                  </th>
-                  <th className="px-4 py-3 text-left" style={{ color: "#9CA3AF" }}>
-                    SKU
-                  </th>
-                  <th className="px-4 py-3 text-left" style={{ color: "#9CA3AF" }}>
-                    Comprador
-                  </th>
-                  <th className="px-4 py-3 text-left" style={{ color: "#9CA3AF" }}>
-                    Tipo
-                  </th>
-                  <th className="px-4 py-3 text-left" style={{ color: "#9CA3AF" }}>
-                    Fecha
-                  </th>
-                  <th className="px-4 py-3 text-left" style={{ color: "#9CA3AF" }}>
-                    Expira
-                  </th>
-                  <th className="px-4 py-3 text-center" style={{ color: "#9CA3AF" }}>
-                    Accion
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredResults.map((label, idx) => (
-                  <tr
-                    key={label.id}
-                    style={{
-                      background: idx % 2 === 0 ? "#1A1A1A" : "#121212",
-                      borderBottom: "1px solid rgba(255,255,255,0.05)",
-                    }}
-                  >
-                    <td className="px-4 py-3">
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.has(label.id)}
-                        onChange={() => toggleSelection(label.id)}
-                        className="w-4 h-4"
-                      />
-                    </td>
-                    <td className="px-4 py-3 text-white">
-                      {label.buyer_nickname === "USUARIO_TEST" && (
-                        <span
-                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-bold mr-2"
-                          style={{ background: "rgba(57,255,20,0.2)", color: "#39FF14" }}
+        ) : filteredEtiquetas.length === 0 ? (
+          <div className="text-center py-12 text-zinc-500">
+            <Package className="w-16 h-16 mx-auto mb-4 opacity-30" />
+            <p className="text-lg font-bold">No hay etiquetas en el historial</p>
+            <p className="text-sm mt-2">Las etiquetas se guardan automáticamente desde la página de Etiquetas</p>
+            <Link 
+              href="/etiquetas"
+              className="inline-block mt-4 px-4 py-2 bg-amber-500 text-black rounded-xl font-bold text-sm"
+            >
+              Ir a Etiquetas
+            </Link>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {filteredEtiquetas.map((etiqueta) => {
+              const config = tipoEnvioConfig[etiqueta.tipo_envio] || tipoEnvioConfig.CORREO;
+              const Icon = config.icon;
+              
+              return (
+                <div 
+                  key={etiqueta.id}
+                  className="bg-white/[0.03] border border-white/10 rounded-2xl p-4 hover:border-amber-500/30 transition-all"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${config.bg} ${config.color} ${config.border} border`}
                         >
-                          TEST
+                          <Icon className="w-3.5 h-3.5 inline mr-1" />
+                          {config.label}
                         </span>
+                        <span className="text-[11px] text-zinc-500 font-mono">
+                          #{etiqueta.order_id}
+                        </span>
+                        <span className="text-[10px] text-zinc-600">
+                          {etiqueta.cuenta_origen}
+                        </span>
+                      </div>
+                      
+                      <h3 className="text-base font-bold text-white mb-2 truncate"
+                      >
+                        {etiqueta.titulo_producto || "Sin título"}
+                      </h3>
+                      
+                      <div className="flex items-center gap-4 text-xs text-zinc-500"
+                      >
+                        <span className="flex items-center gap-1">
+                          <User className="w-3.5 h-3.5" />
+                          {etiqueta.comprador_nombre || "Sin nombre"}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Calendar className="w-3.5 h-3.5" />
+                          {formatearFecha(etiqueta.fecha_creacion)}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <button
+                      onClick={() => descargarPDF(etiqueta)}
+                      disabled={descargando === etiqueta.shipping_id}
+                      className="flex-shrink-0 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-400 px-4 py-2 rounded-xl font-bold text-xs uppercase tracking-wider transition-all disabled:opacity-50 flex items-center gap-2"
+                    >
+                      {descargando === etiqueta.shipping_id ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <>
+                          <Download className="w-4 h-4" />
+                          PDF
+                        </>
                       )}
-                      {label.shipment_id}
-                    </td>
-                    <td className="px-4 py-3" style={{ color: "#9CA3AF" }}>
-                      {label.sku || "-"}
-                    </td>
-                    <td className="px-4 py-3" style={{ color: "#9CA3AF" }}>
-                      {label.buyer_nickname || "-"}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className="px-2 py-1 rounded text-xs font-semibold"
-                        style={{
-                          background:
-                            label.shipping_method === "flex"
-                              ? "#0EA5E920"
-                              : label.shipping_method === "correo"
-                              ? "#F59E0B20"
-                              : label.shipping_method === "turbo"
-                              ? "#A855F720"
-                              : "#6B728020",
-                          color:
-                            label.shipping_method === "flex"
-                              ? "#0EA5E9"
-                              : label.shipping_method === "correo"
-                              ? "#F59E0B"
-                              : label.shipping_method === "turbo"
-                              ? "#A855F7"
-                              : "#9CA3AF",
-                        }}
-                      >
-                        {label.shipping_method?.toUpperCase() || "OTHER"}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3" style={{ color: "#9CA3AF" }}>
-                      {new Date(label.print_date).toLocaleDateString("es-AR")}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className="text-xs font-bold"
-                        style={{
-                          color: label.days_remaining <= 7
-                            ? "#EF4444"
-                            : label.days_remaining <= 30
-                            ? "#F59E0B"
-                            : "#34D399",
-                        }}
-                      >
-                        {label.days_remaining}d
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <button
-                        onClick={() => downloadIndividual(label.file_path)}
-                        className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded transition-all hover:opacity-80"
-                        style={{ color: "#0EA5E9" }}
-                      >
-                        <Download className="w-3 h-3" />
-                        Ver
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
-      </div>
-    </main>
+      </main>
+    </div>
   );
 }
+
+// Importar History que faltó
+import { History } from "lucide-react";
