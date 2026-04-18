@@ -395,6 +395,32 @@ function EtiquetasInner() {
       
       // No combinar arrays - la API ya separa correctamente pending/printed/in_transit/returns
       setData(d);
+      
+      // Guardar TODAS las etiquetas vigentes en el historial (pending + printed + in_transit)
+      const todasLasEtiquetas = [
+        ...(d.shipments || []),
+        ...(d.printed || []),
+        ...(d.in_transit || []),
+      ];
+      
+      if (todasLasEtiquetas.length > 0) {
+        // Preparar datos para el historial
+        const etiquetasParaHistorial = todasLasEtiquetas.map((s: ShipmentInfo) => ({
+          order_id: s.order_id,
+          shipping_id: s.shipment_id,
+          cuenta_origen: s.account,
+          comprador_nombre: s.buyer,
+          titulo_producto: s.title,
+          tipo_envio: s.type?.toUpperCase() || "CORREO",
+        }));
+        
+        // Guardar en historial (no bloquear la carga)
+        fetch("/api/etiquetas-historial-batch", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ etiquetas: etiquetasParaHistorial }),
+        }).catch(err => console.error("Error guardando en historial:", err));
+      }
     } catch (e) {
       console.error("Error loading labels:", e);
     } finally {
