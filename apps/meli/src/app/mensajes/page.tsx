@@ -728,9 +728,9 @@ function MensajesInner() {
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
-          // Filtrar solo los que tienen menos de 10 minutos
+          // Filtrar solo los que tienen menos de 30 minutos (aumentado de 10)
           const now = Date.now();
-          const valid = parsed.filter((item: any) => now - item.timestamp < 10 * 60 * 1000);
+          const valid = parsed.filter((item: any) => now - item.timestamp < 30 * 60 * 1000);
           return new Set(valid.map((item: any) => item.id));
         } catch {
           return new Set();

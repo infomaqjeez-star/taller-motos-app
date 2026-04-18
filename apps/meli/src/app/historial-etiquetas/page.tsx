@@ -9,6 +9,7 @@ import {
   Clock
 } from "lucide-react";
 import { getNowBA, getTodayBA, isSameDayBA } from "@/lib/date-utils";
+import { supabase } from "@/lib/supabase";
 
 interface EtiquetaHistorial {
   id: number;
@@ -289,9 +290,16 @@ export default function HistorialEtiquetasPage() {
     const seleccionadas = etiquetas.filter(e => selectedIds.has(e.id));
     
     try {
+      // Obtener token de sesión
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      
       const res = await fetch("/api/etiquetas-download", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          ...(token ? { "Authorization": `Bearer ${token}` } : {})
+        },
         body: JSON.stringify({ etiquetas: seleccionadas }),
       });
       
