@@ -9,6 +9,7 @@ import {
 import { classifyFlexZone, ZONE_CFG } from "@/lib/zone-calc";
 import { ZoneIndicator } from "@/components/ZoneIndicator";
 import { supabase, getAuthHeaders } from "@/lib/supabase";
+import { EtiquetasHistorial } from "@/components/EtiquetasHistorial";
 
 type StatusTab = "pending" | "printed" | "in_transit" | "returns";
 type LogisticType = "todas" | "flex" | "correo" | "turbo" | "full";
@@ -884,17 +885,10 @@ function EtiquetasInner() {
               🧪 MODO PRUEBA
             </span>
           )}
-          <Link
-            href="/historial-etiquetas"
-            className="px-3 py-2 rounded-lg text-xs font-semibold transition-all"
-            style={{
-              background: testMode ? "rgba(255,255,255,0.05)" : "rgba(57,255,20,0.1)",
-              color: testMode ? "#9CA3AF" : "#39FF14",
-              border: testMode ? "1px solid rgba(255,255,255,0.06)" : "1px solid rgba(57,255,20,0.3)",
-            }}
-          >
-            📋 Historial
-          </Link>
+          {/* Botón Historial (60 días) */}
+          <EtiquetasHistorial 
+            accountName={Array.from(summaryByAccount.keys())[0] || undefined}
+          />
           {/* Botón Modo Test */}
           <button
             onClick={handlePrintTest}
