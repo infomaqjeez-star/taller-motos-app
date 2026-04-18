@@ -55,23 +55,13 @@ const tipoEnvioConfig = {
 };
 
 export function EtiquetasHistorial({ accountName, accessToken }: Props) {
-  // Persistir estado en localStorage
-  const [isOpen, setIsOpen] = useState(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("etiquetasHistorialOpen") === "true";
-    }
-    return false;
-  });
+  // Modal cerrado por defecto
+  const [isOpen, setIsOpen] = useState(false);
   
   const [etiquetas, setEtiquetas] = useState<EtiquetaHistorial[]>([]);
   const [loading, setLoading] = useState(false);
   const [filtroTipo, setFiltroTipo] = useState<string>("");
   const [descargando, setDescargando] = useState<string | null>(null);
-
-  // Guardar estado en localStorage
-  useEffect(() => {
-    localStorage.setItem("etiquetasHistorialOpen", isOpen.toString());
-  }, [isOpen]);
 
   const cargarHistorial = async () => {
     setLoading(true);
