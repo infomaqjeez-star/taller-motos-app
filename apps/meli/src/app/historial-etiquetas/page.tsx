@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { 
   ArrowLeft, Download, Search, Loader2, RefreshCw, 
-  Package, Zap, Truck, Warehouse, Filter, Calendar, User 
+  Package, Zap, Truck, Warehouse, Filter, Calendar, User, History 
 } from "lucide-react";
 
 interface EtiquetaHistorial {
@@ -298,6 +298,3 @@ export default function HistorialEtiquetasPage() {
     </div>
   );
 }
-
-// Importar History que faltó
-import { History } from "lucide-react";
