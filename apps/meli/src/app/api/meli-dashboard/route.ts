@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { getValidToken, getBuenosAiresDateString, getStartOfDayBuenosAires, type LinkedMeliAccount } from "@/lib/meli";
+import { getCachedData, setCachedData } from "@/lib/dashboard-cache";
 
 // Forzar renderizado dinámico - evita error de generación estática
 export const dynamic = 'force-dynamic';
@@ -13,14 +14,6 @@ const supabase = createClient(
   supabaseUrl || "https://placeholder.supabase.co",
   supabaseServiceKey || "placeholder-key"
 );
-
-// Caché en memoria para el dashboard (5 minutos)
-interface CacheEntry {
-  data: AccountDash[];
-  timestamp: number;
-}
-const dashboardCache = new Map<string, CacheEntry>();
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutos
 
 interface Reputation {
   level_id: string | null;
@@ -78,10 +71,10 @@ export async function GET(request: NextRequest) {
     }
 
     // Verificar caché
-    const cached = dashboardCache.get(userId);
-    if (cached && (Date.now() - cached.timestamp) < CACHE_TTL) {
+    const cachedData = getCachedData(userId);
+    if (cachedData) {
       console.log(`[meli-dashboard] ✅ Usando caché para ${userId}`);
-      return NextResponse.json(cached.data);
+      return NextResponse.json(cachedData);
     }
 
     // Obtener las cuentas de Mercado Libre del usuario
@@ -256,7 +249,7 @@ export async function GET(request: NextRequest) {
     );
 
     // Guardar en caché
-    dashboardCache.set(userId, { data: dashboardData, timestamp: Date.now() });
+    setCachedData(userId, dashboardData);
 
     return NextResponse.json(dashboardData);
   } catch (error) {

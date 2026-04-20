@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { invalidateDashboardCache } from "@/lib/dashboard-cache";
 
 // Forzar renderizado dinámico - evita error de generación estática
 export const dynamic = 'force-dynamic';
@@ -132,6 +133,9 @@ export async function PATCH(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    // Invalidar caché del dashboard para que se recargue con el nuevo nombre
+    invalidateDashboardCache(userId);
 
     return NextResponse.json({
       id: data.id,
