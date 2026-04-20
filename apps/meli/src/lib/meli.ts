@@ -369,11 +369,20 @@ export function formatDateToBuenosAiresString(date: Date): string {
 }
 
 export function getStartOfDayBuenosAires(): string {
-  return `${formatBuenosAiresDate(getBuenosAiresDate())}T00:00:00.000-03:00`;
+  // Formato que acepta MeLi API: YYYY-MM-DDTHH:mm:ss.sss-03:00
+  const d = getBuenosAiresDate();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}T00:00:00.000-03:00`;
 }
 
 export function getEndOfDayBuenosAires(): string {
-  return `${formatBuenosAiresDate(getBuenosAiresDate())}T23:59:59.999-03:00`;
+  const d = getBuenosAiresDate();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}T23:59:59.999-03:00`;
 }
 
 export async function meliGetWithRetry(

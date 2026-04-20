@@ -14,6 +14,14 @@ const supabase = createClient(
   supabaseServiceKey || "placeholder-key"
 );
 
+// Caché en memoria para el dashboard (5 minutos)
+interface CacheEntry {
+  data: AccountDash[];
+  timestamp: number;
+}
+const dashboardCache = new Map<string, CacheEntry>();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutos
+
 interface Reputation {
   level_id: string | null;
   power_seller_status: string | null;
@@ -67,6 +75,13 @@ export async function GET(request: NextRequest) {
     // Si no hay usuario autenticado, devolver array vacío
     if (!userId) {
       return NextResponse.json([], { status: 200 });
+    }
+
+    // Verificar caché
+    const cached = dashboardCache.get(userId);
+    if (cached && (Date.now() - cached.timestamp) < CACHE_TTL) {
+      console.log(`[meli-dashboard] ✅ Usando caché para ${userId}`);
+      return NextResponse.json(cached.data);
     }
 
     // Obtener las cuentas de Mercado Libre del usuario
@@ -239,6 +254,9 @@ export async function GET(request: NextRequest) {
         }
       })
     );
+
+    // Guardar en caché
+    dashboardCache.set(userId, { data: dashboardData, timestamp: Date.now() });
 
     return NextResponse.json(dashboardData);
   } catch (error) {
