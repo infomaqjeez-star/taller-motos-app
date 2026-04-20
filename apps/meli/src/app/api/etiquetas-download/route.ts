@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { getValidToken, type LinkedMeliAccount } from "@/lib/meli";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-if (!supabaseUrl || !supabaseKey) {
+if (!supabaseUrl || !supabaseServiceKey) {
   throw new Error("Missing Supabase environment variables");
 }
 
-const supabase = createClient(supabaseUrl, supabaseKey);
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 // POST - Descargar múltiples etiquetas
 export async function POST(req: NextRequest) {
@@ -46,10 +47,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Obtener las cuentas del usuario autenticado
+    // Obtener las cuentas del usuario autenticado con todos los campos necesarios
     const { data: todasLasCuentas, error: errorCuentas } = await supabase
       .from("linked_meli_accounts")
-      .select("meli_nickname, access_token")
+      .select("id, user_id, meli_user_id, meli_nickname, access_token_enc, refresh_token_enc, token_expiry_date, is_active")
       .eq("user_id", userId)
       .eq("is_active", true);
 
@@ -63,20 +64,18 @@ export async function POST(req: NextRequest) {
 
     console.log(`[etiquetas-download] Cuentas disponibles para user ${userId}:`, todasLasCuentas.map(c => c.meli_nickname));
 
-    // Crear mapa de cuentas (normalizando nombres)
-    const cuentasMap: Record<string, string> = {};
+    // Crear mapa de cuentas por nombre (normalizando)
+    const cuentasMap: Record<string, typeof todasLasCuentas[0]> = {};
     todasLasCuentas.forEach(c => {
-      if (c.meli_nickname && c.access_token) {
+      if (c.meli_nickname) {
         const nombre = c.meli_nickname.trim();
-        cuentasMap[nombre.toLowerCase()] = c.access_token;
-        cuentasMap[nombre.toUpperCase()] = c.access_token;
-        cuentasMap[nombre] = c.access_token;
-        cuentasMap[nombre.replace(/\s+/g, '').toLowerCase()] = c.access_token;
-        cuentasMap[nombre.replace(/\s+/g, '').toUpperCase()] = c.access_token;
+        cuentasMap[nombre.toLowerCase()] = c;
+        cuentasMap[nombre.toUpperCase()] = c;
+        cuentasMap[nombre] = c;
+        cuentasMap[nombre.replace(/\s+/g, '').toLowerCase()] = c;
+        cuentasMap[nombre.replace(/\s+/g, '').toUpperCase()] = c;
       }
     });
-
-    console.log(`[etiquetas-download] Mapa de cuentas:`, Object.keys(cuentasMap));
 
     // Descargar PDFs
     const pdfsDescargados: { order_id: string; blob: Blob; cuenta: string }[] = [];
@@ -87,29 +86,36 @@ export async function POST(req: NextRequest) {
       
       console.log(`[etiquetas-download] Procesando: order=${etiqueta.order_id}, shipping=${shippingId}, cuenta="${cuentaNombre}"`);
       
-      // Buscar token de varias formas
-      let token = cuentasMap[cuentaNombre] || 
-                  cuentasMap[cuentaNombre.toLowerCase()] || 
-                  cuentasMap[cuentaNombre.toUpperCase()] ||
-                  cuentasMap[cuentaNombre.replace(/\s+/g, '').toLowerCase()] ||
-                  cuentasMap[cuentaNombre.replace(/\s+/g, '').toUpperCase()];
+      // Buscar cuenta de varias formas
+      let cuenta: typeof todasLasCuentas[0] | undefined = cuentasMap[cuentaNombre] || 
+                   cuentasMap[cuentaNombre.toLowerCase()] || 
+                   cuentasMap[cuentaNombre.toUpperCase()] ||
+                   cuentasMap[cuentaNombre.replace(/\s+/g, '').toLowerCase()] ||
+                   cuentasMap[cuentaNombre.replace(/\s+/g, '').toUpperCase()];
 
       // Si no se encuentra exacto, buscar parcial
-      if (!token) {
+      if (!cuenta) {
         console.log(`[etiquetas-download] Buscando match parcial para: "${cuentaNombre}"`);
-        const cuentaEncontrada = todasLasCuentas.find(c => {
+        cuenta = todasLasCuentas.find(c => {
           const dbName = (c.meli_nickname || "").toLowerCase();
           const searchName = cuentaNombre.toLowerCase();
           return dbName.includes(searchName) || searchName.includes(dbName);
         });
-        if (cuentaEncontrada) {
-          token = cuentaEncontrada.access_token;
-          console.log(`[etiquetas-download] Match parcial encontrado: "${cuentaNombre}" -> "${cuentaEncontrada.meli_nickname}"`);
+        if (cuenta) {
+          console.log(`[etiquetas-download] Match parcial encontrado: "${cuentaNombre}" -> "${cuenta.meli_nickname}"`);
         }
       }
 
-      if (!token) {
-        console.error(`[etiquetas-download] No hay token para cuenta: "${cuentaNombre}"`);
+      if (!cuenta) {
+        console.error(`[etiquetas-download] No se encontró cuenta: "${cuentaNombre}"`);
+        continue;
+      }
+
+      // Obtener token válido (desencriptado con auto-refresh)
+      const validToken = await getValidToken(cuenta as LinkedMeliAccount);
+      
+      if (!validToken) {
+        console.error(`[etiquetas-download] No se pudo obtener token válido para: "${cuenta.meli_nickname}"`);
         continue;
       }
 
@@ -119,7 +125,7 @@ export async function POST(req: NextRequest) {
         const pdfRes = await fetch(
           `https://api.mercadolibre.com/shipment_labels?shipment_ids=${shippingId}&response_type=pdf`,
           {
-            headers: { Authorization: `Bearer ${token}` },
+            headers: { Authorization: `Bearer ${validToken}` },
           }
         );
 
