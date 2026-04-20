@@ -11,12 +11,16 @@ const supabase = createClient(
 
 /**
  * GET /api/meli-messages
- * Obtiene mensajes post-venta de compradores de todas las cuentas MeLi.
+ * Obtiene TODOS los mensajes de compradores:
+ * - Mensajes post-venta de órdenes recientes
+ * - Mensajes de órdenes en preparación/envío
+ * - Mensajes no leídos del centro de mensajes
  */
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const limit = parseInt(searchParams.get("limit") || "50", 10);
+    const limit = parseInt(searchParams.get("limit") || "100", 10);
+    const sync = searchParams.get("sync") === "true";
 
     const authHeader = request.headers.get("authorization");
     let userId: string | null = null;
@@ -35,6 +39,7 @@ export async function GET(request: NextRequest) {
     if (!accounts || accounts.length === 0) return NextResponse.json([]);
 
     const allMessages: any[] = [];
+    const processedPackIds = new Set<string>(); // Evitar duplicados
 
     for (const account of accounts) {
       try {
@@ -44,30 +49,90 @@ export async function GET(request: NextRequest) {
         const headers = { Authorization: `Bearer ${token}` };
         const meliId = String(account.meli_user_id);
 
-        // Obtener ordenes recientes con envio (tienen mas probabilidad de mensajes)
-        const ordersRes = await fetch(
-          `https://api.mercadolibre.com/orders/search?seller=${meliId}&order.status=paid&sort=date_desc&limit=10`,
-          { headers, signal: AbortSignal.timeout(10000) }
-        );
-        if (!ordersRes.ok) {
-          console.error(`[meli-messages] Error orders ${ordersRes.status} para ${account.meli_nickname}`);
-          continue;
+        console.log(`[meli-messages] Procesando cuenta: ${account.meli_nickname}`);
+
+        // 1. Obtener mensajes no leídos del centro de mensajes
+        try {
+          const unreadRes = await fetch(
+            `https://api.mercadolibre.com/messages/unread?role=seller&limit=50`,
+            { headers, signal: AbortSignal.timeout(10000) }
+          );
+          
+          if (unreadRes.ok) {
+            const unreadData = await unreadRes.json();
+            const unreadMessages = unreadData.messages || [];
+            console.log(`[meli-messages] ${account.meli_nickname}: ${unreadMessages.length} mensajes no leídos`);
+            
+            for (const msg of unreadMessages) {
+              const packId = msg.pack_id || msg.order_id;
+              if (!packId || processedPackIds.has(packId)) continue;
+              processedPackIds.add(packId);
+              
+              allMessages.push({
+                id: `${packId}-${msg.id}`,
+                meli_message_id: String(msg.id),
+                meli_account_id: account.id,
+                order_id: msg.order_id ? String(msg.order_id) : null,
+                pack_id: msg.pack_id ? String(msg.pack_id) : null,
+                buyer_id: msg.from?.user_id,
+                buyer_nickname: msg.from?.nickname || "Comprador",
+                item_id: null,
+                item_title: msg.resource_type === "order" ? "Mensaje de orden" : "Mensaje",
+                item_thumbnail: "",
+                message_text: msg.text || "",
+                status: "UNREAD",
+                message_type: "buyer",
+                date_created: msg.date_created || new Date().toISOString(),
+                date_read: null,
+                attachments: msg.attachments || [],
+                account_nickname: account.meli_nickname,
+                meli_accounts: { nickname: account.meli_nickname },
+                meli_user_id: meliId,
+                order: null,
+              });
+            }
+          }
+        } catch (err) {
+          console.error(`[meli-messages] Error mensajes no leídos ${account.meli_nickname}:`, err);
         }
-        const ordersData = await ordersRes.json();
-        const orders = ordersData.results || [];
 
-        console.log(`[meli-messages] ${account.meli_nickname}: ${orders.length} ordenes recientes`);
-
-        // Para cada orden, intentar obtener mensajes via packs
-        for (const order of orders.slice(0, 8)) {
+        // 2. Obtener órdenes recientes con actividad (últimos 30 días)
+        const statuses = ["paid", "confirmed", "processing", "ready_to_ship", "shipped"];
+        const recentOrders: any[] = [];
+        
+        for (const status of statuses) {
           try {
-            // pack_id null = usar order_id como pack
+            const ordersRes = await fetch(
+              `https://api.mercadolibre.com/orders/search?seller=${meliId}&order.status=${status}&sort=date_desc&limit=20`,
+              { headers, signal: AbortSignal.timeout(10000) }
+            );
+            
+            if (ordersRes.ok) {
+              const ordersData = await ordersRes.json();
+              const orders = ordersData.results || [];
+              recentOrders.push(...orders);
+            }
+          } catch { /* skip */ }
+        }
+
+        // Eliminar duplicados de órdenes
+        const uniqueOrders = recentOrders.filter((order, index, self) => 
+          index === self.findIndex(o => o.id === order.id)
+        );
+
+        console.log(`[meli-messages] ${account.meli_nickname}: ${uniqueOrders.length} órdenes únicas`);
+
+        // 3. Para cada orden, obtener mensajes
+        for (const order of uniqueOrders.slice(0, 15)) {
+          try {
             const packId = order.pack_id || order.id;
-            const msgUrl = `https://api.mercadolibre.com/messages/packs/${packId}/sellers/${meliId}?mark_as_read=false&limit=10`;
+            if (processedPackIds.has(String(packId))) continue;
+            
+            const msgUrl = `https://api.mercadolibre.com/messages/packs/${packId}/sellers/${meliId}?mark_as_read=false&limit=20`;
 
             const msgRes = await fetch(msgUrl, {
               headers,
-              signal: AbortSignal.timeout(5000),
+              signal: AbortSignal.timeout(8000),
             });
 
             if (msgRes.status === 404 || msgRes.status === 403) continue;
@@ -76,6 +141,8 @@ export async function GET(request: NextRequest) {
             const msgData = await msgRes.json();
             const messages = msgData.messages || [];
             if (messages.length === 0) continue;
+
+            processedPackIds.add(String(packId));
 
             // Info del producto
             let itemTitle = "Producto";
@@ -87,18 +154,18 @@ export async function GET(request: NextRequest) {
             if (firstItem?.item?.id) {
               try {
                 const itemRes = await fetch(
-                  `https://api.mercadolibre.com/items/${firstItem.item.id}?attributes=thumbnail`,
+                  `https://api.mercadolibre.com/items/${firstItem.item.id}?attributes=thumbnail,title`,
                   { headers, signal: AbortSignal.timeout(3000) }
                 );
                 if (itemRes.ok) {
                   const itemData = await itemRes.json();
                   itemThumbnail = itemData.thumbnail || "";
-                  if (!itemTitle || itemTitle === "Producto") itemTitle = itemData.title || itemTitle;
+                  if (itemData.title) itemTitle = itemData.title;
                 }
               } catch { /* skip */ }
             }
 
-            // Tomar el ultimo mensaje del comprador
+            // Tomar el último mensaje del comprador (o el último mensaje general)
             const buyerMsgs = messages.filter((m: any) =>
               String(m.from?.user_id) !== meliId
             );
@@ -111,8 +178,8 @@ export async function GET(request: NextRequest) {
               meli_account_id: account.id,
               order_id: String(order.id),
               pack_id: order.pack_id ? String(order.pack_id) : null,
-              buyer_id: order.buyer?.id,
-              buyer_nickname: order.buyer?.nickname || "Comprador",
+              buyer_id: order.buyer?.id || lastMsg.from?.user_id,
+              buyer_nickname: order.buyer?.nickname || lastMsg.from?.nickname || "Comprador",
               item_id: firstItem?.item?.id || null,
               item_title: itemTitle,
               item_thumbnail: itemThumbnail,
@@ -139,7 +206,7 @@ export async function GET(request: NextRequest) {
     }
 
     allMessages.sort((a, b) => new Date(b.date_created).getTime() - new Date(a.date_created).getTime());
-    console.log(`[meli-messages] Total mensajes: ${allMessages.length}`);
+    console.log(`[meli-messages] Total mensajes únicos: ${allMessages.length}`);
     return NextResponse.json(allMessages.slice(0, limit));
   } catch (error) {
     console.error("[meli-messages] Error:", error);
