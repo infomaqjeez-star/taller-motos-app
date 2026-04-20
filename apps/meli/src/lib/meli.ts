@@ -86,19 +86,17 @@ interface RefreshResult {
 }
 
 // ── REFRESH TOKEN ─────────────────────────────────────────────
-export async function refreshMeliToken(refreshTokenEnc: string): Promise<RefreshResult | null> {
+export async function refreshMeliToken(refreshToken: string): Promise<RefreshResult | null> {
   if (!APP_ID || !SECRET_KEY) {
     console.error("[refreshMeliToken] Faltan APP_ID o SECRET_KEY");
     return null;
   }
   try {
-    // Tokens se guardan como texto plano (sin encriptar)
-    const rt = refreshTokenEnc;
     const body = new URLSearchParams({
       grant_type: "refresh_token",
       client_id: APP_ID,
       client_secret: SECRET_KEY,
-      refresh_token: rt,
+      refresh_token: refreshToken,
     });
     
     console.log("[refreshMeliToken] Intentando refresh con MeLi...");
@@ -130,26 +128,50 @@ export async function updateLinkedAccountTokens(
   accountId: string,
   newTokens: RefreshResult
 ): Promise<string> {
-  // Tokens se guardan como texto plano
+  // Encriptar tokens antes de guardar
   const expiresAt = new Date(Date.now() + newTokens.expires_in * 1000).toISOString();
   const supabase = getSupabase();
   
-  const { error } = await supabase
-    .from("linked_meli_accounts")
-    .update({
-      access_token_enc: newTokens.access_token,
-      refresh_token_enc: newTokens.refresh_token,
-      token_expiry_date: expiresAt,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", accountId);
+  try {
+    const encryptedAccessToken = await encrypt(newTokens.access_token);
+    const encryptedRefreshToken = await encrypt(newTokens.refresh_token);
+    
+    const { error } = await supabase
+      .from("linked_meli_accounts")
+      .update({
+        access_token_enc: encryptedAccessToken,
+        refresh_token_enc: encryptedRefreshToken,
+        token_expiry_date: expiresAt,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", accountId);
 
-  if (error) {
-    console.error("[updateLinkedAccountTokens] Error:", error);
-    throw error;
+    if (error) {
+      console.error("[updateLinkedAccountTokens] Error:", error);
+      throw error;
+    }
+    
+    return newTokens.access_token;
+  } catch (err) {
+    console.error("[updateLinkedAccountTokens] Error encriptando tokens:", err);
+    // Fallback: guardar sin encriptar si falla
+    const { error } = await supabase
+      .from("linked_meli_accounts")
+      .update({
+        access_token_enc: newTokens.access_token,
+        refresh_token_enc: newTokens.refresh_token,
+        token_expiry_date: expiresAt,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", accountId);
+
+    if (error) {
+      console.error("[updateLinkedAccountTokens] Error fallback:", error);
+      throw error;
+    }
+    
+    return newTokens.access_token;
   }
-  
-  return newTokens.access_token;
 }
 
 // ── OBTENER CUENTAS ACTIVAS DE UN USUARIO ─────────────────────
@@ -181,22 +203,28 @@ export async function getValidToken(
     const meliUserId = (account as LinkedMeliAccount).meli_user_id || (account as MeliAccount).meli_user_id;
     const accountId = account.id;
 
+    // Intentar desencriptar el token (puede estar encriptado o en texto plano)
+    let accessToken: string;
+    try {
+      accessToken = await decrypt(account.access_token_enc);
+    } catch {
+      // Si falla el decrypt, asumir que está en texto plano
+      accessToken = account.access_token_enc;
+    }
+
     // Verificar si está por expirar (con margen de 5 minutos)
     const isExpired = tokenExpiryDate && 
       new Date(tokenExpiryDate).getTime() < Date.now() + 5 * 60 * 1000;
 
-    if (!isExpired) {
+    if (!isExpired && accessToken) {
       try {
-        // Tokens se guardan como texto plano
-        const token = account.access_token_enc;
-        if (!token) return null;
         // Verificar que el token funcione
         const testUserId = typeof meliUserId === 'string' ? meliUserId : String(meliUserId);
         const test = await fetch(`https://api.mercadolibre.com/users/${testUserId}`, {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { Authorization: `Bearer ${accessToken}` },
           signal: AbortSignal.timeout(5000),
         });
-        if (test.ok) return token;
+        if (test.ok) return accessToken;
       } catch {
         // Si falla el test, continuar a refresh
       }
@@ -204,9 +232,19 @@ export async function getValidToken(
 
     // Intentar refresh
     if (!account.refresh_token_enc) return null;
-    const newTokens = await refreshMeliToken(account.refresh_token_enc);
+    
+    // Desencriptar refresh token
+    let refreshToken: string;
+    try {
+      refreshToken = await decrypt(account.refresh_token_enc);
+    } catch {
+      refreshToken = account.refresh_token_enc;
+    }
+    
+    const newTokens = await refreshMeliToken(refreshToken);
     if (!newTokens) return null;
     
+    // Guardar nuevos tokens encriptados
     await updateLinkedAccountTokens(accountId, newTokens);
     return newTokens.access_token;
   } catch (err) {
