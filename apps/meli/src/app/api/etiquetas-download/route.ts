@@ -100,9 +100,30 @@ export async function POST(req: NextRequest) {
     for (const etiqueta of etiquetas) {
       let cuentaNombre = (etiqueta.cuenta_origen || "").trim();
       const shippingId = String(etiqueta.shipping_id);
+      const orderId = String(etiqueta.order_id);
       
-      console.log(`[etiquetas-download] Procesando: order=${etiqueta.order_id}, shipping=${shippingId}, cuenta="${cuentaNombre}"`);
+      console.log(`[etiquetas-download] Procesando: order=${orderId}, shipping=${shippingId}, cuenta="${cuentaNombre}"`);
       
+      // 1. PRIMERO: Intentar obtener el PDF guardado en la base de datos (backup permanente)
+      try {
+        const { data: etiquetaGuardada } = await supabase
+          .from("etiquetas_historial")
+          .select("pdf_data, pdf_guardado_en")
+          .eq("order_id", orderId)
+          .not("pdf_data", "is", null)
+          .single();
+        
+        if (etiquetaGuardada?.pdf_data) {
+          console.log(`[etiquetas-download] ✅ PDF encontrado en BD para ${orderId}`);
+          const blob = new Blob([etiquetaGuardada.pdf_data], { type: "application/pdf" });
+          pdfsDescargados.push({ order_id: orderId, blob, cuenta: cuentaNombre });
+          continue; // Saltar a la siguiente etiqueta
+        }
+      } catch (err) {
+        console.log(`[etiquetas-download] No hay PDF guardado para ${orderId}, intentando MeLi...`);
+      }
+      
+      // 2. SEGUNDO: Si no está en BD, descargar de MeLi
       // Normalizar nombre de cuenta (quitar espacios extras, etc.)
       cuentaNombre = cuentaNombre.replace(/\s+/g, ' ').trim();
       
@@ -156,7 +177,7 @@ export async function POST(req: NextRequest) {
       }
 
       try {
-        console.log(`[etiquetas-download] Descargando shipping_id=${shippingId}...`);
+        console.log(`[etiquetas-download] Descargando de MeLi shipping_id=${shippingId}...`);
         
         const pdfRes = await fetch(
           `https://api.mercadolibre.com/shipment_labels?shipment_ids=${shippingId}&response_type=pdf`,
@@ -167,14 +188,14 @@ export async function POST(req: NextRequest) {
 
         if (pdfRes.ok) {
           const blob = await pdfRes.blob();
-          pdfsDescargados.push({ order_id: etiqueta.order_id, blob, cuenta: cuentaNombre });
-          console.log(`[etiquetas-download] Éxito: ${etiqueta.order_id}`);
+          pdfsDescargados.push({ order_id: orderId, blob, cuenta: cuentaNombre });
+          console.log(`[etiquetas-download] Éxito desde MeLi: ${orderId}`);
         } else {
           const errorText = await pdfRes.text();
-          console.error(`[etiquetas-download] Error MeLi ${etiqueta.order_id}:`, pdfRes.status, errorText.substring(0, 200));
+          console.error(`[etiquetas-download] Error MeLi ${orderId}:`, pdfRes.status, errorText.substring(0, 200));
         }
       } catch (err) {
-        console.error(`[etiquetas-download] Error descargando ${etiqueta.order_id}:`, err);
+        console.error(`[etiquetas-download] Error descargando ${orderId}:`, err);
       }
     }
 

@@ -421,6 +421,34 @@ function EtiquetasInner() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ etiquetas: etiquetasParaHistorial }),
         }).catch(err => console.error("Error guardando en historial:", err));
+
+        // Descargar y guardar PDF de cada etiqueta (backup permanente)
+        // Esto es crítico porque MeLi borra las etiquetas después de 72hs
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          for (const etiqueta of todasLasEtiquetas.slice(0, 10)) { // Limitar a 10 por carga para no sobrecargar
+            try {
+              fetch("/api/etiquetas-guardar", {
+                method: "POST",
+                headers: { 
+                  "Content-Type": "application/json",
+                  "Authorization": `Bearer ${session.access_token}`
+                },
+                body: JSON.stringify({
+                  order_id: etiqueta.order_id,
+                  shipping_id: etiqueta.shipment_id,
+                  cuenta_origen: etiqueta.account,
+                }),
+              }).then(res => {
+                if (res.ok) console.log(`[Etiquetas] PDF guardado para orden ${etiqueta.order_id}`);
+              }).catch(err => {
+                console.error(`[Etiquetas] Error guardando PDF ${etiqueta.order_id}:`, err);
+              });
+            } catch (e) {
+              console.error(`[Etiquetas] Error procesando etiqueta ${etiqueta.order_id}:`, e);
+            }
+          }
+        }
       }
     } catch (e) {
       console.error("Error loading labels:", e);

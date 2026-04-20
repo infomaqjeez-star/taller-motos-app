@@ -294,6 +294,8 @@ export default function HistorialEtiquetasPage() {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
       
+      // Intentar descargar desde el backup primero (más confiable)
+      // Si no existe en backup, intentar desde MeLi
       const res = await fetch("/api/etiquetas-download", {
         method: "POST",
         headers: { 
