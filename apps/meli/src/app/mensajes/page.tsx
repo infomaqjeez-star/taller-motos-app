@@ -229,7 +229,7 @@ function QuestionCard({ q, onAnswered }: { q: Question; onAnswered: (id: number)
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [answered, setAnswered] = useState(false);
 
-  const FIRMA = "Atte.: MaqJeez de Carlos Spegazzini Ezeiza";
+  const FIRMA = "Atte.: MAQJEEZ";
 
   async function handleSend() {
     if (!text.trim()) return;

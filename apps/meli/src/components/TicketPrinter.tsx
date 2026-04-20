@@ -212,7 +212,7 @@ export default function TicketPrinter({ isOpen, venta, clientData, onClose }: Pr
 
               {/* Pie */}
               <div style={{ marginTop: "50px", textAlign: "center", fontSize: "11px", color: "#777" }}>
-                <p>Gracias por confiar en MaqJeez para sus herramientas y servicios técnicos.</p>
+                <p>Gracias por confiar en MAQJEEZ para sus herramientas y servicios técnicos.</p>
                 <p>Este documento es un resumen de operación comercial interna.</p>
               </div>
             </div>
