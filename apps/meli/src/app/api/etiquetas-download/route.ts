@@ -73,41 +73,73 @@ export async function POST(req: NextRequest) {
     todasLasCuentas.forEach(c => {
       if (c.meli_nickname) {
         const nombre = c.meli_nickname.trim();
+        // Varias formas de indexar
         cuentasMap[nombre.toLowerCase()] = c;
         cuentasMap[nombre.toUpperCase()] = c;
         cuentasMap[nombre] = c;
         cuentasMap[nombre.replace(/\s+/g, '').toLowerCase()] = c;
         cuentasMap[nombre.replace(/\s+/g, '').toUpperCase()] = c;
+        // Sin la V al final (para MAQJEEZ V -> MAQJEEZ)
+        const sinV = nombre.replace(/\s+v$/i, '').trim();
+        if (sinV !== nombre) {
+          cuentasMap[sinV.toLowerCase()] = c;
+          cuentasMap[sinV.toUpperCase()] = c;
+        }
+        // Solo la primera palabra
+        const primeraPalabra = nombre.split(/\s+/)[0];
+        cuentasMap[primeraPalabra.toLowerCase()] = c;
+        cuentasMap[primeraPalabra.toUpperCase()] = c;
       }
     });
+
+    console.log(`[etiquetas-download] Mapa de cuentas:`, Object.keys(cuentasMap));
 
     // Descargar PDFs
     const pdfsDescargados: { order_id: string; blob: Blob; cuenta: string }[] = [];
 
     for (const etiqueta of etiquetas) {
-      const cuentaNombre = (etiqueta.cuenta_origen || "").trim();
+      let cuentaNombre = (etiqueta.cuenta_origen || "").trim();
       const shippingId = String(etiqueta.shipping_id);
       
       console.log(`[etiquetas-download] Procesando: order=${etiqueta.order_id}, shipping=${shippingId}, cuenta="${cuentaNombre}"`);
+      
+      // Normalizar nombre de cuenta (quitar espacios extras, etc.)
+      cuentaNombre = cuentaNombre.replace(/\s+/g, ' ').trim();
       
       // Buscar cuenta de varias formas
       let cuenta: typeof todasLasCuentas[0] | undefined = cuentasMap[cuentaNombre] || 
                    cuentasMap[cuentaNombre.toLowerCase()] || 
                    cuentasMap[cuentaNombre.toUpperCase()] ||
                    cuentasMap[cuentaNombre.replace(/\s+/g, '').toLowerCase()] ||
-                   cuentasMap[cuentaNombre.replace(/\s+/g, '').toUpperCase()];
+                   cuentasMap[cuentaNombre.replace(/\s+/g, '').toUpperCase()] ||
+                   cuentasMap[cuentaNombre.split(/\s+/)[0].toLowerCase()] ||
+                   cuentasMap[cuentaNombre.split(/\s+/)[0].toUpperCase()];
 
-      // Si no se encuentra exacto, buscar parcial
+      // Si no se encuentra, intentar quitando la "V" al final
+      if (!cuenta && cuentaNombre.match(/\sv$/i)) {
+        const sinV = cuentaNombre.replace(/\sv$/i, '').trim();
+        console.log(`[etiquetas-download] Intentando sin V: "${sinV}"`);
+        cuenta = cuentasMap[sinV.toLowerCase()] || cuentasMap[sinV.toUpperCase()];
+      }
+
+      // Si aún no se encuentra, buscar parcial
       if (!cuenta) {
         console.log(`[etiquetas-download] Buscando match parcial para: "${cuentaNombre}"`);
         cuenta = todasLasCuentas.find(c => {
           const dbName = (c.meli_nickname || "").toLowerCase();
           const searchName = cuentaNombre.toLowerCase();
+          // Match si uno contiene al otro
           return dbName.includes(searchName) || searchName.includes(dbName);
         });
         if (cuenta) {
           console.log(`[etiquetas-download] Match parcial encontrado: "${cuentaNombre}" -> "${cuenta.meli_nickname}"`);
         }
+      }
+
+      // Último recurso: usar la primera cuenta disponible
+      if (!cuenta && todasLasCuentas.length > 0) {
+        console.log(`[etiquetas-download] Usando primera cuenta como fallback: "${todasLasCuentas[0].meli_nickname}"`);
+        cuenta = todasLasCuentas[0];
       }
 
       if (!cuenta) {
