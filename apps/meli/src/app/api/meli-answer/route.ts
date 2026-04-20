@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
+import { getValidToken } from "@/lib/meli";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +12,7 @@ const supabase = createClient(
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { question_id, answer_text } = body;
+    const { question_id, answer_text, meli_account_id } = body;
 
     if (!question_id || !answer_text) {
       return NextResponse.json(
@@ -36,12 +37,76 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log(`[meli-answer] Respondiendo pregunta ${question_id} (usuario: ${userId})`);
+    console.log(`[meli-answer] Respondiendo pregunta ${question_id} (usuario: ${userId}, cuenta: ${meli_account_id || 'auto-detect'})`);
 
-    // Solo obtener cuentas del usuario autenticado
+    // Si tenemos meli_account_id, usar esa cuenta directamente
+    if (meli_account_id) {
+      const { data: account, error: accountError } = await supabase
+        .from("linked_meli_accounts")
+        .select("id, user_id, meli_user_id, meli_nickname, access_token_enc, refresh_token_enc, token_expiry_date, is_active")
+        .eq("id", meli_account_id)
+        .eq("user_id", userId)
+        .eq("is_active", true)
+        .single();
+
+      if (accountError || !account) {
+        console.error(`[meli-answer] Cuenta ${meli_account_id} no encontrada:`, accountError);
+        return NextResponse.json(
+          { error: "Cuenta no encontrada o no autorizada" },
+          { status: 404 }
+        );
+      }
+
+      // Usar getValidToken para obtener token desencriptado (con auto-refresh)
+      const validToken = await getValidToken(account);
+      
+      if (!validToken) {
+        console.error(`[meli-answer] No se pudo obtener token válido para ${account.meli_nickname}`);
+        return NextResponse.json(
+          { error: "Token inválido o expirado para la cuenta" },
+          { status: 401 }
+        );
+      }
+
+      console.log(`[meli-answer] Enviando respuesta con cuenta: ${account.meli_nickname}`);
+      
+      const response = await fetch("https://api.mercadolibre.com/answers", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${validToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          question_id: question_id,
+          text: answer_text
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log(`[meli-answer] ✅ Respuesta enviada exitosamente con ${account.meli_nickname}`);
+        return NextResponse.json({ 
+          status: "ok", 
+          message: "Respuesta enviada",
+          account: account.meli_nickname,
+          data 
+        });
+      } else {
+        const errorText = await response.text();
+        console.error(`[meli-answer] ❌ Error ${response.status} de MeLi: ${errorText}`);
+        return NextResponse.json(
+          { error: `Error de Mercado Libre: ${response.status}`, details: errorText },
+          { status: response.status }
+        );
+      }
+    }
+
+    // Fallback: si no tenemos meli_account_id, probar todas las cuentas (comportamiento anterior)
+    console.log(`[meli-answer] No se proporcionó meli_account_id, probando todas las cuentas...`);
+    
     const { data: accounts } = await supabase
       .from("linked_meli_accounts")
-      .select("id, meli_user_id, meli_nickname, access_token_enc")
+      .select("id, user_id, meli_user_id, meli_nickname, access_token_enc, refresh_token_enc, token_expiry_date, is_active")
       .eq("user_id", userId)
       .eq("is_active", true);
 
@@ -52,12 +117,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log(`[meli-answer] ${accounts.length} cuentas del usuario:`, accounts.map(a => `${a.meli_nickname}(${a.meli_user_id})`).join(', '));
+    console.log(`[meli-answer] ${accounts.length} cuentas disponibles:`, accounts.map(a => `${a.meli_nickname}(${a.meli_user_id})`).join(', '));
 
     // Buscar la cuenta correcta probando cada una
     for (const account of accounts) {
-      if (!account.access_token_enc?.startsWith('APP_USR')) {
-        console.log(`[meli-answer] Saltando ${account.meli_nickname} - token invalido`);
+      const validToken = await getValidToken(account);
+      
+      if (!validToken) {
+        console.log(`[meli-answer] Saltando ${account.meli_nickname} - no se pudo obtener token válido`);
         continue;
       }
 
@@ -67,7 +134,7 @@ export async function POST(request: NextRequest) {
         const response = await fetch("https://api.mercadolibre.com/answers", {
           method: "POST",
           headers: {
-            "Authorization": `Bearer ${account.access_token_enc}`,
+            "Authorization": `Bearer ${validToken}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
@@ -78,7 +145,7 @@ export async function POST(request: NextRequest) {
 
         if (response.ok) {
           const data = await response.json();
-          console.log(`[meli-answer] Respuesta enviada con cuenta: ${account.meli_nickname}`);
+          console.log(`[meli-answer] ✅ Respuesta enviada con cuenta: ${account.meli_nickname}`);
           return NextResponse.json({ 
             status: "ok", 
             message: "Respuesta enviada",

@@ -260,7 +260,7 @@ function QuestionCard({ q, onAnswered }: { q: Question; onAnswered: (id: number)
         body:    JSON.stringify({
           question_id: q.meli_question_id,
           answer_text: finalText,
-          // meli_account_id ya no es necesario - el backend detecta la cuenta automáticamente
+          meli_account_id: q.meli_account_id, // Enviar ID de cuenta para respuesta directa
           pregunta_original: q.question_text,
         }),
       });
