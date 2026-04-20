@@ -143,10 +143,12 @@ export async function GET(request: NextRequest) {
           console.log(`[meli-dashboard] ✅ Token válido para ${account.meli_nickname}, consultando API...`);
 
           // ── Llamadas paralelas a MeLi API ───────────────────────────────
-          let userRes, questionsRes, ordersReadyRes, itemsRes, claimsRes, unreadRes, todayOrdersRes;
+          let userRes, questionsRes, ordersReadyRes, itemsRes, claimsRes, unreadRes, 
+              todayOrdersPaidRes, todayOrdersConfirmedRes, todayOrdersProcessingRes;
           
           try {
-            [userRes, questionsRes, ordersReadyRes, itemsRes, claimsRes, unreadRes, todayOrdersRes] =
+            [userRes, questionsRes, ordersReadyRes, itemsRes, claimsRes, unreadRes, 
+             todayOrdersPaidRes, todayOrdersConfirmedRes, todayOrdersProcessingRes] =
               await Promise.allSettled([
                 fetch(`https://api.mercadolibre.com/users/${meliId}?attributes=seller_reputation,nickname`, {
                   headers: meliHeaders, signal: AbortSignal.timeout(5000),
@@ -169,6 +171,12 @@ export async function GET(request: NextRequest) {
                 fetch(`https://api.mercadolibre.com/orders/search?seller=${meliId}&order.status=paid&order.date_created.from=${getStartOfDayBuenosAires()}&limit=50`, {
                   headers: meliHeaders, signal: AbortSignal.timeout(10000),
                 }),
+                fetch(`https://api.mercadolibre.com/orders/search?seller=${meliId}&order.status=confirmed&order.date_created.from=${getStartOfDayBuenosAires()}&limit=50`, {
+                  headers: meliHeaders, signal: AbortSignal.timeout(10000),
+                }),
+                fetch(`https://api.mercadolibre.com/orders/search?seller=${meliId}&order.status=processing&order.date_created.from=${getStartOfDayBuenosAires()}&limit=50`, {
+                  headers: meliHeaders, signal: AbortSignal.timeout(10000),
+                }),
               ]);
           } catch (fetchError) {
             console.error(`[meli-dashboard] ❌ Error en fetch para ${account.meli_nickname}:`, fetchError);
@@ -183,7 +191,9 @@ export async function GET(request: NextRequest) {
             items: itemsRes?.status,
             claims: claimsRes?.status,
             unread: unreadRes?.status,
-            todayOrders: todayOrdersRes?.status,
+            todayOrdersPaid: todayOrdersPaidRes?.status,
+            todayOrdersConfirmed: todayOrdersConfirmedRes?.status,
+            todayOrdersProcessing: todayOrdersProcessingRes?.status,
           });
 
           // ── Parsear resultados ──────────────────────────────────────────
@@ -194,8 +204,10 @@ export async function GET(request: NextRequest) {
             return null;
           };
 
-          const [userData, questionsData, ordersData, itemsData, claimsData, unreadData, todayOrdersData] =
-            await Promise.all([userRes, questionsRes, ordersReadyRes, itemsRes, claimsRes, unreadRes, todayOrdersRes].map(safeJson));
+          const [userData, questionsData, ordersData, itemsData, claimsData, unreadData, 
+                 todayOrdersPaidData, todayOrdersConfirmedData, todayOrdersProcessingData] =
+            await Promise.all([userRes, questionsRes, ordersReadyRes, itemsRes, claimsRes, unreadRes, 
+                              todayOrdersPaidRes, todayOrdersConfirmedRes, todayOrdersProcessingRes].map(safeJson));
 
           // Reputación
           const rep = userData?.seller_reputation ?? {};
@@ -220,12 +232,34 @@ export async function GET(request: NextRequest) {
           const claimsCount         = claimsData?.meta?.paging?.total ?? claimsData?.paging?.total ?? 0;
           const pendingMessages     = unreadData?.total ?? unreadData?.paging?.total ?? 0;
 
-          // Ventas de hoy desde MeLi API
-          const todayOrdersList = todayOrdersData?.results || [];
-          const todayOrders = todayOrdersList.length;
-          const todaySalesAmount = todayOrdersList.reduce((sum: number, order: any) => {
+          // Ventas de hoy desde MeLi API - combinar todas las órdenes (paid + confirmed + processing)
+          const paidOrders = todayOrdersPaidData?.results || [];
+          const confirmedOrders = todayOrdersConfirmedData?.results || [];
+          const processingOrders = todayOrdersProcessingData?.results || [];
+          
+          // Usar Set para evitar duplicados (misma orden puede aparecer en múltiples estados)
+          const uniqueOrderIds = new Set<string>();
+          const allOrders: any[] = [];
+          
+          [...paidOrders, ...confirmedOrders, ...processingOrders].forEach((order: any) => {
+            if (!uniqueOrderIds.has(order.id)) {
+              uniqueOrderIds.add(order.id);
+              allOrders.push(order);
+            }
+          });
+          
+          const todayOrders = allOrders.length;
+          const todaySalesAmount = allOrders.reduce((sum: number, order: any) => {
             return sum + (order.total_amount || order.paid_amount || 0);
           }, 0);
+          
+          console.log(`[meli-dashboard] 💰 Ventas hoy para ${account.meli_nickname}:`, {
+            paid: paidOrders.length,
+            confirmed: confirmedOrders.length,
+            processing: processingOrders.length,
+            unique: todayOrders,
+            total: todaySalesAmount,
+          });
 
           return {
             account: account.meli_nickname || `Cuenta ${account.meli_user_id}`,
