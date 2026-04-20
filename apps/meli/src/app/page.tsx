@@ -10,7 +10,7 @@ import {
   ChevronDown, ChevronUp, ShoppingCart, DollarSign,
   Package, Clock, XCircle, BarChart2, ExternalLink,
   Bell, Store, Menu, X, Copy, Pencil, Check, Zap,
-  LogOut, User, Home, Share2
+  LogOut, User, Home, Share2, HelpCircle
 } from "lucide-react";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import { useNotificationStream } from "@/hooks/useNotificationStream";
@@ -547,7 +547,8 @@ function AppJeezInner() {
   const navItems = [
     { label: "Dashboard",       icon: <BarChart2 className="w-4 h-4" />,       href: "/",               active: true  },
     { label: "Estadísticas",    icon: <TrendingUp className="w-4 h-4" />,      href: "/estadisticas",  active: false },
-    { label: "Mensajería",      icon: <MessageCircle className="w-4 h-4" />,   href: "/mensajes",      active: false },
+    { label: "Preguntas",       icon: <HelpCircle className="w-4 h-4" />,      href: "/mensajes",      active: false },
+    { label: "Mensajes Ventas", icon: <MessageCircle className="w-4 h-4" />,   href: "/mensajes-ventas", active: false },
     { label: "Etiquetas",       icon: <Tag className="w-4 h-4" />,             href: "/etiquetas",     active: false },
     { label: "Publicaciones",   icon: <Package className="w-4 h-4" />,         href: "/publicaciones", active: false },
     { label: "Sincronizar",     icon: <Copy className="w-4 h-4" />,            href: "/sincronizar",   active: false },
