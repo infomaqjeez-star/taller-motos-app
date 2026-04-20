@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import { useNotificationStream } from "@/hooks/useNotificationStream";
+import { useMeliAccounts } from "@/components/auth/MeliAccountsProvider";
 import { supabase } from "@/lib/supabase";
 import { getNowBA } from "@/lib/date-utils";
 import AccountSelector from "@/components/AccountSelector";
@@ -409,6 +410,20 @@ function AppJeezInner() {
     };
     window.addEventListener('questionAnswered', handleQuestionAnswered);
     return () => window.removeEventListener('questionAnswered', handleQuestionAnswered);
+  }, [load]);
+
+  // Escuchar evento cuando se conecta una nueva cuenta de MeLi
+  useEffect(() => {
+    const handleAccountConnected = (event: CustomEvent) => {
+      const { account } = event.detail;
+      console.log('[Dashboard] Nueva cuenta conectada:', account.meli_nickname);
+      
+      // Recargar dashboard inmediatamente para mostrar la nueva cuenta
+      load();
+    };
+    
+    window.addEventListener('meli:account-connected', handleAccountConnected as EventListener);
+    return () => window.removeEventListener('meli:account-connected', handleAccountConnected as EventListener);
   }, [load]);
 
   // Cargar cuentas solo cuando el usuario está confirmado
