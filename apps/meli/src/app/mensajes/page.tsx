@@ -884,11 +884,11 @@ function MensajesInner() {
     // Carga inicial inmediata
     loadAll();
 
-    // Polling cada 30 segundos (más conservador para evitar 502)
+    // Polling cada 60 segundos (muy conservador para no saturar Railway)
     const interval = setInterval(() => {
-      console.log('[MENSAJES] Polling automático (30s)...');
+      console.log('[MENSAJES] Polling automático (60s)...');
       loadAll(true);
-    }, 30000);
+    }, 60000);
     
     // Recargar cuando la ventana vuelve a tener foco
     const handleVisibilityChange = () => {
