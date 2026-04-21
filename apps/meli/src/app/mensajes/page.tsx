@@ -782,7 +782,7 @@ function MensajesInner() {
   const loadRef = useRef<((sync?: boolean) => Promise<void>) | null>(null);
 
   // Cargar preguntas
-  const loadQuestions = useCallback(async (sync = false) => {
+  const loadQuestions = useCallback(async (sync = false, force = false) => {
     if (sync) setQuestionsSyncing(true); else setQuestionsLoading(true);
     setQuestionsError(null);
     
@@ -792,7 +792,8 @@ function MensajesInner() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { setQuestionsError("No autenticado"); return; }
       
-      const res = await fetch(`/api/meli-questions?_t=${Date.now()}`, {
+      const forceParam = force ? '&force=true' : '';
+      const res = await fetch(`/api/meli-questions?_t=${Date.now()}${forceParam}`, {
         headers: { Authorization: `Bearer ${session.access_token}` },
         cache: 'no-store',
       });
@@ -811,7 +812,7 @@ function MensajesInner() {
         return true;
       });
 
-      // Solo filtrar respondidas si tienen < 5 minutos (más agresivo)
+      // Solo filtrar respondidas si tienen < 2 minutos (muy agresivo)
       const now = Date.now();
       const validAnsweredIds = Array.from(recentlyAnsweredRef.current)
         .filter(id => {
@@ -821,7 +822,7 @@ function MensajesInner() {
               const parsed = JSON.parse(saved);
               const item = parsed.find((p: any) => p.id === id);
               if (item) {
-                return (now - item.timestamp) < 5 * 60 * 1000; // Solo 5 min
+                return (now - item.timestamp) < 2 * 60 * 1000; // Solo 2 min
               }
             } catch {}
           }
@@ -900,33 +901,44 @@ function MensajesInner() {
     // Carga inicial inmediata
     loadAll();
 
-    // Polling más frecuente para preguntas (cada 30 segundos)
+    // Polling AGRESIVO para preguntas (cada 15 segundos) - SIEMPRE fuerza recarga
     const interval = setInterval(() => {
-      console.log('[MENSAJES] Polling automático...');
-      loadRef.current?.(true);
-    }, 30000);
+      console.log('[MENSAJES] Polling automático (15s) - FORZANDO recarga...');
+      loadQuestions(true, true); // sync=true, force=true
+    }, 15000);
     
-    // Recargar cuando la ventana vuelve a tener foco
+    // Recargar cuando la ventana vuelve a tener foco (inmediato + forzado)
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        console.log('[MENSAJES] Ventana visible, recargando...');
-        loadRef.current?.(true);
+        console.log('[MENSAJES] Ventana visible, recargando INMEDIATAMENTE con force...');
+        // Forzar recarga sin caché
+        loadQuestions(true, true);
+        loadMessages(true);
+        loadClaims(true);
       }
     };
     
     // Recargar cuando vuelve la conexión
     const handleOnline = () => {
       console.log('[MENSAJES] Conexión restaurada, recargando...');
-      loadRef.current?.(true);
+      loadAll(true);
+    };
+    
+    // Recargar al hacer click en la pestaña de preguntas
+    const handleFocus = () => {
+      console.log('[MENSAJES] Página enfocada, verificando preguntas...');
+      loadQuestions(true);
     };
     
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('online', handleOnline);
+    window.addEventListener('focus', handleFocus);
     
     return () => {
       clearInterval(interval);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('online', handleOnline);
+      window.removeEventListener('focus', handleFocus);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

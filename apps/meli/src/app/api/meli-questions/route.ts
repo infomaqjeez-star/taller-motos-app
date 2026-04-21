@@ -9,16 +9,19 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY || "placeholder-key"
 );
 
-// Caché en memoria para preguntas (30 segundos)
+// Caché en memoria para preguntas (10 segundos - más agresivo)
 interface CacheEntry {
   data: any[];
   timestamp: number;
 }
 const questionsCache = new Map<string, CacheEntry>();
-const CACHE_TTL = 30 * 1000; // 30 segundos
+const CACHE_TTL = 10 * 1000; // 10 segundos (más agresivo para tiempo real)
 
 export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url);
+    const force = searchParams.get("force") === "true";
+    
     const authHeader = request.headers.get("authorization");
     let userId: string | null = null;
     
@@ -31,13 +34,17 @@ export async function GET(request: NextRequest) {
       return NextResponse.json([], { status: 200 });
     }
 
-    // Verificar caché
-    const cached = questionsCache.get(userId);
-    if (cached && (Date.now() - cached.timestamp) < CACHE_TTL) {
-      console.log(`[meli-questions] ✅ Usando caché para ${userId}`);
-      const response = NextResponse.json(cached.data);
-      response.headers.set('Cache-Control', 'no-store');
-      return response;
+    // Verificar caché (solo si no se fuerza recarga)
+    if (!force) {
+      const cached = questionsCache.get(userId);
+      if (cached && (Date.now() - cached.timestamp) < CACHE_TTL) {
+        console.log(`[meli-questions] ✅ Usando caché para ${userId}`);
+        const response = NextResponse.json(cached.data);
+        response.headers.set('Cache-Control', 'no-store');
+        return response;
+      }
+    } else {
+      console.log(`[meli-questions] 🔄 Forzando recarga para ${userId}`);
     }
 
     const { data: accounts } = await supabase
