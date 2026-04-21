@@ -788,11 +788,36 @@ function MensajesInner() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { setQuestionsError("No autenticado"); return; }
-      const res = await fetch(`/api/meli-questions?_t=${Date.now()}`, {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data: Question[] = await res.json();
+      
+      // Agregar retry logic
+      let retries = 3;
+      let data: Question[] = [];
+      let lastError: Error | null = null;
+      
+      while (retries > 0) {
+        try {
+          const res = await fetch(`/api/meli-questions?_t=${Date.now()}`, {
+            headers: { Authorization: `Bearer ${session.access_token}` },
+            // Asegurar que no use caché
+            cache: 'no-store',
+          });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          data = await res.json();
+          break; // Éxito, salir del loop
+        } catch (err) {
+          lastError = err as Error;
+          retries--;
+          if (retries > 0) {
+            console.log(`[PREGUNTAS] Reintentando... ${retries} intentos restantes`);
+            await new Promise(r => setTimeout(r, 1000)); // Esperar 1s antes de reintentar
+          }
+        }
+      }
+      
+      if (retries === 0 && lastError) {
+        throw lastError;
+      }
+      
       console.log(`[PREGUNTAS] Recibidas ${data.length} preguntas de la API`);
 
       const seen = new Set<number>();
@@ -805,14 +830,33 @@ function MensajesInner() {
       console.log(`[PREGUNTAS] ${unique.length} preguntas unicas despues de filtrar duplicados`);
 
       // Filtrar preguntas ya respondidas (convertir a número para comparación)
-      const answeredIds = Array.from(recentlyAnsweredRef.current).map(id => Number(id));
-      const answeredSet = new Set(answeredIds);
+      // Solo filtrar si tienen menos de 30 minutos (evitar filtrar permanentemente)
+      const now = Date.now();
+      const validAnsweredIds = Array.from(recentlyAnsweredRef.current)
+        .filter(id => {
+          // Buscar en localStorage el timestamp
+          const saved = localStorage.getItem("recentlyAnsweredQuestions");
+          if (saved) {
+            try {
+              const parsed = JSON.parse(saved);
+              const item = parsed.find((p: any) => p.id === id);
+              if (item) {
+                return (now - item.timestamp) < 30 * 60 * 1000; // Solo si tiene < 30 min
+              }
+            } catch {}
+          }
+          return true; // Si no hay timestamp, asumir válido
+        })
+        .map(id => Number(id));
+        
+      const answeredSet = new Set(validAnsweredIds);
       const filtered = unique.filter(q => !answeredSet.has(Number(q.meli_question_id)));
-      console.log(`[PREGUNTAS] ${filtered.length} preguntas despues de filtrar respondidas. Respondidas en localStorage: ${answeredIds.length}`);
+      console.log(`[PREGUNTAS] ${filtered.length} preguntas despues de filtrar respondidas recientes. Respondidas recientes: ${validAnsweredIds.length}`);
       
       setQuestions(filtered);
       setLastSync(new Date());
     } catch (e) {
+      console.error("[PREGUNTAS] Error cargando:", e);
       setQuestionsError((e as Error).message);
     } finally {
       setQuestionsLoading(false); setQuestionsSyncing(false);
@@ -871,11 +915,37 @@ function MensajesInner() {
   useEffect(() => { loadRef.current = loadAll; }, [loadAll]);
 
   useEffect(() => {
+    // Carga inicial inmediata
     loadAll();
 
-    // Polling cada 1 minuto para mantener actualizado
-    const interval = setInterval(() => loadRef.current?.(true), 60000);
-    return () => clearInterval(interval);
+    // Polling más frecuente para preguntas (cada 30 segundos)
+    const interval = setInterval(() => {
+      console.log('[MENSAJES] Polling automático...');
+      loadRef.current?.(true);
+    }, 30000);
+    
+    // Recargar cuando la ventana vuelve a tener foco
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        console.log('[MENSAJES] Ventana visible, recargando...');
+        loadRef.current?.(true);
+      }
+    };
+    
+    // Recargar cuando vuelve la conexión
+    const handleOnline = () => {
+      console.log('[MENSAJES] Conexión restaurada, recargando...');
+      loadRef.current?.(true);
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('online', handleOnline);
+    
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('online', handleOnline);
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
