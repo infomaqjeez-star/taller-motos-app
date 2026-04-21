@@ -126,16 +126,18 @@ export async function GET(request: NextRequest) {
     console.log(`[meli-questions] Tokens: ${validTokens.length} válidos, ${invalidTokens.length} inválidos de ${accounts.length} cuentas`);
     console.log(`[meli-questions] Tiempo tokens: ${Date.now() - tokensStart}ms`);
 
-    // Consultar preguntas de TODAS las cuentas con token válido en PARALELO
-    // PERO con un pequeño delay entre cada una para no saturar MeLi
+    // Consultar preguntas de TODAS las cuentas con token válido
+    // Procesar en grupos pequeños para no saturar ni MeLi ni Railway
     const questionsStart = Date.now();
     
     const questionsResults: { account: any; questions: any[]; error: string | null }[] = [];
     
-    // Procesar en grupos de 3 para no saturar la API de MeLi
-    const batchSize = 3;
+    // Procesar de a 2 cuentas con delay de 1s entre grupos
+    const batchSize = 2;
     for (let i = 0; i < validTokens.length; i += batchSize) {
       const batch = validTokens.slice(i, i + batchSize);
+      
+      console.log(`[meli-questions] Procesando batch ${Math.floor(i/batchSize) + 1}: ${batch.map(b => b.account.meli_nickname).join(', ')}`);
       
       const batchPromises = batch.map(async ({ account, headers }) => {
         try {
@@ -143,7 +145,7 @@ export async function GET(request: NextRequest) {
           
           const res = await fetchWithRetry(
             url,
-            { headers: headers!, signal: AbortSignal.timeout(15000) },
+            { headers: headers!, signal: AbortSignal.timeout(20000) },
             3,
             account.meli_nickname
           );
@@ -171,9 +173,10 @@ export async function GET(request: NextRequest) {
       const batchResults = await Promise.all(batchPromises);
       questionsResults.push(...batchResults);
       
-      // Esperar 500ms entre batches para no saturar MeLi
+      // Esperar 1s entre batches para no saturar
       if (i + batchSize < validTokens.length) {
-        await sleep(500);
+        console.log(`[meli-questions] Esperando 1s antes del siguiente batch...`);
+        await sleep(1000);
       }
     }
     

@@ -884,20 +884,17 @@ function MensajesInner() {
     // Carga inicial inmediata
     loadAll();
 
-    // Polling ULTRA-AGRESIVO para preguntas (cada 8 segundos) - SIEMPRE fuerza recarga
+    // Polling cada 30 segundos (más conservador para evitar 502)
     const interval = setInterval(() => {
-      console.log('[MENSAJES] Polling automático (8s) - FORZANDO recarga...');
-      loadQuestions(true, true); // sync=true, force=true
-    }, 8000);
+      console.log('[MENSAJES] Polling automático (30s)...');
+      loadAll(true);
+    }, 30000);
     
-    // Recargar cuando la ventana vuelve a tener foco (inmediato + forzado)
+    // Recargar cuando la ventana vuelve a tener foco
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        console.log('[MENSAJES] Ventana visible, recargando INMEDIATAMENTE con force...');
-        // Forzar recarga sin caché
-        loadQuestions(true, true);
-        loadMessages(true);
-        loadClaims(true);
+        console.log('[MENSAJES] Ventana visible, recargando...');
+        loadAll(true);
       }
     };
     
