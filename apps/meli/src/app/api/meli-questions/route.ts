@@ -10,15 +10,54 @@ const supabase = createClient(
 );
 
 // Caché en memoria para preguntas (DESHABILITADO para tiempo real absoluto)
-// Si necesitas reactivar el caché, cambia esto a true y ajusta CACHE_TTL
 const CACHE_ENABLED = false;
-const CACHE_TTL = 5 * 1000; // 5 segundos (mínimo si se reactiva)
+const CACHE_TTL = 5 * 1000;
 
 interface CacheEntry {
   data: any[];
   timestamp: number;
 }
 const questionsCache = new Map<string, CacheEntry>();
+
+// Función para esperar N ms
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+// Función para hacer fetch con retry y backoff para error 502
+async function fetchWithRetry(
+  url: string, 
+  options: RequestInit, 
+  maxRetries = 3,
+  accountName: string
+): Promise<Response | null> {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`[meli-questions] [${accountName}] Intento ${attempt}/${maxRetries}`);
+      
+      const res = await fetch(url, options);
+      
+      // Si es 502, esperar y reintentar
+      if (res.status === 502) {
+        const waitTime = attempt * 1000; // 1s, 2s, 3s
+        console.log(`[meli-questions] [${accountName}] ⚠️ Error 502, esperando ${waitTime}ms...`);
+        await sleep(waitTime);
+        continue;
+      }
+      
+      return res;
+      
+    } catch (err: any) {
+      console.error(`[meli-questions] [${accountName}] ❌ Error en intento ${attempt}:`, err.message);
+      
+      if (attempt < maxRetries) {
+        const waitTime = attempt * 1000;
+        await sleep(waitTime);
+      }
+    }
+  }
+  
+  console.error(`[meli-questions] [${accountName}] ❌ Todos los intentos fallaron`);
+  return null;
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -88,47 +127,65 @@ export async function GET(request: NextRequest) {
     console.log(`[meli-questions] Tiempo tokens: ${Date.now() - tokensStart}ms`);
 
     // Consultar preguntas de TODAS las cuentas con token válido en PARALELO
+    // PERO con un pequeño delay entre cada una para no saturar MeLi
     const questionsStart = Date.now();
-    const questionsPromises = validTokens
-      .map(async ({ account, headers }) => {
+    
+    const questionsResults: { account: any; questions: any[]; error: string | null }[] = [];
+    
+    // Procesar en grupos de 3 para no saturar la API de MeLi
+    const batchSize = 3;
+    for (let i = 0; i < validTokens.length; i += batchSize) {
+      const batch = validTokens.slice(i, i + batchSize);
+      
+      const batchPromises = batch.map(async ({ account, headers }) => {
         try {
-          // Solo un endpoint - el más confiable
           const url = `https://api.mercadolibre.com/questions/search?seller_id=${account.meli_user_id}&status=UNANSWERED&limit=50`;
           
-          console.log(`[meli-questions] [${account.meli_nickname}] Consultando: ${url}`);
+          const res = await fetchWithRetry(
+            url,
+            { headers: headers!, signal: AbortSignal.timeout(15000) },
+            3,
+            account.meli_nickname
+          );
           
-          const res = await fetch(url, { 
-            headers: headers!, 
-            signal: AbortSignal.timeout(10000) // 10s timeout
-          });
+          if (!res) {
+            return { account, questions: [], error: "Max retries exceeded" };
+          }
           
           if (!res.ok) {
             const errorText = await res.text().catch(() => "Unknown error");
             console.error(`[meli-questions] [${account.meli_nickname}] ❌ Error ${res.status}: ${errorText.substring(0, 200)}`);
-            return { account, questions: [], error: res.status };
+            return { account, questions: [], error: `${res.status}: ${errorText}` };
           }
           
           const data = await res.json();
           const questions = data.questions || [];
-          console.log(`[meli-questions] [${account.meli_nickname}] ✅ ${questions.length} preguntas encontradas`);
+          console.log(`[meli-questions] [${account.meli_nickname}] ✅ ${questions.length} preguntas`);
           return { account, questions, error: null };
         } catch (e: any) {
-          console.error(`[meli-questions] [${account.meli_nickname}] ❌ Error en fetch:`, e.message || e);
+          console.error(`[meli-questions] [${account.meli_nickname}] ❌ Error:`, e.message);
           return { account, questions: [], error: e.message };
         }
       });
-
-    const allResults = await Promise.all(questionsPromises);
+      
+      const batchResults = await Promise.all(batchPromises);
+      questionsResults.push(...batchResults);
+      
+      // Esperar 500ms entre batches para no saturar MeLi
+      if (i + batchSize < validTokens.length) {
+        await sleep(500);
+      }
+    }
     
     // Resumen de resultados
-    const totalQuestions = allResults.reduce((sum, r) => sum + r.questions.length, 0);
-    const errors = allResults.filter(r => r.error);
+    const totalQuestions = questionsResults.reduce((sum, r) => sum + r.questions.length, 0);
+    const errors = questionsResults.filter(r => r.error);
     
     console.log(`[meli-questions] Consultas completadas en ${Date.now() - questionsStart}ms`);
-    console.log(`[meli-questions] RESULTADO: ${totalQuestions} preguntas totales de ${allResults.length} cuentas consultadas`);
+    console.log(`[meli-questions] RESULTADO: ${totalQuestions} preguntas totales de ${questionsResults.length} cuentas consultadas`);
     
     if (errors.length > 0) {
-      console.error(`[meli-questions] ERRORES en ${errors.length} cuentas:`, errors.map(e => e.account.meli_nickname));
+      console.error(`[meli-questions] ERRORES en ${errors.length} cuentas:`, errors.map(e => `${e.account.meli_nickname}: ${e.error}`));
     }
     if (invalidTokens.length > 0) {
       console.error(`[meli-questions] SIN TOKEN:`, invalidTokens.map(t => t.account.meli_nickname));
@@ -138,7 +195,7 @@ export async function GET(request: NextRequest) {
     const allQuestions: any[] = [];
     const itemCache = new Map<string, { title: string; thumbnail: string }>();
 
-    for (const { account, questions } of allResults) {
+    for (const { account, questions } of questionsResults) {
       if (questions.length === 0) continue;
 
       // Obtener info de items únicos en paralelo
