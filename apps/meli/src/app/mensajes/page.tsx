@@ -803,7 +803,7 @@ function MensajesInner() {
       
       console.log(`[PREGUNTAS] Recibidas ${data.length} preguntas en ${Date.now() - startTime}ms`);
 
-      // Filtrar duplicados
+      // Filtrar duplicados nada más
       const seen = new Set<number>();
       const unique = data.filter(q => {
         const qId = Number(q.meli_question_id);
@@ -812,30 +812,13 @@ function MensajesInner() {
         return true;
       });
 
-      // Solo filtrar respondidas si tienen < 2 minutos (muy agresivo)
-      const now = Date.now();
-      const validAnsweredIds = Array.from(recentlyAnsweredRef.current)
-        .filter(id => {
-          const saved = localStorage.getItem("recentlyAnsweredQuestions");
-          if (saved) {
-            try {
-              const parsed = JSON.parse(saved);
-              const item = parsed.find((p: any) => p.id === id);
-              if (item) {
-                return (now - item.timestamp) < 2 * 60 * 1000; // Solo 2 min
-              }
-            } catch {}
-          }
-          return false;
-        })
-        .map(id => Number(id));
-        
-      const answeredSet = new Set(validAnsweredIds);
-      const filtered = unique.filter(q => !answeredSet.has(Number(q.meli_question_id)));
+      // SIN FILTRO DE RESPONDIDAS - mostrar TODAS las preguntas
+      // El filtro de respondidas recientes causa que las preguntas no aparezcan
+      // Las preguntas respondidas se filtran en el backend de MeLi (status=UNANSWERED)
       
-      console.log(`[PREGUNTAS] ${filtered.length} preguntas finales (${unique.length} únicas - ${validAnsweredIds.length} recientes)`);
+      console.log(`[PREGUNTAS] ${unique.length} preguntas finales (sin filtro de respondidas)`);
       
-      setQuestions(filtered);
+      setQuestions(unique);
       setLastSync(new Date());
     } catch (e) {
       console.error("[PREGUNTAS] Error:", e);
@@ -901,11 +884,11 @@ function MensajesInner() {
     // Carga inicial inmediata
     loadAll();
 
-    // Polling AGRESIVO para preguntas (cada 15 segundos) - SIEMPRE fuerza recarga
+    // Polling ULTRA-AGRESIVO para preguntas (cada 8 segundos) - SIEMPRE fuerza recarga
     const interval = setInterval(() => {
-      console.log('[MENSAJES] Polling automático (15s) - FORZANDO recarga...');
+      console.log('[MENSAJES] Polling automático (8s) - FORZANDO recarga...');
       loadQuestions(true, true); // sync=true, force=true
-    }, 15000);
+    }, 8000);
     
     // Recargar cuando la ventana vuelve a tener foco (inmediato + forzado)
     const handleVisibilityChange = () => {

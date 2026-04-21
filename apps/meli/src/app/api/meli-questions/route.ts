@@ -9,13 +9,16 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY || "placeholder-key"
 );
 
-// Caché en memoria para preguntas (10 segundos - más agresivo)
+// Caché en memoria para preguntas (DESHABILITADO para tiempo real absoluto)
+// Si necesitas reactivar el caché, cambia esto a true y ajusta CACHE_TTL
+const CACHE_ENABLED = false;
+const CACHE_TTL = 5 * 1000; // 5 segundos (mínimo si se reactiva)
+
 interface CacheEntry {
   data: any[];
   timestamp: number;
 }
 const questionsCache = new Map<string, CacheEntry>();
-const CACHE_TTL = 10 * 1000; // 10 segundos (más agresivo para tiempo real)
 
 export async function GET(request: NextRequest) {
   try {
@@ -34,8 +37,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json([], { status: 200 });
     }
 
-    // Verificar caché (solo si no se fuerza recarga)
-    if (!force) {
+    // Verificar caché (solo si está habilitado Y no se fuerza recarga)
+    if (CACHE_ENABLED && !force) {
       const cached = questionsCache.get(userId);
       if (cached && (Date.now() - cached.timestamp) < CACHE_TTL) {
         console.log(`[meli-questions] ✅ Usando caché para ${userId}`);
@@ -43,7 +46,9 @@ export async function GET(request: NextRequest) {
         response.headers.set('Cache-Control', 'no-store');
         return response;
       }
-    } else {
+    } else if (!CACHE_ENABLED) {
+      console.log(`[meli-questions] 🔄 Caché DESHABILITADO - Consultando MeLi directamente`);
+    } else if (force) {
       console.log(`[meli-questions] 🔄 Forzando recarga para ${userId}`);
     }
 
