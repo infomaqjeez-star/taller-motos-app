@@ -7,10 +7,11 @@ import {
   ArrowLeft, RefreshCw, MessageCircle, Send, Clock,
   CheckCircle2, AlertCircle, ChevronDown, ChevronUp,
   Search, Package, Settings, Plus, Trash2, Edit2, Check, X,
-  Users, ShoppingBag, Mail, Bell, UserCircle, AlertTriangle, Shield
+  Users, ShoppingBag, Mail, Bell, UserCircle, AlertTriangle, Shield, Volume2, VolumeX
 } from "lucide-react";
 import QuestionSuggestion from "@/components/QuestionSuggestion";
 import { supabase } from "@/lib/supabase";
+import { useRealtimeNotifications } from "@/hooks/useRealtimeNotifications";
 
 const DEFAULT_TEMPLATES = [
   "¡Hola! Sí, el producto está disponible. ¿Tenés alguna consulta adicional?",
@@ -760,6 +761,54 @@ function MensajesInner() {
   
   // Sincronizar el ref cuando cambia el estado
   useEffect(() => { recentlyAnsweredRef.current = recentlyAnswered; }, [recentlyAnswered]);
+
+  // Notificaciones en tiempo real desde MeLi (Webhooks + SSE)
+  const { notifications, connected: realtimeConnected } = useRealtimeNotifications();
+  
+  // Procesar notificaciones en tiempo real
+  useEffect(() => {
+    if (notifications.length === 0) return;
+    
+    const latestNotification = notifications[0];
+    console.log('[MENSAJES] Notificación en tiempo real recibida:', latestNotification);
+    
+    if (latestNotification.type === 'question') {
+      // Agregar la pregunta a la lista si no existe
+      const newQuestion = latestNotification.data;
+      setQuestions(prev => {
+        // Verificar si ya existe
+        const exists = prev.some(q => q.meli_question_id === newQuestion.id);
+        if (exists) return prev;
+        
+        // Agregar al inicio
+        const question: Question = {
+          id: `temp-${newQuestion.id}`,
+          meli_question_id: newQuestion.id,
+          meli_account_id: latestNotification.account_id,
+          item_id: newQuestion.item_id,
+          item_title: newQuestion.item_title || newQuestion.item_id,
+          item_thumbnail: newQuestion.item_thumbnail || '',
+          buyer_id: newQuestion.from?.id,
+          buyer_nickname: newQuestion.from?.nickname || 'Comprador',
+          question_text: newQuestion.text,
+          status: newQuestion.status,
+          date_created: newQuestion.date_created,
+          answer_text: null,
+          meli_accounts: { nickname: 'Cuenta MeLi' },
+        };
+        
+        // Mostrar notificación visual
+        if ('Notification' in window && Notification.permission === 'granted') {
+          new Notification('Nueva pregunta en MeLi', {
+            body: `${question.buyer_nickname}: ${question.question_text.substring(0, 100)}...`,
+            icon: '/icon.png',
+          });
+        }
+        
+        return [question, ...prev];
+      });
+    }
+  }, [notifications]);
   
   // Estados para mensajes
   const [messages, setMessages] = useState<Message[]>([]);

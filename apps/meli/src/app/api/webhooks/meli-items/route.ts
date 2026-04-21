@@ -111,7 +111,21 @@ async function processQuestion(resource: string, account: any) {
     if (error) {
       console.error("[meli-webhook] Error guardando notificación:", error);
     } else {
-      console.log(`[meli-webhook] ✅ Pregunta ${questionId} guardada para notificación`);
+      console.log(`[meli-webhook] ✅ Pregunta ${questionId} guardada y notificada en tiempo real`);
+      
+      // Notificar a través de Supabase Realtime (broadcast)
+      await supabase.channel(`notifications:${account.user_id}`)
+        .send({
+          type: "broadcast",
+          event: "notification",
+          payload: {
+            type: "question",
+            meli_id: questionId,
+            account_id: account.id,
+            data: questionData,
+            created_at: new Date().toISOString(),
+          },
+        });
     }
     
   } catch (err) {
