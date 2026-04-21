@@ -99,9 +99,20 @@ export async function GET(request: NextRequest) {
           const meliId = String(account.meli_user_id);
 
           // Llamadas iniciales en paralelo
-          const [ordRes, qRes, itemsRes, msgRes] = await Promise.allSettled([
+          // Consultar TODOS los estados de órdenes activas (igual que el dashboard)
+          const [ordPaidRes, ordConfirmedRes, ordProcessingRes, qRes, itemsRes, msgRes] = await Promise.allSettled([
             fetch(
               `https://api.mercadolibre.com/orders/search?seller=${meliId}&order.status=paid` +
+              `&order.date_created.from=${encodeURIComponent(fechaDesdeStr)}&sort=date_desc&limit=50`,
+              { headers, signal: AbortSignal.timeout(7000) }
+            ),
+            fetch(
+              `https://api.mercadolibre.com/orders/search?seller=${meliId}&order.status=confirmed` +
+              `&order.date_created.from=${encodeURIComponent(fechaDesdeStr)}&sort=date_desc&limit=50`,
+              { headers, signal: AbortSignal.timeout(7000) }
+            ),
+            fetch(
+              `https://api.mercadolibre.com/orders/search?seller=${meliId}&order.status=processing` +
               `&order.date_created.from=${encodeURIComponent(fechaDesdeStr)}&sort=date_desc&limit=50`,
               { headers, signal: AbortSignal.timeout(7000) }
             ),
@@ -126,15 +137,30 @@ export async function GET(request: NextRequest) {
             return null;
           };
 
-          const [ordData, qData, itemsData, msgData] = await Promise.all(
-            [ordRes, qRes, itemsRes, msgRes].map(safeJson)
+          const [ordPaidData, ordConfirmedData, ordProcessingData, qData, itemsData, msgData] = await Promise.all(
+            [ordPaidRes, ordConfirmedRes, ordProcessingRes, qRes, itemsRes, msgRes].map(safeJson)
           );
 
-          // Órdenes — primera página
-          let allOrders: any[] = ordData?.results || [];
-          const totalOrd: number = ordData?.paging?.total ?? allOrders.length;
+          // Combinar órdenes de todos los estados y eliminar duplicados
+          const allOrdersMap = new Map<string, any>();
+          
+          for (const order of (ordPaidData?.results || [])) {
+            allOrdersMap.set(order.id, order);
+          }
+          for (const order of (ordConfirmedData?.results || [])) {
+            allOrdersMap.set(order.id, order);
+          }
+          for (const order of (ordProcessingData?.results || [])) {
+            allOrdersMap.set(order.id, order);
+          }
+          
+          let allOrders = Array.from(allOrdersMap.values());
+          
+          console.log(`[meli-stats] [${account.meli_nickname}] Órdenes: paid=${ordPaidData?.results?.length || 0}, confirmed=${ordConfirmedData?.results?.length || 0}, processing=${ordProcessingData?.results?.length || 0}, únicas=${allOrders.length}`);
 
-          // Paginar hasta cap 500 (10 páginas de 50)
+          // Paginar hasta cap 500 (10 páginas de 50) - solo para paid
+          const totalOrd: number = ordPaidData?.paging?.total ?? allOrders.length;
+
           if (totalOrd > 50) {
             const totalPages = Math.min(Math.ceil(totalOrd / 50), 10);
             const pageResults = await Promise.allSettled(
@@ -148,9 +174,12 @@ export async function GET(request: NextRequest) {
             );
             for (const pr of pageResults) {
               if (pr.status === "fulfilled" && pr.value?.results) {
-                allOrders = allOrders.concat(pr.value.results);
+                for (const order of pr.value.results) {
+                  allOrdersMap.set(order.id, order);
+                }
               }
             }
+            allOrders = Array.from(allOrdersMap.values());
           }
 
           const facturacion = allOrders.reduce((s: number, o: any) => s + (o.total_amount || 0), 0);
