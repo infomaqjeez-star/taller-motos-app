@@ -785,41 +785,24 @@ function MensajesInner() {
   const loadQuestions = useCallback(async (sync = false) => {
     if (sync) setQuestionsSyncing(true); else setQuestionsLoading(true);
     setQuestionsError(null);
+    
+    const startTime = Date.now();
+    
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { setQuestionsError("No autenticado"); return; }
       
-      // Agregar retry logic
-      let retries = 3;
-      let data: Question[] = [];
-      let lastError: Error | null = null;
+      const res = await fetch(`/api/meli-questions?_t=${Date.now()}`, {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+        cache: 'no-store',
+      });
       
-      while (retries > 0) {
-        try {
-          const res = await fetch(`/api/meli-questions?_t=${Date.now()}`, {
-            headers: { Authorization: `Bearer ${session.access_token}` },
-            // Asegurar que no use caché
-            cache: 'no-store',
-          });
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
-          data = await res.json();
-          break; // Éxito, salir del loop
-        } catch (err) {
-          lastError = err as Error;
-          retries--;
-          if (retries > 0) {
-            console.log(`[PREGUNTAS] Reintentando... ${retries} intentos restantes`);
-            await new Promise(r => setTimeout(r, 1000)); // Esperar 1s antes de reintentar
-          }
-        }
-      }
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data: Question[] = await res.json();
       
-      if (retries === 0 && lastError) {
-        throw lastError;
-      }
-      
-      console.log(`[PREGUNTAS] Recibidas ${data.length} preguntas de la API`);
+      console.log(`[PREGUNTAS] Recibidas ${data.length} preguntas en ${Date.now() - startTime}ms`);
 
+      // Filtrar duplicados
       const seen = new Set<number>();
       const unique = data.filter(q => {
         const qId = Number(q.meli_question_id);
@@ -827,39 +810,38 @@ function MensajesInner() {
         seen.add(qId);
         return true;
       });
-      console.log(`[PREGUNTAS] ${unique.length} preguntas unicas despues de filtrar duplicados`);
 
-      // Filtrar preguntas ya respondidas (convertir a número para comparación)
-      // Solo filtrar si tienen menos de 30 minutos (evitar filtrar permanentemente)
+      // Solo filtrar respondidas si tienen < 5 minutos (más agresivo)
       const now = Date.now();
       const validAnsweredIds = Array.from(recentlyAnsweredRef.current)
         .filter(id => {
-          // Buscar en localStorage el timestamp
           const saved = localStorage.getItem("recentlyAnsweredQuestions");
           if (saved) {
             try {
               const parsed = JSON.parse(saved);
               const item = parsed.find((p: any) => p.id === id);
               if (item) {
-                return (now - item.timestamp) < 30 * 60 * 1000; // Solo si tiene < 30 min
+                return (now - item.timestamp) < 5 * 60 * 1000; // Solo 5 min
               }
             } catch {}
           }
-          return true; // Si no hay timestamp, asumir válido
+          return false;
         })
         .map(id => Number(id));
         
       const answeredSet = new Set(validAnsweredIds);
       const filtered = unique.filter(q => !answeredSet.has(Number(q.meli_question_id)));
-      console.log(`[PREGUNTAS] ${filtered.length} preguntas despues de filtrar respondidas recientes. Respondidas recientes: ${validAnsweredIds.length}`);
+      
+      console.log(`[PREGUNTAS] ${filtered.length} preguntas finales (${unique.length} únicas - ${validAnsweredIds.length} recientes)`);
       
       setQuestions(filtered);
       setLastSync(new Date());
     } catch (e) {
-      console.error("[PREGUNTAS] Error cargando:", e);
+      console.error("[PREGUNTAS] Error:", e);
       setQuestionsError((e as Error).message);
     } finally {
-      setQuestionsLoading(false); setQuestionsSyncing(false);
+      setQuestionsLoading(false); 
+      setQuestionsSyncing(false);
     }
   }, []);
 
