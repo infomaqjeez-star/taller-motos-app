@@ -66,43 +66,73 @@ export async function GET(request: NextRequest) {
     const tokensStart = Date.now();
     const tokenResults = await Promise.all(
       accounts.map(async (account) => {
-        const token = await getValidToken(account as LinkedMeliAccount);
-        return { account, token, headers: token ? { Authorization: `Bearer ${token}` } : null };
+        try {
+          const token = await getValidToken(account as LinkedMeliAccount);
+          if (!token) {
+            console.error(`[meli-questions] [${account.meli_nickname}] ❌ NO SE PUDO OBTENER TOKEN`);
+          } else {
+            console.log(`[meli-questions] [${account.meli_nickname}] ✅ Token válido obtenido`);
+          }
+          return { account, token, headers: token ? { Authorization: `Bearer ${token}` } : null };
+        } catch (err) {
+          console.error(`[meli-questions] [${account.meli_nickname}] ❌ Error obteniendo token:`, err);
+          return { account, token: null, headers: null };
+        }
       })
     );
-    console.log(`[meli-questions] Tokens obtenidos en ${Date.now() - tokensStart}ms`);
+    
+    const validTokens = tokenResults.filter(({ token }) => token);
+    const invalidTokens = tokenResults.filter(({ token }) => !token);
+    
+    console.log(`[meli-questions] Tokens: ${validTokens.length} válidos, ${invalidTokens.length} inválidos de ${accounts.length} cuentas`);
+    console.log(`[meli-questions] Tiempo tokens: ${Date.now() - tokensStart}ms`);
 
-    // Consultar preguntas de TODAS las cuentas en PARALELO
+    // Consultar preguntas de TODAS las cuentas con token válido en PARALELO
     const questionsStart = Date.now();
-    const questionsPromises = tokenResults
-      .filter(({ token }) => token)
+    const questionsPromises = validTokens
       .map(async ({ account, headers }) => {
         try {
           // Solo un endpoint - el más confiable
           const url = `https://api.mercadolibre.com/questions/search?seller_id=${account.meli_user_id}&status=UNANSWERED&limit=50`;
           
+          console.log(`[meli-questions] [${account.meli_nickname}] Consultando: ${url}`);
+          
           const res = await fetch(url, { 
             headers: headers!, 
-            signal: AbortSignal.timeout(8000) // Reducir timeout a 8s
+            signal: AbortSignal.timeout(10000) // 10s timeout
           });
           
           if (!res.ok) {
-            console.error(`[meli-questions] [${account.meli_nickname}] Error ${res.status}`);
-            return { account, questions: [] };
+            const errorText = await res.text().catch(() => "Unknown error");
+            console.error(`[meli-questions] [${account.meli_nickname}] ❌ Error ${res.status}: ${errorText.substring(0, 200)}`);
+            return { account, questions: [], error: res.status };
           }
           
           const data = await res.json();
           const questions = data.questions || [];
-          console.log(`[meli-questions] [${account.meli_nickname}] ${questions.length} preguntas`);
-          return { account, questions };
-        } catch (e) {
-          console.error(`[meli-questions] [${account.meli_nickname}] Error:`, e);
-          return { account, questions: [] };
+          console.log(`[meli-questions] [${account.meli_nickname}] ✅ ${questions.length} preguntas encontradas`);
+          return { account, questions, error: null };
+        } catch (e: any) {
+          console.error(`[meli-questions] [${account.meli_nickname}] ❌ Error en fetch:`, e.message || e);
+          return { account, questions: [], error: e.message };
         }
       });
 
     const allResults = await Promise.all(questionsPromises);
+    
+    // Resumen de resultados
+    const totalQuestions = allResults.reduce((sum, r) => sum + r.questions.length, 0);
+    const errors = allResults.filter(r => r.error);
+    
     console.log(`[meli-questions] Consultas completadas en ${Date.now() - questionsStart}ms`);
+    console.log(`[meli-questions] RESULTADO: ${totalQuestions} preguntas totales de ${allResults.length} cuentas consultadas`);
+    
+    if (errors.length > 0) {
+      console.error(`[meli-questions] ERRORES en ${errors.length} cuentas:`, errors.map(e => e.account.meli_nickname));
+    }
+    if (invalidTokens.length > 0) {
+      console.error(`[meli-questions] SIN TOKEN:`, invalidTokens.map(t => t.account.meli_nickname));
+    }
 
     // Procesar preguntas y obtener info de items en PARALELO
     const allQuestions: any[] = [];
