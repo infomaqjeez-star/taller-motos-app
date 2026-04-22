@@ -50,6 +50,7 @@ interface ShipmentInfo {
   status_label: string | null;
   meli_user_id: string;
   unit_price?: number | null;
+  tracking_number?: string | null;
 }
 
 interface LabelData {
