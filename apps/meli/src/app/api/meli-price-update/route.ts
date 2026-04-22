@@ -3,19 +3,31 @@ import { createClient } from "@supabase/supabase-js";
 
 export const dynamic = 'force-dynamic';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co",
-  process.env.SUPABASE_SERVICE_ROLE_KEY || "placeholder-key"
-);
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+const supabase = supabaseUrl && supabaseServiceKey
+  ? createClient(supabaseUrl, supabaseServiceKey)
+  : null;
+
+// Rate limiting: 500 requests por minuto por cuenta
+const RATE_LIMIT_DELAY = 120; // ms entre requests (aprox 500 por minuto)
 
 /**
  * POST /api/meli-price-update
  * 
  * Actualiza precios masivamente basado en palabra clave.
  * Soporta SSE (Server-Sent Events) para progreso en tiempo real.
+ * Procesa múltiples cuentas secuencialmente.
  */
 export async function POST(request: NextRequest) {
   try {
+    if (!supabase) {
+      return new Response(
+        JSON.stringify({ error: "Supabase no configurado" }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
     const body = await request.json();
     const { 
       keyword, 
@@ -27,7 +39,7 @@ export async function POST(request: NextRequest) {
       account_ids = []
     } = body;
 
-    if (!keyword || !adjustment_type || !adjustment_value) {
+    if (!keyword || !adjustment_type || adjustment_value === undefined) {
       return new Response(
         JSON.stringify({ error: "Faltan campos requeridos: keyword, adjustment_type, adjustment_value" }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
@@ -56,12 +68,12 @@ export async function POST(request: NextRequest) {
       .eq("is_active", true);
     
     if (account_ids.length > 0) {
-      query = query.in("id", account_ids);
+      query = query.in("meli_user_id", account_ids);
     }
     
-    const { data: accounts } = await query;
+    const { data: accounts, error: accountsError } = await query;
 
-    if (!accounts || accounts.length === 0) {
+    if (accountsError || !accounts || accounts.length === 0) {
       return new Response(
         JSON.stringify({ error: "No hay cuentas activas" }),
         { status: 404, headers: { 'Content-Type': 'application/json' } }
@@ -73,7 +85,11 @@ export async function POST(request: NextRequest) {
     const stream = new ReadableStream({
       async start(controller) {
         const send = (data: any) => {
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
+          try {
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
+          } catch (e) {
+            console.error("[meli-price-update] Error enviando SSE:", e);
+          }
         };
 
         const results: any[] = [];
@@ -86,8 +102,15 @@ export async function POST(request: NextRequest) {
         // Procesar cada cuenta
         for (const account of accounts) {
           if (!account.access_token_enc?.startsWith('APP_USR')) {
+            console.log(`[meli-price-update] Saltando cuenta ${account.meli_nickname}: token inválido`);
             continue;
           }
+
+          // Notificar inicio de cuenta
+          send({
+            type: "account_start",
+            account: account.meli_nickname
+          });
 
           try {
             // Buscar items por palabra clave
@@ -99,16 +122,33 @@ export async function POST(request: NextRequest) {
               }
             );
 
-            if (!searchRes.ok) continue;
+            if (!searchRes.ok) {
+              console.error(`[meli-price-update] Error buscando items para ${account.meli_nickname}:`, searchRes.status);
+              errors++;
+              continue;
+            }
 
             const searchData = await searchRes.json();
             const itemIds = searchData.results || [];
 
-            // Procesar cada item
-            for (const itemId of itemIds) {
+            // Notificar total de items
+            send({
+              type: "account_total",
+              account: account.meli_nickname,
+              total: itemIds.length
+            });
+
+            // Procesar cada item con delay para rate limiting
+            for (let i = 0; i < itemIds.length; i++) {
+              const itemId = itemIds[i];
               totalScanned++;
 
               try {
+                // Delay para rate limiting
+                if (i > 0) {
+                  await new Promise(resolve => setTimeout(resolve, RATE_LIMIT_DELAY));
+                }
+
                 // Obtener detalles del item
                 const itemRes = await fetch(
                   `https://api.mercadolibre.com/items/${itemId}`,
@@ -120,88 +160,117 @@ export async function POST(request: NextRequest) {
 
                 if (!itemRes.ok) {
                   errors++;
+                  send({
+                    type: "progress",
+                    current: i + 1,
+                    total: itemIds.length,
+                    item_id: itemId,
+                    title: "Error al obtener item",
+                    status: "error",
+                    account: account.meli_nickname,
+                    reason: `HTTP ${itemRes.status}`
+                  });
                   continue;
                 }
 
                 const item = await itemRes.json();
 
+                // Verificar si está en promoción
+                if (item.deal_ids && item.deal_ids.length > 0) {
+                  skipped++;
+                  send({
+                    type: "progress",
+                    current: i + 1,
+                    total: itemIds.length,
+                    item_id: itemId,
+                    title: item.title,
+                    status: "promo_blocked",
+                    account: account.meli_nickname,
+                    old_price: item.price,
+                    new_price: item.price,
+                    reason: "Item en promoción"
+                  });
+                  continue;
+                }
+
                 // Verificar palabras excluidas
                 if (exclude_words) {
-                  const excludeList = exclude_words.split(',').map((w: string) => w.trim().toLowerCase());
-                  const titleLower = item.title.toLowerCase();
-                  const hasExcludedWord = excludeList.some((word: string) => titleLower.includes(word));
-                  if (hasExcludedWord) {
-                    excluded++;
-                    send({
-                      type: "progress",
-                      current: totalScanned,
-                      total: itemIds.length,
-                      item_id: itemId,
-                      title: item.title,
-                      status: "excluded",
-                      account: account.meli_nickname,
-                      excluded_by: excludeList.find((word: string) => titleLower.includes(word))
-                    });
-                    continue;
+                  const excludeList = exclude_words.split(',').map((w: string) => w.trim().toLowerCase()).filter(Boolean);
+                  if (excludeList.length > 0) {
+                    const titleLower = item.title.toLowerCase();
+                    const hasExcludedWord = excludeList.some((word: string) => titleLower.includes(word));
+                    if (hasExcludedWord) {
+                      excluded++;
+                      send({
+                        type: "progress",
+                        current: i + 1,
+                        total: itemIds.length,
+                        item_id: itemId,
+                        title: item.title,
+                        status: "excluded",
+                        account: account.meli_nickname,
+                        excluded_by: excludeList.find((word: string) => titleLower.includes(word))
+                      });
+                      continue;
+                    }
                   }
                 }
 
                 // Calcular nuevo precio
                 const oldPrice = item.price;
                 let newPrice = oldPrice;
+                let shouldUpdate = true;
+                let skipReason = "";
 
-                if (adjustment_type === "percentage") {
-                  // Aumento porcentaje
-                  newPrice = oldPrice * (1 + adjustment_value / 100);
-                } else if (adjustment_type === "percentage_decrease") {
-                  // Descuento porcentaje
-                  newPrice = oldPrice * (1 - adjustment_value / 100);
-                } else if (adjustment_type === "fixed_add") {
-                  // Suma fija
-                  newPrice = oldPrice + adjustment_value;
-                } else if (adjustment_type === "fixed_subtract") {
-                  // Resta fija
-                  newPrice = oldPrice - adjustment_value;
-                } else if (adjustment_type === "fixed_floor") {
-                  // Precio piso - solo sube si está por debajo
-                  if (oldPrice < adjustment_value) {
-                    newPrice = adjustment_value;
-                  } else {
-                    skipped++;
-                    send({
-                      type: "progress",
-                      current: totalScanned,
-                      total: itemIds.length,
-                      item_id: itemId,
-                      title: item.title,
-                      status: "skipped",
-                      account: account.meli_nickname,
-                      old_price: oldPrice,
-                      new_price: oldPrice,
-                      reason: "Ya está por encima del piso"
-                    });
-                    continue;
-                  }
-                } else if (adjustment_type === "fixed_ceiling") {
-                  // Precio techo - solo baja si está por encima
-                  if (oldPrice > adjustment_value) {
-                    newPrice = adjustment_value;
-                  } else {
-                    skipped++;
-                    send({
-                      type: "progress",
-                      current: totalScanned,
-                      total: itemIds.length,
-                      item_id: itemId,
-                      title: item.title,
-                      status: "skipped",
-                      account: account.meli_nickname,
-                      old_price: oldPrice,
-                      new_price: oldPrice,
-                      reason: "Ya está por debajo del techo"
-                    });
-                    continue;
-                  }
+                switch (adjustment_type) {
+                  case "percentage":
+                    newPrice = oldPrice * (1 + adjustment_value / 100);
+                    break;
+                  case "percentage_decrease":
+                    newPrice = oldPrice * (1 - adjustment_value / 100);
+                    break;
+                  case "fixed_add":
+                    newPrice = oldPrice + adjustment_value;
+                    break;
+                  case "fixed_subtract":
+                    newPrice = oldPrice - adjustment_value;
+                    break;
+                  case "fixed_floor":
+                    if (oldPrice < adjustment_value) {
+                      newPrice = adjustment_value;
+                    } else {
+                      shouldUpdate = false;
+                      skipReason = "Ya está por encima del piso";
+                    }
+                    break;
+                  case "fixed_ceiling":
+                    if (oldPrice > adjustment_value) {
+                      newPrice = adjustment_value;
+                    } else {
+                      shouldUpdate = false;
+                      skipReason = "Ya está por debajo del techo";
+                    }
+                    break;
+                  default:
+                    shouldUpdate = false;
+                    skipReason = "Tipo de ajuste desconocido";
+                }
+
+                if (!shouldUpdate) {
+                  skipped++;
+                  send({
+                    type: "progress",
+                    current: i + 1,
+                    total: itemIds.length,
+                    item_id: itemId,
+                    title: item.title,
+                    status: "skipped",
+                    account: account.meli_nickname,
+                    old_price: oldPrice,
+                    new_price: oldPrice,
+                    reason: skipReason
+                  });
+                  continue;
                 }
 
                 newPrice = Math.round(newPrice);
@@ -211,7 +280,7 @@ export async function POST(request: NextRequest) {
                   updated++;
                   send({
                     type: "progress",
-                    current: totalScanned,
+                    current: i + 1,
                     total: itemIds.length,
                     item_id: itemId,
                     title: item.title,
@@ -239,9 +308,18 @@ export async function POST(request: NextRequest) {
 
                 if (updateRes.ok) {
                   updated++;
+                  results.push({
+                    account: account.meli_nickname,
+                    item_id: itemId,
+                    title: item.title,
+                    old_price: oldPrice,
+                    new_price: newPrice,
+                    status: "updated"
+                  });
+                  
                   send({
                     type: "progress",
-                    current: totalScanned,
+                    current: i + 1,
                     total: itemIds.length,
                     item_id: itemId,
                     title: item.title,
@@ -251,20 +329,33 @@ export async function POST(request: NextRequest) {
                     new_price: newPrice
                   });
                 } else {
+                  const errorData = await updateRes.json().catch(() => ({}));
                   errors++;
+                  results.push({
+                    account: account.meli_nickname,
+                    item_id: itemId,
+                    title: item.title,
+                    old_price: oldPrice,
+                    new_price: oldPrice,
+                    status: "error",
+                    reason: errorData.message || `HTTP ${updateRes.status}`
+                  });
+                  
                   send({
                     type: "progress",
-                    current: totalScanned,
+                    current: i + 1,
                     total: itemIds.length,
                     item_id: itemId,
                     title: item.title,
                     status: "error",
-                    account: account.meli_nickname
+                    account: account.meli_nickname,
+                    reason: errorData.message || `HTTP ${updateRes.status}`
                   });
                 }
 
               } catch (e) {
                 errors++;
+                console.error(`[meli-price-update] Error procesando item ${itemId}:`, e);
               }
             }
 
