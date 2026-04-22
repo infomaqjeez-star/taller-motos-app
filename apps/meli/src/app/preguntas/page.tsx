@@ -80,6 +80,13 @@ export default function PreguntasPage() {
   const [answering, setAnswering] = useState<number | null>(null);
   const [answerText, setAnswerText] = useState("");
 
+  // Debug logs
+  useEffect(() => {
+    console.log("[Preguntas] accounts:", accounts);
+    console.log("[Preguntas] accountsLoading:", accountsLoading);
+    console.log("[Preguntas] accounts.length:", accounts?.length);
+  }, [accounts, accountsLoading]);
+
   // ============ CARGA DE PREGUNTAS ============
   const loadAllQuestions = useCallback(async () => {
     if (!accounts.length) return;
@@ -268,6 +275,26 @@ export default function PreguntasPage() {
           {loading ? "Sync..." : "Actualizar"}
         </button>
       </div>
+
+      {/* Error de cuentas */}
+      {!accountsLoading && accounts.length === 0 && (
+        <div className="max-w-6xl mx-auto px-4 pt-4">
+          <div className="rounded-2xl p-6 text-center" style={{ background: "#ef444418", border: "1px solid #ef444440" }}>
+            <AlertCircle className="w-10 h-10 mx-auto mb-2" style={{ color: "#ef4444" }} />
+            <p className="text-white font-bold mb-1">No hay cuentas de Mercado Libre conectadas</p>
+            <p className="text-sm" style={{ color: "#6B7280" }}>
+              Conectá al menos una cuenta desde el Dashboard para ver las preguntas.
+            </p>
+            <Link 
+              href="/"
+              className="inline-block mt-3 px-4 py-2 rounded-xl text-sm font-bold text-black"
+              style={{ background: "#FFE600" }}
+            >
+              Ir al Dashboard
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* Estadísticas */}
       <div className="max-w-6xl mx-auto px-4 pt-4">
