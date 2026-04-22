@@ -9,10 +9,11 @@ import {
 } from "lucide-react";
 import { classifyFlexZone, ZONE_CFG } from "@/lib/zone-calc";
 import { ZoneIndicator } from "@/components/ZoneIndicator";
+import { LabelHistory } from "@/components/LabelHistory";
 import { supabase, getAuthHeaders } from "@/lib/supabase";
 import { getNowBA, getTodayStringBA } from "@/lib/date-utils";
 
-type StatusTab = "pending" | "printed" | "in_transit" | "returns";
+type StatusTab = "pending" | "printed" | "in_transit" | "returns" | "history";
 type LogisticType = "todas" | "flex" | "correo" | "turbo" | "full";
 type TimeFilter = "all" | "today" | "upcoming";
 type ZoneFilter = "all" | "cercana" | "media" | "lejana" | "desconocida";
@@ -1033,12 +1034,13 @@ function EtiquetasInner() {
           <>
             {/* Pestañas de Estado */}
             <div className="flex gap-2 mb-4 flex-wrap">
-              {(["pending", "printed", "in_transit", "returns"] as StatusTab[]).map(tab => {
+              {(["pending", "printed", "in_transit", "returns", "history"] as StatusTab[]).map(tab => {
                 const counts = {
                   pending:    (data?.shipments ?? []).length,
                   printed:    (data?.printed ?? []).length,
                   in_transit: (data?.in_transit ?? []).length,
                   returns:    (data?.returns ?? []).length,
+                  history:    0, // El historial tiene su propio contador
                 };
                 const isActive = statusTab === tab;
                 const tabLabels: Record<StatusTab, string> = {
@@ -1046,6 +1048,7 @@ function EtiquetasInner() {
                   printed: "✅ Impresas",
                   in_transit: "🚚 En Tránsito",
                   returns: "↩️ Devoluciones",
+                  history: "📜 Historial",
                 };
                 return (
                   <button
@@ -1059,16 +1062,18 @@ function EtiquetasInner() {
                     }
                   >
                     {tabLabels[tab]}
-                    <span
-                      className="text-[10px] font-black px-1.5 py-0.5 rounded-full min-w-[20px] text-center"
-                      style={
-                        isActive
-                          ? { background: "rgba(0,0,0,0.2)" }
-                          : { background: "#FFE60025", color: "#FFE600" }
-                      }
-                    >
-                      {counts[tab]}
-                    </span>
+                    {tab !== "history" && (
+                      <span
+                        className="text-[10px] font-black px-1.5 py-0.5 rounded-full min-w-[20px] text-center"
+                        style={
+                          isActive
+                            ? { background: "rgba(0,0,0,0.2)" }
+                            : { background: "#FFE60025", color: "#FFE600" }
+                        }
+                      >
+                        {counts[tab]}
+                      </span>
+                    )}
                   </button>
                 );
               })}
@@ -1287,7 +1292,9 @@ function EtiquetasInner() {
             {/* Botón Imprimir Seleccionadas (versión antigua - removida) */}
 
             {/* Lista de Etiquetas */}
-            {filtered.length === 0 ? (
+            {statusTab === "history" ? (
+              <LabelHistory />
+            ) : filtered.length === 0 ? (
               <div
                 className="rounded-2xl p-10 text-center flex flex-col items-center justify-center gap-2"
                 style={{ background: "#1A1A1A", border: "1px solid rgba(255,255,255,0.06)" }}
