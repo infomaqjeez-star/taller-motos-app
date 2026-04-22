@@ -44,6 +44,22 @@ export default function QuestionAlertGlobal() {
   const alertedIdsRef = useRef<Set<number>>(new Set());
   const lastPollRef = useRef<Date | null>(null);
   const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const alertModeRef = useRef(alertMode);
+  const playAlertSoundRef = useRef(playAlertSound);
+  const showBrowserNotificationRef = useRef(showBrowserNotification);
+
+  // Actualizar refs cuando cambian las dependencias
+  useEffect(() => {
+    alertModeRef.current = alertMode;
+  }, [alertMode]);
+
+  useEffect(() => {
+    playAlertSoundRef.current = playAlertSound;
+  }, [playAlertSound]);
+
+  useEffect(() => {
+    showBrowserNotificationRef.current = showBrowserNotification;
+  }, [showBrowserNotification]);
 
   const hasRealtimeSupport = hasValidSupabaseConfig();
 
@@ -120,7 +136,7 @@ export default function QuestionAlertGlobal() {
     } catch (error) {
       console.error("❌ Error en playAlertSound:", error);
     }
-  }, []);
+  }, []); // Sin dependencias - usa enabledRef
 
   // Función para mostrar notificación del navegador
   const showBrowserNotification = useCallback((title: string, body: string) => {
@@ -206,16 +222,16 @@ export default function QuestionAlertGlobal() {
         
         // Reproducir sonido si está habilitado
         if (enabledRef.current) {
-          playAlertSound(alertMode);
+          playAlertSoundRef.current(alertModeRef.current);
         }
         
         // Mostrar toast
         const toastMessage = `${newQuestions} pregunta${newQuestions > 1 ? "s" : ""} nueva${newQuestions > 1 ? "s" : ""} de ${newAccounts.join(", ")}`;
         setToast(toastMessage);
-        setTimeout(() => setToast(null), ALERT_MODES[alertMode].duration);
+        setTimeout(() => setToast(null), ALERT_MODES[alertModeRef.current].duration);
         
         // Notificación del navegador
-        showBrowserNotification(
+        showBrowserNotificationRef.current(
           "¡Nueva pregunta en Mercado Libre!",
           `${newQuestions} pregunta${newQuestions > 1 ? "s" : ""} nueva${newQuestions > 1 ? "s" : ""} de ${newAccounts.join(", ")}`
         );
@@ -225,7 +241,8 @@ export default function QuestionAlertGlobal() {
     } catch (error) {
       console.error("[POLL] Error:", error);
     }
-  }, [playAlertSound, alertMode, showBrowserNotification]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Sin dependencias - usa refs para valores cambiantes
 
   // Configurar polling cuando se inicializa
   useEffect(() => {
@@ -247,7 +264,8 @@ export default function QuestionAlertGlobal() {
       }
       console.log("[QuestionAlertGlobal] Polling detenido");
     };
-  }, [isInitialized, pollQuestions]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isInitialized]); // Solo iniciar cuando isInitialized cambia, no cuando pollQuestions cambia
 
   const handleEnable = () => {
     if (typeof Notification !== "undefined" && Notification.permission !== "denied") {

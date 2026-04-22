@@ -30,6 +30,12 @@ export function useNotificationStream(
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isCleaningUp = useRef(false);
   const reconnectAttempts = useRef(0);
+  const onNotificationRef = useRef(onNotification);
+
+  // Actualizar el ref cuando cambia onNotification
+  useEffect(() => {
+    onNotificationRef.current = onNotification;
+  }, [onNotification]);
 
   const connect = useCallback(async () => {
     if (!enabled || isCleaningUp.current) return;
@@ -58,7 +64,7 @@ export function useNotificationStream(
         try {
           const customEvent = event as MessageEvent;
           const notification = JSON.parse(customEvent.data) as MeliNotification;
-          onNotification(notification);
+          onNotificationRef.current(notification);
           console.log("[SSE] 🔔 Notificación recibida:", notification);
         } catch (parseError) {
           console.error("[SSE] ❌ Error parseando notificación:", parseError);
@@ -105,7 +111,7 @@ export function useNotificationStream(
         reconnectTimeoutRef.current = setTimeout(connect, 5000);
       }
     }
-  }, [enabled, onNotification]);
+  }, [enabled]);
 
   useEffect(() => {
     if (!enabled) {
@@ -143,7 +149,8 @@ export function useNotificationStream(
 
       setConnected(false);
     };
-  }, [enabled, connect]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enabled]); // Solo reconectar cuando cambia enabled, no cuando cambia connect
 
   return {
     connected,

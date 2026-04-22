@@ -765,11 +765,18 @@ function MensajesInner() {
   // Notificaciones en tiempo real desde MeLi (Webhooks + SSE)
   const { notifications, connected: realtimeConnected } = useRealtimeNotifications();
   
-  // Procesar notificaciones en tiempo real
+  // Procesar notificaciones en tiempo real - SOLO UNA VEZ por notificación
+  const processedNotificationIds = useRef<Set<string>>(new Set());
+  
   useEffect(() => {
     if (notifications.length === 0) return;
     
     const latestNotification = notifications[0];
+    
+    // Evitar procesar la misma notificación múltiples veces
+    if (processedNotificationIds.current.has(latestNotification.id)) return;
+    processedNotificationIds.current.add(latestNotification.id);
+    
     console.log('[MENSAJES] Notificación en tiempo real recibida:', latestNotification);
     
     if (latestNotification.type === 'question') {
@@ -808,6 +815,8 @@ function MensajesInner() {
         return [question, ...prev];
       });
     }
+    // Solo dependemos de notifications, no de setQuestions
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [notifications]);
   
   // Estados para mensajes
