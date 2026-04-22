@@ -53,14 +53,6 @@ export default function QuestionAlertGlobal() {
     alertModeRef.current = alertMode;
   }, [alertMode]);
 
-  useEffect(() => {
-    playAlertSoundRef.current = playAlertSound;
-  }, [playAlertSound]);
-
-  useEffect(() => {
-    showBrowserNotificationRef.current = showBrowserNotification;
-  }, [showBrowserNotification]);
-
   const hasRealtimeSupport = hasValidSupabaseConfig();
 
   // Restore persisted preference on mount
@@ -112,6 +104,9 @@ export default function QuestionAlertGlobal() {
 
   // Función para reproducir sonido de alerta usando PRELOAD
   const playAlertSound = useCallback((mode: AlertMode) => {
+    // Actualizar la ref para que pollQuestions tenga acceso a la última versión
+    playAlertSoundRef.current = playAlertSound;
+    
     try {
       if (!enabledRef.current) return; // Solo sonar si está habilitado
 
@@ -140,6 +135,9 @@ export default function QuestionAlertGlobal() {
 
   // Función para mostrar notificación del navegador
   const showBrowserNotification = useCallback((title: string, body: string) => {
+    // Actualizar la ref para que pollQuestions tenga acceso a la última versión
+    showBrowserNotificationRef.current = showBrowserNotification;
+    
     if (typeof Notification !== "undefined" && Notification.permission === "granted" && enabledRef.current) {
       new Notification(title, {
         body,
