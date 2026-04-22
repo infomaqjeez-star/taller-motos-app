@@ -13,6 +13,45 @@ const supabase = supabaseUrl && supabaseServiceKey
 // Forzar renderizado dinámico
 export const dynamic = 'force-dynamic';
 
+// Función para esperar N ms
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+// Función para hacer fetch con retry y backoff
+async function fetchWithRetry(
+  url: string, 
+  options: RequestInit, 
+  maxRetries = 3,
+  accountName: string
+): Promise<Response | null> {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`[meli-questions-unified] [${accountName}] Intento ${attempt}/${maxRetries}`);
+      
+      const res = await fetch(url, options);
+      
+      // Si es 502, 503, o 429, esperar y reintentar
+      if (res.status === 502 || res.status === 503 || res.status === 429) {
+        const waitTime = attempt * 1000;
+        console.log(`[meli-questions-unified] [${accountName}] ⚠️ Error ${res.status}, esperando ${waitTime}ms...`);
+        await sleep(waitTime);
+        continue;
+      }
+      
+      return res;
+    } catch (err: any) {
+      console.error(`[meli-questions-unified] [${accountName}] ❌ Error en intento ${attempt}:`, err.message);
+      
+      if (attempt < maxRetries) {
+        const waitTime = attempt * 1000;
+        await sleep(waitTime);
+      }
+    }
+  }
+  
+  console.error(`[meli-questions-unified] [${accountName}] ❌ Todos los intentos fallaron`);
+  return null;
+}
+
 /**
  * GET /api/meli-questions-unified
  * 
@@ -75,14 +114,28 @@ export async function GET(request: NextRequest) {
             };
           }
 
-          // Llamar a API de MeLi - traer todas las preguntas (sin filtro de estado)
-          const response = await fetch(
+          // Llamar a API de MeLi con retry
+          const response = await fetchWithRetry(
             `https://api.mercadolibre.com/questions/search?seller_id=${account.meli_user_id}&api_version=4&limit=100`,
             {
               headers: { Authorization: `Bearer ${token}` },
               next: { revalidate: 0 },
-            }
+            },
+            3,
+            account.meli_nickname
           );
+
+          if (!response) {
+            console.error(`[meli-questions] ❌ Todos los intentos fallaron para ${account.meli_nickname}`);
+            return {
+              accountId: account.id,
+              nickname: account.meli_nickname,
+              sellerId: account.meli_user_id,
+              questions: [],
+              total: 0,
+              error: "max_retries_exceeded",
+            };
+          }
 
           if (!response.ok) {
             console.error(`[meli-questions] ❌ Error API para ${account.meli_nickname}:`, response.status);
