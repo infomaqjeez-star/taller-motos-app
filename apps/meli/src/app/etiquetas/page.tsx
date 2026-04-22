@@ -704,6 +704,11 @@ function EtiquetasInner() {
   const handlePrinted = async (shipmentId: number) => {
     setPrinting(true);
     try {
+      // Encontrar el shipment en los datos
+      const shipment = data?.shipments.find(s => s.shipment_id === shipmentId) ||
+                      data?.printed?.find(s => s.shipment_id === shipmentId) ||
+                      data?.in_transit?.find(s => s.shipment_id === shipmentId);
+
       // Marcar como impresa en Supabase
       const authHeaders = await getAuthHeaders();
       const res = await fetch("/api/meli-labels", {
@@ -713,6 +718,30 @@ function EtiquetasInner() {
       });
 
       if (!res.ok) throw new Error("Failed to mark as printed");
+
+      // Guardar en historial de etiquetas
+      if (shipment) {
+        try {
+          await fetch("/api/label-history", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", ...authHeaders },
+            body: JSON.stringify({
+              shipment_id: shipment.shipment_id,
+              order_id: shipment.order_id,
+              tracking_number: shipment.tracking_number || null,
+              account_nickname: shipment.account,
+              buyer_name: shipment.buyer,
+              buyer_nickname: shipment.buyer_nickname,
+              item_title: shipment.title,
+              item_thumbnail: shipment.thumbnail,
+              total_amount: shipment.total_price,
+              shipping_cost: shipment.shipping_cost,
+            }),
+          });
+        } catch (e) {
+          console.error("Error saving to label history:", e);
+        }
+      }
 
       // Actualizar estado local
       setData(prev => prev ? {
