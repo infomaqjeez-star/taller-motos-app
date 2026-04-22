@@ -98,12 +98,30 @@ export async function GET(request: NextRequest) {
 
           const data = await response.json();
 
+          // Obtener tiempo de respuesta
+          let responseTime = null;
+          try {
+            const rtResponse = await fetch(
+              `https://api.mercadolibre.com/users/${account.meli_user_id}/questions/response_time`,
+              {
+                headers: { Authorization: `Bearer ${token}` },
+                next: { revalidate: 0 },
+              }
+            );
+            if (rtResponse.ok) {
+              responseTime = await rtResponse.json();
+            }
+          } catch (e) {
+            console.warn(`[meli-questions] ⚠️ No se pudo obtener tiempo de respuesta para ${account.meli_nickname}`);
+          }
+
           return {
             accountId: account.id,
             nickname: account.meli_nickname,
             sellerId: account.meli_user_id,
             questions: data.questions || [],
             total: data.total || data.paging?.total || 0,
+            responseTime,
           };
         } catch (error) {
           console.error(`[meli-questions] ❌ Error para ${account.meli_nickname}:`, error);

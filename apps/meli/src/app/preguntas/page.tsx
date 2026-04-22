@@ -136,17 +136,7 @@ export default function PreguntasPage() {
         
         unified.push(...accountQuestions);
         
-        // Obtener tiempo de respuesta para estadísticas
-        let responseTime: MeliResponseTime | null = null;
-        try {
-          responseTime = await questionsService.getResponseTime(
-            result.accountId,
-            result.sellerId
-          );
-        } catch (e) {
-          console.warn(`No se pudo obtener tiempo de respuesta para ${result.nickname}`);
-        }
-        
+        // Usar tiempo de respuesta del servidor (ya viene en el endpoint)
         stats.push({
           accountId: result.accountId,
           nickname: result.nickname,
@@ -154,7 +144,7 @@ export default function PreguntasPage() {
           unanswered: result.questions.filter(
             (q: any) => q.status === QUESTION_STATUSES.UNANSWERED
           ).length,
-          responseTime,
+          responseTime: result.responseTime,
         });
       }
       
