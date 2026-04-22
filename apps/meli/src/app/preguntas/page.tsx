@@ -21,6 +21,7 @@ import {
 import { useMeliAccounts } from "@/components/auth/MeliAccountsProvider";
 import { questionsService } from "@/services/meli";
 import { QUESTION_STATUSES, MELI_STATUS_COLORS } from "@/lib/meli/constants";
+import { supabase } from "@/lib/supabase";
 import type { MeliQuestion, MeliResponseTime } from "@/types/meli";
 
 // ============ TIPOS ============
