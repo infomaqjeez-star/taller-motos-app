@@ -155,11 +155,18 @@ export default function PreguntasPage() {
 
   // Cargar al inicio y cada 60 segundos
   useEffect(() => {
-    loadAllQuestions();
+    if (!accountsLoading && accounts.length > 0) {
+      loadAllQuestions();
+    }
+  }, [accounts, accountsLoading, loadAllQuestions]);
+  
+  // Auto-refresh cada 60 segundos
+  useEffect(() => {
+    if (!accounts.length) return;
     
     const interval = setInterval(loadAllQuestions, 60000);
     return () => clearInterval(interval);
-  }, [loadAllQuestions]);
+  }, [accounts.length, loadAllQuestions]);
 
   // ============ FILTROS ============
   const filteredQuestions = useMemo(() => {
