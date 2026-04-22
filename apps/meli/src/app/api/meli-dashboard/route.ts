@@ -211,19 +211,36 @@ export async function GET(request: NextRequest) {
 
           // Reputación
           const rep = userData?.seller_reputation ?? {};
+          
+          // Log detallado para debugging
+          console.log(`[meli-dashboard] 📊 Datos de reputación para ${account.meli_nickname}:`, {
+            level_id: rep.level_id,
+            power_seller_status: rep.power_seller_status,
+            transactions: rep.transactions,
+            metrics: rep.metrics,
+            raw_metrics_keys: rep.metrics ? Object.keys(rep.metrics) : 'no metrics',
+          });
+          
           const reputation: Reputation = {
             level_id:               rep.level_id ?? null,
             power_seller_status:    rep.power_seller_status ?? null,
             transactions_total:     rep.transactions?.total ?? 0,
             transactions_completed: rep.transactions?.completed ?? 0,
-            ratings_positive:       rep.metrics?.sales?.fulfilled ?? 0,
-            ratings_negative:       rep.metrics?.claims?.rate ?? 0,
-            ratings_neutral:        0,
-            delayed_handling_time:  rep.metrics?.delayed_handling_time?.rate ?? 0,
+            ratings_positive:       rep.metrics?.sales?.fulfilled ?? rep.metrics?.ratings?.positive ?? 0,
+            ratings_negative:       rep.metrics?.sales?.canceled ?? rep.metrics?.ratings?.negative ?? 0,
+            ratings_neutral:        rep.metrics?.ratings?.neutral ?? 0,
+            delayed_handling_time:  rep.metrics?.delayed_handling_time?.rate ?? rep.metrics?.handling_time?.delayed ?? 0,
             claims:                 rep.metrics?.claims?.rate ?? 0,
             cancellations:          rep.metrics?.cancellations?.rate ?? 0,
             immediate_payment:      false,
           };
+          
+          // Log del resultado final
+          console.log(`[meli-dashboard] ✅ Reputación procesada para ${account.meli_nickname}:`, {
+            delayed_handling_time: reputation.delayed_handling_time,
+            claims: reputation.claims,
+            cancellations: reputation.cancellations,
+          });
 
           // Contadores
           const unansweredQuestions = questionsData?.total ?? questionsData?.paging?.total ?? 0;
