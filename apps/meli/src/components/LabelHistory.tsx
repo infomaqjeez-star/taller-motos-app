@@ -6,7 +6,6 @@ import {
   Printer, Download, Search, Calendar, Package,
   ChevronLeft, ChevronRight, History, ExternalLink
 } from "lucide-react";
-import Image from "next/image";
 
 interface LabelHistoryItem {
   id: string;
@@ -47,7 +46,7 @@ export function LabelHistory({ accountFilter }: LabelHistoryProps) {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session?.access_token) {
-        throw new Error("No hay sesión activa");
+        throw new Error("No hay sesion activa");
       }
 
       const params = new URLSearchParams({
@@ -88,12 +87,10 @@ export function LabelHistory({ accountFilter }: LabelHistoryProps) {
   }, [loadHistory]);
 
   const handleReprint = async (item: LabelHistoryItem) => {
-    // TODO: Implementar reimpresión
     console.log("Reimprimir:", item.shipment_id);
   };
 
   const handleDownload = async (item: LabelHistoryItem) => {
-    // TODO: Implementar descarga
     console.log("Descargar:", item.shipment_id);
   };
 
@@ -121,7 +118,6 @@ export function LabelHistory({ accountFilter }: LabelHistoryProps) {
 
   return (
     <div className="space-y-4">
-      {/* Header con búsqueda */}
       <div className="flex flex-wrap gap-3 items-center justify-between p-4 rounded-2xl" 
         style={{ background: "#1F1F1F", border: "1px solid rgba(255,255,255,0.07)" }}
       >
@@ -136,7 +132,6 @@ export function LabelHistory({ accountFilter }: LabelHistoryProps) {
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Búsqueda */}
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
             <input
@@ -149,7 +144,6 @@ export function LabelHistory({ accountFilter }: LabelHistoryProps) {
             />
           </div>
 
-          {/* Seleccionar todo */}
           {history.length > 0 && (
             <button
               onClick={selectAll}
@@ -162,7 +156,6 @@ export function LabelHistory({ accountFilter }: LabelHistoryProps) {
         </div>
       </div>
 
-      {/* Acciones batch */}
       {selectedItems.size > 0 && (
         <div className="flex items-center gap-2 p-3 rounded-xl" 
           style={{ background: "#FFE60018", border: "1px solid #FFE60044" }}
@@ -186,7 +179,6 @@ export function LabelHistory({ accountFilter }: LabelHistoryProps) {
         </div>
       )}
 
-      {/* Lista */}
       {loading ? (
         <div className="space-y-3">
           {[1, 2, 3].map(i => (
@@ -208,7 +200,7 @@ export function LabelHistory({ accountFilter }: LabelHistoryProps) {
           <Package className="w-12 h-12 mx-auto mb-2" style={{ color: "#6B7280" }} />
           <p className="text-white font-bold">No hay etiquetas en el historial</p>
           <p className="text-sm mt-1" style={{ color: "#6B7280" }}>
-            Las etiquetas impresas aparecerán aquí
+            Las etiquetas impresas apareceran aqui
           </p>
         </div>
       ) : (
@@ -216,15 +208,13 @@ export function LabelHistory({ accountFilter }: LabelHistoryProps) {
           {history.map(item => (
             <div 
               key={item.id}
-              className={`p-4 rounded-2xl transition-all ${selectedItems.has(item.id) ? 'ring-2' : ''}`}
+              className="p-4 rounded-2xl"
               style={{ 
                 background: "#1F1F1F", 
-                border: "1px solid rgba(255,255,255,0.07)",
-                ringColor: selectedItems.has(item.id) ? "#FFE600" : undefined
+                border: "1px solid rgba(255,255,255,0.07)"
               }}
             >
               <div className="flex items-start gap-3">
-                {/* Checkbox */}
                 <input
                   type="checkbox"
                   checked={selectedItems.has(item.id)}
@@ -232,7 +222,6 @@ export function LabelHistory({ accountFilter }: LabelHistoryProps) {
                   className="mt-1 w-4 h-4 rounded"
                 />
 
-                {/* Imagen */}
                 {item.item_thumbnail ? (
                   <img
                     src={item.item_thumbnail}
@@ -245,7 +234,6 @@ export function LabelHistory({ accountFilter }: LabelHistoryProps) {
                   </div>
                 )}
 
-                {/* Info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
@@ -284,9 +272,7 @@ export function LabelHistory({ accountFilter }: LabelHistoryProps) {
                   </div>
                 </div>
 
-                {/* Acciones */}
-                <div className="flex flex-col gap-2"
-003e
+                <div className="flex flex-col gap-2">
                   <button
                     onClick={() => handleReprint(item)}
                     className="p-2 rounded-lg text-white"
@@ -310,7 +296,6 @@ export function LabelHistory({ accountFilter }: LabelHistoryProps) {
         </div>
       )}
 
-      {/* Paginación */}
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-2 pt-4">
           <button
@@ -323,7 +308,7 @@ export function LabelHistory({ accountFilter }: LabelHistoryProps) {
           </button>
           
           <span className="text-sm text-white">
-            Página {page + 1} de {totalPages}
+            Pagina {page + 1} de {totalPages}
           </span>
           
           <button
