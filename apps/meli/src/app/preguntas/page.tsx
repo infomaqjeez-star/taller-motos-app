@@ -104,7 +104,7 @@ export default function PreguntasPage() {
       }
       
       // Llamar al endpoint del servidor (evita CORS)
-      const response = await fetch("/api/meli-questions-unified", {
+      const response = await fetch(`/api/meli-questions-unified?_t=${Date.now()}`, {
         headers: {
           Authorization: `Bearer ${session.access_token}`,
         },
@@ -115,6 +115,13 @@ export default function PreguntasPage() {
       }
       
       const data = await response.json();
+      
+      console.log("[Preguntas] Datos recibidos del endpoint:", {
+        totalQuestions: data.questions?.reduce((acc: number, q: any) => acc + (q.questions?.length || 0), 0),
+        accounts: data.questions?.length,
+        firstAccount: data.questions?.[0]?.nickname,
+        firstAccountQuestions: data.questions?.[0]?.questions?.length,
+      });
       
       if (data.error) {
         throw new Error(data.error);
