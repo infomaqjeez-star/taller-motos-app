@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { useMeliAccounts } from "@/components/auth/MeliAccountsProvider";
 import { useQuestionsUnified, useAnswerQuestion } from "@/hooks/useQuestions";
+import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import type { MeliQuestion, MeliResponseTime } from "@/types/meli";
 
