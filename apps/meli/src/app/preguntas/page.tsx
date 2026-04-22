@@ -649,6 +649,30 @@ function QuestionCard({
               </span>
             </div>
             
+            {/* Info del producto */}
+            {(question as any).item_info && (
+              <div className="flex items-center gap-2 mb-2 p-2 rounded-lg" style={{ background: "#121212" }}>
+                <img 
+                  src={(question as any).item_info.thumbnail} 
+                  alt={(question as any).item_info.title}
+                  className="w-12 h-12 rounded-lg object-cover"
+                />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-white truncate">{(question as any).item_info.title}</p>
+                  <a 
+                    href={(question as any).item_info.permalink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[10px]" 
+                    style={{ color: "#00E5FF" }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    Ver publicación →
+                  </a>
+                </div>
+              </div>
+            )}
+            
             {/* Pregunta */}
             <p className="text-sm text-white font-medium leading-snug">
               {question.text}

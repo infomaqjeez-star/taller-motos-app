@@ -98,6 +98,46 @@ export async function GET(request: NextRequest) {
 
           const data = await response.json();
 
+          // Obtener información de los ítems (imágenes, títulos) para cada pregunta
+          const itemIds = [...new Set((data.questions || []).map((q: any) => q.item_id))];
+          const itemCache: Record<string, any> = {};
+          
+          // Obtener detalles de ítems en lotes de 20 (límite de la API de MeLi)
+          for (let i = 0; i < itemIds.length; i += 20) {
+            const batch = itemIds.slice(i, i + 20);
+            try {
+              const itemsResponse = await fetch(
+                `https://api.mercadolibre.com/items?ids=${batch.join(',')}`,
+                {
+                  headers: { Authorization: `Bearer ${token}` },
+                  next: { revalidate: 0 },
+                }
+              );
+              
+              if (itemsResponse.ok) {
+                const itemsData = await itemsResponse.json();
+                itemsData.forEach((item: any) => {
+                  if (item.code === 200 && item.body) {
+                    itemCache[item.body.id] = {
+                      title: item.body.title,
+                      thumbnail: item.body.thumbnail,
+                      pictures: item.body.pictures?.[0]?.url || item.body.thumbnail,
+                      permalink: item.body.permalink,
+                    };
+                  }
+                });
+              }
+            } catch (e) {
+              console.warn(`[meli-questions] ⚠️ Error obteniendo ítems para ${account.meli_nickname}:`, e);
+            }
+          }
+
+          // Enriquecer preguntas con información del ítem
+          const enrichedQuestions = (data.questions || []).map((q: any) => ({
+            ...q,
+            item_info: itemCache[q.item_id] || null,
+          }));
+
           // Obtener tiempo de respuesta
           let responseTime = null;
           try {
@@ -119,7 +159,7 @@ export async function GET(request: NextRequest) {
             accountId: account.id,
             nickname: account.meli_nickname,
             sellerId: account.meli_user_id,
-            questions: data.questions || [],
+            questions: enrichedQuestions,
             total: data.total || data.paging?.total || 0,
             responseTime,
           };
