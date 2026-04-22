@@ -227,6 +227,34 @@ export default function VentasPage() {
         </button>
       </div>
 
+      {/* Error o Sin Cuentas */}
+      <div className="max-w-6xl mx-auto px-4 pt-4">
+        {error && (
+          <div className="rounded-2xl p-6 mb-4 text-center" style={{ background: "#ef444418", border: "1px solid #ef444440" }}>
+            <AlertTriangle className="w-10 h-10 mx-auto mb-2" style={{ color: "#ef4444" }} />
+            <p className="text-white font-bold mb-1">Error al cargar ventas</p>
+            <p className="text-sm" style={{ color: "#9CA3AF" }}>{error}</p>
+          </div>
+        )}
+
+        {!loading && !error && accounts.length === 0 && (
+          <div className="rounded-2xl p-6 mb-4 text-center" style={{ background: "#ef444418", border: "1px solid #ef444440" }}>
+            <AlertTriangle className="w-10 h-10 mx-auto mb-2" style={{ color: "#ef4444" }} />
+            <p className="text-white font-bold mb-1">No hay cuentas conectadas</p>
+            <p className="text-sm" style={{ color: "#9CA3AF" }}>
+              Conectá al menos una cuenta de Mercado Libre para ver las ventas.
+            </p>
+            <Link 
+              href="/"
+              className="inline-block mt-3 px-4 py-2 rounded-xl text-sm font-bold text-black"
+              style={{ background: "#FFE600" }}
+            >
+              Ir al Dashboard
+            </Link>
+          </div>
+        )}
+      </div>
+
       {/* Estadísticas */}
       <div className="max-w-6xl mx-auto px-4 pt-4">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">

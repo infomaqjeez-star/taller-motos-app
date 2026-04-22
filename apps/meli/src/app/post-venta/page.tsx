@@ -112,8 +112,39 @@ function PostVentaContent() {
             </div>
           )}
 
+          {/* Loading state */}
+          {loading && (
+            <div className="rounded-2xl p-6 text-center" style={{ background: "#1F1F1F" }}>
+              <div className="w-10 h-10 mx-auto mb-2 rounded-full border-2 border-yellow-400 border-t-transparent animate-spin" />
+              <p className="text-white font-bold mb-1">Cargando cuentas...</p>
+              <p className="text-sm" style={{ color: "#6B7280" }}>
+                Estamos conectando con Mercado Libre
+              </p>
+            </div>
+          )}
+
+          {/* No accounts state */}
+          {!loading && !error && accounts.length === 0 && (
+            <div className="rounded-2xl p-6 text-center" style={{ background: "#ef444418", border: "1px solid #ef444440" }}>
+              <AlertTriangle className="w-10 h-10 mx-auto mb-2" style={{ color: "#ef4444" }} />
+              <p className="text-white font-bold mb-1">No hay cuentas disponibles</p>
+              <p className="text-sm" style={{ color: "#6B7280" }}>
+                Conectá al menos una cuenta de Mercado Libre desde el Dashboard.
+              </p>
+              <Link 
+                href="/"
+                className="inline-block mt-3 px-4 py-2 rounded-xl text-sm font-bold text-black"
+                style={{ background: "#FFE600" }}
+              >
+                Ir al Dashboard
+              </Link>
+            </div>
+          )}
+
           {/* Unified Panel */}
-          <UnifiedPostSalePanel accounts={accounts} isLoading={loading} />
+          {accounts.length > 0 && (
+            <UnifiedPostSalePanel accounts={accounts} isLoading={loading} />
+          )}
 
           {/* Tabla Detallada */}
           {!loading && accounts.length > 0 && (

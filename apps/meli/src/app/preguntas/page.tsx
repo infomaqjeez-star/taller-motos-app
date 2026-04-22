@@ -22,9 +22,8 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { useMeliAccounts } from "@/components/auth/MeliAccountsProvider";
-import { questionsService } from "@/services/meli";
-import { QUESTION_STATUSES, MELI_STATUS_COLORS } from "@/lib/meli/constants";
-import { supabase } from "@/lib/supabase";
+import { useQuestionsUnified, useAnswerQuestion } from "@/hooks/useQuestions";
+import { toast } from "sonner";
 import type { MeliQuestion, MeliResponseTime } from "@/types/meli";
 
 // ============ TIPOS ============
@@ -309,6 +308,19 @@ export default function PreguntasPage() {
         </div>
       )}
 
+      {/* Cargando cuentas */}
+      {accountsLoading && (
+        <div className="max-w-6xl mx-auto px-4 pt-4">
+          <div className="rounded-2xl p-6 text-center" style={{ background: "#1F1F1F" }}>
+            <div className="w-10 h-10 mx-auto mb-2 rounded-full border-2 border-yellow-400 border-t-transparent animate-spin" />
+            <p className="text-white font-bold mb-1">Cargando cuentas...</p>
+            <p className="text-sm" style={{ color: "#6B7280" }}>
+              Estamos conectando con Mercado Libre
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Estadísticas */}
       <div className="max-w-6xl mx-auto px-4 pt-4">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
@@ -521,6 +533,9 @@ export default function PreguntasPage() {
           <div className="rounded-2xl p-4 mb-4 text-center" style={{ background: "#ef444418", border: "1px solid #ef444440" }}>
             <AlertCircle className="w-7 h-7 mx-auto mb-1" style={{ color: "#ef4444" }} />
             <p className="text-sm text-white font-semibold">{error}</p>
+            <p className="text-xs mt-2" style={{ color: "#9CA3AF" }}>
+              Cuentas: {accounts.length} | Loading: {accountsLoading ? 'Sí' : 'No'}
+            </p>
             <button onClick={loadAllQuestions} className="mt-2 px-4 py-1.5 rounded-lg text-xs font-bold bg-red-500 text-white">
               Reintentar
             </button>
