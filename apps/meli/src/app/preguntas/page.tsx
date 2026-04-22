@@ -310,6 +310,123 @@ export default function PreguntasPage() {
           </div>
         </div>
 
+        {/* Panel de Tiempo de Respuesta por Cuenta */}
+        <div className="rounded-2xl p-4 mb-4" style={{ background: "#1F1F1F", border: "1px solid rgba(255,255,255,0.07)" }}>
+          <div className="flex items-center gap-2 mb-3">
+            <TrendingUp className="w-4 h-4" style={{ color: "#39FF14" }} />
+            <h2 className="text-sm font-bold text-white">Tiempo de Respuesta por Cuenta</h2>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {accountStats.map((stat) => {
+              const responseTime = stat.responseTime?.total?.response_time;
+              const hasData = responseTime !== undefined && responseTime !== null;
+              
+              // Determinar color según tiempo de respuesta
+              let color = "#6B7280"; // Gris - sin datos
+              let label = "Sin datos";
+              
+              if (hasData) {
+                if (responseTime <= 15) {
+                  color = "#39FF14"; // Verde - Excelente (< 15 min)
+                  label = "Excelente";
+                } else if (responseTime <= 60) {
+                  color = "#00E5FF"; // Cyan - Bueno (< 1 hora)
+                  label = "Bueno";
+                } else if (responseTime <= 180) {
+                  color = "#FFE600"; // Amarillo - Regular (< 3 horas)
+                  label = "Regular";
+                } else if (responseTime <= 1440) {
+                  color = "#FF5722"; // Naranja - Lento (< 24 horas)
+                  label = "Lento";
+                } else {
+                  color = "#ef4444"; // Rojo - Crítico (> 24 horas)
+                  label = "Crítico";
+                }
+              }
+              
+              // Calcular porcentaje para la barra de progreso (máximo 24 horas = 1440 minutos)
+              const maxTime = 1440;
+              const percentage = hasData ? Math.min((responseTime / maxTime) * 100, 100) : 0;
+              
+              return (
+                <div 
+                  key={stat.accountId} 
+                  className="p-3 rounded-xl"
+                  style={{ background: "#121212", border: `1px solid ${color}30` }}
+                >
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm font-bold text-white">@{stat.nickname}</span>
+                    <span 
+                      className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                      style={{ background: `${color}22`, color }}
+                    >
+                      {label}
+                    </span>
+                  </div>
+                  
+                  <div className="flex items-baseline gap-1 mb-2">
+                    <span className="text-2xl font-black" style={{ color }}>
+                      {hasData ? formatTime(responseTime) : "--"}
+                    </span>
+                    <span className="text-xs" style={{ color: "#6B7280" }}>
+                      {hasData ? "promedio" : "sin datos"}
+                    </span>
+                  </div>
+                  
+                  {/* Barra de progreso */}
+                  {hasData && (
+                    <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "#2a2a2a" }}>
+                      <div 
+                        className="h-full rounded-full transition-all duration-500"
+                        style={{ 
+                          width: `${percentage}%`,
+                          background: color
+                        }}
+                      />
+                    </div>
+                  )}
+                  
+                  {/* Preguntas sin responder */}
+                  <div className="flex justify-between items-center mt-2 pt-2 border-t" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
+                    <span className="text-[10px]" style={{ color: "#6B7280" }}>Sin responder</span>
+                    <span 
+                      className="text-xs font-bold"
+                      style={{ color: stat.unanswered > 0 ? "#FF5722" : "#39FF14" }}
+                    >
+                      {stat.unanswered}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          
+          {/* Leyenda */}
+          <div className="flex flex-wrap gap-3 mt-3 pt-3 border-t" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
+            <div className="flex items-center gap-1">
+              <div className="w-2 h-2 rounded-full" style={{ background: "#39FF14" }} />
+              <span className="text-[10px]" style={{ color: "#6B7280" }}>&lt; 15m (Excelente)</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="w-2 h-2 rounded-full" style={{ background: "#00E5FF" }} />
+              <span className="text-[10px]" style={{ color: "#6B7280" }}>&lt; 1h (Bueno)</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="w-2 h-2 rounded-full" style={{ background: "#FFE600" }} />
+              <span className="text-[10px]" style={{ color: "#6B7280" }}>&lt; 3h (Regular)</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="w-2 h-2 rounded-full" style={{ background: "#FF5722" }} />
+              <span className="text-[10px]" style={{ color: "#6B7280" }}>&lt; 24h (Lento)</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="w-2 h-2 rounded-full" style={{ background: "#ef4444" }} />
+              <span className="text-[10px]" style={{ color: "#6B7280" }}>&gt; 24h (Crítico)</span>
+            </div>
+          </div>
+        </div>
+
         {/* Filtros */}
         <div className="flex flex-wrap gap-2 mb-4">
           {/* Búsqueda */}
@@ -599,4 +716,18 @@ function getTimeAgo(dateString: string): string {
   if (hours < 24) return `hace ${hours}h`;
   if (days < 7) return `hace ${days}d`;
   return date.toLocaleDateString("es-AR");
+}
+
+function formatTime(minutes: number): string {
+  if (minutes < 60) {
+    return `${Math.round(minutes)}m`;
+  } else if (minutes < 1440) {
+    const hours = Math.floor(minutes / 60);
+    const mins = Math.round(minutes % 60);
+    return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+  } else {
+    const days = Math.floor(minutes / 1440);
+    const hours = Math.floor((minutes % 1440) / 60);
+    return hours > 0 ? `${days}d ${hours}h` : `${days}d`;
+  }
 }
