@@ -546,9 +546,9 @@ function AppJeezInner() {
 
   const navItems = [
     { label: "Dashboard",       icon: <BarChart2 className="w-4 h-4" />,       href: "/",               active: true  },
-    { label: "Estadísticas",    icon: <TrendingUp className="w-4 h-4" />,      href: "/estadisticas",  active: false },
-    { label: "Preguntas",       icon: <HelpCircle className="w-4 h-4" />,      href: "/mensajes",      active: false },
-    { label: "Mensajes Ventas", icon: <MessageCircle className="w-4 h-4" />,   href: "/mensajes-ventas", active: false },
+    { label: "Preguntas Unif.", icon: <HelpCircle className="w-4 h-4" />,      href: "/preguntas",     active: false },
+    { label: "Ventas Unif.",    icon: <ShoppingCart className="w-4 h-4" />,    href: "/ventas",        active: false },
+    { label: "Mensajes",        icon: <MessageCircle className="w-4 h-4" />,   href: "/mensajes",      active: false },
     { label: "Etiquetas",       icon: <Tag className="w-4 h-4" />,             href: "/etiquetas",     active: false },
     { label: "Publicaciones",   icon: <Package className="w-4 h-4" />,         href: "/publicaciones", active: false },
     { label: "Sincronizar",     icon: <Copy className="w-4 h-4" />,            href: "/sincronizar",   active: false },
