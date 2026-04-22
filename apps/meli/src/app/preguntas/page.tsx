@@ -26,6 +26,22 @@ import { useQuestionsUnified, useAnswerQuestion } from "@/hooks/useQuestions";
 import { toast } from "sonner";
 import type { MeliQuestion, MeliResponseTime } from "@/types/meli";
 
+// Constantes para estados de preguntas
+const QUESTION_STATUSES = {
+  UNANSWERED: "UNANSWERED",
+  ANSWERED: "ANSWERED",
+  CLOSED_UNANSWERED: "CLOSED_UNANSWERED",
+  UNDER_REVIEW: "UNDER_REVIEW",
+};
+
+// Colores para estados
+const MELI_STATUS_COLORS: Record<string, string> = {
+  UNANSWERED: "#FF5722",
+  ANSWERED: "#39FF14",
+  CLOSED_UNANSWERED: "#6B7280",
+  UNDER_REVIEW: "#FFE600",
+};
+
 // ============ TIPOS ============
 interface UnifiedQuestion {
   id: number;
