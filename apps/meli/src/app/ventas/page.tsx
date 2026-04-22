@@ -1,873 +1,571 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
-  Plus, Trash2, ShoppingCart, BarChart2, List,
-  TrendingUp, Package, CreditCard, ChevronDown,
-  CheckCircle, XCircle, AlertTriangle, Calendar, Pencil, Save, X, Printer,
+  ArrowLeft,
+  RefreshCw,
+  ShoppingBag,
+  DollarSign,
+  Package,
+  AlertTriangle,
+  CheckCircle2,
+  Clock,
+  Search,
+  Users,
+  Filter,
+  TrendingUp,
+  Calendar,
+  ChevronRight,
+  ExternalLink,
 } from "lucide-react";
-import Navbar from "@/components/Navbar";
-import BottomNav from "@/components/BottomNav";
-import ClientDataForm from "@/components/ClientDataForm";
-import TicketPrinter from "@/components/TicketPrinter";
-import { ventasDb } from "@/lib/db";
-import { generateId } from "@/lib/utils";
-import { getNowBA, getTodayStringBA } from "@/lib/date-utils";
-import {
-  VentaRepuesto, VentaItem, MetodoPago, VentasStats,
-  VentasPorDia, TopProducto, METODO_PAGO_LABELS, METODO_PAGO_ICONS,
-} from "@/lib/types";
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, Cell,
-} from "recharts";
+import { useMeliAccounts } from "@/components/auth/MeliAccountsProvider";
+import { ordersService } from "@/services/meli";
+import { ORDER_STATUSES } from "@/lib/meli/constants";
+import type { MeliOrder } from "@/types/meli";
 
-// ─── Helpers ─────────────────────────────────────────────────
-
-const fmt = (n: number) =>
-  "$" + n.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
-
-function todayStr() { return getTodayStringBA(); }
-function weekRange(): [string, string] {
-  const d = getNowBA();
-  const day = d.getDay() || 7;
-  const mon = new Date(d); mon.setDate(d.getDate() - day + 1);
-  const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
-  return [mon.toISOString().slice(0, 10), sun.toISOString().slice(0, 10)];
+// ============ TIPOS ============
+interface UnifiedOrder {
+  id: number;
+  status: string;
+  status_detail: string | null;
+  date_created: string;
+  date_closed: string;
+  total_amount: number;
+  gross_price?: number;
+  currency_id: string;
+  buyer: {
+    id: string;
+    nickname?: string;
+    first_name?: string;
+    last_name?: string;
+  };
+  order_items: Array<{
+    item: {
+      id: string;
+      title: string;
+    };
+    quantity: number;
+    unit_price: number;
+  }>;
+  shipping?: {
+    id: number;
+    status?: string;
+  };
+  tags: string[];
+  account: {
+    id: string;
+    nickname: string;
+    sellerId: string;
+  };
 }
-function monthRange(): [string, string] {
-  const d = getNowBA();
-  const from = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
-  const last = new Date(d.getFullYear(), d.getMonth() + 1, 0);
-  const to = last.toISOString().slice(0, 10);
-  return [from, to];
+
+interface SalesStats {
+  totalSales: number;
+  totalAmount: number;
+  averageTicket: number;
+  byAccount: Record<string, { sales: number; amount: number }>;
 }
 
-const METODO_COLORS: Record<MetodoPago, string> = {
-  efectivo:      "#39FF14",
-  transferencia: "#00E5FF",
-  debito:        "#FDB71A",
-  credito:       "#FF5722",
-  mercado_pago:  "#2563EB",
-};
+// ============ COMPONENTE PRINCIPAL ============
+export default function VentasPage() {
+  const router = useRouter();
+  const { accounts, loading: accountsLoading } = useMeliAccounts();
+  
+  // Estados
+  const [orders, setOrders] = useState<UnifiedOrder[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+  
+  // Filtros
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [accountFilter, setAccountFilter] = useState<string>("all");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  
+  // Estadísticas
+  const [stats, setStats] = useState<SalesStats>({
+    totalSales: 0,
+    totalAmount: 0,
+    averageTicket: 0,
+    byAccount: {},
+  });
 
-// ─── Componente: Fila de ítem ─────────────────────────────────
+  // ============ CARGA DE ÓRDENES ============
+  const loadAllOrders = useCallback(async () => {
+    if (!accounts.length) return;
+    
+    setLoading(true);
+    setError(null);
+    
+    try {
+      // Calcular fechas por defecto (últimos 30 días)
+      const today = new Date();
+      const thirtyDaysAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+      
+      const dateFromStr = dateFrom || thirtyDaysAgo.toISOString().split('T')[0];
+      const dateToStr = dateTo || today.toISOString().split('T')[0];
+      
+      // Obtener órdenes de todas las cuentas
+      const accountsData = accounts.map(acc => ({
+        id: acc.id,
+        sellerId: acc.meli_user_id,
+        nickname: acc.meli_nickname,
+      }));
+      
+      const results = await ordersService.getOrdersFromMultipleAccounts(
+        accountsData,
+        {
+          status: statusFilter !== "all" ? [statusFilter] : undefined,
+          dateFrom: dateFromStr,
+          dateTo: dateToStr,
+          limit: 100,
+        }
+      );
+      
+      // Unificar órdenes
+      const unified: UnifiedOrder[] = [];
+      
+      for (const result of results) {
+        const accountOrders = result.orders.map(o => ({
+          ...o,
+          account: {
+            id: result.accountId,
+            nickname: result.nickname,
+            sellerId: result.sellerId,
+          },
+        }));
+        
+        unified.push(...accountOrders);
+      }
+      
+      // Ordenar por fecha (más recientes primero)
+      unified.sort((a, b) => 
+        new Date(b.date_created).getTime() - new Date(a.date_created).getTime()
+      );
+      
+      setOrders(unified);
+      
+      // Calcular estadísticas
+      const salesStats = await ordersService.getSalesStats(
+        accountsData,
+        dateFromStr,
+        dateToStr
+      );
+      setStats(salesStats);
+      
+      setLastUpdate(new Date());
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error cargando ventas");
+    } finally {
+      setLoading(false);
+    }
+  }, [accounts, statusFilter, dateFrom, dateTo]);
 
-function ItemRow({
-  item,
-  onChange,
-  onRemove,
-}: {
-  item: VentaItem;
-  onChange: (id: string, field: keyof VentaItem, value: string | number) => void;
-  onRemove: (id: string) => void;
-}) {
+  // Cargar al inicio
+  useEffect(() => {
+    loadAllOrders();
+  }, [loadAllOrders]);
+
+  // ============ FILTROS ============
+  const filteredOrders = useMemo(() => {
+    return orders.filter(o => {
+      // Filtro por cuenta
+      if (accountFilter !== "all" && o.account.id !== accountFilter) return false;
+      
+      // Filtro por búsqueda
+      if (searchTerm) {
+        const term = searchTerm.toLowerCase();
+        return (
+          o.id.toString().includes(term) ||
+          o.buyer.nickname?.toLowerCase().includes(term) ||
+          o.order_items.some(item => 
+            item.item.title.toLowerCase().includes(term)
+          ) ||
+          o.account.nickname.toLowerCase().includes(term)
+        );
+      }
+      
+      return true;
+    });
+  }, [orders, accountFilter, searchTerm]);
+
+  // ============ RENDER ============
   return (
-    <div className="grid grid-cols-12 gap-2 items-center">
-      <div className="col-span-5">
-        <input
-          className="input input-sm"
-          placeholder="Producto / descripción"
-          value={item.producto}
-          onChange={e => onChange(item.id, "producto", e.target.value)}
-        />
-      </div>
-      <div className="col-span-2">
-        <input
-          className="input input-sm"
-          placeholder="SKU"
-          value={item.sku}
-          onChange={e => onChange(item.id, "sku", e.target.value)}
-        />
-      </div>
-      <div className="col-span-2">
-        <input
-          type="number"
-          min={1}
-          className="input input-sm"
-          placeholder="Cant."
-          value={item.cantidad}
-          onChange={e => onChange(item.id, "cantidad", Math.max(1, parseInt(e.target.value) || 1))}
-        />
-      </div>
-      <div className="col-span-2">
-        <input
-          type="number"
-          min={0}
-          className="input input-sm"
-          placeholder="$Precio"
-          value={item.precioUnit || ""}
-          onChange={e => onChange(item.id, "precioUnit", parseFloat(e.target.value) || 0)}
-        />
-      </div>
-      <div className="col-span-1 flex justify-end">
-        <button
-          onClick={() => onRemove(item.id)}
-          className="p-2 rounded-lg text-red-400 hover:bg-red-500/15 transition-colors"
+    <main className="min-h-screen pb-24" style={{ background: "#121212" }}>
+      {/* Header */}
+      <div className="sticky top-0 z-30 px-4 py-3 flex items-center justify-between border-b"
+        style={{ background: "rgba(18,18,18,0.97)", backdropFilter: "blur(16px)", borderColor: "rgba(255,255,255,0.07)" }}>
+        <div className="flex items-center gap-3">
+          <Link href="/" className="p-1.5 rounded-lg" style={{ background: "rgba(255,255,255,0.05)" }}>
+            <ArrowLeft className="w-5 h-5 text-gray-400" />
+          </Link>
+          <div>
+            <h1 className="font-black text-white text-base flex items-center gap-2">
+              <ShoppingBag className="w-5 h-5" style={{ color: "#39FF14" }} />
+              Ventas Unificadas
+            </h1>
+            <p className="text-[10px]" style={{ color: "#6B7280" }}>
+              {accounts.length} cuentas · {lastUpdate ? `Actualizado ${lastUpdate.toLocaleTimeString()}` : "Cargando..."}
+            </p>
+          </div>
+        </div>
+        <button 
+          onClick={loadAllOrders}
+          disabled={loading}
+          className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold disabled:opacity-40"
+          style={{ background: "#1F1F1F", color: "#39FF14", border: "1px solid #39FF1422" }}
         >
-          <Trash2 className="w-4 h-4" />
+          <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+          {loading ? "Sync..." : "Actualizar"}
         </button>
       </div>
-    </div>
-  );
-}
 
-// ─── Componente: Tarjeta de venta del día ─────────────────────
-
-function VentaCard({
-  venta,
-  onCancelar,
-  onEditar,
-  onPrintTicket,
-}: {
-  venta: VentaRepuesto;
-  onCancelar: (id: string) => void;
-  onEditar: (v: VentaRepuesto) => void;
-  onPrintTicket: (venta: VentaRepuesto) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const hora = new Date(venta.createdAt).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", hour12: false });
-  const cancelada = venta.status === "cancelada";
-
-  return (
-    <div className={`card border ${cancelada ? "border-red-500/30 opacity-60" : "border-white/10"}`}>
-      <div className="flex items-center gap-3 cursor-pointer" onClick={() => setOpen(o => !o)}>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs text-gray-500 font-mono">{hora}</span>
-            <span className="text-sm font-semibold text-gray-200 truncate">
-              {venta.items.length === 1
-                ? venta.items[0].producto
-                : `${venta.items.length} productos`}
-            </span>
-            {cancelada && (
-              <span className="text-xs font-bold text-red-400 bg-red-500/15 px-2 py-0.5 rounded-full">
-                ANULADA
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-2 mt-1">
-            <span
-              className="text-xs px-2 py-0.5 rounded-full border font-bold"
-              style={{
-                borderColor: METODO_COLORS[venta.metodoPago] + "80",
-                color: METODO_COLORS[venta.metodoPago],
-                background: METODO_COLORS[venta.metodoPago] + "15",
-              }}
-            >
-              {METODO_PAGO_ICONS[venta.metodoPago]} {METODO_PAGO_LABELS[venta.metodoPago]}
-            </span>
-          </div>
-        </div>
-        <div className="text-right flex-shrink-0">
-          <p className={`text-lg font-black ${cancelada ? "line-through text-gray-500" : "text-[#39FF14]"}`}
-            style={cancelada ? {} : { textShadow: "0 0 8px rgba(57,255,20,0.5)" }}>
-            {fmt(venta.total)}
-          </p>
-          <ChevronDown className={`w-4 h-4 text-gray-500 ml-auto transition-transform ${open ? "rotate-180" : ""}`} />
-        </div>
-      </div>
-
-      {open && (
-        <div className="mt-3 pt-3 border-t border-white/10 space-y-2">
-          {venta.items.map(i => (
-            <div key={i.id} className="flex justify-between text-sm text-gray-400">
-              <span className="truncate flex-1">{i.cantidad}x {i.producto} {i.sku && <span className="text-gray-600">({i.sku})</span>}</span>
-              <span className="text-gray-300 font-semibold ml-2">{fmt(i.subtotal)}</span>
+      {/* Estadísticas */}
+      <div className="max-w-6xl mx-auto px-4 pt-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+          {/* Total Ventas */}
+          <div className="rounded-2xl p-4" style={{ background: "#1F1F1F", border: "1px solid rgba(255,255,255,0.07)" }}>
+            <div className="flex items-center gap-2 mb-1">
+              <ShoppingBag className="w-4 h-4" style={{ color: "#39FF14" }} />
+              <span className="text-xs" style={{ color: "#6B7280" }}>Ventas</span>
             </div>
-          ))}
-          {venta.notas && (
-            <p className="text-xs text-gray-500 italic mt-1">&ldquo;{venta.notas}&rdquo;</p>
-          )}
-          {!cancelada && (
-            <div className="mt-2 flex items-center gap-4">
-              <button
-                onClick={() => onPrintTicket(venta)}
-                className="flex items-center gap-2 text-xs text-green-400 hover:text-green-300 font-semibold"
-              >
-                <Printer className="w-4 h-4" /> Imprimir Ticket
-              </button>
-              <button
-                onClick={() => onEditar(venta)}
-                className="flex items-center gap-2 text-xs text-blue-400 hover:text-blue-300 font-semibold"
-              >
-                <Pencil className="w-4 h-4" /> Editar Venta
-              </button>
-              <button
-                onClick={() => {
-                  if (confirm("¿Anular esta venta? Esta acción no se puede deshacer.")) {
-                    onCancelar(venta.id);
-                  }
-                }}
-                className="flex items-center gap-2 text-xs text-red-400 hover:text-red-300 font-semibold"
-              >
-                <XCircle className="w-4 h-4" /> Anular Venta
-              </button>
+            <p className="text-2xl font-black text-white">{stats.totalSales}</p>
+          </div>
+          
+          {/* Total Recaudado */}
+          <div className="rounded-2xl p-4" style={{ background: "#1F1F1F", border: "1px solid rgba(255,255,255,0.07)" }}>
+            <div className="flex items-center gap-2 mb-1">
+              <DollarSign className="w-4 h-4" style={{ color: "#00E5FF" }} />
+              <span className="text-xs" style={{ color: "#6B7280" }}>Recaudado</span>
             </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── Modal de Edición de Venta ────────────────────────────────
-
-function EditVentaModal({
-  venta,
-  onClose,
-  onSave,
-}: {
-  venta: VentaRepuesto;
-  onClose: () => void;
-  onSave: (v: VentaRepuesto) => Promise<void>;
-}) {
-  const [items, setItems] = useState<VentaItem[]>(
-    venta.items.map(i => ({ ...i, subtotal: i.cantidad * i.precioUnit }))
-  );
-  const [metodoPago, setMetodoPago] = useState<MetodoPago>(venta.metodoPago);
-  const [vendedor, setVendedor] = useState(venta.vendedor);
-  const [notas, setNotas] = useState(venta.notas ?? "");
-  const [saving, setSaving] = useState(false);
-
-  const itemsCalc = items.map(i => ({ ...i, subtotal: i.cantidad * i.precioUnit }));
-  const total = itemsCalc.reduce((s, i) => s + i.subtotal, 0);
-
-  const handleChange = (id: string, field: keyof VentaItem, value: string | number) => {
-    setItems(prev => prev.map(i => i.id === id ? { ...i, [field]: value } : i));
-  };
-  const handleAdd = () => setItems(prev => [...prev, { id: generateId(), ventaId: venta.id, producto: "", sku: "", cantidad: 1, precioUnit: 0, subtotal: 0 }]);
-  const handleRemove = (id: string) => { if (items.length > 1) setItems(prev => prev.filter(i => i.id !== id)); };
-
-  const handleSave = async () => {
-    const valid = itemsCalc.filter(i => i.producto.trim() && i.precioUnit > 0);
-    if (valid.length === 0) return;
-    setSaving(true);
-    await onSave({ ...venta, items: valid, metodoPago, vendedor, notas, total });
-    setSaving(false);
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
-      style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(6px)" }}>
-      <div className="w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl overflow-hidden"
-        style={{ background: "#1a1a1a", border: "1px solid rgba(255,255,255,0.10)", maxHeight: "90vh", overflowY: "auto" }}>
-
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-white/10 sticky top-0"
-          style={{ background: "#1a1a1a" }}>
-          <h2 className="text-base font-black text-white flex items-center gap-2">
-            <Pencil className="w-4 h-4 text-blue-400" /> Editar Venta
-          </h2>
-          <button onClick={onClose} className="p-2 rounded-lg hover:bg-white/10 text-gray-400">
-            <X className="w-5 h-5" />
-          </button>
+            <p className="text-2xl font-black text-white">
+              ${stats.totalAmount.toLocaleString("es-AR")}
+            </p>
+          </div>
+          
+          {/* Ticket Promedio */}
+          <div className="rounded-2xl p-4" style={{ background: "#1F1F1F", border: "1px solid rgba(255,255,255,0.07)" }}>
+            <div className="flex items-center gap-2 mb-1">
+              <TrendingUp className="w-4 h-4" style={{ color: "#FFE600" }} />
+              <span className="text-xs" style={{ color: "#6B7280" }}>Ticket Promedio</span>
+            </div>
+            <p className="text-2xl font-black text-white">
+              ${stats.averageTicket.toLocaleString("es-AR", { maximumFractionDigits: 0 })}
+            </p>
+          </div>
+          
+          {/* Cuentas Activas */}
+          <div className="rounded-2xl p-4" style={{ background: "#1F1F1F", border: "1px solid rgba(255,255,255,0.07)" }}>
+            <div className="flex items-center gap-2 mb-1">
+              <Users className="w-4 h-4" style={{ color: "#FF5722" }} />
+              <span className="text-xs" style={{ color: "#6B7280" }}>Cuentas</span>
+            </div>
+            <p className="text-2xl font-black text-white">{accounts.length}</p>
+          </div>
         </div>
 
-        <div className="p-4 space-y-4">
-          {/* Vendedor */}
-          <div>
-            <label className="label">Vendedor</label>
-            <input className="input" value={vendedor} onChange={e => setVendedor(e.target.value)} />
-          </div>
-
-          {/* Método de pago */}
-          <div>
-            <label className="label">Método de Pago</label>
-            <div className="grid grid-cols-3 gap-2">
-              {(Object.keys(METODO_PAGO_LABELS) as MetodoPago[]).map(m => (
-                <button
-                  key={m}
-                  onClick={() => setMetodoPago(m)}
-                  className={`py-2 px-3 rounded-xl text-xs font-bold border transition-all ${metodoPago === m ? "border-current" : "border-white/10 text-gray-500"}`}
-                  style={metodoPago === m ? { color: METODO_COLORS[m], background: METODO_COLORS[m] + "20", borderColor: METODO_COLORS[m] } : {}}
-                >
-                  {METODO_PAGO_ICONS[m]} {METODO_PAGO_LABELS[m]}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Items */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="label mb-0">Productos</label>
-              <button onClick={handleAdd} className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1">
-                <Plus className="w-3 h-3" /> Agregar
-              </button>
-            </div>
-            <div className="space-y-2">
-              {itemsCalc.map(item => (
-                <ItemRow key={item.id} item={item} onChange={handleChange} onRemove={handleRemove} />
-              ))}
-            </div>
-          </div>
-
-          {/* Notas */}
-          <div>
-            <label className="label">Notas</label>
-            <textarea className="input resize-none" rows={2} value={notas} onChange={e => setNotas(e.target.value)} />
-          </div>
-
-          {/* Total */}
-          <div className="flex items-center justify-between pt-2 border-t border-white/10">
-            <span className="text-gray-400 text-sm font-semibold">Total</span>
-            <span className="text-2xl font-black text-[#39FF14]"
-              style={{ textShadow: "0 0 10px rgba(57,255,20,0.5)" }}>{fmt(total)}</span>
-          </div>
-
-          {/* Botón guardar */}
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="w-full py-3 rounded-xl font-black text-sm flex items-center justify-center gap-2 transition-all"
-            style={{ background: "#2563EB", boxShadow: "0 0 20px rgba(37,99,235,0.40)" }}
-          >
-            {saving ? "Guardando..." : <><Save className="w-4 h-4" /> Guardar Cambios</>}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── Componente: Mini métrica ─────────────────────────────────
-
-function MetricCard({ label, value, sub, color }: {
-  label: string; value: string; sub?: string; color: string;
-}) {
-  return (
-    <div className="card border border-white/10">
-      <p className="text-xs text-gray-500 font-semibold uppercase tracking-wide">{label}</p>
-      <p className="text-2xl font-black mt-1" style={{ color, textShadow: `0 0 10px ${color}70` }}>
-        {value}
-      </p>
-      {sub && <p className="text-xs text-gray-600 mt-0.5">{sub}</p>}
-    </div>
-  );
-}
-
-// ─── Página Principal ─────────────────────────────────────────
-
-type Tab = "nueva" | "movimientos" | "estadisticas";
-type RangoStats = "hoy" | "semana" | "mes" | "custom";
-
-function newItem(): VentaItem {
-  return { id: generateId(), ventaId: "", producto: "", sku: "", cantidad: 1, precioUnit: 0, subtotal: 0 };
-}
-
-export default function VentasPage() {
-  const [tab, setTab] = useState<Tab>("nueva");
-
-  // ── Nueva Venta
-  const [items, setItems] = useState<VentaItem[]>([newItem()]);
-  const [metodoPago, setMetodoPago] = useState<MetodoPago>("efectivo");
-  const [vendedor, setVendedor] = useState("Maqjeez");
-  const [notas, setNotas] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
-
-  // ── Datos del cliente (para ticket)
-  const [clientData, setClientData] = useState<{ nombre?: string; dni?: string; direccion?: string }>({});
-
-  // ── Movimientos del día
-  const [ventasHoy, setVentasHoy] = useState<VentaRepuesto[]>([]);
-  const [loadingHoy, setLoadingHoy] = useState(false);
-  const [editVenta, setEditVenta] = useState<VentaRepuesto | null>(null);
-  const [ticketModal, setTicketModal] = useState<{ isOpen: boolean; ventaId?: string }>({ isOpen: false });
-
-  // ── Estadísticas
-  const [rango, setRango] = useState<RangoStats>("hoy");
-  const [customDesde, setCustomDesde] = useState(todayStr());
-  const [customHasta, setCustomHasta] = useState(todayStr());
-  const [stats, setStats] = useState<VentasStats | null>(null);
-  const [chartData, setChartData] = useState<VentasPorDia[]>([]);
-  const [topProd, setTopProd] = useState<TopProducto[]>([]);
-  const [loadingStats, setLoadingStats] = useState(false);
-
-  const showToast = (msg: string, ok = true) => {
-    setToast({ msg, ok });
-    setTimeout(() => setToast(null), 3500);
-  };
-
-  // Cálculos en tiempo real
-  const itemsCalc = items.map(i => ({ ...i, subtotal: i.cantidad * i.precioUnit }));
-  const total = itemsCalc.reduce((s, i) => s + i.subtotal, 0);
-
-  const handleItemChange = (id: string, field: keyof VentaItem, value: string | number) => {
-    setItems(prev => prev.map(i => i.id === id ? { ...i, [field]: value } : i));
-  };
-
-  const handleAddItem = () => setItems(prev => [...prev, newItem()]);
-  const handleRemoveItem = (id: string) => {
-    if (items.length === 1) return;
-    setItems(prev => prev.filter(i => i.id !== id));
-  };
-
-  const handleGuardarVenta = async () => {
-    const valid = itemsCalc.filter(i => i.producto.trim() && i.precioUnit > 0);
-    if (valid.length === 0) { showToast("Agregá al menos un producto con precio", false); return; }
-    setSaving(true);
-    try {
-      const venta: VentaRepuesto = {
-        id:         generateId(),
-        vendedor:   vendedor.trim() || "Maqjeez",
-        metodoPago,
-        total:      valid.reduce((s, i) => s + i.subtotal, 0),
-        status:     "activa",
-        notas,
-        createdAt:  new Date().toLocaleString("sv-SE", { timeZone: "America/Argentina/Buenos_Aires" }).replace(" ", "T"),
-        items:      valid.map(i => ({ ...i, ventaId: "" })),
-      };
-      await ventasDb.create(venta);
-      setItems([newItem()]);
-      setMetodoPago("efectivo");
-      setNotas("");
-      showToast(`Venta guardada: ${fmt(venta.total)}`);
-      loadVentasHoy();
-    } catch (e: unknown) {
-      const pg = e as { message?: string; details?: string; hint?: string; code?: string };
-      const msg = pg?.message ?? pg?.details ?? JSON.stringify(e) ?? "Error desconocido";
-      showToast("Error: " + msg, false);
-      console.error("ventasDb.create error:", e);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const loadVentasHoy = useCallback(async () => {
-    setLoadingHoy(true);
-    try { setVentasHoy(await ventasDb.getToday()); }
-    catch { /* no-op */ }
-    finally { setLoadingHoy(false); }
-  }, []);
-
-  const handleCancelar = async (id: string) => {
-    await ventasDb.cancelar(id);
-    loadVentasHoy();
-  };
-
-  const handleEditarVenta = async (v: VentaRepuesto) => {
-    try {
-      await ventasDb.update(v);
-      setEditVenta(null);
-      showToast("Venta actualizada");
-      loadVentasHoy();
-    } catch (e: unknown) {
-      const pg = e as { message?: string };
-      showToast("Error: " + (pg?.message ?? "No se pudo guardar"), false);
-    }
-  };
-
-  // Rango de stats
-  function getRango(): [string, string] {
-    if (rango === "hoy")    return [todayStr(), todayStr()];
-    if (rango === "semana") return weekRange();
-    if (rango === "mes")    return monthRange();
-    return [customDesde, customHasta];
-  }
-
-  const loadStats = useCallback(async () => {
-    const [d, h] = getRango();
-    setLoadingStats(true);
-    try {
-      const [s, chart, top] = await Promise.all([
-        ventasDb.getStats(d, h),
-        ventasDb.getVentasPorDia(d, h),
-        ventasDb.getTopProductos(d, h),
-      ]);
-      setStats(s);
-      setChartData(chart);
-      setTopProd(top);
-    } catch { /* no-op */ }
-    finally { setLoadingStats(false); }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rango, customDesde, customHasta]);
-
-  useEffect(() => { loadVentasHoy(); }, [loadVentasHoy]);
-  useEffect(() => { if (tab === "estadisticas") loadStats(); }, [tab, loadStats]);
-
-  const ventasActivas = ventasHoy.filter(v => v.status === "activa");
-  const totalHoy = ventasActivas.reduce((s, v) => s + v.total, 0);
-  const [rangeDesde, rangeHasta] = getRango();
-  const rangeLabel = rango === "hoy" ? "hoy" : rango === "semana" ? "esta semana" : rango === "mes" ? "este mes" : `${rangeDesde} → ${rangeHasta}`;
-
-  const chartFormatted = chartData.map(d => ({
-    name: new Date(d.dia + "T12:00:00").toLocaleDateString("es-AR", { weekday: "short", day: "numeric" }),
-    total: d.total,
-    cant: d.cant,
-  }));
-
-  return (
-    <>
-      <Navbar />
-
-      {/* ── Tabs ── */}
-      <div className="sticky top-14 z-30 border-b border-white/10"
-        style={{ background: "rgba(18,18,18,0.95)", backdropFilter: "blur(12px)" }}>
-        <div className="max-w-3xl mx-auto px-4 flex">
-          {([
-            { id: "nueva",         label: "Nueva Venta",   icon: ShoppingCart },
-            { id: "movimientos",   label: "Movimientos",   icon: List },
-            { id: "estadisticas",  label: "Estadísticas",  icon: BarChart2 },
-          ] as { id: Tab; label: string; icon: React.ElementType }[]).map(({ id, label, icon: Icon }) => (
-            <button
-              key={id}
-              onClick={() => { setTab(id); if (id === "movimientos") loadVentasHoy(); }}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-3 text-sm font-semibold border-b-2 transition-colors
-                ${tab === id
-                  ? "border-[#FDB71A] text-[#FDB71A]"
-                  : "border-transparent text-gray-500 hover:text-gray-300"}`}
-            >
-              <Icon className="w-4 h-4" />
-              <span className="hidden sm:inline">{label}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <main className="max-w-3xl mx-auto px-4 py-6 pb-24 sm:pb-6 space-y-6">
-
-        {/* ══════════════════ NUEVA VENTA ══════════════════ */}
-        {tab === "nueva" && (
-          <div className="space-y-4">
-            {/* ── Datos del Cliente ── */}
-            <ClientDataForm
-              initialData={clientData}
-              onClientDataChange={setClientData}
+        {/* Filtros */}
+        <div className="flex flex-wrap gap-2 mb-4">
+          {/* Búsqueda */}
+          <div className="relative flex-1 min-w-[200px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+            <input
+              type="text"
+              placeholder="Buscar por ID, comprador o producto..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-9 pr-4 py-2.5 rounded-xl text-sm text-white placeholder-gray-500 outline-none"
+              style={{ background: "#1F1F1F", border: "1px solid rgba(255,255,255,0.08)" }}
             />
+          </div>
+          
+          {/* Filtro Estado */}
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="px-3 py-2.5 rounded-xl text-sm text-white outline-none"
+            style={{ background: "#1F1F1F", border: "1px solid rgba(255,255,255,0.08)" }}
+          >
+            <option value="all">Todos los estados</option>
+            <option value="paid">Pagado</option>
+            <option value="confirmed">Confirmado</option>
+            <option value="payment_in_process">Pago en proceso</option>
+            <option value="cancelled">Cancelado</option>
+          </select>
+          
+          {/* Filtro Cuenta */}
+          <select
+            value={accountFilter}
+            onChange={(e) => setAccountFilter(e.target.value)}
+            className="px-3 py-2.5 rounded-xl text-sm text-white outline-none"
+            style={{ background: "#1F1F1F", border: "1px solid rgba(255,255,255,0.08)" }}
+          >
+            <option value="all">Todas las cuentas</option>
+            {accounts.map(acc => (
+              <option key={acc.id} value={acc.id}>@{acc.meli_nickname}</option>
+            ))}
+          </select>
+        </div>
 
-            <div className="card border border-white/10">
-              <h2 className="text-base font-bold text-gray-200 mb-4 flex items-center gap-2">
-                <ShoppingCart className="w-5 h-5 text-[#FDB71A]" />
-                Detalle de productos
-              </h2>
+        {/* Error */}
+        {error && (
+          <div className="rounded-2xl p-4 mb-4 text-center" style={{ background: "#ef444418", border: "1px solid #ef444440" }}>
+            <AlertTriangle className="w-7 h-7 mx-auto mb-1" style={{ color: "#ef4444" }} />
+            <p className="text-sm text-white font-semibold">{error}</p>
+            <button onClick={loadAllOrders} className="mt-2 px-4 py-1.5 rounded-lg text-xs font-bold bg-red-500 text-white">
+              Reintentar
+            </button>
+          </div>
+        )}
 
-              {/* Header de columnas */}
-              <div className="grid grid-cols-12 gap-2 mb-2 px-1">
-                <p className="col-span-5 text-xs text-gray-600 font-semibold">PRODUCTO</p>
-                <p className="col-span-2 text-xs text-gray-600 font-semibold">SKU</p>
-                <p className="col-span-2 text-xs text-gray-600 font-semibold">CANT.</p>
-                <p className="col-span-2 text-xs text-gray-600 font-semibold">PRECIO</p>
-                <p className="col-span-1" />
+        {/* Lista de Órdenes */}
+        <div className="space-y-3">
+          {loading && orders.length === 0 ? (
+            // Skeleton loading
+            [1, 2, 3].map(i => (
+              <div key={i} className="rounded-2xl p-4 animate-pulse" style={{ background: "#1F1F1F" }}>
+                <div className="h-3 rounded w-24 mb-2" style={{ background: "#2a2a2a" }} />
+                <div className="h-4 rounded w-3/4 mb-1" style={{ background: "#2a2a2a" }} />
+                <div className="h-4 rounded w-1/2" style={{ background: "#2a2a2a" }} />
               </div>
+            ))
+          ) : filteredOrders.length === 0 ? (
+            // Empty state
+            <div className="rounded-2xl p-10 text-center" style={{ background: "#1F1F1F" }}>
+              <ShoppingBag className="w-10 h-10 mx-auto mb-2" style={{ color: "#6B7280" }} />
+              <p className="text-white font-bold">
+                {searchTerm ? "Sin resultados" : "No hay ventas en el período"}
+              </p>
+              <p className="text-sm mt-1" style={{ color: "#6B7280" }}>
+                {searchTerm ? "Intenta con otros filtros" : "No se encontraron órdenes en las cuentas conectadas"}
+              </p>
+            </div>
+          ) : (
+            // Órdenes
+            filteredOrders.map(order => (
+              <OrderCard key={order.id} order={order} />
+            ))
+          )}
+        </div>
+      </div>
+    </main>
+  );
+}
 
-              <div className="space-y-2">
-                {itemsCalc.map(item => (
-                  <ItemRow
-                    key={item.id}
-                    item={item}
-                    onChange={handleItemChange}
-                    onRemove={handleRemoveItem}
-                  />
-                ))}
-              </div>
+// ============ COMPONENTE: TARJETA DE ORDEN ============
+interface OrderCardProps {
+  order: UnifiedOrder;
+}
 
-              <button
-                onClick={handleAddItem}
-                className="mt-3 flex items-center gap-2 text-sm text-[#00E5FF] hover:text-white font-semibold transition-colors"
+function OrderCard({ order }: OrderCardProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  
+  const isPaid = order.status === ORDER_STATUSES.PAID;
+  const isCancelled = order.status === ORDER_STATUSES.CANCELLED;
+  const hasFraudAlert = order.tags?.includes('fraud_risk_detected');
+  
+  const statusColors: Record<string, string> = {
+    [ORDER_STATUSES.PAID]: "#39FF14",
+    [ORDER_STATUSES.CONFIRMED]: "#00E5FF",
+    [ORDER_STATUSES.PAYMENT_IN_PROCESS]: "#FFE600",
+    [ORDER_STATUSES.PAYMENT_REQUIRED]: "#FF5722",
+    [ORDER_STATUSES.CANCELLED]: "#ef4444",
+    [ORDER_STATUSES.PENDING_CANCEL]: "#FF5722",
+  };
+  
+  const statusLabels: Record<string, string> = {
+    [ORDER_STATUSES.PAID]: "Pagado",
+    [ORDER_STATUSES.CONFIRMED]: "Confirmado",
+    [ORDER_STATUSES.PAYMENT_IN_PROCESS]: "Pago en proceso",
+    [ORDER_STATUSES.PAYMENT_REQUIRED]: "Pago requerido",
+    [ORDER_STATUSES.CANCELLED]: "Cancelado",
+    [ORDER_STATUSES.PENDING_CANCEL]: "Pendiente de cancelación",
+    [ORDER_STATUSES.PARTIALLY_PAID]: "Parcialmente pagado",
+    [ORDER_STATUSES.PARTIALLY_REFUNDED]: "Parcialmente reembolsado",
+  };
+
+  const timeAgo = getTimeAgo(order.date_created);
+  const totalItems = order.order_items.reduce((sum, item) => sum + item.quantity, 0);
+
+  return (
+    <div 
+      className="rounded-2xl overflow-hidden transition-all duration-300"
+      style={{ 
+        background: "#1F1F1F", 
+        border: `1px solid ${hasFraudAlert ? "#ef444444" : "rgba(255,255,255,0.07)"}`,
+      }}
+    >
+      {/* Header */}
+      <button 
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="w-full text-left p-4"
+      >
+        <div className="flex items-start gap-3">
+          {/* Indicador de cuenta */}
+          <div 
+            className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+            style={{ background: "#2a2a2a", border: "2px solid rgba(255,230,0,0.1)" }}
+          >
+            <span className="text-xs font-bold" style={{ color: "#FFE600" }}>
+              {order.account.nickname.substring(0, 2).toUpperCase()}
+            </span>
+          </div>
+          
+          {/* Contenido */}
+          <div className="flex-1 min-w-0">
+            {/* Cuenta y estado */}
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
+              <span 
+                className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                style={{ background: "#FFE60018", color: "#FFE600" }}
               >
-                <Plus className="w-4 h-4" /> Agregar producto
-              </button>
-            </div>
-
-            {/* Método de pago + vendedor */}
-            <div className="card border border-white/10 space-y-4">
-              <div>
-                <label className="label">Forma de Pago</label>
-                <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mt-1">
-                  {(Object.keys(METODO_PAGO_LABELS) as MetodoPago[]).map(m => (
-                    <button
-                      key={m}
-                      onClick={() => setMetodoPago(m)}
-                      className={`py-2 px-2 rounded-xl text-xs font-bold border transition-all text-center
-                        ${metodoPago === m
-                          ? "text-white"
-                          : "border-white/10 text-gray-500 hover:border-white/20 hover:text-gray-300"}`}
-                      style={metodoPago === m ? {
-                        borderColor: METODO_COLORS[m],
-                        background: METODO_COLORS[m] + "20",
-                        color: METODO_COLORS[m],
-                        boxShadow: `0 0 10px ${METODO_COLORS[m]}40`,
-                      } : {}}
-                    >
-                      <span className="block text-base">{METODO_PAGO_ICONS[m]}</span>
-                      {METODO_PAGO_LABELS[m]}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="label">Vendedor</label>
-                  <input className="input" value={vendedor} onChange={e => setVendedor(e.target.value)} placeholder="Nombre del vendedor" />
-                </div>
-                <div>
-                  <label className="label">Notas (opcional)</label>
-                  <input className="input" value={notas} onChange={e => setNotas(e.target.value)} placeholder="Ej: cliente frecuente" />
-                </div>
-              </div>
-            </div>
-
-            {/* Total + Guardar */}
-            <div className="card border border-[#39FF14]/40"
-              style={{ background: "rgba(57,255,20,0.05)", boxShadow: "0 0 20px rgba(57,255,20,0.10)" }}>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-gray-500 font-semibold uppercase">Total de la venta</p>
-                  <p className="text-4xl font-black text-[#39FF14]"
-                    style={{ textShadow: "0 0 12px rgba(57,255,20,0.60)" }}>
-                    {fmt(total)}
-                  </p>
-                  <p className="text-xs text-gray-600 mt-0.5">
-                    {itemsCalc.filter(i => i.producto).length} producto(s) · {METODO_PAGO_LABELS[metodoPago]}
-                  </p>
-                </div>
-                <button
-                  onClick={handleGuardarVenta}
-                  disabled={saving || total === 0}
-                  className="btn-primary px-8 disabled:opacity-40 disabled:cursor-not-allowed"
+                @{order.account.nickname}
+              </span>
+              <span 
+                className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                style={{ 
+                  background: `${statusColors[order.status] || "#6B7280"}22`, 
+                  color: statusColors[order.status] || "#6B7280"
+                }}
+              >
+                {statusLabels[order.status] || order.status}
+              </span>
+              {hasFraudAlert && (
+                <span 
+                  className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                  style={{ background: "#ef444422", color: "#ef4444" }}
                 >
-                  {saving ? (
-                    <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <CheckCircle className="w-5 h-5" />
-                  )}
-                  {saving ? "Guardando..." : "Confirmar Venta"}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ══════════════════ MOVIMIENTOS ══════════════════ */}
-        {tab === "movimientos" && (
-          <div className="space-y-4">
-            {/* Resumen del día */}
-            <div className="card border border-[#FDB71A]/30"
-              style={{ background: "rgba(253,183,26,0.05)" }}>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-gray-500 font-semibold uppercase flex items-center gap-1">
-                    <Calendar className="w-3.5 h-3.5" /> Hoy — {getNowBA().toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" })}
-                  </p>
-                  <p className="text-3xl font-black text-[#FDB71A] mt-1"
-                    style={{ textShadow: "0 0 10px rgba(253,183,26,0.50)" }}>
-                    {fmt(totalHoy)}
-                  </p>
-                  <p className="text-xs text-gray-600 mt-0.5">
-                    {ventasActivas.length} venta{ventasActivas.length !== 1 ? "s" : ""} activa{ventasActivas.length !== 1 ? "s" : ""}
-                  </p>
-                </div>
-                <button onClick={loadVentasHoy} className="btn-secondary btn-sm">
-                  Actualizar
-                </button>
-              </div>
-            </div>
-
-            {loadingHoy ? (
-              <div className="card flex items-center justify-center py-12">
-                <span className="w-8 h-8 border-4 border-[#FDB71A] border-t-transparent rounded-full animate-spin" />
-              </div>
-            ) : ventasHoy.length === 0 ? (
-              <div className="card flex flex-col items-center py-14 text-center">
-                <ShoppingCart className="w-10 h-10 text-gray-700 mb-3" />
-                <p className="text-gray-400 font-semibold">No hay ventas registradas hoy</p>
-                <p className="text-gray-600 text-sm mt-1">Las ventas que registres aparecerán aquí</p>
-              </div>
-            ) : (
-              ventasHoy.map(v => (
-                <VentaCard 
-                  key={v.id} 
-                  venta={v} 
-                  onCancelar={handleCancelar} 
-                  onEditar={setEditVenta}
-                  onPrintTicket={(venta) => setTicketModal({ isOpen: true, ventaId: venta.id })}
-                />
-              ))
-            )}
-          </div>
-        )}
-
-        {/* ══════════════════ ESTADÍSTICAS ══════════════════ */}
-        {tab === "estadisticas" && (
-          <div className="space-y-4">
-            {/* Selector de rango */}
-            <div className="card border border-white/10">
-              <div className="flex gap-2 flex-wrap">
-                {([
-                  { id: "hoy",    label: "Hoy" },
-                  { id: "semana", label: "Semana" },
-                  { id: "mes",    label: "Mes" },
-                  { id: "custom", label: "Personalizado" },
-                ] as { id: RangoStats; label: string }[]).map(r => (
-                  <button
-                    key={r.id}
-                    onClick={() => setRango(r.id)}
-                    className={`px-4 py-1.5 rounded-xl text-sm font-bold border transition-all
-                      ${rango === r.id
-                        ? "border-[#00E5FF] text-[#00E5FF] bg-[#00E5FF]/10"
-                        : "border-white/10 text-gray-500 hover:border-white/20 hover:text-gray-300"}`}
-                  >
-                    {r.label}
-                  </button>
-                ))}
-              </div>
-
-              {rango === "custom" && (
-                <div className="grid grid-cols-2 gap-3 mt-3">
-                  <div>
-                    <label className="label">Desde</label>
-                    <input type="date" className="input" value={customDesde} onChange={e => setCustomDesde(e.target.value)} />
-                  </div>
-                  <div>
-                    <label className="label">Hasta</label>
-                    <input type="date" className="input" value={customHasta} onChange={e => setCustomHasta(e.target.value)} />
-                  </div>
-                </div>
+                  <AlertTriangle className="w-3 h-3 inline mr-1" />
+                  Fraude
+                </span>
               )}
-
-              <button onClick={loadStats} className="btn-secondary btn-sm mt-3">
-                <TrendingUp className="w-4 h-4" /> Cargar estadísticas
-              </button>
+              <span className="text-[10px]" style={{ color: "#6B7280" }}>
+                {timeAgo}
+              </span>
             </div>
-
-            {loadingStats ? (
-              <div className="card flex items-center justify-center py-12">
-                <span className="w-8 h-8 border-4 border-[#00E5FF] border-t-transparent rounded-full animate-spin" />
-              </div>
-            ) : stats ? (
-              <>
-                {/* Métricas clave */}
-                <div className="grid grid-cols-2 gap-3">
-                  <MetricCard
-                    label={`Total facturado (${rangeLabel})`}
-                    value={fmt(stats.totalFacturado)}
-                    sub={`${stats.cantVentas} venta${stats.cantVentas !== 1 ? "s" : ""}`}
-                    color="#39FF14"
-                  />
-                  <MetricCard
-                    label="Ventas totales"
-                    value={String(stats.cantVentas)}
-                    sub={rangeLabel}
-                    color="#00E5FF"
-                  />
-                  <MetricCard
-                    label="Método más usado"
-                    value={stats.metodoTop ? METODO_PAGO_LABELS[stats.metodoTop as MetodoPago] ?? stats.metodoTop : "—"}
-                    color="#FDB71A"
-                  />
-                  <MetricCard
-                    label="Producto top"
-                    value={stats.productoTop ?? "—"}
-                    color="#FF5722"
-                  />
-                </div>
-
-                {/* Gráfico de barras */}
-                {chartFormatted.length > 0 && (
-                  <div className="card border border-white/10">
-                    <h3 className="text-sm font-bold text-gray-300 mb-4 flex items-center gap-2">
-                      <BarChart2 className="w-4 h-4 text-[#FDB71A]" />
-                      Facturación por día
-                    </h3>
-                    <ResponsiveContainer width="100%" height={200}>
-                      <BarChart data={chartFormatted} barSize={32}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                        <XAxis dataKey="name" tick={{ fill: "#6B7280", fontSize: 11 }} axisLine={false} tickLine={false} />
-                        <YAxis tick={{ fill: "#6B7280", fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={v => "$" + (v / 1000).toFixed(0) + "k"} />
-                        <Tooltip
-                          contentStyle={{ background: "#1F1F1F", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "12px", color: "#fff" }}
-                          formatter={(v) => [fmt(Number(v ?? 0)), "Total"] as [string, string]}
-                        />
-                        <Bar dataKey="total" radius={[6, 6, 0, 0]}>
-                          {chartFormatted.map((_, i) => (
-                            <Cell key={i} fill={i % 2 === 0 ? "#FDB71A" : "#FF5722"} />
-                          ))}
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                )}
-
-                {/* Top 5 productos */}
-                {topProd.length > 0 && (
-                  <div className="card border border-white/10">
-                    <h3 className="text-sm font-bold text-gray-300 mb-3 flex items-center gap-2">
-                      <Package className="w-4 h-4 text-[#00E5FF]" />
-                      Top 5 productos más vendidos
-                    </h3>
-                    <div className="space-y-2">
-                      {topProd.map((p, i) => {
-                        const maxCant = topProd[0]?.cantidad || 1;
-                        const pct = Math.round((p.cantidad / maxCant) * 100);
-                        return (
-                          <div key={p.producto}>
-                            <div className="flex justify-between items-baseline mb-1">
-                              <span className="text-sm text-gray-300 truncate flex-1 mr-2">
-                                <span className="text-gray-600 font-mono mr-1">#{i + 1}</span>
-                                {p.producto}
-                              </span>
-                              <div className="text-right flex-shrink-0">
-                                <span className="text-xs text-[#00E5FF] font-bold">{p.cantidad} uds</span>
-                                <span className="text-xs text-gray-600 ml-2">{fmt(p.total)}</span>
-                              </div>
-                            </div>
-                            <div className="h-1.5 rounded-full bg-white/5">
-                              <div
-                                className="h-1.5 rounded-full transition-all"
-                                style={{ width: `${pct}%`, background: i === 0 ? "#FDB71A" : "#00E5FF" }}
-                              />
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {/* Distribución por método de pago */}
-              </>
-            ) : (
-              <div className="card flex flex-col items-center py-14 text-center">
-                <CreditCard className="w-10 h-10 text-gray-700 mb-3" />
-                <p className="text-gray-400 font-semibold">Seleccioná un rango y cargá las estadísticas</p>
-              </div>
-            )}
+            
+            {/* Info principal */}
+            <div className="flex items-baseline gap-2">
+              <p className="text-lg font-black text-white">
+                ${order.total_amount.toLocaleString("es-AR")}
+              </p>
+              <p className="text-xs" style={{ color: "#6B7280" }}>
+                Orden #{order.id}
+              </p>
+            </div>
+            
+            {/* Comprador */}
+            <p className="text-xs mt-1" style={{ color: "#6B7280" }}>
+              {order.buyer.nickname 
+                ? `@${order.buyer.nickname}` 
+                : `Comprador #${order.buyer.id}`}
+              {order.buyer.first_name && ` · ${order.buyer.first_name} ${order.buyer.last_name || ""}`}
+            </p>
+            
+            {/* Items */}
+            <p className="text-xs mt-1 truncate" style={{ color: "#6B7280" }}>
+              {totalItems} {totalItems === 1 ? "producto" : "productos"}
+              {order.order_items.length > 0 && ` · ${order.order_items[0].item.title}`}
+              {order.order_items.length > 1 && ` y ${order.order_items.length - 1} más`}
+            </p>
           </div>
-        )}
-      </main>
-
-      <BottomNav />
-
-      {editVenta && (
-        <EditVentaModal
-          venta={editVenta}
-          onClose={() => setEditVenta(null)}
-          onSave={handleEditarVenta}
-        />
-      )}
-
-      {ticketModal.isOpen && (
-        <TicketPrinter
-          isOpen={ticketModal.isOpen}
-          venta={ventasHoy.find(v => v.id === ticketModal.ventaId) || { items: [], total: 0, metodoPago: "efectivo", createdAt: "" }}
-          clientData={clientData}
-          onClose={() => setTicketModal({ isOpen: false })}
-        />
-      )}
-
-      {toast && (
-        <div className={`fixed bottom-28 sm:bottom-8 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3
-          px-5 py-3.5 rounded-2xl shadow-2xl text-white font-semibold text-sm
-          ${toast.ok ? "bg-green-700" : "bg-red-700"}`}>
-          {toast.ok
-            ? <CheckCircle className="w-5 h-5 flex-shrink-0" />
-            : <AlertTriangle className="w-5 h-5 flex-shrink-0" />}
-          {toast.msg}
+          
+          {/* Chevron */}
+          <div className="flex-shrink-0">
+            <ChevronRight 
+              className={`w-5 h-5 transition-transform ${isExpanded ? "rotate-90" : ""}`}
+              style={{ color: "#6B7280" }}
+            />
+          </div>
+        </div>
+      </button>
+      
+      {/* Detalles expandibles */}
+      {isExpanded && (
+        <div className="px-4 pb-4 space-y-3 border-t" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+          {/* Productos */}
+          <div className="pt-3">
+            <p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: "#6B7280" }}>
+              Productos
+            </p>
+            
+            <div className="space-y-2">
+              {order.order_items.map((item, idx) => (
+                <div key={idx} className="p-3 rounded-xl" style={{ background: "#121212" }}>
+                  <p className="text-sm text-white font-medium">{item.item.title}</p>
+                  <div className="flex justify-between items-center mt-1">
+                    <span className="text-xs" style={{ color: "#6B7280" }}>
+                      {item.quantity} x ${item.unit_price.toLocaleString("es-AR")}
+                    </span>
+                    <span className="text-sm font-bold text-white">
+                      ${(item.quantity * item.unit_price).toLocaleString("es-AR")}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          
+          {/* Envío */}
+          {order.shipping && (
+            <div className="p-3 rounded-xl" style={{ background: "#121212" }}>
+              <p className="text-xs font-bold uppercase tracking-wider mb-1" style={{ color: "#6B7280" }}>
+                Envío
+              </p>
+              <p className="text-sm text-white">
+                ID: {order.shipping.id}
+              </p>
+              {order.shipping.status && (
+                <p className="text-xs mt-1" style={{ color: "#6B7280" }}>
+                  Estado: {order.shipping.status}
+                </p>
+              )}
+            </div>
+          )}
+          
+          {/* Acciones */}
+          <div className="flex gap-2 pt-2">
+            <a 
+              href={`https://www.mercadolibre.com.ar/ventas/${order.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-xl font-bold text-sm text-white"
+              style={{ background: "#2a2a2a" }}
+            >
+              <ExternalLink className="w-4 h-4" />
+              Ver en MeLi
+            </a>
+            
+            <Link
+              href={`/mensajes?order=${order.id}`}
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-xl font-bold text-sm text-black"
+              style={{ background: "#FFE600" }}
+            >
+              Mensajes
+            </Link>
+          </div>
         </div>
       )}
-    </>
+    </div>
   );
+}
+
+// ============ UTILIDADES ============
+function getTimeAgo(dateString: string): string {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diff = now.getTime() - date.getTime();
+  const minutes = Math.floor(diff / 60000);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+  
+  if (minutes < 1) return "ahora";
+  if (minutes < 60) return `hace ${minutes}m`;
+  if (hours < 24) return `hace ${hours}h`;
+  if (days < 7) return `hace ${days}d`;
+  return date.toLocaleDateString("es-AR");
 }
