@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
 
-if (!supabaseUrl || !supabaseKey) {
-  throw new Error("Missing Supabase environment variables");
-}
-
-const supabase = createClient(supabaseUrl, supabaseKey);
+// Crear cliente solo si las variables están definidas
+const supabase = supabaseUrl && supabaseKey 
+  ? createClient(supabaseUrl, supabaseKey)
+  : null;
 
 // Detectar tipo de envío basado en la respuesta de MeLi
 function detectarTipoEnvio(shipmentData: any): string {
@@ -50,6 +49,14 @@ function detectarTipoEnvio(shipmentData: any): string {
 // POST - Guardar múltiples etiquetas en historial (batch)
 export async function POST(req: NextRequest) {
   try {
+    // Verificar que Supabase esté configurado
+    if (!supabase) {
+      return NextResponse.json(
+        { error: "Supabase no configurado" },
+        { status: 500 }
+      );
+    }
+
     const body = await req.json();
     const { etiquetas } = body;
 
