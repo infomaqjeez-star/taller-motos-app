@@ -216,7 +216,7 @@ function PreciosInner() {
     } finally {
       setRunning(false);
     }
-  }, [keyword, excludeWords, adjType, adjValue, selectedAcc]);
+  }, [keyword, excludeWords, adjType, adjValue, selectedAccs, clearCache]);
 
   const progressPct = progress && totalInAcc > 0
     ? Math.round((progress.current / totalInAcc) * 100)
