@@ -3,6 +3,9 @@ import { createClient, SupabaseClient } from "@supabase/supabase-js";
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
 
+// Flag para saber si estamos en build time
+const isBuildTime = typeof window === "undefined" && process.env.NODE_ENV === "production";
+
 // Validación en tiempo de ejecución para variables de entorno
 if (typeof window !== "undefined") {
   // Solo verificar en el cliente
@@ -21,27 +24,63 @@ if (typeof window !== "undefined") {
   }
 }
 
-console.log("[Supabase Init]", {
-  url: url && !url.includes("placeholder") ? "✓ URL configured" : "✗ URL missing",
-  key: key && !key.includes("placeholder") ? "✓ Key configured" : "✗ Key missing",
-});
+if (!isBuildTime) {
+  console.log("[Supabase Init]", {
+    url: url && !url.includes("placeholder") ? "✓ URL configured" : "✗ URL missing",
+    key: key && !key.includes("placeholder") ? "✓ Key configured" : "✗ Key missing",
+  });
+}
 
-export const supabase: SupabaseClient = createClient(
-  url || "https://placeholder.supabase.co",
-  key || "placeholder-key",
-  {
+// Crear un cliente mock para build time
+const createMockClient = (): SupabaseClient => {
+  return {
     auth: {
-      flowType: "implicit",
-      autoRefreshToken: true,
-      persistSession: true,
+      getUser: async () => ({ data: { user: null }, error: null }),
+      getSession: async () => ({ data: { session: null }, error: null }),
+      onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
+      signInWithOAuth: async () => ({ data: null, error: new Error("Build time") }),
+      signOut: async () => ({ error: null }),
     },
+    from: () => ({
+      select: () => ({
+        eq: () => ({
+          single: async () => ({ data: null, error: null }),
+          order: () => ({ data: [], error: null }),
+        }),
+        order: () => ({ data: [], error: null }),
+      }),
+      insert: async () => ({ data: null, error: null }),
+      update: async () => ({ data: null, error: null }),
+      delete: async () => ({ data: null, error: null }),
+    }),
     realtime: {
-      params: {
-        eventsPerSecond: 10,
-      },
+      channel: () => ({
+        on: () => ({ subscribe: () => {} }),
+        subscribe: () => {},
+      }),
     },
-  }
-);
+  } as unknown as SupabaseClient;
+};
+
+// Crear el cliente real o mock según el entorno
+export const supabase: SupabaseClient = isBuildTime && (!url || url.includes("placeholder"))
+  ? createMockClient()
+  : createClient(
+      url || "https://placeholder.supabase.co",
+      key || "placeholder-key",
+      {
+        auth: {
+          flowType: "implicit",
+          autoRefreshToken: true,
+          persistSession: true,
+        },
+        realtime: {
+          params: {
+            eventsPerSecond: 10,
+          },
+        },
+      }
+    );
 
 // 🔌 Nota: Realtime usa polling en producción (fallback automático)
 // Los errores de WebSocket se deben a que RLS no está configurado en Supabase

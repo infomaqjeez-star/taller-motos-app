@@ -36,10 +36,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="es" suppressHydrationWarning className={`${inter.variable} ${jetbrainsMono.variable}`}>
       <body className="min-h-screen bg-[#020203] text-zinc-200 font-sans antialiased selection:bg-amber-400/30">
-        <ReactQueryProvider>
-          <Providers>{children}</Providers>
-          <Toaster />
-        </ReactQueryProvider>
+        <Providers>
+          <ReactQueryProvider>
+            {children}
+            <Toaster />
+          </ReactQueryProvider>
+        </Providers>
         <QuestionAlertGlobal />
       </body>
     </html>
