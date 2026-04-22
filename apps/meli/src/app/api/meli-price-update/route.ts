@@ -63,19 +63,23 @@ export async function POST(request: NextRequest) {
     // Obtener cuentas
     let query = supabase
       .from("linked_meli_accounts")
-      .select("id, meli_user_id, meli_nickname, access_token_enc")
+      .select("id, meli_user_id, meli_nickname, access_token_enc, access_token, refresh_token, token_expires_at")
       .eq("user_id", userId)
       .eq("is_active", true);
     
     if (account_ids.length > 0) {
-      query = query.in("meli_user_id", account_ids);
+      // Filtrar por meli_user_id o id
+      query = query.or(`meli_user_id.in.(${account_ids.join(',')}),id.in.(${account_ids.join(',')})`);
     }
     
     const { data: accounts, error: accountsError } = await query;
 
+    console.log("[meli-price-update] Cuentas encontradas:", accounts?.length || 0);
+    console.log("[meli-price-update] account_ids recibidos:", account_ids);
+
     if (accountsError || !accounts || accounts.length === 0) {
       return new Response(
-        JSON.stringify({ error: "No hay cuentas activas" }),
+        JSON.stringify({ error: "No hay cuentas activas", details: accountsError }),
         { status: 404, headers: { 'Content-Type': 'application/json' } }
       );
     }
@@ -101,8 +105,14 @@ export async function POST(request: NextRequest) {
 
         // Procesar cada cuenta
         for (const account of accounts) {
-          if (!account.access_token_enc?.startsWith('APP_USR')) {
+          // Obtener token válido (puede ser access_token o access_token_enc)
+          const token = account.access_token || account.access_token_enc;
+          
+          console.log(`[meli-price-update] Procesando cuenta ${account.meli_nickname}, token válido:`, !!token);
+          
+          if (!token?.startsWith('APP_USR')) {
             console.log(`[meli-price-update] Saltando cuenta ${account.meli_nickname}: token inválido`);
+            errors++;
             continue;
           }
 
@@ -114,17 +124,33 @@ export async function POST(request: NextRequest) {
 
           try {
             // Buscar items por palabra clave
+            const searchUrl = `https://api.mercadolibre.com/users/${account.meli_user_id}/items/search?q=${encodeURIComponent(keyword)}&status=active&limit=100`;
+            console.log(`[meli-price-update] Buscando: ${searchUrl}`);
+            
             const searchRes = await fetch(
-              `https://api.mercadolibre.com/users/${account.meli_user_id}/items/search?q=${encodeURIComponent(keyword)}&status=active&limit=100`,
+              searchUrl,
               {
-                headers: { Authorization: `Bearer ${account.access_token_enc}` },
+                headers: { Authorization: `Bearer ${token}` },
                 signal: AbortSignal.timeout(15000),
               }
             );
 
+            console.log(`[meli-price-update] Respuesta búsqueda para ${account.meli_nickname}:`, searchRes.status);
+
             if (!searchRes.ok) {
-              console.error(`[meli-price-update] Error buscando items para ${account.meli_nickname}:`, searchRes.status);
+              const errorText = await searchRes.text().catch(() => "No error text");
+              console.error(`[meli-price-update] Error buscando items para ${account.meli_nickname}:`, searchRes.status, errorText);
               errors++;
+              send({
+                type: "progress",
+                current: 0,
+                total: 0,
+                item_id: "",
+                title: `Error en búsqueda: ${errorText}`,
+                status: "error",
+                account: account.meli_nickname,
+                reason: `HTTP ${searchRes.status}`
+              });
               continue;
             }
 
@@ -153,7 +179,7 @@ export async function POST(request: NextRequest) {
                 const itemRes = await fetch(
                   `https://api.mercadolibre.com/items/${itemId}`,
                   {
-                    headers: { Authorization: `Bearer ${account.access_token_enc}` },
+                    headers: { Authorization: `Bearer ${token}` },
                     signal: AbortSignal.timeout(10000),
                   }
                 );
@@ -298,7 +324,7 @@ export async function POST(request: NextRequest) {
                   {
                     method: "PUT",
                     headers: {
-                      Authorization: `Bearer ${account.access_token_enc}`,
+                      Authorization: `Bearer ${token}`,
                       "Content-Type": "application/json",
                     },
                     body: JSON.stringify({ price: newPrice }),
