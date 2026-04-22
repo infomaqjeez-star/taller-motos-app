@@ -5,7 +5,7 @@ import { createClient } from "@supabase/supabase-js";
 import {
   ArrowLeft, Search, DollarSign, RefreshCw, AlertTriangle,
   XCircle, Tag, ShieldAlert, Eye, Percent, Plus, TrendingUp,
-  Square, Play, Ban,
+  Square, Play, Ban, Check
 } from "lucide-react";
 
 const supabase = createClient(
@@ -81,8 +81,9 @@ function PreciosInner() {
   const [adjType, setAdjType]           = useState<AdjustmentType>("fixed_floor");
   const [adjValue, setAdjValue]         = useState("");
   const [dryRun, setDryRun]             = useState(false);
-  const [accounts, setAccounts]         = useState<Array<{ meli_user_id: string; nickname: string }>>([]);
-  const [selectedAcc, setSelectedAcc]   = useState("all");
+  const [accounts, setAccounts]         = useState<Array<{ meli_user_id: string; nickname: string; id?: string }>>([]);
+  const [selectedAccs, setSelectedAccs] = useState<Set<string>>(new Set());
+  const [selectAllAccs, setSelectAllAccs] = useState(true);
 
   const [running, setRunning]           = useState(false);
   const [stopped, setStopped]           = useState(false);
@@ -99,9 +100,35 @@ function PreciosInner() {
   useEffect(() => {
     fetch("/api/meli-accounts")
       .then(r => r.json())
-      .then(d => setAccounts(Array.isArray(d) ? d : (d.accounts ?? [])))
+      .then(d => {
+        const accs = Array.isArray(d) ? d : (d.accounts ?? []);
+        setAccounts(accs);
+        // Seleccionar todas por defecto
+        setSelectedAccs(new Set(accs.map((a: any) => a.meli_user_id || a.id)));
+      })
       .catch(() => {});
   }, []);
+
+  const toggleAccount = (accId: string) => {
+    setSelectedAccs(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(accId)) {
+        newSet.delete(accId);
+      } else {
+        newSet.add(accId);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectAllAccs) {
+      setSelectedAccs(new Set());
+    } else {
+      setSelectedAccs(new Set(accounts.map(a => a.meli_user_id || a.id || "")));
+    }
+    setSelectAllAccs(!selectAllAccs);
+  };
 
   const activeCfg = ADJ_TYPES.find(t => t.value === adjType)!;
 
@@ -134,8 +161,8 @@ function PreciosInner() {
         adjustment_value: Number(adjValue),
         dry_run: dry,
         clear_cache: clearCache,
+        account_ids: Array.from(selectedAccs),
       };
-      if (selectedAcc !== "all") payload.account_ids = [selectedAcc];
 
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("No hay sesión activa");
@@ -296,24 +323,33 @@ function PreciosInner() {
 
           {/* Cuentas */}
           <div>
-            <label className="text-xs font-bold text-gray-400 mb-2 block">Cuentas</label>
-            <div className="flex flex-wrap gap-2">
-              <button onClick={() => setSelectedAcc("all")}
-                className="px-3 py-1.5 rounded-xl text-xs font-black transition-all border"
-                style={selectedAcc === "all"
-                  ? { background: "#FFE600", color: "#121212", borderColor: "#FFE600" }
-                  : { background: "transparent", color: "#9CA3AF", borderColor: "rgba(255,255,255,0.15)" }}>
-                ★ Todas
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-xs font-bold text-gray-400">Cuentas ({selectedAccs.size}/{accounts.length})</label>
+              <button 
+                onClick={toggleSelectAll}
+                className="text-[10px] font-bold px-2 py-1 rounded-lg"
+                style={{ background: "#2a2a2a", color: "#FFE600" }}
+              >
+                {selectAllAccs ? "Deseleccionar todo" : "Seleccionar todo"}
               </button>
-              {accounts.map(a => (
-                <button key={a.meli_user_id} onClick={() => setSelectedAcc(String(a.meli_user_id))}
-                  className="px-3 py-1.5 rounded-xl text-xs font-black transition-all border"
-                  style={selectedAcc === String(a.meli_user_id)
-                    ? { background: "#39FF14", color: "#121212", borderColor: "#39FF14" }
-                    : { background: "transparent", color: "#9CA3AF", borderColor: "rgba(255,255,255,0.15)" }}>
-                  {a.nickname}
-                </button>
-              ))}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {accounts.map(a => {
+                const accId = a.meli_user_id || a.id || "";
+                const isSelected = selectedAccs.has(accId);
+                return (
+                  <button 
+                    key={accId} 
+                    onClick={() => toggleAccount(accId)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black transition-all border"
+                    style={isSelected
+                      ? { background: "#39FF14", color: "#121212", borderColor: "#39FF14" }
+                      : { background: "transparent", color: "#9CA3AF", borderColor: "rgba(255,255,255,0.15)" }}>
+                    {isSelected && <Check className="w-3 h-3" />}
+                    {a.nickname}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
