@@ -2,9 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { getValidToken } from "@/lib/meli";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+
+// Crear cliente solo si las variables están definidas
+const supabase = supabaseUrl && supabaseServiceKey 
+  ? createClient(supabaseUrl, supabaseServiceKey)
+  : null;
 
 // Forzar renderizado dinámico
 export const dynamic = 'force-dynamic';
@@ -17,6 +21,14 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET(request: NextRequest) {
   try {
+    // Verificar que Supabase esté configurado
+    if (!supabase) {
+      return NextResponse.json(
+        { error: "Supabase no configurado" },
+        { status: 500 }
+      );
+    }
+
     // Obtener el usuario actual
     const authHeader = request.headers.get("authorization");
     let userId: string | null = null;
