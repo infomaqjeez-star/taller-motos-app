@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
+export const dynamic = 'force-dynamic';
+
 // GET - Descargar PDF de etiqueta en tiempo real
 export async function GET(req: NextRequest) {
   try {
