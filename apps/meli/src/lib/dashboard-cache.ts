@@ -5,7 +5,7 @@ interface CacheEntry {
 }
 
 const dashboardCache = new Map<string, CacheEntry>();
-export const CACHE_TTL = 5 * 60 * 1000; // 5 minutos
+export const CACHE_TTL = 30 * 1000; // 30 segundos temporalmente para debugging
 
 export function getCachedData(userId: string): any[] | null {
   const cached = dashboardCache.get(userId);
