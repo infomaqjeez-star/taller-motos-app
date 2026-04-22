@@ -58,14 +58,12 @@ export function MeliAccountsProvider({ children }: { children: React.ReactNode }
     } finally {
       setLoading(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Sin dependencias - usa user desde closure
+  }, [user]); // Dependencia correcta: user
 
   // Cargar cuentas inicialmente
   useEffect(() => {
     refreshAccounts();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]); // Solo cuando cambia user, no cuando cambia refreshAccounts
+  }, [refreshAccounts]);
 
   // Escuchar cambios en tiempo real
   useEffect(() => {
@@ -107,8 +105,7 @@ export function MeliAccountsProvider({ children }: { children: React.ReactNode }
       console.log("[MeliAccounts] Cancelando suscripción realtime...");
       subscription.unsubscribe();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]); // Solo cuando cambia user, no cuando cambia refreshAccounts
+  }, [user, refreshAccounts]);
 
   return (
     <MeliAccountsContext.Provider
