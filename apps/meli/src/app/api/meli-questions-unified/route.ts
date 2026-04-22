@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
             };
           }
 
-          // Llamar a API de MeLi
+          // Llamar a API de MeLi - traer todas las preguntas (sin filtro de estado)
           const response = await fetch(
             `https://api.mercadolibre.com/questions/search?seller_id=${account.meli_user_id}&api_version=4&limit=100`,
             {
@@ -97,6 +97,8 @@ export async function GET(request: NextRequest) {
           }
 
           const data = await response.json();
+          
+          console.log(`[meli-questions] ✅ ${account.meli_nickname}: ${data.questions?.length || 0} preguntas (total: ${data.total || 0})`);
 
           // Obtener información de los ítems (imágenes, títulos) para cada pregunta
           const itemIds = [...new Set((data.questions || []).map((q: any) => q.item_id))];
