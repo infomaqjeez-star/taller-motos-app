@@ -145,7 +145,7 @@ export interface MeliAttachment {
 // ========== ÓRDENES ==========
 export interface MeliOrder {
   id: number;
-  status: 'confirmed' | 'payment_required' | 'payment_in_process' | 'partially_paid' | 'paid' | 'partially_refunded' | 'pending_cancel' | 'cancelled';
+  status: 'confirmed' | 'payment_required' | 'payment_in_process' | 'partially_paid' | 'paid' | 'partially_refunded' | 'pending_cancel' | 'cancelled' | 'shipped' | 'delivered';
   status_detail: string | null;
   date_created: string;
   date_closed: string;
@@ -202,6 +202,7 @@ export interface MeliOrderItem {
   item: {
     id: string;
     title: string;
+    thumbnail?: string;
     variation_id: number | null;
     variation_attributes: any[];
   };

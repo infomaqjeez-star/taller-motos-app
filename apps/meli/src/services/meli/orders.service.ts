@@ -1,13 +1,10 @@
-import { MELI_API_BASE, ORDER_STATUSES } from '@/lib/meli/constants';
+import { MELI_API_BASE } from '@/lib/meli/constants';
 import { tokenService } from './token.service';
-import type { 
-  MeliOrder, 
-  MeliOrdersSearchResponse,
-  MeliApiError 
-} from '@/types/meli';
+import type { MeliOrder, MeliApiError } from '@/types/meli';
 
 /**
- * Servicio de gestión de órdenes/ventas de Mercado Libre
+ * Servicio de gestión de órdenes de Mercado Libre
+ * API: /orders
  */
 export class OrdersService {
   private static instance: OrdersService;
@@ -20,10 +17,61 @@ export class OrdersService {
   }
 
   /**
-   * Obtiene una orden específica por ID
-   * Incluye: items, pagos, envío, feedback, descuentos
+   * Obtiene órdenes de un vendedor
    */
-  async getOrder(
+  async getOrders(
+    accountId: string,
+    sellerId: string,
+    options: {
+      status?: string;
+      dateFrom?: string;
+      dateTo?: string;
+      offset?: number;
+      limit?: number;
+    } = {}
+  ): Promise<MeliOrder[]> {
+    const token = await tokenService.getValidToken(accountId);
+    
+    const params = new URLSearchParams({
+      seller: sellerId,
+      offset: (options.offset || 0).toString(),
+      limit: (options.limit || 50).toString(),
+    });
+
+    if (options.status) {
+      params.append('order.status', options.status);
+    }
+
+    if (options.dateFrom) {
+      params.append('order.date_created.from', options.dateFrom);
+    }
+
+    if (options.dateTo) {
+      params.append('order.date_created.to', options.dateTo);
+    }
+
+    const response = await fetch(
+      `${MELI_API_BASE}/orders/search?${params.toString()}`,
+      {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      const error: MeliApiError = await response.json();
+      throw new Error(`Error obteniendo órdenes: ${error.message}`);
+    }
+
+    const data = await response.json();
+    return data.results || [];
+  }
+
+  /**
+   * Obtiene una orden específica por ID
+   */
+  async getOrderById(
     accountId: string,
     orderId: string
   ): Promise<MeliOrder> {
@@ -47,200 +95,78 @@ export class OrdersService {
   }
 
   /**
-   * Busca órdenes de un vendedor con filtros
+   * Obtiene órdenes recientes (últimos 7 días)
    */
-  async searchOrders(
-    accountId: string,
-    sellerId: string,
-    filters: {
-      status?: string[];
-      dateCreatedFrom?: string;
-      dateCreatedTo?: string;
-      dateUpdatedFrom?: string;
-      dateUpdatedTo?: string;
-      q?: string;  // Búsqueda por ID, título, nickname
-      tags?: string[];
-      sort?: 'date_desc' | 'date_asc';
-      offset?: number;
-      limit?: number;
-    } = {}
-  ): Promise<MeliOrdersSearchResponse> {
-    const token = await tokenService.getValidToken(accountId);
-    
-    const params = new URLSearchParams({
-      seller: sellerId,
-    });
-
-    if (filters.status?.length) {
-      params.append('order.status', filters.status.join(','));
-    }
-
-    if (filters.dateCreatedFrom) {
-      params.append('order.date_created.from', filters.dateCreatedFrom);
-    }
-
-    if (filters.dateCreatedTo) {
-      params.append('order.date_created.to', filters.dateCreatedTo);
-    }
-
-    if (filters.dateUpdatedFrom) {
-      params.append('order.date_last_updated.from', filters.dateUpdatedFrom);
-    }
-
-    if (filters.dateUpdatedTo) {
-      params.append('order.date_last_updated.to', filters.dateUpdatedTo);
-    }
-
-    if (filters.q) {
-      params.append('q', filters.q);
-    }
-
-    if (filters.tags?.length) {
-      params.append('tags', filters.tags.join(','));
-    }
-
-    if (filters.sort) {
-      params.append('sort', filters.sort);
-    }
-
-    if (filters.offset !== undefined) {
-      params.append('offset', filters.offset.toString());
-    }
-
-    if (filters.limit) {
-      params.append('limit', filters.limit.toString());
-    }
-
-    const response = await fetch(
-      `${MELI_API_BASE}/orders/search?${params.toString()}`,
-      {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      }
-    );
-
-    if (!response.ok) {
-      const error: MeliApiError = await response.json();
-      throw new Error(`Error buscando órdenes: ${error.message}`);
-    }
-
-    return response.json();
-  }
-
-  /**
-   * Obtiene órdenes pagadas de un vendedor
-   */
-  async getPaidOrders(
+  async getRecentOrders(
     accountId: string,
     sellerId: string,
     options: {
+      days?: number;
       limit?: number;
-      offset?: number;
-      sort?: 'date_desc' | 'date_asc';
     } = {}
-  ): Promise<MeliOrdersSearchResponse> {
-    return this.searchOrders(accountId, sellerId, {
-      status: [ORDER_STATUSES.PAID],
+  ): Promise<MeliOrder[]> {
+    const days = options.days || 7;
+    const now = new Date();
+    const fromDate = new Date(now);
+    fromDate.setDate(fromDate.getDate() - days);
+
+    return this.getOrders(accountId, sellerId, {
+      dateFrom: fromDate.toISOString(),
+      dateTo: now.toISOString(),
       limit: options.limit || 50,
-      offset: options.offset || 0,
-      sort: options.sort || 'date_desc',
     });
   }
 
   /**
-   * Obtiene órdenes pendientes de un vendedor
+   * Obtiene órdenes pendientes de envío
    */
   async getPendingOrders(
     accountId: string,
     sellerId: string,
     options: {
       limit?: number;
-      offset?: number;
     } = {}
-  ): Promise<MeliOrdersSearchResponse> {
-    return this.searchOrders(accountId, sellerId, {
-      status: [
-        ORDER_STATUSES.CONFIRMED,
-        ORDER_STATUSES.PAYMENT_REQUIRED,
-        ORDER_STATUSES.PAYMENT_IN_PROCESS,
-      ],
+  ): Promise<MeliOrder[]> {
+    return this.getOrders(accountId, sellerId, {
+      status: 'paid',
       limit: options.limit || 50,
-      offset: options.offset || 0,
     });
   }
 
   /**
-   * Obtiene descuentos aplicados en una orden
+   * Obtiene órdenes enviadas
    */
-  async getOrderDiscounts(
+  async getShippedOrders(
     accountId: string,
-    orderId: string
-  ): Promise<any> {
-    const token = await tokenService.getValidToken(accountId);
-
-    const response = await fetch(
-      `${MELI_API_BASE}/orders/${orderId}/discounts`,
-      {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      }
-    );
-
-    if (!response.ok) {
-      const error: MeliApiError = await response.json();
-      throw new Error(`Error obteniendo descuentos: ${error.message}`);
-    }
-
-    return response.json();
+    sellerId: string,
+    options: {
+      limit?: number;
+    } = {}
+  ): Promise<MeliOrder[]> {
+    return this.getOrders(accountId, sellerId, {
+      status: 'shipped',
+      limit: options.limit || 50,
+    });
   }
 
   /**
-   * Obtiene información del producto en una orden
+   * Obtiene órdenes entregadas
    */
-  async getOrderProductInfo(
+  async getDeliveredOrders(
     accountId: string,
-    orderId: string
-  ): Promise<any> {
-    const token = await tokenService.getValidToken(accountId);
-
-    const response = await fetch(
-      `${MELI_API_BASE}/orders/${orderId}/product`,
-      {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      }
-    );
-
-    if (!response.ok) {
-      const error: MeliApiError = await response.json();
-      throw new Error(`Error obteniendo info del producto: ${error.message}`);
-    }
-
-    return response.json();
-  }
-
-  /**
-   * Verifica si una orden tiene alerta de fraude
-   */
-  hasFraudRisk(order: MeliOrder): boolean {
-    return order.tags?.includes('fraud_risk_detected') || false;
-  }
-
-  /**
-   * Calcula el monto total con envío
-   * Formula: total_amount + taxes.amount + lead_time.cost
-   */
-  calculateTotalWithShipping(order: MeliOrder, shippingCost: number): number {
-    const taxes = order.taxes?.amount || 0;
-    return order.total_amount + taxes + shippingCost;
+    sellerId: string,
+    options: {
+      limit?: number;
+    } = {}
+  ): Promise<MeliOrder[]> {
+    return this.getOrders(accountId, sellerId, {
+      status: 'delivered',
+      limit: options.limit || 50,
+    });
   }
 
   /**
    * Obtiene órdenes de múltiples cuentas
-   * Útil para dashboard unificado
    */
   async getOrdersFromMultipleAccounts(
     accounts: Array<{ 
@@ -248,8 +174,8 @@ export class OrdersService {
       sellerId: string; 
       nickname: string;
     }>,
-    filters: {
-      status?: string[];
+    options: {
+      status?: string;
       dateFrom?: string;
       dateTo?: string;
       limit?: number;
@@ -260,34 +186,23 @@ export class OrdersService {
     sellerId: string;
     orders: MeliOrder[];
     total: number;
-    hasFraudAlerts: boolean;
   }>> {
     const results = await Promise.allSettled(
       accounts.map(async (account) => {
         try {
-          const response = await this.searchOrders(
-            account.id,
-            account.sellerId,
-            {
-              status: filters.status,
-              dateCreatedFrom: filters.dateFrom,
-              dateCreatedTo: filters.dateTo,
-              limit: filters.limit || 50,
-              sort: 'date_desc',
-            }
-          );
-
-          const hasFraudAlerts = response.results.some(order => 
-            this.hasFraudRisk(order)
-          );
+          const orders = await this.getOrders(account.id, account.sellerId, {
+            status: options.status,
+            dateFrom: options.dateFrom,
+            dateTo: options.dateTo,
+            limit: options.limit || 50,
+          });
 
           return {
             accountId: account.id,
             nickname: account.nickname,
             sellerId: account.sellerId,
-            orders: response.results,
-            total: response.paging?.total || response.results.length,
-            hasFraudAlerts,
+            orders,
+            total: orders.length,
           };
         } catch (error) {
           console.error(
@@ -300,7 +215,6 @@ export class OrdersService {
             sellerId: account.sellerId,
             orders: [],
             total: 0,
-            hasFraudAlerts: false,
           };
         }
       })
@@ -316,7 +230,6 @@ export class OrdersService {
         sellerId: accounts[index].sellerId,
         orders: [],
         total: 0,
-        hasFraudAlerts: false,
       };
     });
   }
@@ -325,63 +238,49 @@ export class OrdersService {
    * Obtiene estadísticas de ventas de múltiples cuentas
    */
   async getSalesStats(
-    accounts: Array<{ id: string; sellerId: string }>,
-    dateFrom: string,
-    dateTo: string
+    accounts: Array<{ 
+      id: string; 
+      sellerId: string; 
+      nickname: string;
+    }>,
+    dateFrom?: string,
+    dateTo?: string
   ): Promise<{
     totalSales: number;
     totalAmount: number;
     averageTicket: number;
     byAccount: Record<string, { sales: number; amount: number }>;
   }> {
-    const results = await Promise.allSettled(
-      accounts.map(async (account) => {
-        try {
-          const response = await this.searchOrders(
-            account.id,
-            account.sellerId,
-            {
-              status: [ORDER_STATUSES.PAID],
-              dateCreatedFrom: dateFrom,
-              dateCreatedTo: dateTo,
-              limit: 100,
-            }
-          );
-
-          const totalAmount = response.results.reduce(
-            (sum, order) => sum + order.total_amount,
-            0
-          );
-
-          return {
-            accountId: account.id,
-            sales: response.results.length,
-            amount: totalAmount,
-          };
-        } catch (error) {
-          return {
-            accountId: account.id,
-            sales: 0,
-            amount: 0,
-          };
-        }
-      })
-    );
-
-    const byAccount: Record<string, { sales: number; amount: number }> = {};
-    let totalSales = 0;
-    let totalAmount = 0;
-
-    results.forEach((result) => {
-      if (result.status === 'fulfilled') {
-        byAccount[result.value.accountId] = {
-          sales: result.value.sales,
-          amount: result.value.amount,
-        };
-        totalSales += result.value.sales;
-        totalAmount += result.value.amount;
-      }
+    // Obtener órdenes de todas las cuentas
+    const results = await this.getOrdersFromMultipleAccounts(accounts, {
+      dateFrom,
+      dateTo,
+      limit: 200,
     });
+
+    // Calcular totales
+    let totalAmount = 0;
+    let totalSales = 0;
+    const byAccount: Record<string, { sales: number; amount: number }> = {};
+
+    for (const result of results) {
+      let accountAmount = 0;
+      let accountSales = 0;
+      
+      for (const order of result.orders) {
+        if (order.status === 'paid' || order.status === 'shipped' || order.status === 'delivered') {
+          totalAmount += order.total_amount || 0;
+          accountAmount += order.total_amount || 0;
+          totalSales++;
+          accountSales++;
+        }
+      }
+
+      byAccount[result.nickname] = {
+        sales: accountSales,
+        amount: accountAmount,
+      };
+    }
 
     return {
       totalSales,
@@ -389,6 +288,127 @@ export class OrdersService {
       averageTicket: totalSales > 0 ? totalAmount / totalSales : 0,
       byAccount,
     };
+  }
+
+  /**
+   * Calcula estadísticas de órdenes
+   */
+  calculateOrderStats(orders: MeliOrder[]): {
+    totalOrders: number;
+    totalRevenue: number;
+    averageOrderValue: number;
+    ordersByStatus: Record<string, number>;
+  } {
+    const totalOrders = orders.length;
+    const totalRevenue = orders.reduce((sum, order) => {
+      return sum + (order.total_amount || 0);
+    }, 0);
+    const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+
+    const ordersByStatus: Record<string, number> = {};
+    orders.forEach((order) => {
+      const status = order.status || 'unknown';
+      ordersByStatus[status] = (ordersByStatus[status] || 0) + 1;
+    });
+
+    return {
+      totalOrders,
+      totalRevenue,
+      averageOrderValue,
+      ordersByStatus,
+    };
+  }
+
+  /**
+   * Obtiene el estado de la orden en texto legible
+   */
+  getStatusLabel(status: string): string {
+    const statusMap: Record<string, string> = {
+      'confirmed': 'Confirmada',
+      'payment_required': 'Pago requerido',
+      'payment_in_process': 'Pago en proceso',
+      'partially_paid': 'Parcialmente pagada',
+      'paid': 'Pagada',
+      'cancelled': 'Cancelada',
+      'invalid': 'Inválida',
+      'shipped': 'Enviada',
+      'delivered': 'Entregada',
+    };
+
+    return statusMap[status] || status;
+  }
+
+  /**
+   * Obtiene el color del estado
+   */
+  getStatusColor(status: string): string {
+    const colorMap: Record<string, string> = {
+      'confirmed': 'bg-blue-500',
+      'paid': 'bg-green-500',
+      'shipped': 'bg-purple-500',
+      'delivered': 'bg-emerald-500',
+      'cancelled': 'bg-red-500',
+      'payment_required': 'bg-orange-500',
+      'payment_in_process': 'bg-yellow-500',
+    };
+
+    return colorMap[status] || 'bg-gray-500';
+  }
+
+  /**
+   * Formatea la fecha de creación
+   */
+  formatDate(dateString: string): string {
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat('es-AR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(date);
+  }
+
+  /**
+   * Obtiene el nombre del comprador
+   */
+  getBuyerName(order: MeliOrder): string {
+    if (order.buyer?.nickname) {
+      return order.buyer.nickname;
+    }
+    if (order.buyer?.first_name && order.buyer?.last_name) {
+      return `${order.buyer.first_name} ${order.buyer.last_name}`;
+    }
+    return 'Comprador desconocido';
+  }
+
+  /**
+   * Obtiene el título del producto principal
+   */
+  getMainItemTitle(order: MeliOrder): string {
+    if (order.order_items?.length > 0) {
+      return order.order_items[0].item?.title || 'Producto sin título';
+    }
+    return 'Sin productos';
+  }
+
+  /**
+   * Obtiene la imagen del producto principal
+   */
+  getMainItemImage(order: MeliOrder): string | null {
+    if (order.order_items?.length > 0) {
+      return order.order_items[0].item?.thumbnail || null;
+    }
+    return null;
+  }
+
+  /**
+   * Obtiene la cantidad total de items
+   */
+  getTotalItems(order: MeliOrder): number {
+    return order.order_items?.reduce((sum, item) => {
+      return sum + (item.quantity || 0);
+    }, 0) || 0;
   }
 }
 

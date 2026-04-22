@@ -121,7 +121,7 @@ export default function VentasPage() {
       const results = await ordersService.getOrdersFromMultipleAccounts(
         accountsData,
         {
-          status: statusFilter !== "all" ? [statusFilter] : undefined,
+          status: statusFilter !== "all" ? statusFilter : undefined,
           dateFrom: dateFromStr,
           dateTo: dateToStr,
           limit: 100,

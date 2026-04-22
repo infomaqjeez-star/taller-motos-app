@@ -1,14 +1,10 @@
-import { MELI_API_BASE, CLAIM_TYPES, EVIDENCE_TYPES, SHIPPING_METHODS } from '@/lib/meli/constants';
+import { MELI_API_BASE } from '@/lib/meli/constants';
 import { tokenService } from './token.service';
-import type { 
-  MeliClaim,
-  MeliShippingEvidence,
-  MeliApiError 
-} from '@/types/meli';
+import type { MeliClaim, MeliShippingEvidence, MeliApiError } from '@/types/meli';
 
 /**
  * Servicio de gestión de reclamos de Mercado Libre
- * Base URL: /post-purchase/v1/claims
+ * API: /post-purchase/v1/claims
  */
 export class ClaimsService {
   private static instance: ClaimsService;
@@ -186,7 +182,6 @@ export class ClaimsService {
 
   /**
    * Carga evidencia de envío
-   * Tipos: shipping_evidence, handling_shipping_evidence
    */
   async uploadShippingEvidence(
     accountId: string,
@@ -217,7 +212,6 @@ export class ClaimsService {
 
   /**
    * Sube un archivo adjunto para evidencia
-   * Formatos: JPG, PNG, PDF (máx 5 MB)
    */
   async uploadEvidenceAttachment(
     accountId: string,
@@ -311,7 +305,6 @@ export class ClaimsService {
 
   /**
    * Obtiene reclamos de múltiples cuentas
-   * Útil para panel unificado
    */
   async getClaimsFromMultipleAccounts(
     accounts: Array<{ 
@@ -382,8 +375,8 @@ export class ClaimsService {
    */
   getClaimTypeLabel(type: string): string {
     const typeMap: Record<string, string> = {
-      [CLAIM_TYPES.CLAIM]: 'Reclamo',
-      [CLAIM_TYPES.MEDIATION]: 'Mediación',
+      'claim': 'Reclamo',
+      'mediation': 'Mediación',
     };
 
     return typeMap[type] || type;
@@ -408,10 +401,10 @@ export class ClaimsService {
    */
   getShippingMethodLabel(method: string): string {
     const methodMap: Record<string, string> = {
-      [SHIPPING_METHODS.MAIL]: 'Correo',
-      [SHIPPING_METHODS.ENTRUSTED]: 'Encomienda/Transportista',
-      [SHIPPING_METHODS.PERSONAL_DELIVERY]: 'Entrega en mano',
-      [SHIPPING_METHODS.EMAIL]: 'Envío digital',
+      'mail': 'Correo',
+      'entrusted': 'Encomienda/Transportista',
+      'personal_delivery': 'Entrega en mano',
+      'email': 'Envío digital',
     };
 
     return methodMap[method] || method;
@@ -427,8 +420,8 @@ export class ClaimsService {
     attachments: string[] = []
   ): MeliShippingEvidence {
     return {
-      type: EVIDENCE_TYPES.SHIPPING_EVIDENCE,
-      shipping_method: SHIPPING_METHODS.MAIL,
+      type: 'shipping_evidence',
+      shipping_method: 'mail',
       shipping_company_name: shippingCompanyName,
       date_shipped: dateShipped,
       tracking_number: trackingNumber,
@@ -451,8 +444,8 @@ export class ClaimsService {
     } = {}
   ): MeliShippingEvidence {
     return {
-      type: EVIDENCE_TYPES.SHIPPING_EVIDENCE,
-      shipping_method: SHIPPING_METHODS.ENTRUSTED,
+      type: 'shipping_evidence',
+      shipping_method: 'entrusted',
       shipping_company_name: shippingCompanyName,
       destination_agency: destinationAgency,
       date_shipped: dateShipped,
@@ -468,8 +461,8 @@ export class ClaimsService {
    */
   createHandlingEvidence(handlingDate: string): MeliShippingEvidence {
     return {
-      type: EVIDENCE_TYPES.HANDLING_SHIPPING_EVIDENCE,
-      shipping_method: SHIPPING_METHODS.MAIL,
+      type: 'handling_shipping_evidence',
+      shipping_method: 'mail',
       handling_date: handlingDate,
       attachments: [],
     };
