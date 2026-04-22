@@ -98,15 +98,24 @@ function PreciosInner() {
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
+    console.log("[Precios] Cargando cuentas...");
     fetch("/api/meli-accounts")
-      .then(r => r.json())
+      .then(r => {
+        console.log("[Precios] Respuesta cuentas:", r.status);
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
       .then(d => {
+        console.log("[Precios] Datos recibidos:", d);
         const accs = Array.isArray(d) ? d : (d.accounts ?? []);
+        console.log("[Precios] Cuentas procesadas:", accs.length);
         setAccounts(accs);
         // Seleccionar todas por defecto
         setSelectedAccs(new Set(accs.map((a: any) => a.meli_user_id || a.id)));
       })
-      .catch(() => {});
+      .catch(e => {
+        console.error("[Precios] Error cargando cuentas:", e);
+      });
   }, []);
 
   const toggleAccount = (accId: string) => {
