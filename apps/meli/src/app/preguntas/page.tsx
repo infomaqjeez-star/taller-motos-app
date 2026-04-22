@@ -95,24 +95,36 @@ export default function PreguntasPage() {
     setError(null);
     
     try {
-      // Obtener preguntas de todas las cuentas
-      const accountsData = accounts.map(acc => ({
-        id: acc.id,
-        sellerId: acc.meli_user_id,
-        nickname: acc.meli_nickname,
-      }));
+      // Obtener token de Supabase para auth
+      const { data: { session } } = await supabase.auth.getSession();
       
-      const results = await questionsService.getQuestionsFromMultipleAccounts(
-        accountsData,
-        { limit: 100 }
-      );
+      if (!session?.access_token) {
+        throw new Error("No hay sesión activa");
+      }
       
-      // Unificar preguntas
+      // Llamar al endpoint del servidor (evita CORS)
+      const response = await fetch("/api/meli-questions-unified", {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Error ${response.status}: ${await response.text()}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data.error) {
+        throw new Error(data.error);
+      }
+      
+      // Unificar preguntas de todas las cuentas
       const unified: UnifiedQuestion[] = [];
       const stats: AccountStats[] = [];
       
-      for (const result of results) {
-        const accountQuestions = result.questions.map(q => ({
+      for (const result of data.questions) {
+        const accountQuestions = result.questions.map((q: any) => ({
           ...q,
           account: {
             id: result.accountId,
@@ -139,7 +151,7 @@ export default function PreguntasPage() {
           nickname: result.nickname,
           total: result.total,
           unanswered: result.questions.filter(
-            q => q.status === QUESTION_STATUSES.UNANSWERED
+            (q: any) => q.status === QUESTION_STATUSES.UNANSWERED
           ).length,
           responseTime,
         });
