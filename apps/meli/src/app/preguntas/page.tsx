@@ -29,7 +29,7 @@ interface UnifiedQuestion {
   text: string;
   status: string;
   date_created: string;
-  answer: {
+  answer?: {
     text: string;
     status: string;
     date_created: string;
