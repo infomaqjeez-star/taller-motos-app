@@ -44,9 +44,9 @@ export default function QuestionAlertGlobal() {
   const alertedIdsRef = useRef<Set<number>>(new Set());
   const lastPollRef = useRef<Date | null>(null);
   const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const alertModeRef = useRef(alertMode);
-  const playAlertSoundRef = useRef(playAlertSound);
-  const showBrowserNotificationRef = useRef(showBrowserNotification);
+  const alertModeRef = useRef<AlertMode>("taller");
+  const playAlertSoundRef = useRef<(mode: AlertMode) => void>(() => {});
+  const showBrowserNotificationRef = useRef<(title: string, body: string) => void>(() => {});
 
   // Actualizar refs cuando cambian las dependencias
   useEffect(() => {
