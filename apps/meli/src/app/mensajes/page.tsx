@@ -1148,7 +1148,7 @@ function MensajesInner() {
             <Settings className="w-4 h-4" />
             <span className="hidden sm:inline">Plantillas</span>
           </button>
-          <button onClick={() => loadAll(true, true)} disabled={isSyncing || isLoading}
+          <button onClick={() => loadAll(true)} disabled={isSyncing || isLoading}
             className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold disabled:opacity-40"
             style={{ background: "#1F1F1F", color: "#FF5722", border: "1px solid #FF572244" }}>
             <RefreshCw className={`w-4 h-4 ${isSyncing ? "animate-spin" : ""}`} />
@@ -1310,7 +1310,7 @@ function MensajesInner() {
           <div className="rounded-2xl p-4 mb-4 text-center" style={{ background: "#ef444418", border: "1px solid #ef444440" }}>
             <AlertCircle className="w-7 h-7 mx-auto mb-1" style={{ color: "#ef4444" }} />
             <p className="text-sm text-white font-semibold">{error}</p>
-            <button onClick={() => loadAll(false, true)} className="mt-2 px-4 py-1.5 rounded-lg text-xs font-bold bg-red-500 text-white">
+            <button onClick={() => loadAll()} className="mt-2 px-4 py-1.5 rounded-lg text-xs font-bold bg-red-500 text-white">
               Reintentar
             </button>
           </div>
