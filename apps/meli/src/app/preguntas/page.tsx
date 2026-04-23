@@ -1,9 +1,8 @@
 "use client";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
-import { useEffect, useState, useCallback, useMemo, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -15,19 +14,13 @@ import {
   AlertCircle,
   Search,
   Users,
-  Filter,
   TrendingUp,
-  Zap,
-  AlertTriangle,
 } from "lucide-react";
 import { useMeliAccounts } from "@/components/auth/MeliAccountsProvider";
-import { useQuestionsUnified, useAnswerQuestion } from "@/hooks/useQuestions";
-import { questionsService } from "@/services/meli";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
-import type { MeliQuestion, MeliResponseTime } from "@/types/meli";
+import type { MeliResponseTime } from "@/types/meli";
 
-// Constantes para estados de preguntas
 const QUESTION_STATUSES = {
   UNANSWERED: "UNANSWERED",
   ANSWERED: "ANSWERED",
@@ -35,15 +28,6 @@ const QUESTION_STATUSES = {
   UNDER_REVIEW: "UNDER_REVIEW",
 };
 
-// Colores para estados
-const MELI_STATUS_COLORS: Record<string, string> = {
-  UNANSWERED: "#FF5722",
-  ANSWERED: "#39FF14",
-  CLOSED_UNANSWERED: "#6B7280",
-  UNDER_REVIEW: "#FFE600",
-};
-
-// ============ TIPOS ============
 interface UnifiedQuestion {
   id: number;
   text: string;
@@ -77,327 +61,341 @@ interface AccountStats {
   responseTime: MeliResponseTime | null;
 }
 
-// ============ COMPONENTE PRINCIPAL ============
+function normalizeQuestion(rawQuestion: any, account: { accountId: string; nickname: string; sellerId: string }): UnifiedQuestion | null {
+  const id = Number(rawQuestion.id ?? rawQuestion.meli_question_id);
+
+  if (!Number.isFinite(id)) {
+    return null;
+  }
+
+  const answerText = rawQuestion.answer?.text ?? rawQuestion.answer_text;
+  const answerDate = rawQuestion.answer?.date_created ?? rawQuestion.answer_date;
+  const answerStatus = rawQuestion.answer?.status ?? (answerText ? "ACTIVE" : undefined);
+
+  return {
+    id,
+    text: rawQuestion.text ?? rawQuestion.question_text ?? "",
+    status: rawQuestion.status ?? QUESTION_STATUSES.UNANSWERED,
+    date_created: rawQuestion.date_created ?? rawQuestion.created_at ?? new Date().toISOString(),
+    answer: answerText
+      ? {
+          text: answerText,
+          status: answerStatus ?? "ACTIVE",
+          date_created: answerDate ?? new Date().toISOString(),
+        }
+      : null,
+    item_id: String(rawQuestion.item_id ?? ""),
+    item_title: rawQuestion.item_title ?? rawQuestion.item_info?.title ?? String(rawQuestion.item_id ?? ""),
+    item_thumbnail: rawQuestion.item_thumbnail ?? rawQuestion.item_info?.thumbnail ?? "",
+    from: {
+      id: Number(rawQuestion.from?.id ?? rawQuestion.buyer_id ?? 0),
+      nickname: rawQuestion.from?.nickname ?? rawQuestion.buyer_nickname,
+    },
+    account: {
+      id: account.accountId,
+      nickname: account.nickname,
+      sellerId: account.sellerId,
+    },
+    responseTime: rawQuestion.responseTime,
+  };
+}
+
 export default function PreguntasPage() {
-  const router = useRouter();
   const { accounts, loading: accountsLoading } = useMeliAccounts();
-  
-  // Log de estado de cuentas
-  useEffect(() => {
-    console.log("[Preguntas] Estado de cuentas:", {
-      accountsCount: accounts.length,
-      accountsLoading,
-      accounts: accounts.map(a => a.meli_nickname),
-    });
-  }, [accounts, accountsLoading]);
-  
-  // Estados
   const [questions, setQuestions] = useState<UnifiedQuestion[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
-  
-  // Filtros
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>(QUESTION_STATUSES.UNANSWERED);
   const [accountFilter, setAccountFilter] = useState<string>("all");
-  
-  // Estadísticas
   const [accountStats, setAccountStats] = useState<AccountStats[]>([]);
-  
-  // Respuesta
   const [answering, setAnswering] = useState<number | null>(null);
-  const [answerText, setAnswerText] = useState("");
-  
-  // Referencia para detectar preguntas nuevas y sonar alerta
   const prevUnansweredCountRef = useRef<number | null>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Inicializar audio para alerta
-  useEffect(() => {
-    // Crear un AudioContext para generar un beep de alerta
-    audioRef.current = null; // Se usa Web Audio API directamente
-  }, []);
-
-  // Función para reproducir sonido de alerta
   const playAlertSound = useCallback(() => {
     try {
       const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-      if (!AudioContextClass) return;
-      
-      const ctx = new AudioContextClass();
-      
-      // Primer beep
-      const osc1 = ctx.createOscillator();
-      const gain1 = ctx.createGain();
-      osc1.connect(gain1);
-      gain1.connect(ctx.destination);
-      osc1.frequency.value = 800;
-      gain1.gain.value = 0.3;
-      osc1.start(ctx.currentTime);
-      osc1.stop(ctx.currentTime + 0.15);
-      
-      // Segundo beep (más agudo)
-      const osc2 = ctx.createOscillator();
-      const gain2 = ctx.createGain();
-      osc2.connect(gain2);
-      gain2.connect(ctx.destination);
-      osc2.frequency.value = 1000;
-      gain2.gain.value = 0.3;
-      osc2.start(ctx.currentTime + 0.2);
-      osc2.stop(ctx.currentTime + 0.35);
-      
-      // Tercer beep (aún más agudo)
-      const osc3 = ctx.createOscillator();
-      const gain3 = ctx.createGain();
-      osc3.connect(gain3);
-      gain3.connect(ctx.destination);
-      osc3.frequency.value = 1200;
-      gain3.gain.value = 0.3;
-      osc3.start(ctx.currentTime + 0.4);
-      osc3.stop(ctx.currentTime + 0.55);
-      
-      // Cerrar contexto después
-      setTimeout(() => ctx.close(), 1000);
-    } catch (e) {
-      console.warn("[Preguntas] No se pudo reproducir sonido:", e);
+
+      if (!AudioContextClass) {
+        return;
+      }
+
+      const context = new AudioContextClass();
+
+      const beep = (frequency: number, startOffset: number, duration: number) => {
+        const oscillator = context.createOscillator();
+        const gain = context.createGain();
+
+        oscillator.connect(gain);
+        gain.connect(context.destination);
+        oscillator.frequency.value = frequency;
+        gain.gain.value = 0.3;
+        oscillator.start(context.currentTime + startOffset);
+        oscillator.stop(context.currentTime + startOffset + duration);
+      };
+
+      beep(800, 0, 0.15);
+      beep(1000, 0.2, 0.15);
+      beep(1200, 0.4, 0.15);
+
+      setTimeout(() => context.close(), 1000);
+    } catch (soundError) {
+      console.warn("[Preguntas] No se pudo reproducir sonido:", soundError);
     }
   }, []);
 
-  // Detectar preguntas nuevas y sonar alerta
-  useEffect(() => {
-    const currentUnanswered = questions.filter(
-      q => q.status === QUESTION_STATUSES.UNANSWERED
-    ).length;
-    
-    if (prevUnansweredCountRef.current !== null && currentUnanswered > prevUnansweredCountRef.current) {
-      const newCount = currentUnanswered - prevUnansweredCountRef.current;
-      console.log(`[Preguntas] 🔔 ${newCount} pregunta(s) nueva(s) detectada(s)!`);
-      
-      // Reproducir sonido de alerta
-      playAlertSound();
-      
-      // Mostrar notificación del navegador
-      if ("Notification" in window && Notification.permission === "granted") {
-        new Notification(`${newCount} pregunta${newCount > 1 ? "s" : ""} nueva${newCount > 1 ? "s" : ""}`, {
-          body: "Tenés preguntas nuevas sin responder en MeLi",
-          icon: "/icon.png",
-        });
-      }
-      
-      // Toast visual
-      toast.info(`🔔 ${newCount} pregunta${newCount > 1 ? "s" : ""} nueva${newCount > 1 ? "s" : ""}`, {
-        description: "Respondé rápido para mejorar tu reputación",
-        duration: 5000,
-      });
-    }
-    
-    prevUnansweredCountRef.current = currentUnanswered;
-  }, [questions, playAlertSound]);
-
-  // Pedir permiso de notificaciones al cargar
   useEffect(() => {
     if ("Notification" in window && Notification.permission === "default") {
       Notification.requestPermission();
     }
   }, []);
 
-  // Debug logs
   useEffect(() => {
-    console.log("[Preguntas] accounts:", accounts);
-    console.log("[Preguntas] accountsLoading:", accountsLoading);
-    console.log("[Preguntas] accounts.length:", accounts?.length);
-  }, [accounts, accountsLoading]);
+    const currentUnanswered = questions.filter((question) => question.status === QUESTION_STATUSES.UNANSWERED).length;
 
-  // ============ CARGA DE PREGUNTAS ============
+    if (
+      prevUnansweredCountRef.current !== null &&
+      currentUnanswered > prevUnansweredCountRef.current
+    ) {
+      const newCount = currentUnanswered - prevUnansweredCountRef.current;
+
+      playAlertSound();
+
+      if ("Notification" in window && Notification.permission === "granted") {
+        new Notification(`${newCount} pregunta${newCount > 1 ? "s" : ""} nueva${newCount > 1 ? "s" : ""}`, {
+          body: "Tenés preguntas nuevas sin responder en MeLi",
+          icon: "/icon.png",
+        });
+      }
+
+      toast.info(`🔔 ${newCount} pregunta${newCount > 1 ? "s" : ""} nueva${newCount > 1 ? "s" : ""}`, {
+        description: "Respondé rápido para mejorar tu reputación",
+        duration: 5000,
+      });
+    }
+
+    prevUnansweredCountRef.current = currentUnanswered;
+  }, [playAlertSound, questions]);
+
   const loadAllQuestions = useCallback(async () => {
-    if (!accounts.length) return;
-    
+    if (!accounts.length) {
+      setQuestions([]);
+      setAccountStats([]);
+      setError(null);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     setError(null);
-    
+
     try {
-      // Obtener token de Supabase para auth
-      const { data: { session } } = await supabase.auth.getSession();
-      
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
       if (!session?.access_token) {
         throw new Error("No hay sesión activa");
       }
-      
-      // Llamar al endpoint del servidor (evita CORS)
+
       const response = await fetch(`/api/meli-questions-unified?_t=${Date.now()}`, {
         headers: {
           Authorization: `Bearer ${session.access_token}`,
         },
       });
-      
-      if (!response.ok) {
-        throw new Error(`Error ${response.status}: ${await response.text()}`);
+
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok || data?.error) {
+        throw new Error(data?.error || `Error ${response.status}`);
       }
-      
-      const data = await response.json();
-      
-      console.log("[Preguntas] Datos recibidos del endpoint:", {
-        totalQuestions: data.questions?.reduce((acc: number, q: any) => acc + (q.questions?.length || 0), 0),
-        accounts: data.questions?.length,
-        firstAccount: data.questions?.[0]?.nickname,
-        firstAccountQuestions: data.questions?.[0]?.questions?.length,
-      });
-      
-      if (data.error) {
-        throw new Error(data.error);
-      }
-      
-      // Unificar preguntas de todas las cuentas
+
       const unified: UnifiedQuestion[] = [];
       const stats: AccountStats[] = [];
-      
-      for (const result of data.questions) {
-        const accountQuestions = result.questions.map((q: any) => ({
-          ...q,
-          account: {
-            id: result.accountId,
-            nickname: result.nickname,
-            sellerId: result.sellerId,
-          },
-        }));
-        
+
+      for (const result of data.questions ?? []) {
+        const accountQuestions = (result.questions ?? [])
+          .map((question: any) =>
+            normalizeQuestion(question, {
+              accountId: result.accountId,
+              nickname: result.nickname,
+              sellerId: result.sellerId,
+            })
+          )
+          .filter((question: UnifiedQuestion | null): question is UnifiedQuestion => question !== null);
+
         unified.push(...accountQuestions);
-        
-        // Usar tiempo de respuesta del servidor (ya viene en el endpoint)
+
         stats.push({
           accountId: result.accountId,
           nickname: result.nickname,
-          total: result.total,
-          unanswered: result.questions.filter(
-            (q: any) => q.status === QUESTION_STATUSES.UNANSWERED
-          ).length,
-          responseTime: result.responseTime,
+          total: result.total ?? accountQuestions.length,
+          unanswered: accountQuestions.filter((question: UnifiedQuestion) => question.status === QUESTION_STATUSES.UNANSWERED).length,
+          responseTime: result.responseTime ?? null,
         });
       }
-      
-      // Ordenar por fecha (más recientes primero)
-      unified.sort((a, b) => 
-        new Date(b.date_created).getTime() - new Date(a.date_created).getTime()
+
+      unified.sort(
+        (firstQuestion, secondQuestion) =>
+          new Date(secondQuestion.date_created).getTime() - new Date(firstQuestion.date_created).getTime()
       );
-      
+
       setQuestions(unified);
       setAccountStats(stats);
       setLastUpdate(new Date());
-      
-      console.log("[Preguntas] Estado actualizado:", {
-        questionsCount: unified.length,
-        firstQuestion: unified[0]?.text?.substring(0, 50),
-        accountStatsCount: stats.length,
-      });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Error cargando preguntas");
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : "Error cargando preguntas");
     } finally {
       setLoading(false);
     }
   }, [accounts]);
 
-  // Cargar al inicio y cada 60 segundos
   useEffect(() => {
     if (!accountsLoading && accounts.length > 0) {
       loadAllQuestions();
     }
   }, [accounts, accountsLoading, loadAllQuestions]);
-  
-  // Auto-refresh cada 60 segundos
+
   useEffect(() => {
-    if (!accounts.length) return;
-    
-    const interval = setInterval(loadAllQuestions, 60000);
-    return () => clearInterval(interval);
+    if (!accountsLoading && accounts.length === 0) {
+      setQuestions([]);
+      setAccountStats([]);
+      setError(null);
+      setLoading(false);
+    }
+  }, [accounts.length, accountsLoading]);
+
+  useEffect(() => {
+    if (!accounts.length) {
+      return;
+    }
+
+    const intervalId = setInterval(loadAllQuestions, 60000);
+    return () => clearInterval(intervalId);
   }, [accounts.length, loadAllQuestions]);
 
-  // ============ FILTROS ============
   const filteredQuestions = useMemo(() => {
-    console.log("[Preguntas] Filtrando preguntas:", {
-      totalQuestions: questions.length,
-      statusFilter,
-      accountFilter,
-      searchTerm,
-    });
-    
-    const filtered = questions.filter(q => {
-      // Filtro por estado
-      if (statusFilter !== "all" && q.status !== statusFilter) return false;
-      
-      // Filtro por cuenta
-      if (accountFilter !== "all" && q.account?.id !== accountFilter) return false;
-      
-      // Filtro por búsqueda
-      if (searchTerm) {
-        const term = searchTerm.toLowerCase();
-        return (
-          q.text?.toLowerCase().includes(term) ||
-          q.item_id?.toLowerCase().includes(term) ||
-          q.account?.nickname?.toLowerCase().includes(term) ||
-          (q.from?.nickname?.toLowerCase().includes(term) ?? false)
-        );
+    return questions.filter((question) => {
+      if (statusFilter !== "all" && question.status !== statusFilter) {
+        return false;
       }
-      
-      return true;
-    });
-    
-    console.log("[Preguntas] Preguntas filtradas:", filtered.length);
-    return filtered;
-  }, [questions, statusFilter, accountFilter, searchTerm]);
 
-  // ============ RESPUESTA ============
-  const handleAnswer = async (questionId: number, accountId: string) => {
-    if (!answerText.trim()) return;
-    
+      if (accountFilter !== "all" && question.account.id !== accountFilter) {
+        return false;
+      }
+
+      if (!searchTerm) {
+        return true;
+      }
+
+      const term = searchTerm.toLowerCase();
+
+      return (
+        question.text.toLowerCase().includes(term) ||
+        question.item_id.toLowerCase().includes(term) ||
+        (question.item_title ?? "").toLowerCase().includes(term) ||
+        question.account.nickname.toLowerCase().includes(term) ||
+        (question.from.nickname?.toLowerCase().includes(term) ?? false)
+      );
+    });
+  }, [accountFilter, questions, searchTerm, statusFilter]);
+
+  const handleAnswer = async (questionId: number, accountId: string, text: string) => {
+    const trimmedText = text.trim();
+
+    if (!trimmedText) {
+      return false;
+    }
+
     setAnswering(questionId);
-    
+
     try {
-      await questionsService.answerQuestion(accountId, questionId, answerText);
-      
-      // Actualizar estado local
-      setQuestions(prev => prev.map(q => 
-        q.id === questionId 
-          ? { 
-              ...q, 
-              status: QUESTION_STATUSES.ANSWERED,
-              answer: {
-                text: answerText,
-                status: "ACTIVE",
-                date_created: new Date().toISOString(),
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session?.access_token) {
+        throw new Error("No hay sesión activa");
+      }
+
+      const response = await fetch("/api/meli-answer", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          question_id: questionId,
+          answer_text: trimmedText,
+          meli_account_id: accountId,
+        }),
+      });
+
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok || data?.status === "error") {
+        throw new Error(data?.error || `Error ${response.status}`);
+      }
+
+      setQuestions((previousQuestions) =>
+        previousQuestions.map((question) =>
+          question.id === questionId
+            ? {
+                ...question,
+                status: QUESTION_STATUSES.ANSWERED,
+                answer: {
+                  text: trimmedText,
+                  status: "ACTIVE",
+                  date_created: new Date().toISOString(),
+                },
               }
-            }
-          : q
-      ));
-      
-      setAnswerText("");
-      setAnswering(null);
-    } catch (err) {
-      alert("Error enviando respuesta: " + (err instanceof Error ? err.message : "Error desconocido"));
+            : question
+        )
+      );
+
+      setAccountStats((previousStats) =>
+        previousStats.map((stat) =>
+          stat.accountId === accountId
+            ? { ...stat, unanswered: Math.max(0, stat.unanswered - 1) }
+            : stat
+        )
+      );
+
+      toast.success("Respuesta enviada correctamente");
+      return true;
+    } catch (answerError) {
+      toast.error(answerError instanceof Error ? answerError.message : "Error enviando respuesta");
+      return false;
+    } finally {
       setAnswering(null);
     }
   };
 
-  // ============ ESTADÍSTICAS ============
-  const totalUnanswered = questions.filter(
-    q => q.status === QUESTION_STATUSES.UNANSWERED
-  ).length;
-  
+  const totalUnanswered = questions.filter((question) => question.status === QUESTION_STATUSES.UNANSWERED).length;
+
   const avgResponseTime = useMemo(() => {
     const times = accountStats
-      .filter(s => s.responseTime?.total?.response_time)
-      .map(s => s.responseTime!.total.response_time);
-    
-    if (!times.length) return 0;
-    return Math.round(times.reduce((a, b) => a + b, 0) / times.length);
+      .map((stat) => stat.responseTime?.total?.response_time)
+      .filter((value): value is number => typeof value === "number");
+
+    if (!times.length) {
+      return 0;
+    }
+
+    return Math.round(times.reduce((sum, value) => sum + value, 0) / times.length);
   }, [accountStats]);
 
-  // ============ RENDER ============
   return (
     <main className="min-h-screen pb-24" style={{ background: "#121212" }}>
-      {/* Header */}
-      <div className="sticky top-0 z-30 px-4 py-3 flex items-center justify-between border-b"
-        style={{ background: "rgba(18,18,18,0.97)", backdropFilter: "blur(16px)", borderColor: "rgba(255,255,255,0.07)" }}>
+      <div
+        className="sticky top-0 z-30 px-4 py-3 flex items-center justify-between border-b"
+        style={{
+          background: "rgba(18,18,18,0.97)",
+          backdropFilter: "blur(16px)",
+          borderColor: "rgba(255,255,255,0.07)",
+        }}
+      >
         <div className="flex items-center gap-3">
           <Link href="/" className="p-1.5 rounded-lg" style={{ background: "rgba(255,255,255,0.05)" }}>
             <ArrowLeft className="w-5 h-5 text-gray-400" />
@@ -412,7 +410,7 @@ export default function PreguntasPage() {
             </p>
           </div>
         </div>
-        <button 
+        <button
           onClick={loadAllQuestions}
           disabled={loading}
           className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold disabled:opacity-40"
@@ -423,7 +421,6 @@ export default function PreguntasPage() {
         </button>
       </div>
 
-      {/* Error de cuentas */}
       {!accountsLoading && accounts.length === 0 && (
         <div className="max-w-6xl mx-auto px-4 pt-4">
           <div className="rounded-2xl p-6 text-center" style={{ background: "#ef444418", border: "1px solid #ef444440" }}>
@@ -432,7 +429,7 @@ export default function PreguntasPage() {
             <p className="text-sm" style={{ color: "#6B7280" }}>
               Conectá al menos una cuenta desde el Dashboard para ver las preguntas.
             </p>
-            <Link 
+            <Link
               href="/"
               className="inline-block mt-3 px-4 py-2 rounded-xl text-sm font-bold text-black"
               style={{ background: "#FFE600" }}
@@ -443,23 +440,18 @@ export default function PreguntasPage() {
         </div>
       )}
 
-      {/* Cargando cuentas */}
       {accountsLoading && (
         <div className="max-w-6xl mx-auto px-4 pt-4">
           <div className="rounded-2xl p-6 text-center" style={{ background: "#1F1F1F" }}>
             <div className="w-10 h-10 mx-auto mb-2 rounded-full border-2 border-yellow-400 border-t-transparent animate-spin" />
             <p className="text-white font-bold mb-1">Cargando cuentas...</p>
-            <p className="text-sm" style={{ color: "#6B7280" }}>
-              Estamos conectando con Mercado Libre
-            </p>
+            <p className="text-sm" style={{ color: "#6B7280" }}>Estamos conectando con Mercado Libre</p>
           </div>
         </div>
       )}
 
-      {/* Estadísticas */}
       <div className="max-w-6xl mx-auto px-4 pt-4">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-          {/* Total Preguntas */}
           <div className="rounded-2xl p-4" style={{ background: "#1F1F1F", border: "1px solid rgba(255,255,255,0.07)" }}>
             <div className="flex items-center gap-2 mb-1">
               <MessageCircle className="w-4 h-4" style={{ color: "#00E5FF" }} />
@@ -467,34 +459,29 @@ export default function PreguntasPage() {
             </div>
             <p className="text-2xl font-black text-white">{questions.length}</p>
           </div>
-          
-          {/* Sin Responder */}
-          <div className="rounded-2xl p-4" 
-            style={{ 
-              background: totalUnanswered > 0 ? "#FF572218" : "#1F1F1F", 
-              border: `1px solid ${totalUnanswered > 0 ? "#FF572244" : "rgba(255,255,255,0.07)"}` 
-            }}>
+
+          <div
+            className="rounded-2xl p-4"
+            style={{
+              background: totalUnanswered > 0 ? "#FF572218" : "#1F1F1F",
+              border: `1px solid ${totalUnanswered > 0 ? "#FF572244" : "rgba(255,255,255,0.07)"}`,
+            }}
+          >
             <div className="flex items-center gap-2 mb-1">
               <AlertCircle className="w-4 h-4" style={{ color: totalUnanswered > 0 ? "#FF5722" : "#6B7280" }} />
               <span className="text-xs" style={{ color: "#6B7280" }}>Sin Responder</span>
             </div>
-            <p className={`text-2xl font-black ${totalUnanswered > 0 ? "text-white" : "text-gray-500"}`}>
-              {totalUnanswered}
-            </p>
+            <p className={`text-2xl font-black ${totalUnanswered > 0 ? "text-white" : "text-gray-500"}`}>{totalUnanswered}</p>
           </div>
-          
-          {/* Tiempo Respuesta */}
+
           <div className="rounded-2xl p-4" style={{ background: "#1F1F1F", border: "1px solid rgba(255,255,255,0.07)" }}>
             <div className="flex items-center gap-2 mb-1">
               <Clock className="w-4 h-4" style={{ color: "#FFE600" }} />
               <span className="text-xs" style={{ color: "#6B7280" }}>Tiempo Respuesta</span>
             </div>
-            <p className="text-2xl font-black text-white">
-              {avgResponseTime > 0 ? `${avgResponseTime}m` : "N/A"}
-            </p>
+            <p className="text-2xl font-black text-white">{avgResponseTime > 0 ? `${avgResponseTime}m` : "N/A"}</p>
           </div>
-          
-          {/* Cuentas Activas */}
+
           <div className="rounded-2xl p-4" style={{ background: "#1F1F1F", border: "1px solid rgba(255,255,255,0.07)" }}>
             <div className="flex items-center gap-2 mb-1">
               <Users className="w-4 h-4" style={{ color: "#39FF14" }} />
@@ -504,90 +491,44 @@ export default function PreguntasPage() {
           </div>
         </div>
 
-        {/* Panel de Tiempo de Respuesta por Cuenta */}
         <div className="rounded-2xl p-4 mb-4" style={{ background: "#1F1F1F", border: "1px solid rgba(255,255,255,0.07)" }}>
           <div className="flex items-center gap-2 mb-3">
-            <TrendingUp className="w-4 h-4" style={{ color: "#39FF14" }} />
-            <h2 className="text-sm font-bold text-white">Tiempo de Respuesta por Cuenta</h2>
+            <TrendingUp className="w-4 h-4" style={{ color: "#00E5FF" }} />
+            <span className="text-sm font-bold text-white">Tiempo de respuesta por cuenta</span>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {accountStats.map((stat) => {
-              const responseTime = stat.responseTime?.total?.response_time;
-              const hasData = responseTime !== undefined && responseTime !== null;
-              
-              // Determinar color según tiempo de respuesta
-              let color = "#6B7280"; // Gris - sin datos
-              let label = "Sin datos";
-              
-              if (hasData) {
-                if (responseTime <= 15) {
-                  color = "#39FF14"; // Verde - Excelente (< 15 min)
-                  label = "Excelente";
-                } else if (responseTime <= 60) {
-                  color = "#00E5FF"; // Cyan - Bueno (< 1 hora)
-                  label = "Bueno";
-                } else if (responseTime <= 180) {
-                  color = "#FFE600"; // Amarillo - Regular (< 3 horas)
-                  label = "Regular";
-                } else if (responseTime <= 1440) {
-                  color = "#FF5722"; // Naranja - Lento (< 24 horas)
-                  label = "Lento";
-                } else {
-                  color = "#ef4444"; // Rojo - Crítico (> 24 horas)
-                  label = "Crítico";
-                }
-              }
-              
-              // Calcular porcentaje para la barra de progreso (máximo 24 horas = 1440 minutos)
-              const maxTime = 1440;
-              const percentage = hasData ? Math.min((responseTime / maxTime) * 100, 100) : 0;
-              
+              const responseMinutes = stat.responseTime?.total?.response_time ?? null;
+              const color =
+                responseMinutes === null
+                  ? "#6B7280"
+                  : responseMinutes <= 15
+                    ? "#39FF14"
+                    : responseMinutes <= 60
+                      ? "#00E5FF"
+                      : responseMinutes <= 180
+                        ? "#FFE600"
+                        : responseMinutes <= 1440
+                          ? "#FF5722"
+                          : "#ef4444";
+
               return (
-                <div 
-                  key={stat.accountId} 
+                <div
+                  key={stat.accountId}
                   className="p-3 rounded-xl"
                   style={{ background: "#121212", border: `1px solid ${color}30` }}
                 >
-                  <div className="flex justify-between items-center mb-2">
+                  <div className="flex items-center justify-between mb-2">
                     <span className="text-sm font-bold text-white">@{stat.nickname}</span>
-                    <span 
-                      className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-                      style={{ background: `${color}22`, color }}
-                    >
-                      {label}
+                    <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: `${color}22`, color }}>
+                      {responseMinutes !== null ? formatTime(responseMinutes) : "Sin datos"}
                     </span>
                   </div>
-                  
-                  <div className="flex items-baseline gap-1 mb-2">
-                    <span className="text-2xl font-black" style={{ color }}>
-                      {hasData ? formatTime(responseTime) : "--"}
-                    </span>
-                    <span className="text-xs" style={{ color: "#6B7280" }}>
-                      {hasData ? "promedio" : "sin datos"}
-                    </span>
-                  </div>
-                  
-                  {/* Barra de progreso */}
-                  {hasData && (
-                    <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "#2a2a2a" }}>
-                      <div 
-                        className="h-full rounded-full transition-all duration-500"
-                        style={{ 
-                          width: `${percentage}%`,
-                          background: color
-                        }}
-                      />
-                    </div>
-                  )}
-                  
-                  {/* Preguntas sin responder */}
+
                   <div className="flex justify-between items-center mt-2 pt-2 border-t" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
                     <span className="text-[10px]" style={{ color: "#6B7280" }}>Sin responder</span>
-                    <span 
-                      className="text-xs font-bold"
-                      style={{ color: stat.unanswered > 0 ? "#FF5722" : "#39FF14" }}
-                    >
+                    <span className="text-xs font-bold" style={{ color: stat.unanswered > 0 ? "#FF5722" : "#39FF14" }}>
                       {stat.unanswered}
                     </span>
                   </div>
@@ -595,51 +536,24 @@ export default function PreguntasPage() {
               );
             })}
           </div>
-          
-          {/* Leyenda */}
-          <div className="flex flex-wrap gap-3 mt-3 pt-3 border-t" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
-            <div className="flex items-center gap-1">
-              <div className="w-2 h-2 rounded-full" style={{ background: "#39FF14" }} />
-              <span className="text-[10px]" style={{ color: "#6B7280" }}>&lt; 15m (Excelente)</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="w-2 h-2 rounded-full" style={{ background: "#00E5FF" }} />
-              <span className="text-[10px]" style={{ color: "#6B7280" }}>&lt; 1h (Bueno)</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="w-2 h-2 rounded-full" style={{ background: "#FFE600" }} />
-              <span className="text-[10px]" style={{ color: "#6B7280" }}>&lt; 3h (Regular)</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="w-2 h-2 rounded-full" style={{ background: "#FF5722" }} />
-              <span className="text-[10px]" style={{ color: "#6B7280" }}>&lt; 24h (Lento)</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="w-2 h-2 rounded-full" style={{ background: "#ef4444" }} />
-              <span className="text-[10px]" style={{ color: "#6B7280" }}>&gt; 24h (Crítico)</span>
-            </div>
-          </div>
         </div>
 
-        {/* Filtros */}
         <div className="flex flex-wrap gap-2 mb-4">
-          {/* Búsqueda */}
           <div className="relative flex-1 min-w-[200px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
             <input
               type="text"
               placeholder="Buscar pregunta, producto o cuenta..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(event) => setSearchTerm(event.target.value)}
               className="w-full pl-9 pr-4 py-2.5 rounded-xl text-sm text-white placeholder-gray-500 outline-none"
               style={{ background: "#1F1F1F", border: "1px solid rgba(255,255,255,0.08)" }}
             />
           </div>
-          
-          {/* Filtro Estado */}
+
           <select
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
+            onChange={(event) => setStatusFilter(event.target.value)}
             className="px-3 py-2.5 rounded-xl text-sm text-white outline-none"
             style={{ background: "#1F1F1F", border: "1px solid rgba(255,255,255,0.08)" }}
           >
@@ -648,28 +562,28 @@ export default function PreguntasPage() {
             <option value="ANSWERED">Respondidas</option>
             <option value="CLOSED_UNANSWERED">Cerradas sin respuesta</option>
           </select>
-          
-          {/* Filtro Cuenta */}
+
           <select
             value={accountFilter}
-            onChange={(e) => setAccountFilter(e.target.value)}
+            onChange={(event) => setAccountFilter(event.target.value)}
             className="px-3 py-2.5 rounded-xl text-sm text-white outline-none"
             style={{ background: "#1F1F1F", border: "1px solid rgba(255,255,255,0.08)" }}
           >
             <option value="all">Todas las cuentas</option>
-            {accounts.map(acc => (
-              <option key={acc.id} value={acc.id}>@{acc.meli_nickname}</option>
+            {accounts.map((account) => (
+              <option key={account.id} value={account.id}>
+                @{account.meli_nickname}
+              </option>
             ))}
           </select>
         </div>
 
-        {/* Error */}
         {error && (
           <div className="rounded-2xl p-4 mb-4 text-center" style={{ background: "#ef444418", border: "1px solid #ef444440" }}>
             <AlertCircle className="w-7 h-7 mx-auto mb-1" style={{ color: "#ef4444" }} />
             <p className="text-sm text-white font-semibold">{error}</p>
             <p className="text-xs mt-2" style={{ color: "#9CA3AF" }}>
-              Cuentas: {accounts.length} | Loading: {accountsLoading ? 'Sí' : 'No'}
+              Cuentas: {accounts.length} | Loading: {accountsLoading ? "Sí" : "No"}
             </p>
             <button onClick={loadAllQuestions} className="mt-2 px-4 py-1.5 rounded-lg text-xs font-bold bg-red-500 text-white">
               Reintentar
@@ -677,49 +591,30 @@ export default function PreguntasPage() {
           </div>
         )}
 
-        {/* Lista de Preguntas */}
-        
-        {(() => {
-          console.log("[Preguntas] Renderizando lista:", {
-            loading,
-            questionsLength: questions.length,
-            filteredQuestionsLength: filteredQuestions.length,
-            hasError: !!error,
-          });
-          return null;
-        })()}
-        
         <div className="space-y-3">
           {loading && questions.length === 0 ? (
-            // Skeleton loading
-            [1, 2, 3].map(i => (
-              <div key={i} className="rounded-2xl p-4 animate-pulse" style={{ background: "#1F1F1F" }}>
+            [1, 2, 3].map((index) => (
+              <div key={index} className="rounded-2xl p-4 animate-pulse" style={{ background: "#1F1F1F" }}>
                 <div className="h-3 rounded w-24 mb-2" style={{ background: "#2a2a2a" }} />
                 <div className="h-4 rounded w-3/4 mb-1" style={{ background: "#2a2a2a" }} />
                 <div className="h-4 rounded w-1/2" style={{ background: "#2a2a2a" }} />
               </div>
             ))
           ) : filteredQuestions.length === 0 ? (
-            // Empty state
             <div className="rounded-2xl p-10 text-center" style={{ background: "#1F1F1F" }}>
               <CheckCircle2 className="w-10 h-10 mx-auto mb-2" style={{ color: "#39FF14" }} />
-              <p className="text-white font-bold">
-                {searchTerm ? "Sin resultados" : "¡Todas las preguntas respondidas!"}
-              </p>
+              <p className="text-white font-bold">{searchTerm ? "Sin resultados" : "¡Todas las preguntas respondidas!"}</p>
               <p className="text-sm mt-1" style={{ color: "#6B7280" }}>
                 {searchTerm ? "Intenta con otros filtros" : "No hay preguntas pendientes en ninguna cuenta"}
               </p>
             </div>
           ) : (
-            // Preguntas
-            filteredQuestions.map(question => (
+            filteredQuestions.map((question) => (
               <QuestionCard
                 key={question.id}
                 question={question}
                 isAnswering={answering === question.id}
-                answerText={answerText}
-                setAnswerText={setAnswerText}
-                onAnswer={() => handleAnswer(question.id, question.account.id)}
+                onAnswer={(text) => handleAnswer(question.id, question.account.id, text)}
               />
             ))
           )}
@@ -729,35 +624,31 @@ export default function PreguntasPage() {
   );
 }
 
-// ============ COMPONENTE: TARJETA DE PREGUNTA ============
 interface QuestionCardProps {
   question: UnifiedQuestion;
   isAnswering: boolean;
-  answerText: string;
-  setAnswerText: (text: string) => void;
-  onAnswer: () => void;
+  onAnswer: (text: string) => Promise<boolean>;
 }
 
-function QuestionCard({ 
-  question, 
-  isAnswering, 
-  answerText, 
-  setAnswerText, 
-  onAnswer 
-}: QuestionCardProps) {
+function QuestionCard({ question, isAnswering, onAnswer }: QuestionCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [localAnswer, setLocalAnswer] = useState("");
-  
+
   const isUnanswered = question.status === QUESTION_STATUSES.UNANSWERED;
   const timeAgo = getTimeAgo(question.date_created);
-  
+  const itemTitle = question.item_title || question.item_id;
+  const itemThumbnail = question.item_thumbnail || "";
+  const itemPermalink = question.item_id
+    ? `https://articulo.mercadolibre.com.ar/${question.item_id.replace(/^([A-Z]+)(\\d+)$/, "$1-$2")}`
+    : "";
+
   const statusColors: Record<string, string> = {
     [QUESTION_STATUSES.UNANSWERED]: "#FF5722",
     [QUESTION_STATUSES.ANSWERED]: "#39FF14",
     [QUESTION_STATUSES.CLOSED_UNANSWERED]: "#6B7280",
     [QUESTION_STATUSES.UNDER_REVIEW]: "#FFE600",
   };
-  
+
   const statusLabels: Record<string, string> = {
     [QUESTION_STATUSES.UNANSWERED]: "Sin responder",
     [QUESTION_STATUSES.ANSWERED]: "Respondida",
@@ -765,29 +656,26 @@ function QuestionCard({
     [QUESTION_STATUSES.UNDER_REVIEW]: "En revisión",
   };
 
-  const handleSubmit = () => {
-    setAnswerText(localAnswer);
-    onAnswer();
-    setLocalAnswer("");
-    setIsExpanded(false);
+  const handleSubmit = async () => {
+    const sent = await onAnswer(localAnswer);
+
+    if (sent) {
+      setLocalAnswer("");
+      setIsExpanded(false);
+    }
   };
 
   return (
-    <div 
+    <div
       className="rounded-2xl overflow-hidden transition-all duration-300"
-      style={{ 
-        background: "#1F1F1F", 
+      style={{
+        background: "#1F1F1F",
         border: `1px solid ${isUnanswered ? "#FF572244" : "rgba(255,255,255,0.07)"}`,
       }}
     >
-      {/* Header */}
-      <button 
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full text-left p-4"
-      >
+      <button onClick={() => setIsExpanded(!isExpanded)} className="w-full text-left p-4">
         <div className="flex items-start gap-3">
-          {/* Indicador de cuenta */}
-          <div 
+          <div
             className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
             style={{ background: "#2a2a2a", border: "2px solid rgba(255,230,0,0.1)" }}
           >
@@ -795,23 +683,15 @@ function QuestionCard({
               {question.account.nickname.substring(0, 2).toUpperCase()}
             </span>
           </div>
-          
-          {/* Contenido */}
+
           <div className="flex-1 min-w-0">
-            {/* Cuenta y estado */}
             <div className="flex items-center gap-2 mb-1 flex-wrap">
-              <span 
-                className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-                style={{ background: "#FFE60018", color: "#FFE600" }}
-              >
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: "#FFE60018", color: "#FFE600" }}>
                 @{question.account.nickname}
               </span>
-              <span 
+              <span
                 className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-                style={{ 
-                  background: `${statusColors[question.status]}22`, 
-                  color: statusColors[question.status] 
-                }}
+                style={{ background: `${statusColors[question.status]}22`, color: statusColors[question.status] }}
               >
                 {statusLabels[question.status]}
               </span>
@@ -819,45 +699,41 @@ function QuestionCard({
                 {timeAgo}
               </span>
             </div>
-            
-            {/* Info del producto */}
-            {(question as any).item_info && (
+
+            {(itemTitle || itemThumbnail) && (
               <div className="flex items-center gap-2 mb-2 p-2 rounded-lg" style={{ background: "#121212" }}>
-                <img 
-                  src={(question as any).item_info.thumbnail} 
-                  alt={(question as any).item_info.title}
-                  className="w-12 h-12 rounded-lg object-cover"
-                />
+                {itemThumbnail ? (
+                  <img src={itemThumbnail} alt={itemTitle} className="w-12 h-12 rounded-lg object-cover" />
+                ) : (
+                  <div className="w-12 h-12 rounded-lg" style={{ background: "#2a2a2a" }} />
+                )}
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs text-white truncate">{(question as any).item_info.title}</p>
-                  <a 
-                    href={(question as any).item_info.permalink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-[10px]" 
-                    style={{ color: "#00E5FF" }}
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    Ver publicación →
-                  </a>
+                  <p className="text-xs text-white truncate">{itemTitle}</p>
+                  {itemPermalink && (
+                    <a
+                      href={itemPermalink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[10px]"
+                      style={{ color: "#00E5FF" }}
+                      onClick={(event) => event.stopPropagation()}
+                    >
+                      Ver publicación →
+                    </a>
+                  )}
                 </div>
               </div>
             )}
-            
-            {/* Pregunta */}
-            <p className="text-sm text-white font-medium leading-snug">
-              {question.text}
-            </p>
-            
-            {/* Info del comprador */}
+
+            <p className="text-sm text-white font-medium leading-snug">{question.text}</p>
+
             {question.from.nickname && (
               <p className="text-xs mt-1" style={{ color: "#6B7280" }}>
                 De: {question.from.nickname}
               </p>
             )}
           </div>
-          
-          {/* Chevron */}
+
           <div className="flex-shrink-0">
             {isUnanswered ? (
               <AlertCircle className="w-5 h-5" style={{ color: "#FF5722" }} />
@@ -867,28 +743,28 @@ function QuestionCard({
           </div>
         </div>
       </button>
-      
-      {/* Respuesta expandible */}
+
       {isExpanded && (
         <div className="px-4 pb-4 space-y-3 border-t" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
-          {/* Pregunta completa */}
           <div className="pt-3 p-3 rounded-xl" style={{ background: "#121212" }}>
-            <p className="text-xs font-semibold mb-1" style={{ color: "#6B7280" }}>Pregunta:</p>
+            <p className="text-xs font-semibold mb-1" style={{ color: "#6B7280" }}>
+              Pregunta:
+            </p>
             <p className="text-sm text-white">{question.text}</p>
           </div>
-          
-          {/* Respuesta existente */}
+
           {question.answer && (
             <div className="p-3 rounded-xl" style={{ background: "#1a3a1a" }}>
-              <p className="text-xs font-semibold mb-1" style={{ color: "#34D399" }}>Tu respuesta:</p>
+              <p className="text-xs font-semibold mb-1" style={{ color: "#34D399" }}>
+                Tu respuesta:
+              </p>
               <p className="text-sm text-white">{question.answer.text}</p>
               <p className="text-[10px] mt-1" style={{ color: "#6B7280" }}>
                 {getTimeAgo(question.answer.date_created)}
               </p>
             </div>
           )}
-          
-          {/* Formulario de respuesta */}
+
           {isUnanswered && (
             <div className="pt-2">
               <p className="text-[10px] font-bold uppercase tracking-wider mb-1.5" style={{ color: "#6B7280" }}>
@@ -897,7 +773,7 @@ function QuestionCard({
               <textarea
                 rows={3}
                 value={localAnswer}
-                onChange={(e) => setLocalAnswer(e.target.value)}
+                onChange={(event) => setLocalAnswer(event.target.value)}
                 placeholder="Escribí tu respuesta..."
                 maxLength={2000}
                 className="w-full px-3 py-2.5 rounded-xl text-sm text-white placeholder-gray-500 outline-none resize-none"
@@ -907,7 +783,7 @@ function QuestionCard({
                 <span className="text-xs" style={{ color: "#6B7280" }}>
                   {localAnswer.length}/2000
                 </span>
-                <button 
+                <button
                   onClick={handleSubmit}
                   disabled={!localAnswer.trim() || isAnswering}
                   className="flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm text-black disabled:opacity-40"
@@ -934,7 +810,6 @@ function QuestionCard({
   );
 }
 
-// ============ UTILIDADES ============
 function getTimeAgo(dateString: string): string {
   const date = new Date(dateString);
   const now = new Date();
@@ -942,7 +817,7 @@ function getTimeAgo(dateString: string): string {
   const minutes = Math.floor(diff / 60000);
   const hours = Math.floor(minutes / 60);
   const days = Math.floor(hours / 24);
-  
+
   if (minutes < 1) return "ahora";
   if (minutes < 60) return `hace ${minutes}m`;
   if (hours < 24) return `hace ${hours}h`;
@@ -953,13 +828,15 @@ function getTimeAgo(dateString: string): string {
 function formatTime(minutes: number): string {
   if (minutes < 60) {
     return `${Math.round(minutes)}m`;
-  } else if (minutes < 1440) {
-    const hours = Math.floor(minutes / 60);
-    const mins = Math.round(minutes % 60);
-    return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
-  } else {
-    const days = Math.floor(minutes / 1440);
-    const hours = Math.floor((minutes % 1440) / 60);
-    return hours > 0 ? `${days}d ${hours}h` : `${days}d`;
   }
+
+  if (minutes < 1440) {
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = Math.round(minutes % 60);
+    return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
+  }
+
+  const days = Math.floor(minutes / 1440);
+  const hours = Math.floor((minutes % 1440) / 60);
+  return hours > 0 ? `${days}d ${hours}h` : `${days}d`;
 }

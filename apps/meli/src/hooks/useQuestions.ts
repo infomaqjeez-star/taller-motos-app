@@ -1,68 +1,76 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 
-const fetchQuestionsUnified = async () => {
-  const { data: { session } } = await supabase.auth.getSession();
-  
+async function getSessionToken() {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
   if (!session?.access_token) {
     throw new Error("No hay sesión activa");
   }
+
+  return session.access_token;
+}
+
+const fetchQuestionsUnified = async () => {
+  const token = await getSessionToken();
 
   const response = await fetch(`/api/meli-questions-unified?_t=${Date.now()}`, {
     headers: {
-      Authorization: `Bearer ${session.access_token}`,
+      Authorization: `Bearer ${token}`,
     },
   });
 
-  if (!response.ok) {
-    throw new Error(`Error ${response.status}`);
+  const data = await response.json().catch(() => null);
+
+  if (!response.ok || data?.error) {
+    throw new Error(data?.error || `Error ${response.status}`);
   }
 
-  return response.json();
+  return data;
 };
 
-const answerQuestion = async ({ 
-  questionId, 
-  accountId, 
-  text 
-}: { 
-  questionId: number; 
-  accountId: string; 
+const answerQuestion = async ({
+  questionId,
+  accountId,
+  text,
+}: {
+  questionId: number;
+  accountId: string;
   text: string;
 }) => {
-  const { data: { session } } = await supabase.auth.getSession();
-  
-  if (!session?.access_token) {
-    throw new Error("No hay sesión activa");
-  }
+  const token = await getSessionToken();
 
   const response = await fetch("/api/meli-answer", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${session.access_token}`,
+      Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify({
       question_id: questionId,
-      account_id: accountId,
-      text,
+      answer_text: text,
+      accountId,
     }),
   });
 
-  if (!response.ok) {
-    throw new Error("Error al enviar respuesta");
+  const data = await response.json().catch(() => null);
+
+  if (!response.ok || data?.status === "error") {
+    throw new Error(data?.error || "Error al enviar respuesta");
   }
 
-  return response.json();
+  return data;
 };
 
 export function useQuestionsUnified() {
   return useQuery({
     queryKey: ["questions", "unified"],
     queryFn: fetchQuestionsUnified,
-    refetchInterval: 30000, // Refetch cada 30 segundos
-    staleTime: 1000 * 60, // 1 minuto
+    refetchInterval: 30000,
+    staleTime: 1000 * 60,
   });
 }
 
@@ -73,7 +81,6 @@ export function useAnswerQuestion() {
     mutationFn: answerQuestion,
     onSuccess: () => {
       toast.success("Respuesta enviada correctamente");
-      // Invalidar cache para refrescar preguntas
       queryClient.invalidateQueries({ queryKey: ["questions", "unified"] });
     },
     onError: (error: Error) => {
