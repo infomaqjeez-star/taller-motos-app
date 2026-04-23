@@ -567,6 +567,17 @@ export default function PreguntasPage() {
         )}
 
         {/* Lista de Preguntas */}
+        
+        {(() => {
+          console.log("[Preguntas] Renderizando lista:", {
+            loading,
+            questionsLength: questions.length,
+            filteredQuestionsLength: filteredQuestions.length,
+            hasError: !!error,
+          });
+          return null;
+        })()}
+        
         <div className="space-y-3">
           {loading && questions.length === 0 ? (
             // Skeleton loading

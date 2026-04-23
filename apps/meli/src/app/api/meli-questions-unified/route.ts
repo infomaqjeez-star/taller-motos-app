@@ -201,6 +201,7 @@ export async function GET(request: NextRequest) {
         questions: result.questions,
         total: result.total,
         error: result.error,
+        responseTime: null, // TODO: Obtener tiempo de respuesta real
       });
       
       totalQuestions += result.questions.length;
