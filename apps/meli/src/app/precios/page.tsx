@@ -180,6 +180,9 @@ function PreciosInner() {
         clear_cache: clearCache,
         account_ids: Array.from(selectedAccs),
       };
+      
+      console.log("[Precios] Payload a enviar:", payload);
+      console.log("[Precios] selectedAccs:", Array.from(selectedAccs));
 
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("No hay sesión activa");
