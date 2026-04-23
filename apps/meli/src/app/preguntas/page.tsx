@@ -3,7 +3,7 @@
 export const dynamic = 'force-dynamic';
 export const runtime = 'edge';
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -109,6 +109,99 @@ export default function PreguntasPage() {
   // Respuesta
   const [answering, setAnswering] = useState<number | null>(null);
   const [answerText, setAnswerText] = useState("");
+  
+  // Referencia para detectar preguntas nuevas y sonar alerta
+  const prevUnansweredCountRef = useRef<number | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Inicializar audio para alerta
+  useEffect(() => {
+    // Crear un AudioContext para generar un beep de alerta
+    audioRef.current = null; // Se usa Web Audio API directamente
+  }, []);
+
+  // Función para reproducir sonido de alerta
+  const playAlertSound = useCallback(() => {
+    try {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContextClass) return;
+      
+      const ctx = new AudioContextClass();
+      
+      // Primer beep
+      const osc1 = ctx.createOscillator();
+      const gain1 = ctx.createGain();
+      osc1.connect(gain1);
+      gain1.connect(ctx.destination);
+      osc1.frequency.value = 800;
+      gain1.gain.value = 0.3;
+      osc1.start(ctx.currentTime);
+      osc1.stop(ctx.currentTime + 0.15);
+      
+      // Segundo beep (más agudo)
+      const osc2 = ctx.createOscillator();
+      const gain2 = ctx.createGain();
+      osc2.connect(gain2);
+      gain2.connect(ctx.destination);
+      osc2.frequency.value = 1000;
+      gain2.gain.value = 0.3;
+      osc2.start(ctx.currentTime + 0.2);
+      osc2.stop(ctx.currentTime + 0.35);
+      
+      // Tercer beep (aún más agudo)
+      const osc3 = ctx.createOscillator();
+      const gain3 = ctx.createGain();
+      osc3.connect(gain3);
+      gain3.connect(ctx.destination);
+      osc3.frequency.value = 1200;
+      gain3.gain.value = 0.3;
+      osc3.start(ctx.currentTime + 0.4);
+      osc3.stop(ctx.currentTime + 0.55);
+      
+      // Cerrar contexto después
+      setTimeout(() => ctx.close(), 1000);
+    } catch (e) {
+      console.warn("[Preguntas] No se pudo reproducir sonido:", e);
+    }
+  }, []);
+
+  // Detectar preguntas nuevas y sonar alerta
+  useEffect(() => {
+    const currentUnanswered = questions.filter(
+      q => q.status === QUESTION_STATUSES.UNANSWERED
+    ).length;
+    
+    if (prevUnansweredCountRef.current !== null && currentUnanswered > prevUnansweredCountRef.current) {
+      const newCount = currentUnanswered - prevUnansweredCountRef.current;
+      console.log(`[Preguntas] 🔔 ${newCount} pregunta(s) nueva(s) detectada(s)!`);
+      
+      // Reproducir sonido de alerta
+      playAlertSound();
+      
+      // Mostrar notificación del navegador
+      if ("Notification" in window && Notification.permission === "granted") {
+        new Notification(`${newCount} pregunta${newCount > 1 ? "s" : ""} nueva${newCount > 1 ? "s" : ""}`, {
+          body: "Tenés preguntas nuevas sin responder en MeLi",
+          icon: "/icon.png",
+        });
+      }
+      
+      // Toast visual
+      toast.info(`🔔 ${newCount} pregunta${newCount > 1 ? "s" : ""} nueva${newCount > 1 ? "s" : ""}`, {
+        description: "Respondé rápido para mejorar tu reputación",
+        duration: 5000,
+      });
+    }
+    
+    prevUnansweredCountRef.current = currentUnanswered;
+  }, [questions, playAlertSound]);
+
+  // Pedir permiso de notificaciones al cargar
+  useEffect(() => {
+    if ("Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission();
+    }
+  }, []);
 
   // Debug logs
   useEffect(() => {

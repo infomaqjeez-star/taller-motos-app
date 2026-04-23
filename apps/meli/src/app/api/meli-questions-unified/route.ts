@@ -104,6 +104,33 @@ async function fetchQuestionsWithRetry(
   return { questions: [], total: 0, error: "Máximo de reintentos alcanzado" };
 }
 
+// Función para obtener response time de una cuenta
+async function fetchResponseTime(account: any): Promise<any | null> {
+  try {
+    const token = await getValidToken(account);
+    if (!token) return null;
+    
+    const res = await fetch(
+      `https://api.mercadolibre.com/users/${account.meli_user_id}/questions/response_time`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+    
+    if (!res.ok) {
+      console.log(`[QuestionsAPI] [${account.meli_nickname}] Response time: HTTP ${res.status}`);
+      return null;
+    }
+    
+    const data = await res.json();
+    console.log(`[QuestionsAPI] [${account.meli_nickname}] Response time: ${data?.total?.response_time ?? 'N/A'} min`);
+    return data;
+  } catch (err) {
+    console.warn(`[QuestionsAPI] [${account.meli_nickname}] Error response time:`, err);
+    return null;
+  }
+}
+
 /**
  * GET /api/meli-questions-unified
  * 
@@ -173,7 +200,7 @@ export async function GET(request: NextRequest) {
     accounts.forEach(acc => console.log(`  - ${acc.meli_nickname} (${acc.meli_user_id})`));
 
     // Obtener preguntas de cada cuenta con timeout por cuenta
-    const results = [];
+    const results: any[] = [];
     let totalQuestions = 0;
     
     for (let i = 0; i < accounts.length; i++) {
@@ -222,7 +249,23 @@ export async function GET(request: NextRequest) {
 
     const duration = Date.now() - startTime;
     
-    console.log(`[QuestionsAPI] ✅ Completado en ${duration}ms - Total: ${totalQuestions} preguntas`);
+    console.log(`[QuestionsAPI] ✅ Preguntas completadas en ${duration}ms - Total: ${totalQuestions}`);
+
+    // Obtener response times en paralelo (no bloquea si falla)
+    console.log(`[QuestionsAPI] 📊 Obteniendo tiempos de respuesta...`);
+    const responseTimePromises = accounts.map(account => fetchResponseTime(account));
+    const responseTimes = await Promise.all(responseTimePromises);
+    
+    // Asignar response times a los resultados
+    for (let i = 0; i < results.length; i++) {
+      const accountIndex = accounts.findIndex(a => a.id === results[i].accountId);
+      if (accountIndex >= 0 && responseTimes[accountIndex]) {
+        results[i].responseTime = responseTimes[accountIndex];
+      }
+    }
+
+    const totalDuration = Date.now() - startTime;
+    console.log(`[QuestionsAPI] ✅ Todo completado en ${totalDuration}ms`);
 
     return NextResponse.json({
       questions: results,
