@@ -172,39 +172,52 @@ export async function GET(request: NextRequest) {
     console.log(`[QuestionsAPI] 📊 ${accounts.length} cuentas encontradas:`);
     accounts.forEach(acc => console.log(`  - ${acc.meli_nickname} (${acc.meli_user_id})`));
 
-    // Obtener preguntas de cada cuenta
+    // Obtener preguntas de cada cuenta con timeout por cuenta
     const results = [];
     let totalQuestions = 0;
     
     for (let i = 0; i < accounts.length; i++) {
       const account = accounts[i];
       
-      console.log(`[QuestionsAPI] Procesando cuenta ${i + 1}/${accounts.length}: ${account.meli_nickname}`);
-      
-      // Rate limiting entre cuentas
+      // Rate limiting entre cuentas (300ms para ser más rápido)
       if (i > 0) {
-        await sleep(500);
+        await sleep(300);
       }
       
-      const result = await fetchQuestionsWithRetry(account);
+      // Timeout por cuenta (10 segundos)
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout')), 10000)
+      );
       
-      console.log(`[QuestionsAPI] Resultado para ${account.meli_nickname}:`, {
-        questionsCount: result.questions.length,
-        total: result.total,
-        error: result.error,
-      });
-      
-      results.push({
-        accountId: account.id,
-        nickname: account.meli_nickname,
-        sellerId: account.meli_user_id,
-        questions: result.questions,
-        total: result.total,
-        error: result.error,
-        responseTime: null, // TODO: Obtener tiempo de respuesta real
-      });
-      
-      totalQuestions += result.questions.length;
+      try {
+        const result = await Promise.race([
+          fetchQuestionsWithRetry(account),
+          timeoutPromise
+        ]) as any;
+        
+        results.push({
+          accountId: account.id,
+          nickname: account.meli_nickname,
+          sellerId: account.meli_user_id,
+          questions: result.questions,
+          total: result.total,
+          error: result.error,
+          responseTime: null, // Se obtiene después de forma asíncrona
+        });
+        
+        totalQuestions += result.questions.length;
+      } catch (err: any) {
+        console.error(`[QuestionsAPI] [${account.meli_nickname}] Timeout o error:`, err.message);
+        results.push({
+          accountId: account.id,
+          nickname: account.meli_nickname,
+          sellerId: account.meli_user_id,
+          questions: [],
+          total: 0,
+          error: err.message || "Timeout",
+          responseTime: null,
+        });
+      }
     }
 
     const duration = Date.now() - startTime;
