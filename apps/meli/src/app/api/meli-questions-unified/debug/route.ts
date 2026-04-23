@@ -1,119 +1,141 @@
-import { NextResponse } from "next/server";
-import { getActiveAccounts, getValidToken } from "@/lib/meli";
+import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 
 export const dynamic = "force-dynamic";
 
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+
+// Importar getValidToken del route padre
+import { decrypt } from "@/lib/meli";
+
+async function getTokenForAccount(account: any): Promise<string | null> {
+  try {
+    if (!account.access_token_enc) return null;
+    
+    // Check expiry
+    if (account.token_expiry_date) {
+      const expiry = new Date(account.token_expiry_date);
+      if (expiry <= new Date()) {
+        return null; // Token expired - would need refresh
+      }
+    }
+    
+    const token = await decrypt(account.access_token_enc);
+    return token || null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * GET /api/meli-questions-unified/debug
- * 
- * Diagnóstico: muestra token, seller_id, y respuesta cruda de MeLi para cada cuenta
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
   const startTime = Date.now();
   const results: any[] = [];
 
   try {
-    const accounts = await getActiveAccounts();
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
     
+    // Get ALL linked accounts (not just for one user)
+    const { data: accounts, error } = await supabase
+      .from("linked_meli_accounts")
+      .select("id, user_id, meli_user_id, meli_nickname, access_token_enc, refresh_token_enc, token_expiry_date, is_active")
+      .eq("is_active", true);
+
+    if (error) {
+      return NextResponse.json({ error: error.message, table: "linked_meli_accounts" }, { status: 500 });
+    }
+
+    if (!accounts?.length) {
+      // Try the other table too
+      const { data: accounts2, error: error2 } = await supabase
+        .from("meli_accounts")
+        .select("*")
+        .eq("status", "active");
+      
+      return NextResponse.json({
+        linked_meli_accounts: { count: 0, error: null },
+        meli_accounts: { count: accounts2?.length ?? 0, error: error2?.message ?? null, sample: accounts2?.[0] ? Object.keys(accounts2[0]) : [] },
+        message: "No active accounts found in linked_meli_accounts"
+      });
+    }
+
     for (const acc of accounts) {
       const entry: any = {
         nickname: acc.meli_nickname,
         meli_user_id: acc.meli_user_id,
-        id: acc.id,
-        status: acc.status,
-        token: null,
-        token_error: null,
-        meli_me: null,
-        questions_raw: null,
-        questions_error: null,
+        user_id: acc.user_id,
+        is_active: acc.is_active,
+        token_expiry: acc.token_expiry_date,
+        has_access_token: !!acc.access_token_enc,
+        has_refresh_token: !!acc.refresh_token_enc,
       };
 
       try {
-        const token = await getValidToken(acc);
+        const token = await getTokenForAccount(acc);
         if (!token) {
-          entry.token_error = "getValidToken returned null";
+          entry.token_status = "FAILED - could not decrypt or expired";
+          entry.token_expired = acc.token_expiry_date ? new Date(acc.token_expiry_date) <= new Date() : "no_expiry_date";
           results.push(entry);
           continue;
         }
-        entry.token = `${token.substring(0, 8)}...${token.slice(-6)} (len:${token.length})`;
+        entry.token_status = "OK";
+        entry.token_preview = `${token.substring(0, 8)}...${token.slice(-4)} (${token.length} chars)`;
 
-        // 1. Verificar quién es el dueño del token
+        // 1. Verify token owner
         const meRes = await fetch("https://api.mercadolibre.com/users/me", {
           headers: { Authorization: `Bearer ${token}` },
+          signal: AbortSignal.timeout(5000),
         });
         if (meRes.ok) {
           const me = await meRes.json();
-          entry.meli_me = { id: me.id, nickname: me.nickname, site_id: me.site_id };
-          entry.token_owner_matches = String(me.id) === String(acc.meli_user_id);
+          entry.token_owner = { id: me.id, nickname: me.nickname };
+          entry.seller_id_match = String(me.id) === String(acc.meli_user_id);
         } else {
-          entry.meli_me = { error: `HTTP ${meRes.status}`, body: (await meRes.text()).substring(0, 200) };
+          entry.token_owner = { error: meRes.status, body: (await meRes.text()).substring(0, 150) };
         }
 
-        // 2. Probar preguntas con seller_id del token owner (no el de la DB)
-        const actualSellerId = entry.meli_me?.id || acc.meli_user_id;
-        
-        // 2a. Con seller_id de la DB
-        const qRes1 = await fetch(
-          `https://api.mercadolibre.com/questions/search?seller_id=${acc.meli_user_id}&api_version=4&limit=2`,
-          { headers: { Authorization: `Bearer ${token}` } }
+        // 2. Questions with seller_id
+        const qRes = await fetch(
+          `https://api.mercadolibre.com/questions/search?seller_id=${acc.meli_user_id}&api_version=4&limit=3`,
+          { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(5000) }
         );
-        const qData1 = await qRes1.json();
-        entry.questions_with_db_seller_id = {
-          seller_id_used: acc.meli_user_id,
-          status: qRes1.status,
-          total: qData1.total ?? qData1.paging?.total ?? "?",
-          count: qData1.questions?.length ?? 0,
-          error: qData1.error || null,
-          message: qData1.message || null,
-          keys: Object.keys(qData1),
+        const qData = await qRes.json();
+        entry.questions_seller_id = {
+          http_status: qRes.status,
+          total: qData.total ?? "missing",
+          count: qData.questions?.length ?? 0,
+          error: qData.error || null,
+          message: qData.message || null,
+          first: qData.questions?.[0] ? { id: qData.questions[0].id, status: qData.questions[0].status, text: qData.questions[0].text?.substring(0, 40) } : null,
         };
 
-        // 2b. Con /my/received_questions/search (alternativo del PDF)
-        const qRes2 = await fetch(
-          `https://api.mercadolibre.com/my/received_questions/search?api_version=4&limit=2`,
-          { headers: { Authorization: `Bearer ${token}` } }
+        // 3. /my/received_questions/search
+        const myRes = await fetch(
+          `https://api.mercadolibre.com/my/received_questions/search?api_version=4&limit=3`,
+          { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(5000) }
         );
-        const qData2 = await qRes2.json();
-        entry.questions_my_received = {
-          status: qRes2.status,
-          total: qData2.total ?? qData2.paging?.total ?? "?",
-          count: qData2.questions?.length ?? 0,
-          error: qData2.error || null,
-          first_question: qData2.questions?.[0] ? {
-            id: qData2.questions[0].id,
-            status: qData2.questions[0].status,
-            text: qData2.questions[0].text?.substring(0, 50),
-            item_id: qData2.questions[0].item_id,
-          } : null,
+        const myData = await myRes.json();
+        entry.my_received_questions = {
+          http_status: myRes.status,
+          total: myData.total ?? "missing",
+          count: myData.questions?.length ?? 0,
+          first: myData.questions?.[0] ? { id: myData.questions[0].id, status: myData.questions[0].status } : null,
         };
 
-        // 2c. Con seller_id del token owner (si es diferente)
-        if (String(actualSellerId) !== String(acc.meli_user_id)) {
-          const qRes3 = await fetch(
-            `https://api.mercadolibre.com/questions/search?seller_id=${actualSellerId}&api_version=4&limit=2`,
-            { headers: { Authorization: `Bearer ${token}` } }
-          );
-          const qData3 = await qRes3.json();
-          entry.questions_with_real_seller_id = {
-            seller_id_used: actualSellerId,
-            status: qRes3.status,
-            total: qData3.total ?? "?",
-            count: qData3.questions?.length ?? 0,
-          };
-        }
-
-        // 3. Response time
+        // 4. Response time
         const rtRes = await fetch(
-          `https://api.mercadolibre.com/users/${actualSellerId}/questions/response_time`,
-          { headers: { Authorization: `Bearer ${token}` } }
+          `https://api.mercadolibre.com/users/${acc.meli_user_id}/questions/response_time`,
+          { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(5000) }
         );
-        entry.response_time = {
-          status: rtRes.status,
-          data: rtRes.ok ? await rtRes.json() : (await rtRes.text()).substring(0, 200),
-        };
+        entry.response_time = rtRes.ok
+          ? await rtRes.json()
+          : { error: rtRes.status, body: (await rtRes.text()).substring(0, 150) };
 
       } catch (err: any) {
-        entry.questions_error = err.message;
+        entry.error = err.message;
       }
 
       results.push(entry);
