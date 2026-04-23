@@ -252,7 +252,7 @@ export default function HistorialEtiquetasPage() {
     }
     filtered = filtrarPorFecha(filtered);
     return filtered;
-  }, [etiquetas, query, activeTab, fechaFiltro]);
+  }, [etiquetas, query, activeTab, fechaFiltro, filtrarPorFecha]);
 
   const typeCounts = useMemo(() => {
     const filtradasPorFecha = filtrarPorFecha(etiquetas);
@@ -263,7 +263,7 @@ export default function HistorialEtiquetasPage() {
       TURBO: filtradasPorFecha.filter((e) => e.tipo_envio === "TURBO").length,
       FULL: filtradasPorFecha.filter((e) => e.tipo_envio === "FULL").length,
     };
-  }, [etiquetas, fechaFiltro]);
+  }, [etiquetas, fechaFiltro, filtrarPorFecha]);
 
   const toggleSeleccionarTodas = () => {
     if (selectedIds.size === filteredEtiquetas.length) {
