@@ -222,26 +222,36 @@ export default function PreguntasPage() {
 
   // ============ FILTROS ============
   const filteredQuestions = useMemo(() => {
-    return questions.filter(q => {
+    console.log("[Preguntas] Filtrando preguntas:", {
+      totalQuestions: questions.length,
+      statusFilter,
+      accountFilter,
+      searchTerm,
+    });
+    
+    const filtered = questions.filter(q => {
       // Filtro por estado
       if (statusFilter !== "all" && q.status !== statusFilter) return false;
       
       // Filtro por cuenta
-      if (accountFilter !== "all" && q.account.id !== accountFilter) return false;
+      if (accountFilter !== "all" && q.account?.id !== accountFilter) return false;
       
       // Filtro por búsqueda
       if (searchTerm) {
         const term = searchTerm.toLowerCase();
         return (
-          q.text.toLowerCase().includes(term) ||
-          q.item_id.toLowerCase().includes(term) ||
-          q.account.nickname.toLowerCase().includes(term) ||
-          (q.from.nickname?.toLowerCase().includes(term) ?? false)
+          q.text?.toLowerCase().includes(term) ||
+          q.item_id?.toLowerCase().includes(term) ||
+          q.account?.nickname?.toLowerCase().includes(term) ||
+          (q.from?.nickname?.toLowerCase().includes(term) ?? false)
         );
       }
       
       return true;
     });
+    
+    console.log("[Preguntas] Preguntas filtradas:", filtered.length);
+    return filtered;
   }, [questions, statusFilter, accountFilter, searchTerm]);
 
   // ============ RESPUESTA ============
