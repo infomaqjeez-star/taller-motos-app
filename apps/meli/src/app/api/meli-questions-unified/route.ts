@@ -1,162 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { getValidToken } from "@/lib/meli";
+import { getValidToken, type LinkedMeliAccount } from "@/lib/meli";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+export const dynamic = "force-dynamic";
 
-const supabase = supabaseUrl && supabaseServiceKey 
-  ? createClient(supabaseUrl, supabaseServiceKey)
-  : null;
-
-export const dynamic = 'force-dynamic';
-
-// Delay helper
-const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-// Función para obtener preguntas de una cuenta con retry
-async function fetchQuestionsWithRetry(
-  account: any,
-  maxRetries = 3
-): Promise<{ questions: any[]; total: number; error?: string }> {
-  const nickname = account.meli_nickname;
-  const sellerId = account.meli_user_id;
-  
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      console.log(`[QuestionsAPI] [${nickname}] Intento ${attempt}/${maxRetries}`);
-      
-      // Obtener token válido (con refresh automático si es necesario)
-      const token = await getValidToken(account);
-      
-      if (!token) {
-        console.error(`[QuestionsAPI] [${nickname}] ❌ No se pudo obtener token válido`);
-        return { questions: [], total: 0, error: "Token inválido o expirado" };
-      }
-      
-      console.log(`[QuestionsAPI] [${nickname}] ✅ Token obtenido (${token.substring(0,6)}...${token.slice(-4)}, len:${token.length})`);
-      
-      // Llamar a API de MeLi
-      const response = await fetch(
-        `https://api.mercadolibre.com/questions/search?seller_id=${sellerId}&api_version=4&limit=50`,
-        {
-          headers: { 
-            Authorization: `Bearer ${token}`,
-            Accept: "application/json",
-          },
-        }
-      );
-      
-      // Manejar errores específicos
-      if (response.status === 401) {
-        console.error(`[QuestionsAPI] [${nickname}] ❌ Token expirado (401)`);
-        if (attempt < maxRetries) {
-          await sleep(1000 * attempt);
-          continue;
-        }
-        return { questions: [], total: 0, error: "Token expirado" };
-      }
-      
-      if (response.status === 403) {
-        console.error(`[QuestionsAPI] [${nickname}] ❌ Sin permisos (403)`);
-        return { questions: [], total: 0, error: "Sin permisos para acceder a preguntas" };
-      }
-      
-      if (response.status === 429) {
-        console.warn(`[QuestionsAPI] [${nickname}] ⚠️ Rate limit (429)`);
-        if (attempt < maxRetries) {
-          await sleep(2000 * attempt);
-          continue;
-        }
-        return { questions: [], total: 0, error: "Rate limit excedido" };
-      }
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`[QuestionsAPI] [${nickname}] ❌ Error ${response.status}:`, errorText.substring(0, 200));
-        if (attempt < maxRetries) {
-          await sleep(1000 * attempt);
-          continue;
-        }
-        return { questions: [], total: 0, error: `HTTP ${response.status}` };
-      }
-      
-      const data = await response.json();
-      
-      console.log(`[QuestionsAPI] [${nickname}] ✅ ${data.questions?.length || 0} preguntas (total: ${data.total || data.paging?.total || '?'}, status: ${response.status})`);
-      
-      // Log detallado si viene vacío
-      if (!data.questions?.length) {
-        console.log(`[QuestionsAPI] [${nickname}] ⚠️ Respuesta vacía. Keys: ${Object.keys(data).join(',')}. Paging: ${JSON.stringify(data.paging || 'none')}`);
-      }
-      
-      return {
-        questions: data.questions || [],
-        total: data.total || data.paging?.total || data.questions?.length || 0,
-      };
-      
-    } catch (err: any) {
-      console.error(`[QuestionsAPI] [${nickname}] ❌ Error intento ${attempt}:`, err.message);
-      if (attempt < maxRetries) {
-        await sleep(1000 * attempt);
-      } else {
-        return { questions: [], total: 0, error: err.message };
-      }
-    }
-  }
-  
-  return { questions: [], total: 0, error: "Máximo de reintentos alcanzado" };
-}
-
-// Función para obtener response time de una cuenta
-async function fetchResponseTime(account: any): Promise<any | null> {
-  try {
-    const token = await getValidToken(account);
-    if (!token) return null;
-    
-    const res = await fetch(
-      `https://api.mercadolibre.com/users/${account.meli_user_id}/questions/response_time`,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      }
-    );
-    
-    if (!res.ok) {
-      console.log(`[QuestionsAPI] [${account.meli_nickname}] Response time: HTTP ${res.status}`);
-      return null;
-    }
-    
-    const data = await res.json();
-    console.log(`[QuestionsAPI] [${account.meli_nickname}] Response time: ${data?.total?.response_time ?? 'N/A'} min`);
-    return data;
-  } catch (err) {
-    console.warn(`[QuestionsAPI] [${account.meli_nickname}] Error response time:`, err);
-    return null;
-  }
-}
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co";
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "placeholder-key";
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 /**
  * GET /api/meli-questions-unified
  * 
- * Obtiene preguntas de todas las cuentas de Mercado Libre del usuario
- * con manejo robusto de errores y reintentos
+ * Trae las preguntas de TODAS las cuentas conectadas del usuario.
+ * Usa el MISMO patrón que meli-dashboard (que funciona).
  */
 export async function GET(request: NextRequest) {
   const startTime = Date.now();
-  
-  console.log("[QuestionsAPI] 🚀 Iniciando solicitud de preguntas unificadas");
-  
-  try {
-    // Verificar Supabase
-    if (!supabase) {
-      console.error("[QuestionsAPI] ❌ Supabase no configurado");
-      return NextResponse.json(
-        { error: "Supabase no configurado", questions: [], accounts: [] },
-        { status: 500 }
-      );
-    }
 
-    // Obtener usuario del token
+  try {
+    // Auth — mismo que dashboard
     const authHeader = request.headers.get("authorization");
     let userId: string | null = null;
 
@@ -167,94 +29,134 @@ export async function GET(request: NextRequest) {
     }
 
     if (!userId) {
-      console.error("[QuestionsAPI] ❌ Usuario no autorizado");
-      return NextResponse.json(
-        { error: "No autorizado", questions: [], accounts: [] },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "No autorizado", questions: [], accounts: [] }, { status: 401 });
     }
 
-    console.log(`[QuestionsAPI] 👤 Usuario: ${userId}`);
-
-    // Obtener cuentas activas
+    // Cuentas — mismo query que dashboard
     const { data: accounts, error: accountsError } = await supabase
       .from("linked_meli_accounts")
-      .select("id, meli_user_id, meli_nickname, access_token_enc, refresh_token_enc, token_expiry_date")
+      .select("id, user_id, meli_user_id, meli_nickname, is_active, access_token_enc, refresh_token_enc, token_expiry_date")
       .eq("user_id", userId)
       .eq("is_active", true);
 
-    if (accountsError) {
-      console.error("[QuestionsAPI] ❌ Error obteniendo cuentas:", accountsError);
-      return NextResponse.json(
-        { error: "Error obteniendo cuentas", questions: [], accounts: [] },
-        { status: 500 }
-      );
+    if (accountsError || !accounts?.length) {
+      return NextResponse.json({ questions: [], accounts: [], message: "No hay cuentas" });
     }
 
-    if (!accounts || accounts.length === 0) {
-      console.log("[QuestionsAPI] ⚠️ No hay cuentas activas");
-      return NextResponse.json({
-        questions: [],
-        accounts: [],
-        message: "No hay cuentas conectadas",
-      });
-    }
+    console.log(`[Questions] ${accounts.length} cuentas para ${userId}`);
 
-    console.log(`[QuestionsAPI] 📊 ${accounts.length} cuentas encontradas`);
+    // Traer preguntas de TODAS las cuentas en PARALELO — mismo patrón que dashboard
+    const allResults = await Promise.all(
+      accounts.map(async (account) => {
+        try {
+          const validToken = await getValidToken(account as LinkedMeliAccount);
+          if (!validToken) {
+            console.log(`[Questions] ❌ Sin token: ${account.meli_nickname}`);
+            return { account, questions: [], total: 0, error: "token_expired", responseTime: null };
+          }
 
-    // Obtener preguntas Y response times de TODAS las cuentas EN PARALELO
-    const allPromises = accounts.map(async (account) => {
-      const timeoutMs = 8000;
-      
-      // Preguntas + response time en paralelo por cuenta
-      const [questionsResult, responseTime] = await Promise.all([
-        Promise.race([
-          fetchQuestionsWithRetry(account, 2), // Solo 2 reintentos para ir más rápido
-          new Promise<{ questions: any[]; total: number; error: string }>((_, reject) =>
-            setTimeout(() => reject(new Error('Timeout')), timeoutMs)
-          ),
-        ]).catch((err: any) => ({
-          questions: [] as any[],
-          total: 0,
-          error: err.message || 'Timeout',
-        })),
-        fetchResponseTime(account).catch(() => null),
-      ]);
+          const meliId = String(account.meli_user_id);
+          const headers = { Authorization: `Bearer ${validToken}` };
 
-      return {
-        accountId: account.id,
-        nickname: account.meli_nickname,
-        sellerId: account.meli_user_id,
-        questions: questionsResult.questions,
-        total: questionsResult.total,
-        error: questionsResult.error,
-        responseTime,
-      };
-    });
+          // Preguntas + response time en paralelo
+          const [questionsRes, rtRes] = await Promise.allSettled([
+            fetch(
+              `https://api.mercadolibre.com/questions/search?seller_id=${meliId}&status=UNANSWERED&api_version=4&limit=50&sort_fields=date_created&sort_types=DESC`,
+              { headers, signal: AbortSignal.timeout(8000) }
+            ),
+            fetch(
+              `https://api.mercadolibre.com/users/${meliId}/questions/response_time`,
+              { headers, signal: AbortSignal.timeout(5000) }
+            ),
+          ]);
 
-    const results = await Promise.all(allPromises);
-    const totalQuestions = results.reduce((sum, r) => sum + r.questions.length, 0);
+          // Parsear preguntas
+          let questions: any[] = [];
+          let total = 0;
+          if (questionsRes.status === "fulfilled" && questionsRes.value.ok) {
+            const data = await questionsRes.value.json();
+            questions = data.questions || [];
+            total = data.total || questions.length;
+            console.log(`[Questions] ✅ ${account.meli_nickname}: ${questions.length} preguntas (total: ${total})`);
+          } else {
+            const status = questionsRes.status === "fulfilled" ? questionsRes.value.status : "timeout";
+            console.log(`[Questions] ❌ ${account.meli_nickname}: HTTP ${status}`);
+          }
+
+          // Parsear response time
+          let responseTime = null;
+          if (rtRes.status === "fulfilled" && rtRes.value.ok) {
+            responseTime = await rtRes.value.json();
+          }
+
+          // Enriquecer preguntas con datos del item (en paralelo, batch de 5)
+          const itemCache = new Map<string, { title: string; thumbnail: string }>();
+          const uniqueItems = [...new Set(questions.map((q: any) => q.item_id))];
+          
+          // Fetch items en batches de 5
+          for (let i = 0; i < uniqueItems.length; i += 5) {
+            const batch = uniqueItems.slice(i, i + 5);
+            await Promise.allSettled(
+              batch.map(async (itemId: string) => {
+                try {
+                  const res = await fetch(
+                    `https://api.mercadolibre.com/items/${itemId}?attributes=id,title,thumbnail`,
+                    { headers, signal: AbortSignal.timeout(3000) }
+                  );
+                  if (res.ok) {
+                    const d = await res.json();
+                    itemCache.set(itemId, { title: d.title || itemId, thumbnail: (d.thumbnail || "").replace("http://", "https://") });
+                  }
+                } catch { /* skip */ }
+              })
+            );
+          }
+
+          return {
+            account,
+            questions: questions.map((q: any) => ({
+              ...q,
+              item_title: itemCache.get(q.item_id)?.title || q.item_id,
+              item_thumbnail: itemCache.get(q.item_id)?.thumbnail || "",
+              account_nickname: account.meli_nickname,
+              account_id: account.id,
+            })),
+            total,
+            error: null,
+            responseTime,
+          };
+        } catch (err: any) {
+          console.error(`[Questions] Error ${account.meli_nickname}:`, err.message);
+          return { account, questions: [], total: 0, error: err.message, responseTime: null };
+        }
+      })
+    );
+
+    // Combinar resultados
+    const allQuestions = allResults.flatMap(r => r.questions);
+    allQuestions.sort((a, b) => new Date(b.date_created).getTime() - new Date(a.date_created).getTime());
 
     const duration = Date.now() - startTime;
-    console.log(`[QuestionsAPI] ✅ Completado en ${duration}ms - ${totalQuestions} preguntas de ${accounts.length} cuentas`);
+    console.log(`[Questions] ✅ TOTAL: ${allQuestions.length} preguntas de ${accounts.length} cuentas en ${duration}ms`);
 
-    return NextResponse.json({
-      questions: results,
-      accounts: accounts.map(a => ({
-        id: a.id,
-        nickname: a.meli_nickname,
-        sellerId: a.meli_user_id,
+    const response = NextResponse.json({
+      questions: allQuestions,
+      accounts: allResults.map(r => ({
+        accountId: r.account.id,
+        nickname: r.account.meli_nickname,
+        sellerId: r.account.meli_user_id,
+        total: r.total,
+        error: r.error,
+        responseTime: r.responseTime,
       })),
-      totalQuestions,
-      duration,
-      timestamp: new Date().toISOString(),
+      totalQuestions: allQuestions.length,
+      duration_ms: duration,
     });
-
-  } catch (err: any) {
-    console.error("[QuestionsAPI] ❌ Error general:", err);
-    return NextResponse.json(
-      { error: err.message || "Error interno del servidor", questions: [], accounts: [] },
-      { status: 500 }
-    );
+    
+    response.headers.set("Cache-Control", "no-store");
+    return response;
+  } catch (error: any) {
+    console.error("[Questions] Error fatal:", error);
+    return NextResponse.json({ error: error.message, questions: [], accounts: [] }, { status: 500 });
   }
 }
