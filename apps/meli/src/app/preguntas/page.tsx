@@ -83,6 +83,15 @@ export default function PreguntasPage() {
   const router = useRouter();
   const { accounts, loading: accountsLoading } = useMeliAccounts();
   
+  // Log de estado de cuentas
+  useEffect(() => {
+    console.log("[Preguntas] Estado de cuentas:", {
+      accountsCount: accounts.length,
+      accountsLoading,
+      accounts: accounts.map(a => a.meli_nickname),
+    });
+  }, [accounts, accountsLoading]);
+  
   // Estados
   const [questions, setQuestions] = useState<UnifiedQuestion[]>([]);
   const [loading, setLoading] = useState(true);
