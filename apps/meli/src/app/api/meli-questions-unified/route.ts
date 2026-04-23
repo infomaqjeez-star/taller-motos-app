@@ -10,7 +10,6 @@ const supabase = supabaseUrl && supabaseServiceKey
   : null;
 
 export const dynamic = 'force-dynamic';
-export const runtime = 'edge';
 
 // Delay helper
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -35,7 +34,7 @@ async function fetchQuestionsWithRetry(
         return { questions: [], total: 0, error: "Token inválido o expirado" };
       }
       
-      console.log(`[QuestionsAPI] [${nickname}] ✅ Token obtenido`);
+      console.log(`[QuestionsAPI] [${nickname}] ✅ Token obtenido (${token.substring(0,6)}...${token.slice(-4)}, len:${token.length})`);
       
       // Llamar a API de MeLi
       const response = await fetch(
@@ -84,7 +83,12 @@ async function fetchQuestionsWithRetry(
       
       const data = await response.json();
       
-      console.log(`[QuestionsAPI] [${nickname}] ✅ ${data.questions?.length || 0} preguntas obtenidas`);
+      console.log(`[QuestionsAPI] [${nickname}] ✅ ${data.questions?.length || 0} preguntas (total: ${data.total || data.paging?.total || '?'}, status: ${response.status})`);
+      
+      // Log detallado si viene vacío
+      if (!data.questions?.length) {
+        console.log(`[QuestionsAPI] [${nickname}] ⚠️ Respuesta vacía. Keys: ${Object.keys(data).join(',')}. Paging: ${JSON.stringify(data.paging || 'none')}`);
+      }
       
       return {
         questions: data.questions || [],
