@@ -227,13 +227,13 @@ export default function HistorialEtiquetasPage() {
     return () => window.removeEventListener("focus", handleFocus);
   }, [loadEtiquetas]);
 
-  const filtrarPorFecha = (etiquetas: EtiquetaHistorial[]) => {
+  const filtrarPorFecha = useCallback((etiquetas: EtiquetaHistorial[]) => {
     if (!fechaFiltro) return etiquetas;
     return etiquetas.filter(e => {
       const fechaEtiqueta = new Date(e.fecha_creacion);
       return fechaEtiqueta.toDateString() === fechaFiltro.toDateString();
     });
-  };
+  }, [fechaFiltro]);
 
   const filteredEtiquetas = useMemo(() => {
     let filtered = etiquetas;

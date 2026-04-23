@@ -18,6 +18,7 @@ export default function QuestionSuggestion({ preguntaTexto, onUseSuggestion }: P
     if (preguntaTexto && preguntaTexto.trim().length > 0) {
       searchSuggestion();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [preguntaTexto]);
 
   const searchSuggestion = async () => {

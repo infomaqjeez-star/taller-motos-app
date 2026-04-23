@@ -67,6 +67,7 @@ export function useAutoRefresh(
         intervalRef.current = null;
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enableAutomatic, interval]); // Sin manualRefresh en dependencias
 
   return {

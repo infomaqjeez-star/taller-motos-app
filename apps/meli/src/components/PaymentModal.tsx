@@ -19,7 +19,7 @@ export default function PaymentModal({ order, onClose }: Props) {
     try { setPagos(await pagosDb.getByOrder(order.id)); } catch {}
   };
 
-  useEffect(() => { load(); }, [order.id]);
+  useEffect(() => { load(); }, [order.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const total = pagos.reduce((s, p) => s + p.amount, 0);
   const remaining = (order.budget ?? 0) - total;

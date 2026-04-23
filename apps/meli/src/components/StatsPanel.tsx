@@ -44,6 +44,7 @@ export function StatsPanel({ accountId }: { accountId: string }) {
 
   useEffect(() => {
     loadStats();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accountId, period]);
 
   if (!stats) {

@@ -211,6 +211,7 @@ function SyncInner() {
       setStopping(false);
       readerRef.current = null;
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [syncMode, originId, destId]);
 
   const handleSSEEvent = (event: string, data: Record<string, unknown>) => {

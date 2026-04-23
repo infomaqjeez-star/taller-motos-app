@@ -87,6 +87,7 @@ export function EtiquetasHistorial({ accountName, accessToken }: Props) {
     if (isOpen) {
       cargarHistorial();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, filtroTipo]);
 
   const descargarPDF = async (etiqueta: EtiquetaHistorial) => {
