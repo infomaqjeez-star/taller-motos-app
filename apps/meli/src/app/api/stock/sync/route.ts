@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
     // Obtener cuenta MAQJEEZ I (la principal)
     const { data: account, error: accountError } = await supabase
       .from("linked_meli_accounts")
-      .select("id, meli_user_id, meli_nickname, access_token_enc, refresh_token_enc, token_expiry_date")
+      .select("id, user_id, meli_user_id, meli_nickname, access_token_enc, refresh_token_enc, token_expiry_date, is_active")
       .eq("user_id", userId)
       .eq("meli_nickname", "MAQJEEZ I")
       .eq("is_active", true)
