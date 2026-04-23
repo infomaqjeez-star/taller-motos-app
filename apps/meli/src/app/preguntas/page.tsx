@@ -183,6 +183,12 @@ export default function PreguntasPage() {
       setQuestions(unified);
       setAccountStats(stats);
       setLastUpdate(new Date());
+      
+      console.log("[Preguntas] Estado actualizado:", {
+        questionsCount: unified.length,
+        firstQuestion: unified[0]?.text?.substring(0, 50),
+        accountStatsCount: stats.length,
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error cargando preguntas");
     } finally {
