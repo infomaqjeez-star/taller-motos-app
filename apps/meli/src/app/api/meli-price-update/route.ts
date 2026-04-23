@@ -67,6 +67,9 @@ export async function POST(request: NextRequest) {
       .eq("user_id", userId)
       .eq("is_active", true);
     
+    console.log("[meli-price-update] account_ids recibidos:", account_ids);
+    console.log("[meli-price-update] userId:", userId);
+    
     if (account_ids.length > 0) {
       // Filtrar por meli_user_id o id
       query = query.or(`meli_user_id.in.(${account_ids.join(',')}),id.in.(${account_ids.join(',')})`);
@@ -75,7 +78,7 @@ export async function POST(request: NextRequest) {
     const { data: accounts, error: accountsError } = await query;
 
     console.log("[meli-price-update] Cuentas encontradas:", accounts?.length || 0);
-    console.log("[meli-price-update] account_ids recibidos:", account_ids);
+    console.log("[meli-price-update] Error:", accountsError);
 
     if (accountsError || !accounts || accounts.length === 0) {
       return new Response(
