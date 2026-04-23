@@ -179,12 +179,20 @@ export async function GET(request: NextRequest) {
     for (let i = 0; i < accounts.length; i++) {
       const account = accounts[i];
       
+      console.log(`[QuestionsAPI] Procesando cuenta ${i + 1}/${accounts.length}: ${account.meli_nickname}`);
+      
       // Rate limiting entre cuentas
       if (i > 0) {
         await sleep(500);
       }
       
       const result = await fetchQuestionsWithRetry(account);
+      
+      console.log(`[QuestionsAPI] Resultado para ${account.meli_nickname}:`, {
+        questionsCount: result.questions.length,
+        total: result.total,
+        error: result.error,
+      });
       
       results.push({
         accountId: account.id,
