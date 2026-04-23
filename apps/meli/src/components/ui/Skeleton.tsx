@@ -4,15 +4,17 @@ import { motion } from "framer-motion";
 
 interface SkeletonProps {
   className?: string;
+  style?: React.CSSProperties;
 }
 
-export function Skeleton({ className = "" }: SkeletonProps) {
+export function Skeleton({ className = "", style }: SkeletonProps) {
   return (
     <motion.div
       initial={{ opacity: 0.5 }}
       animate={{ opacity: [0.5, 1, 0.5] }}
       transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
       className={`bg-zinc-800/50 rounded-lg ${className}`}
+      style={style}
     />
   );
 }
