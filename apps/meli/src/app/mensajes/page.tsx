@@ -711,6 +711,34 @@ function ClaimCard({ claim, onResponded }: { claim: Claim; onResponded: () => vo
   );
 }
 
+/* ── Response time stats type ── */
+interface ResponseTimeStat {
+  account: string;
+  meli_user_id: string;
+  total_minutes: number | null;
+  weekdays_working?: { minutes: number | null; sales_increase: number | null };
+  weekdays_extra?: { minutes: number | null; sales_increase: number | null };
+  weekend?: { minutes: number | null; sales_increase: number | null };
+  status?: string;
+  error?: string;
+}
+
+function formatResponseTime(minutes: number | null): string {
+  if (minutes === null || minutes === undefined) return "—";
+  if (minutes < 60) return `${minutes}min`;
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return m > 0 ? `${h}h ${m}m` : `${h}h`;
+}
+
+function responseTimeColor(minutes: number | null): string {
+  if (minutes === null) return "#6B7280";
+  if (minutes <= 30) return "#39FF14";
+  if (minutes <= 60) return "#FFE600";
+  if (minutes <= 180) return "#FF9800";
+  return "#ef4444";
+}
+
 /* ── Página principal ── */
 function MensajesInner() {
   const [activeTab, setActiveTab] = useState<TabType>("questions");
@@ -829,6 +857,9 @@ function MensajesInner() {
   const [claims, setClaims] = useState<Claim[]>([]);
   const [claimsLoading, setClaimsLoading] = useState(true);
   const [claimsError, setClaimsError] = useState<string | null>(null);
+
+  // Response time stats
+  const [responseTimeStats, setResponseTimeStats] = useState<ResponseTimeStat[]>([]);
   
   const [search, setSearch] = useState("");
   const [lastSync, setLastSync] = useState<Date | null>(null);
@@ -838,6 +869,22 @@ function MensajesInner() {
 
   const initialLoadDone = useRef(false);
   const loadRef = useRef<((sync?: boolean) => Promise<void>) | null>(null);
+
+  // Cargar response time stats
+  const loadResponseTimes = useCallback(async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const headers: Record<string, string> = {};
+      if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
+      const res = await fetch("/api/meli-questions/response-time", { headers });
+      if (res.ok) {
+        const data = await res.json();
+        setResponseTimeStats(Array.isArray(data) ? data : []);
+      }
+    } catch (e) {
+      console.warn("[mensajes] Error cargando response times:", e);
+    }
+  }, []);
 
   // Cargar preguntas
   const loadQuestions = useCallback(async (sync = false, force = false) => {
@@ -851,11 +898,11 @@ function MensajesInner() {
       if (!session) { setQuestionsError("No autenticado"); return; }
       
       const forceParam = force ? '&force=true' : '';
-      const res = await fetch(`/api/meli-questions?_t=${Date.now()}${forceParam}`, {
+      const syncParam = force ? '&sync=true' : '';
+      const res = await fetch(`/api/meli-questions?_t=${Date.now()}${forceParam}${syncParam}`, {
         headers: { Authorization: `Bearer ${session.access_token}` },
         cache: 'no-store',
       });
-      
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data: Question[] = await res.json();
       
@@ -932,8 +979,13 @@ function MensajesInner() {
 
   // Cargar todo
   const loadAll = useCallback(async (sync = false) => {
-    await Promise.all([loadQuestions(sync), loadMessages(sync), loadClaims(sync)]);
-  }, [loadQuestions, loadMessages, loadClaims]);
+    await Promise.all([
+      loadQuestions(sync),
+      loadMessages(sync),
+      loadClaims(sync),
+      loadResponseTimes(),
+    ]);
+  }, [loadQuestions, loadMessages, loadClaims, loadResponseTimes]);
 
   // Mantener ref de load siempre actualizada para el Worker
   useEffect(() => { loadRef.current = loadAll; }, [loadAll]);
@@ -942,7 +994,7 @@ function MensajesInner() {
     // Carga inicial inmediata
     loadAll();
 
-    // Polling cada 60 segundos (muy conservador para no saturar Railway)
+    // Polling cada 60 segundos (conservador para no saturar Railway)
     const interval = setInterval(() => {
       console.log('[MENSAJES] Polling automático (60s)...');
       loadAll(true);
@@ -1096,7 +1148,7 @@ function MensajesInner() {
             <Settings className="w-4 h-4" />
             <span className="hidden sm:inline">Plantillas</span>
           </button>
-          <button onClick={() => loadAll(true)} disabled={isSyncing || isLoading}
+          <button onClick={() => loadAll(true, true)} disabled={isSyncing || isLoading}
             className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold disabled:opacity-40"
             style={{ background: "#1F1F1F", color: "#FF5722", border: "1px solid #FF572244" }}>
             <RefreshCw className={`w-4 h-4 ${isSyncing ? "animate-spin" : ""}`} />
@@ -1202,6 +1254,41 @@ function MensajesInner() {
           </div>
         )}
 
+        {/* Response Time Stats — solo en tab preguntas */}
+        {!isLoading && activeTab === "questions" && responseTimeStats.length > 0 && (
+          <div className="rounded-2xl p-4 mb-4"
+            style={{ background: "#1F1F1F", border: "1px solid rgba(255,255,255,0.07)" }}>
+            <p className="text-[10px] font-bold uppercase tracking-wider mb-3" style={{ color: "#6B7280" }}>
+              <Clock className="w-3 h-3 inline mr-1" />
+              Tiempo de respuesta por cuenta (últimos 14 días)
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {responseTimeStats.map((stat) => (
+                <div key={stat.meli_user_id} className="rounded-xl p-3 flex items-center justify-between"
+                  style={{ background: "#121212", border: "1px solid rgba(255,255,255,0.06)" }}>
+                  <div>
+                    <p className="text-xs font-bold text-white">@{stat.account}</p>
+                    <p className="text-[10px]" style={{ color: "#6B7280" }}>
+                      {stat.weekdays_working?.minutes != null
+                        ? `Laboral: ${formatResponseTime(stat.weekdays_working.minutes)}`
+                        : "Sin datos"}
+                      {stat.weekend?.minutes != null
+                        ? ` · Finde: ${formatResponseTime(stat.weekend.minutes)}`
+                        : ""}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-lg font-black" style={{ color: responseTimeColor(stat.total_minutes) }}>
+                      {formatResponseTime(stat.total_minutes)}
+                    </p>
+                    <p className="text-[9px]" style={{ color: "#6B7280" }}>promedio</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Search */}
         {!isLoading && currentData.length > 0 && (
           <div className="relative mb-3">
@@ -1223,7 +1310,7 @@ function MensajesInner() {
           <div className="rounded-2xl p-4 mb-4 text-center" style={{ background: "#ef444418", border: "1px solid #ef444440" }}>
             <AlertCircle className="w-7 h-7 mx-auto mb-1" style={{ color: "#ef4444" }} />
             <p className="text-sm text-white font-semibold">{error}</p>
-            <button onClick={() => loadAll()} className="mt-2 px-4 py-1.5 rounded-lg text-xs font-bold bg-red-500 text-white">
+            <button onClick={() => loadAll(false, true)} className="mt-2 px-4 py-1.5 rounded-lg text-xs font-bold bg-red-500 text-white">
               Reintentar
             </button>
           </div>
