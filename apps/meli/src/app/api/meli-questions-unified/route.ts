@@ -196,76 +196,43 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    console.log(`[QuestionsAPI] 📊 ${accounts.length} cuentas encontradas:`);
-    accounts.forEach(acc => console.log(`  - ${acc.meli_nickname} (${acc.meli_user_id})`));
+    console.log(`[QuestionsAPI] 📊 ${accounts.length} cuentas encontradas`);
 
-    // Obtener preguntas de cada cuenta con timeout por cuenta
-    const results: any[] = [];
-    let totalQuestions = 0;
-    
-    for (let i = 0; i < accounts.length; i++) {
-      const account = accounts[i];
+    // Obtener preguntas Y response times de TODAS las cuentas EN PARALELO
+    const allPromises = accounts.map(async (account) => {
+      const timeoutMs = 8000;
       
-      // Rate limiting entre cuentas (300ms para ser más rápido)
-      if (i > 0) {
-        await sleep(300);
-      }
-      
-      // Timeout por cuenta (10 segundos)
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Timeout')), 10000)
-      );
-      
-      try {
-        const result = await Promise.race([
-          fetchQuestionsWithRetry(account),
-          timeoutPromise
-        ]) as any;
-        
-        results.push({
-          accountId: account.id,
-          nickname: account.meli_nickname,
-          sellerId: account.meli_user_id,
-          questions: result.questions,
-          total: result.total,
-          error: result.error,
-          responseTime: null, // Se obtiene después de forma asíncrona
-        });
-        
-        totalQuestions += result.questions.length;
-      } catch (err: any) {
-        console.error(`[QuestionsAPI] [${account.meli_nickname}] Timeout o error:`, err.message);
-        results.push({
-          accountId: account.id,
-          nickname: account.meli_nickname,
-          sellerId: account.meli_user_id,
-          questions: [],
+      // Preguntas + response time en paralelo por cuenta
+      const [questionsResult, responseTime] = await Promise.all([
+        Promise.race([
+          fetchQuestionsWithRetry(account, 2), // Solo 2 reintentos para ir más rápido
+          new Promise<{ questions: any[]; total: number; error: string }>((_, reject) =>
+            setTimeout(() => reject(new Error('Timeout')), timeoutMs)
+          ),
+        ]).catch((err: any) => ({
+          questions: [] as any[],
           total: 0,
-          error: err.message || "Timeout",
-          responseTime: null,
-        });
-      }
-    }
+          error: err.message || 'Timeout',
+        })),
+        fetchResponseTime(account).catch(() => null),
+      ]);
+
+      return {
+        accountId: account.id,
+        nickname: account.meli_nickname,
+        sellerId: account.meli_user_id,
+        questions: questionsResult.questions,
+        total: questionsResult.total,
+        error: questionsResult.error,
+        responseTime,
+      };
+    });
+
+    const results = await Promise.all(allPromises);
+    const totalQuestions = results.reduce((sum, r) => sum + r.questions.length, 0);
 
     const duration = Date.now() - startTime;
-    
-    console.log(`[QuestionsAPI] ✅ Preguntas completadas en ${duration}ms - Total: ${totalQuestions}`);
-
-    // Obtener response times en paralelo (no bloquea si falla)
-    console.log(`[QuestionsAPI] 📊 Obteniendo tiempos de respuesta...`);
-    const responseTimePromises = accounts.map(account => fetchResponseTime(account));
-    const responseTimes = await Promise.all(responseTimePromises);
-    
-    // Asignar response times a los resultados
-    for (let i = 0; i < results.length; i++) {
-      const accountIndex = accounts.findIndex(a => a.id === results[i].accountId);
-      if (accountIndex >= 0 && responseTimes[accountIndex]) {
-        results[i].responseTime = responseTimes[accountIndex];
-      }
-    }
-
-    const totalDuration = Date.now() - startTime;
-    console.log(`[QuestionsAPI] ✅ Todo completado en ${totalDuration}ms`);
+    console.log(`[QuestionsAPI] ✅ Completado en ${duration}ms - ${totalQuestions} preguntas de ${accounts.length} cuentas`);
 
     return NextResponse.json({
       questions: results,
