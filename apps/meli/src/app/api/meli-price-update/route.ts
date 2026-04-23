@@ -74,7 +74,10 @@ export async function POST(request: NextRequest) {
     const numericAccountIds = account_ids.map((id: string) => parseInt(id, 10)).filter((id: number) => !isNaN(id));
     console.log("[meli-price-update] numericAccountIds:", numericAccountIds);
     
-    if (account_ids.length > 0) {
+    // Si no hay account_ids válidos, usar todas las cuentas del usuario
+    if (numericAccountIds.length === 0) {
+      console.log("[meli-price-update] No hay account_ids válidos, usando todas las cuentas del usuario");
+    } else {
       // Filtrar por meli_user_id (números)
       query = query.in('meli_user_id', numericAccountIds);
     }
