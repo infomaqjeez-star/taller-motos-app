@@ -70,9 +70,13 @@ export async function POST(request: NextRequest) {
     console.log("[meli-price-update] account_ids recibidos:", account_ids);
     console.log("[meli-price-update] userId:", userId);
     
+    // Convertir account_ids a números (meli_user_id son números, no strings)
+    const numericAccountIds = account_ids.map((id: string) => parseInt(id, 10)).filter((id: number) => !isNaN(id));
+    console.log("[meli-price-update] numericAccountIds:", numericAccountIds);
+    
     if (account_ids.length > 0) {
-      // Filtrar por meli_user_id o id
-      query = query.or(`meli_user_id.in.(${account_ids.join(',')}),id.in.(${account_ids.join(',')})`);
+      // Filtrar por meli_user_id (números)
+      query = query.in('meli_user_id', numericAccountIds);
     }
     
     const { data: accounts, error: accountsError } = await query;
