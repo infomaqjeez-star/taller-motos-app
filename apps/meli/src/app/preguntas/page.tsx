@@ -100,7 +100,7 @@ export default function PreguntasPage() {
   
   // Filtros
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("UNANSWERED");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [accountFilter, setAccountFilter] = useState<string>("all");
   
   // Estadísticas
