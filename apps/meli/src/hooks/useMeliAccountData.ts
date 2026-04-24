@@ -66,15 +66,14 @@ export function useMeliAccountData(userId: string | null): UseMeliAccountDataRet
 
     // Evitar refetch innecesarios si ya se cargó este usuario
     if (lastFetchedUserId === userId) {
-      console.log(`[useMeliAccountData] Usando datos cacheados para ${userId}`);
       return;
     }
 
     setLoading(true);
     setError(null);
+    setData(null); // Limpiar datos del account anterior para no mostrar info stale
 
     try {
-      console.log(`[useMeliAccountData] Cargando datos para ${userId}...`);
       const { data: { session } } = await supabase.auth.getSession();
       const headers: Record<string, string> = session?.access_token
         ? { Authorization: `Bearer ${session.access_token}` }
@@ -88,7 +87,6 @@ export function useMeliAccountData(userId: string | null): UseMeliAccountDataRet
       const accountData: MeliAccountData = await res.json();
       setData(accountData);
       setLastFetchedUserId(userId);
-      console.log(`[useMeliAccountData] Datos cargados exitosamente`);
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : String(err);
       console.error(`[useMeliAccountData] Error:`, errorMsg);
@@ -97,7 +95,7 @@ export function useMeliAccountData(userId: string | null): UseMeliAccountDataRet
     } finally {
       setLoading(false);
     }
-  }, [userId, lastFetchedUserId]); // Eliminada dependencia 'data' que causaba ciclo infinito
+  }, [userId, lastFetchedUserId]);
 
   // Cargar datos cuando cambia userId
   useEffect(() => {

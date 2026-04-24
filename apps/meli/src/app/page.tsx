@@ -808,6 +808,7 @@ function AppJeezInner() {
               {/* Account Details Panel - Mostrar solo cuenta seleccionada */}
               {selectedAccount && (
                 <AccountDetailsPanel
+                  key={selectedAccount.meli_user_id}
                   data={selectedAccount}
                   editingNick={editingNick}
                   editNickVal={editNickVal}

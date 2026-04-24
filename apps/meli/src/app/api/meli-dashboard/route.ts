@@ -130,11 +130,11 @@ export async function GET(request: NextRequest) {
           const meliId = String(account.meli_user_id);
 
           // ── Llamadas paralelas a MeLi API ───────────────────────────────
-          let userRes, questionsRes, ordersReadyRes, itemsRes, claimsRes, unreadRes, 
+          let userRes, questionsRes, ordersReadyRes, itemsRes, claimsRes, claimsOngoingRes, unreadRes, 
               todayOrdersPaidRes, todayOrdersConfirmedRes, todayOrdersProcessingRes;
           
           try {
-            [userRes, questionsRes, ordersReadyRes, itemsRes, claimsRes, unreadRes, 
+            [userRes, questionsRes, ordersReadyRes, itemsRes, claimsRes, claimsOngoingRes, unreadRes, 
              todayOrdersPaidRes, todayOrdersConfirmedRes, todayOrdersProcessingRes] =
               await Promise.allSettled([
                 fetch(`https://api.mercadolibre.com/users/${meliId}?attributes=seller_reputation,nickname`, {
@@ -150,6 +150,9 @@ export async function GET(request: NextRequest) {
                   headers: meliHeaders, signal: AbortSignal.timeout(5000),
                 }),
                 fetch(`https://api.mercadolibre.com/post-sale/v2/claims/search?role=seller&status=opened&limit=1`, {
+                  headers: meliHeaders, signal: AbortSignal.timeout(5000),
+                }),
+                fetch(`https://api.mercadolibre.com/post-sale/v2/claims/search?role=seller&status=ongoing&limit=1`, {
                   headers: meliHeaders, signal: AbortSignal.timeout(5000),
                 }),
                 fetch(`https://api.mercadolibre.com/messages/unread?role=seller&limit=1`, {
@@ -178,9 +181,9 @@ export async function GET(request: NextRequest) {
             return null;
           };
 
-          const [userData, questionsData, ordersData, itemsData, claimsData, unreadData, 
+          const [userData, questionsData, ordersData, itemsData, claimsData, claimsOngoingData, unreadData, 
                  todayOrdersPaidData, todayOrdersConfirmedData, todayOrdersProcessingData] =
-            await Promise.all([userRes, questionsRes, ordersReadyRes, itemsRes, claimsRes, unreadRes, 
+            await Promise.all([userRes, questionsRes, ordersReadyRes, itemsRes, claimsRes, claimsOngoingRes, unreadRes, 
                               todayOrdersPaidRes, todayOrdersConfirmedRes, todayOrdersProcessingRes].map(safeJson));
 
           // Reputación
@@ -204,7 +207,10 @@ export async function GET(request: NextRequest) {
           const unansweredQuestions = questionsData?.total ?? questionsData?.paging?.total ?? 0;
           const readyToShip         = ordersData?.paging?.total ?? 0;
           const totalItems          = itemsData?.paging?.total ?? 0;
-          const claimsCount         = claimsData?.meta?.paging?.total ?? claimsData?.paging?.total ?? 0;
+          // Sumar reclamos abiertos (opened) + en curso (ongoing) con múltiples fallbacks de formato
+          const parseClaimsTotal = (d: any) =>
+            d?.meta?.paging?.total ?? d?.paging?.total ?? d?.pagination?.total ?? d?.total ?? 0;
+          const claimsCount = parseClaimsTotal(claimsData) + parseClaimsTotal(claimsOngoingData);
           const pendingMessages     = unreadData?.total ?? unreadData?.paging?.total ?? 0;
 
           // Ventas de hoy desde MeLi API - combinar todas las órdenes (paid + confirmed + processing)
