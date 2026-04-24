@@ -133,10 +133,11 @@ export default function PreguntasPage() {
   const [accountFilter, setAccountFilter] = useState<string>("all");
   const [accountStats, setAccountStats] = useState<AccountStats[]>([]);
   const [answering, setAnswering] = useState<number | null>(null);
-  // IDs de preguntas recién respondidas: quedan visibles con badge verde hasta el siguiente poll
-  const [justAnsweredIds, setJustAnsweredIds] = useState<Set<number>>(new Set());
+  // IDs de preguntas recién respondidas: quedan visibles con badge verde hasta que MeLi propague
+  // Map<questionId, timestamp> — el timestamp permite expiración automática (2 min max)
+  const [justAnsweredIds, setJustAnsweredIds] = useState<Map<number, number>>(new Map());
   // Ref para acceder a justAnsweredIds dentro de callbacks sin stale closure
-  const justAnsweredIdsRef = useRef<Set<number>>(new Set());
+  const justAnsweredIdsRef = useRef<Map<number, number>>(new Map());
   useEffect(() => { justAnsweredIdsRef.current = justAnsweredIds; }, [justAnsweredIds]);
   const prevUnansweredCountRef = useRef<number | null>(null);
 
@@ -432,7 +433,7 @@ export default function PreguntasPage() {
         });
       } else {
         // UNANSWERED (default): reemplazar estado con datos frescos de MeLi
-        // Preservar preguntas recién respondidas durante 1 ciclo más para que el usuario las vea
+        // Preservar preguntas recién respondidas hasta que MeLi propague el cambio
         const justAnswered = justAnsweredIdsRef.current;
         setQuestions(prev => {
           if (justAnswered.size === 0) return unified;
@@ -442,7 +443,21 @@ export default function PreguntasPage() {
         setAccountStats(stats);
         setLastUpdate(new Date());
         lastPollTimeRef.current = Date.now();
-        setJustAnsweredIds(new Set());
+        // Cleanup inteligente: solo eliminar de justAnsweredIds si MeLi ya no lo devuelve
+        // como UNANSWERED (propagación confirmada) o si pasaron 2+ minutos (safety timeout)
+        setJustAnsweredIds(prev => {
+          if (prev.size === 0) return prev;
+          const now = Date.now();
+          const freshUnansweredIds = new Set(unified.map(q => q.id));
+          const next = new Map<number, number>();
+          for (const [id, ts] of prev) {
+            // Mantener si MeLi AÚN lo devuelve como UNANSWERED y no pasaron 2 min
+            if (freshUnansweredIds.has(id) && now - ts < 120_000) {
+              next.set(id, ts);
+            }
+          }
+          return next;
+        });
       }
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Error cargando preguntas");
@@ -635,7 +650,7 @@ export default function PreguntasPage() {
       }
 
       // Marcar como respondida: queda visible con badge "✓ Respondida" hasta el siguiente poll
-      setJustAnsweredIds(prev => new Set(prev).add(questionId));
+      setJustAnsweredIds(prev => new Map(prev).set(questionId, Date.now()));
       setQuestions((previousQuestions) =>
         previousQuestions.map((question) =>
           question.id === questionId

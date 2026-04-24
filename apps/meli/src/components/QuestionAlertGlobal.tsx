@@ -104,22 +104,21 @@ export default function QuestionAlertGlobal() {
 
   // Función para reproducir sonido de alerta usando PRELOAD
   const playAlertSound = useCallback((mode: AlertMode) => {
-    // Actualizar la ref para que pollQuestions tenga acceso a la última versión
-    playAlertSoundRef.current = playAlertSound;
-    
     try {
-      if (!enabledRef.current) return; // Solo sonar si está habilitado
+      if (!enabledRef.current) return;
 
       const audios = (window as any).preloadedAudios;
       if (!audios || !audios[mode]) {
-        console.error("❌ Audio no precargado:", mode);
+        console.error("[Alert] Audio no precargado:", mode);
         return;
       }
 
       const audio = audios[mode];
+      // Aplicar volumen configurado por modo (discreto=0.5, taller=0.5, urgente=1.0)
+      const modeConfig = ALERT_MODES[mode];
+      audio.volume = modeConfig?.volume ?? 1.0;
       audio.currentTime = 0;
-      
-      // Intentar reproducir con manejo de error
+
       const playPromise = audio.play();
       if (playPromise !== undefined) {
         playPromise.catch((e: Error) => {
@@ -133,11 +132,11 @@ export default function QuestionAlertGlobal() {
     }
   }, []); // Sin dependencias - usa enabledRef
 
+  // Sincronizar ref para que pollQuestions siempre tenga la versión actual
+  useEffect(() => { playAlertSoundRef.current = playAlertSound; }, [playAlertSound]);
+
   // Función para mostrar notificación del navegador
   const showBrowserNotification = useCallback((title: string, body: string) => {
-    // Actualizar la ref para que pollQuestions tenga acceso a la última versión
-    showBrowserNotificationRef.current = showBrowserNotification;
-    
     if (typeof Notification !== "undefined" && Notification.permission === "granted" && enabledRef.current) {
       new Notification(title, {
         body,
@@ -148,6 +147,9 @@ export default function QuestionAlertGlobal() {
       });
     }
   }, []);
+
+  // Sincronizar ref para que pollQuestions siempre tenga la versión actual
+  useEffect(() => { showBrowserNotificationRef.current = showBrowserNotification; }, [showBrowserNotification]);
 
   // Función para mostrar notificación de cambio de modo
   const showModeNotification = useCallback((mode: AlertMode) => {
