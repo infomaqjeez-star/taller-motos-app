@@ -747,6 +747,35 @@ function AppJeezInner() {
             <>
               <KpiBar accountsCount={accounts.length} salesToday={totalSales} totalAmount={totalAmount} urgentAlerts={totalUrgent} />
               
+              {/* Acceso rápido a Reputaciones */}
+              <Link
+                href="/reputacion"
+                className="flex items-center justify-between px-4 py-3 rounded-2xl mb-3 transition-all hover:scale-[1.01]"
+                style={{ background: "#1F1F1F", border: "1px solid rgba(255,230,0,0.18)" }}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "#FFE60018" }}>
+                    <Star className="w-5 h-5" style={{ color: "#FFE600" }} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-white">Reputaciones unificadas</p>
+                    <p className="text-[11px] text-gray-500">Ver métricas detalladas de todas las cuentas</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {accounts.some(a =>
+                    (a.reputation?.delayed_handling_time ?? 0) > 0.18 ||
+                    (a.reputation?.claims ?? 0) > 0.02 ||
+                    (a.reputation?.cancellations ?? 0) > 0.02
+                  ) && (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: "#ef444420", color: "#ef4444" }}>
+                      Atención
+                    </span>
+                  )}
+                  <ExternalLink className="w-4 h-4 text-gray-600" />
+                </div>
+              </Link>
+
               {/* Unified Post-Sale Panel - Gestión de problemas críticos */}
               <UnifiedPostSalePanel accounts={postSaleMetrics} isLoading={loading} />
             </>
