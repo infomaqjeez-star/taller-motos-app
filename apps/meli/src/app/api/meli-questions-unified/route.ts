@@ -112,26 +112,37 @@ export async function GET(request: NextRequest) {
           responseTime = await rtRes.value.json();
         }
 
-        // Enriquecer con datos de items — usa caché del servidor, batch de 20
+        // Enriquecer con datos de items — usa caché del servidor, multi-item API (1 req/batch)
         const localItemMap = new Map<string, { title: string; thumbnail: string }>();
         const uniqueItems = [...new Set(questions.map((q: any) => String(q.item_id)).filter(Boolean))];
         const itemsToFetch = uniqueItems.filter(id => !getCachedItem(id));
-        
-        // Solo fetchar los items que no están en caché
+
+        // Fetch paralelo de todos los batches usando el endpoint multi-item de MeLi
+        // /items?ids=A,B,C&attributes=id,title,thumbnail → 1 sola request por batch de 20
+        const batches: string[][] = [];
         for (let i = 0; i < itemsToFetch.length; i += 20) {
-          const batch = itemsToFetch.slice(i, i + 20);
+          batches.push(itemsToFetch.slice(i, i + 20));
+        }
+
+        if (batches.length > 0) {
           await Promise.allSettled(
-            batch.map(async (itemId) => {
+            batches.map(async (batch) => {
               try {
+                const ids = batch.join(",");
                 const res = await fetch(
-                  `https://api.mercadolibre.com/items/${itemId}?attributes=id,title,thumbnail`,
-                  { headers, signal: AbortSignal.timeout(2000) }
+                  `https://api.mercadolibre.com/items?ids=${ids}&attributes=id,title,thumbnail`,
+                  { headers, signal: AbortSignal.timeout(8000) }
                 );
                 if (res.ok) {
-                  const d = await res.json();
-                  const title = d.title || itemId;
-                  const thumb = String(d.thumbnail || "").replace("http://", "https://");
-                  setCachedItem(itemId, title, thumb);
+                  const results: any[] = await res.json();
+                  for (const item of results) {
+                    if (item.code === 200 && item.body) {
+                      const d = item.body;
+                      const title = d.title || String(d.id);
+                      const thumb = String(d.thumbnail || "").replace("http://", "https://");
+                      setCachedItem(String(d.id), title, thumb);
+                    }
+                  }
                 }
               } catch { /* skip */ }
             })

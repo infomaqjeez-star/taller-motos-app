@@ -413,6 +413,7 @@ export default function PreguntasPage() {
       setQuestions(unified);
       setAccountStats(stats);
       setLastUpdate(new Date());
+      lastPollTimeRef.current = Date.now();
       // Limpiar las preguntas "recién respondidas" — ahora el estado viene fresco de MeLi
       setJustAnsweredIds(new Set());
     } catch (loadError) {
@@ -425,6 +426,9 @@ export default function PreguntasPage() {
   // Ref para que el interval siempre llame la versión más reciente sin resetear el timer
   const loadAllQuestionsRef = useRef(loadAllQuestions);
   useEffect(() => { loadAllQuestionsRef.current = loadAllQuestions; }, [loadAllQuestions]);
+
+  // Timestamp del último poll exitoso (ref para acceso en listeners sin stale closure)
+  const lastPollTimeRef = useRef<number>(0);
 
   // Carga inicial
   useEffect(() => {
@@ -449,6 +453,21 @@ export default function PreguntasPage() {
     const id = setInterval(() => loadAllQuestionsRef.current(), 30000);
     return () => clearInterval(id);
   }, [accounts.length]); // solo depende de si hay cuentas, no de la función
+
+  // Page Visibility API: re-poll inmediato cuando el usuario vuelve a la pestaña.
+  // Corrige el throttling de Chrome/Safari que retrasa setInterval a ≥60s en background.
+  useEffect(() => {
+    const handleVisible = () => {
+      if (document.visibilityState === "visible") {
+        const elapsed = Date.now() - lastPollTimeRef.current;
+        if (elapsed > 20000) { // solo si el último poll fue hace más de 20s
+          loadAllQuestionsRef.current();
+        }
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisible);
+    return () => document.removeEventListener("visibilitychange", handleVisible);
+  }, []); // montado una sola vez
 
   const filteredQuestions = useMemo(() => {
     return questions.filter((question) => {
