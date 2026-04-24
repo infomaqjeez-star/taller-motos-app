@@ -25,13 +25,18 @@ const MeliAccountsContext = createContext<MeliAccountsContextType | undefined>(u
 
 export function MeliAccountsProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
+
+  // ── CLAVE: usar el ID (primitivo string) como dependencia, NO el objeto user completo.
+  // El objeto user se recrea en cada TOKEN_REFRESHED (cada ~55min), lo que causaba
+  // que refreshAccounts y la suscripción realtime se reiniciaran en loop constante.
+  const userId = user?.id ?? null;
+
   const [accounts, setAccounts] = useState<LinkedMeliAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
 
-  // Función para cargar cuentas
   const refreshAccounts = useCallback(async () => {
-    if (!user) {
+    if (!userId) {
       setAccounts([]);
       setLoading(false);
       return;
@@ -41,7 +46,7 @@ export function MeliAccountsProvider({ children }: { children: React.ReactNode }
       const { data, error } = await supabase
         .from("linked_meli_accounts")
         .select("id, user_id, meli_user_id, meli_nickname, is_active, created_at, updated_at")
-        .eq("user_id", user.id)
+        .eq("user_id", userId)
         .eq("is_active", true)
         .order("created_at", { ascending: false });
 
@@ -58,43 +63,38 @@ export function MeliAccountsProvider({ children }: { children: React.ReactNode }
     } finally {
       setLoading(false);
     }
-  }, [user]); // Dependencia correcta: user
+  }, [userId]); // Solo depende del ID (string estable), no del objeto user
 
-  // Cargar cuentas inicialmente
+  // Carga inicial
   useEffect(() => {
     refreshAccounts();
   }, [refreshAccounts]);
 
-  // Escuchar cambios en tiempo real
+  // Suscripción realtime — solo se reinicia cuando cambia el userId (login/logout),
+  // NO cuando el token se renueva (era la causa del loop de suscripción).
   useEffect(() => {
-    if (!user) return;
+    if (!userId) return;
 
     console.log("[MeliAccounts] Iniciando suscripción realtime...");
 
     const subscription = supabase
-      .channel("linked_meli_accounts_changes")
+      .channel(`linked_meli_accounts_${userId}`) // canal único por usuario
       .on(
         "postgres_changes",
         {
-          event: "*", // INSERT, UPDATE, DELETE
+          event: "*",
           schema: "public",
           table: "linked_meli_accounts",
-          filter: `user_id=eq.${user.id}`,
+          filter: `user_id=eq.${userId}`,
         },
         (payload) => {
-          console.log("[MeliAccounts] Cambio detectado:", payload.eventType, payload);
-          
-          // Recargar cuentas cuando hay cambios
+          console.log("[MeliAccounts] Cambio detectado:", payload.eventType);
           refreshAccounts();
 
-          // Si es una nueva cuenta, mostrar notificación
           if (payload.eventType === "INSERT") {
             const newAccount = payload.new as LinkedMeliAccount;
-            console.log("[MeliAccounts] Nueva cuenta conectada:", newAccount.meli_nickname);
-            
-            // Disparar evento personalizado para que otros componentes se enteren
             window.dispatchEvent(new CustomEvent("meli:account-connected", {
-              detail: { account: newAccount }
+              detail: { account: newAccount },
             }));
           }
         }
@@ -105,17 +105,10 @@ export function MeliAccountsProvider({ children }: { children: React.ReactNode }
       console.log("[MeliAccounts] Cancelando suscripción realtime...");
       subscription.unsubscribe();
     };
-  }, [user, refreshAccounts]);
+  }, [userId]); // SOLO userId — sin refreshAccounts que era la fuente del loop
 
   return (
-    <MeliAccountsContext.Provider
-      value={{
-        accounts,
-        loading,
-        refreshAccounts,
-        lastUpdate,
-      }}
-    >
+    <MeliAccountsContext.Provider value={{ accounts, loading, refreshAccounts, lastUpdate }}>
       {children}
     </MeliAccountsContext.Provider>
   );

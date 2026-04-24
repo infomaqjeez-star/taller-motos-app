@@ -165,21 +165,38 @@ export default function QuestionAlertGlobal() {
         console.log("[POLL] Sin sesion activa, omitiendo poll");
         return;
       }
-      const res = await fetch("/api/meli-questions", {
+
+      // Usa el endpoint unificado que consulta MeLi directamente (no Supabase)
+      const res = await fetch(`/api/meli-questions-unified?_t=${Date.now()}`, {
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
       if (!res.ok) {
         console.error("[POLL] Error en respuesta:", res.status);
         return;
       }
-      
-      const data: Array<{ 
-        meli_question_id: number; 
+
+      const payload = await res.json();
+
+      // Aplanar las preguntas de todas las cuentas al formato esperado
+      const data: Array<{
+        meli_question_id: number;
         question_text: string;
         item_title?: string;
         meli_accounts?: { nickname?: string };
         date_created: string;
-      }> = await res.json();
+      }> = [];
+
+      for (const accountResult of payload?.questions ?? []) {
+        for (const q of accountResult.questions ?? []) {
+          data.push({
+            meli_question_id: q.meli_question_id,
+            question_text: q.question_text ?? "",
+            item_title: q.item_title,
+            meli_accounts: { nickname: accountResult.nickname },
+            date_created: q.date_created,
+          });
+        }
+      }
 
       console.log(`[POLL] ${data.length} preguntas encontradas`);
 
