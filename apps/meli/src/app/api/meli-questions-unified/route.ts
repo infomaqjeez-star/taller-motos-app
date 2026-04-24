@@ -85,7 +85,7 @@ export async function GET(request: NextRequest) {
         // Preguntas + response time en paralelo POR CUENTA
         const [qRes, rtRes] = await Promise.allSettled([
           fetch(
-            `https://api.mercadolibre.com/questions/search?seller_id=${meliId}&status=${meliStatus}&limit=${limitPerAccount}`,
+            `https://api.mercadolibre.com/questions/search?seller_id=${meliId}&status=${meliStatus}&api_version=4&limit=${limitPerAccount}`,
             { headers, signal: AbortSignal.timeout(10000) }
           ),
           fetch(
@@ -97,25 +97,42 @@ export async function GET(request: NextRequest) {
         // Parsear preguntas
         let questions: any[] = [];
         let total = 0;
+        let fetchError: string | null = null;
+
         if (qRes.status === "fulfilled" && qRes.value.ok) {
           const data = await qRes.value.json();
           questions = data.questions || [];
           total = data.total ?? data.paging?.total ?? questions.length;
-          console.log(`[Questions] ✅ ${nickname}: ${questions.length} preguntas sin responder`);
+          console.log(`[Questions] ✅ ${nickname}: ${questions.length} preguntas (status=${meliStatus})`);
         } else {
+          // Loguear el error exacto del fetch principal
+          if (qRes.status === "fulfilled") {
+            const errBody = await qRes.value.text().catch(() => "?");
+            fetchError = `HTTP ${qRes.value.status}: ${errBody.substring(0, 200)}`;
+          } else {
+            fetchError = `Fetch rejected: ${(qRes as any).reason?.message || (qRes as any).reason}`;
+          }
+          console.error(`[Questions] ❌ ${nickname} primary: ${fetchError}`);
+
           // Fallback: /my/received_questions/search
           try {
             const fallbackRes = await fetch(
-              `https://api.mercadolibre.com/my/received_questions/search?status=${meliStatus}&limit=${limitPerAccount}`,
+              `https://api.mercadolibre.com/my/received_questions/search?status=${meliStatus}&api_version=4&limit=${limitPerAccount}`,
               { headers, signal: AbortSignal.timeout(10000) }
             );
             if (fallbackRes.ok) {
               const fbData = await fallbackRes.json();
               questions = fbData.questions || [];
               total = fbData.total ?? questions.length;
+              fetchError = null;
               console.log(`[Questions] ✅ ${nickname}: ${questions.length} preguntas (fallback)`);
+            } else {
+              const fbErr = await fallbackRes.text().catch(() => "?");
+              console.error(`[Questions] ❌ ${nickname} fallback: HTTP ${fallbackRes.status}: ${fbErr.substring(0, 200)}`);
             }
-          } catch { /* skip */ }
+          } catch (fbError: any) {
+            console.error(`[Questions] ❌ ${nickname} fallback error: ${fbError.message}`);
+          }
         }
 
         // Parsear response time
@@ -194,7 +211,7 @@ export async function GET(request: NextRequest) {
           questions: mappedQuestions,
           total,
           responseTime,
-          error: null,
+          error: fetchError,
         };
       })
     );

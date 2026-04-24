@@ -177,6 +177,16 @@ export default function QuestionAlertGlobal() {
 
       const payload = await res.json();
 
+      // Log por cuenta para diagnóstico
+      for (const ar of payload?.questions ?? []) {
+        const qCount = (ar.questions ?? []).length;
+        if (ar.error) {
+          console.warn(`[POLL] ${ar.nickname}: ${qCount} preguntas — ERROR: ${ar.error}`);
+        } else {
+          console.log(`[POLL] ${ar.nickname}: ${qCount} preguntas`);
+        }
+      }
+
       // Aplanar las preguntas de todas las cuentas al formato esperado
       const data: Array<{
         meli_question_id: number;
