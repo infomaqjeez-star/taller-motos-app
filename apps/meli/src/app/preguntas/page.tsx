@@ -15,6 +15,12 @@ import {
   Search,
   Users,
   TrendingUp,
+  Bell,
+  Volume2,
+  VolumeX,
+  Play,
+  Upload,
+  X,
 } from "lucide-react";
 import { useMeliAccounts } from "@/components/auth/MeliAccountsProvider";
 import { supabase } from "@/lib/supabase";
@@ -102,6 +108,18 @@ function normalizeQuestion(rawQuestion: any, account: { accountId: string; nickn
   };
 }
 
+// ── Sonidos de alerta disponibles ────────────────────────────────────────────
+const ALERT_SOUNDS = [
+  { id: "triple",   label: "Triple beep",   desc: "3 tonos ascendentes" },
+  { id: "doble",    label: "Doble beep",    desc: "2 tonos rápidos" },
+  { id: "suave",    label: "Suave",         desc: "1 tono suave" },
+  { id: "urgente",  label: "Urgente",       desc: "4 pulsos cortos" },
+  { id: "campana",  label: "Campana",       desc: "Tono tipo campana" },
+  { id: "clasico",  label: "Clásico",       desc: "Notificación clásica" },
+  { id: "custom",   label: "Personalizado", desc: "Tu propio archivo" },
+] as const;
+type AlertSoundId = typeof ALERT_SOUNDS[number]["id"];
+
 export default function PreguntasPage() {
   const { accounts, loading: accountsLoading } = useMeliAccounts();
   const [questions, setQuestions] = useState<UnifiedQuestion[]>([]);
@@ -115,7 +133,21 @@ export default function PreguntasPage() {
   const [answering, setAnswering] = useState<number | null>(null);
   const prevUnansweredCountRef = useRef<number | null>(null);
 
-  // ── AudioContext persistente ── creado UNA VEZ en primera interacción ──────
+  // ── Configuración de alerta sonora (persiste en localStorage) ────────────
+  const [alertSoundId, setAlertSoundId] = useState<AlertSoundId>(() => {
+    if (typeof window === "undefined") return "triple";
+    return (localStorage.getItem("maqjeez_alert_sound") as AlertSoundId) || "triple";
+  });
+  const [alertVolume, setAlertVolume] = useState<number>(() => {
+    if (typeof window === "undefined") return 0.7;
+    return parseFloat(localStorage.getItem("maqjeez_alert_volume") || "0.7");
+  });
+  const [customSoundDataUrl, setCustomSoundDataUrl] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    return localStorage.getItem("maqjeez_custom_sound") || null;
+  });
+  const [showSoundPanel, setShowSoundPanel] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
 
   const unlockAudio = useCallback(() => {
@@ -160,41 +192,127 @@ export default function PreguntasPage() {
     return null;
   }, []);
 
-  // ── Sonido de alerta usando el AudioContext persistente ─────────────────────
+  // ── Motor de audio: beep con Web Audio API ────────────────────────────────
+  const playWebAudioPattern = useCallback(async (soundId: AlertSoundId, vol: number) => {
+    let ctx = audioCtxRef.current;
+    if (!ctx) {
+      const Cls = window.AudioContext || (window as any).webkitAudioContext;
+      if (!Cls) return;
+      ctx = new Cls();
+      audioCtxRef.current = ctx;
+    }
+    if (ctx.state === "suspended") await ctx.resume();
+    if (ctx.state !== "running") return;
+
+    const masterGain = ctx.createGain();
+    masterGain.gain.value = Math.max(0, Math.min(1, vol));
+    masterGain.connect(ctx.destination);
+
+    const beep = (freq: number, start: number, dur: number, type: OscillatorType = "sine") => {
+      const osc  = ctx!.createOscillator();
+      const g    = ctx!.createGain();
+      osc.connect(g); g.connect(masterGain);
+      osc.type = type; osc.frequency.value = freq;
+      const t = ctx!.currentTime + start;
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(vol, t + 0.015);
+      g.gain.setValueAtTime(vol, t + dur - 0.04);
+      g.gain.linearRampToValueAtTime(0, t + dur);
+      osc.start(t); osc.stop(t + dur + 0.05);
+    };
+
+    switch (soundId) {
+      case "triple":
+        beep(880,  0.00, 0.18);
+        beep(1100, 0.22, 0.18);
+        beep(1320, 0.44, 0.22);
+        break;
+      case "doble":
+        beep(1047, 0.00, 0.14);
+        beep(1047, 0.20, 0.14);
+        break;
+      case "suave":
+        beep(660, 0.00, 0.35);
+        break;
+      case "urgente":
+        beep(1200, 0.00, 0.08);
+        beep(1200, 0.12, 0.08);
+        beep(1200, 0.24, 0.08);
+        beep(1200, 0.36, 0.08);
+        break;
+      case "campana": {
+        // Campana: tono fundamental + armónico, decay largo
+        const t = ctx.currentTime;
+        const osc1 = ctx.createOscillator(); const g1 = ctx.createGain();
+        const osc2 = ctx.createOscillator(); const g2 = ctx.createGain();
+        osc1.connect(g1); g1.connect(masterGain);
+        osc2.connect(g2); g2.connect(masterGain);
+        osc1.frequency.value = 1047; osc1.type = "sine";
+        osc2.frequency.value = 1568; osc2.type = "sine";
+        g1.gain.setValueAtTime(vol * 0.8, t); g1.gain.exponentialRampToValueAtTime(0.001, t + 1.2);
+        g2.gain.setValueAtTime(vol * 0.4, t); g2.gain.exponentialRampToValueAtTime(0.001, t + 0.8);
+        osc1.start(t); osc1.stop(t + 1.3);
+        osc2.start(t); osc2.stop(t + 0.9);
+        break;
+      }
+      case "clasico":
+        beep(587, 0.00, 0.12, "square");
+        beep(880, 0.16, 0.20, "sine");
+        break;
+    }
+  }, []);
+
+  // ── Reproducir alerta (sonido seleccionado) ────────────────────────────────
   const playAlertSound = useCallback(async () => {
     try {
-      let ctx = audioCtxRef.current;
-      if (!ctx) {
-        // Último intento: crear contexto nuevo (puede fallar sin gesto de usuario)
-        const Cls = window.AudioContext || (window as any).webkitAudioContext;
-        if (!Cls) return;
-        ctx = new Cls();
-        audioCtxRef.current = ctx;
+      if (alertSoundId === "custom" && customSoundDataUrl) {
+        const audio = new Audio(customSoundDataUrl);
+        audio.volume = alertVolume;
+        await audio.play();
+        return;
       }
-      if (ctx.state === "suspended") await ctx.resume();
-      if (ctx.state !== "running") return; // Chrome lo bloqueó
-
-      const beep = (freq: number, start: number, dur: number) => {
-        const osc  = ctx!.createOscillator();
-        const gain = ctx!.createGain();
-        osc.connect(gain);
-        gain.connect(ctx!.destination);
-        osc.type = "sine";
-        osc.frequency.value = freq;
-        gain.gain.setValueAtTime(0, ctx!.currentTime + start);
-        gain.gain.linearRampToValueAtTime(0.35, ctx!.currentTime + start + 0.01);
-        gain.gain.linearRampToValueAtTime(0, ctx!.currentTime + start + dur);
-        osc.start(ctx!.currentTime + start);
-        osc.stop(ctx!.currentTime + start + dur + 0.05);
-      };
-
-      beep(880,  0.00, 0.18);
-      beep(1100, 0.22, 0.18);
-      beep(1320, 0.44, 0.22);
+      await playWebAudioPattern(alertSoundId, alertVolume);
     } catch (e) {
       console.warn("[Preguntas] Error audio:", e);
     }
+  }, [alertSoundId, alertVolume, customSoundDataUrl, playWebAudioPattern]);
+
+  // ── Preview desde el panel de configuración ───────────────────────────────
+  const previewSound = useCallback(async (id: AlertSoundId) => {
+    try {
+      if (id === "custom" && customSoundDataUrl) {
+        const audio = new Audio(customSoundDataUrl);
+        audio.volume = alertVolume;
+        await audio.play();
+        return;
+      }
+      await playWebAudioPattern(id, alertVolume);
+    } catch { /* silencioso */ }
+  }, [alertVolume, customSoundDataUrl, playWebAudioPattern]);
+
+  // ── Guardar configuración en localStorage ────────────────────────────────
+  const saveSoundId = useCallback((id: AlertSoundId) => {
+    setAlertSoundId(id);
+    localStorage.setItem("maqjeez_alert_sound", id);
   }, []);
+
+  const saveVolume = useCallback((vol: number) => {
+    setAlertVolume(vol);
+    localStorage.setItem("maqjeez_alert_volume", String(vol));
+  }, []);
+
+  const handleCustomFile = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const dataUrl = ev.target?.result as string;
+      setCustomSoundDataUrl(dataUrl);
+      try { localStorage.setItem("maqjeez_custom_sound", dataUrl); } catch { /* muy grande para localStorage */ }
+      saveSoundId("custom");
+    };
+    reader.readAsDataURL(file);
+  }, [saveSoundId]);
 
   useEffect(() => {
     if ("Notification" in window && Notification.permission === "default") {
@@ -442,7 +560,7 @@ export default function PreguntasPage() {
   return (
     <main className="min-h-screen pb-24" style={{ background: "#121212" }}>
       <div
-        className="sticky top-0 z-30 px-4 py-3 flex items-center justify-between border-b"
+        className="sticky top-0 z-30 px-4 py-3 flex items-center justify-between border-b relative"
         style={{
           background: "rgba(18,18,18,0.97)",
           backdropFilter: "blur(16px)",
@@ -463,16 +581,132 @@ export default function PreguntasPage() {
             </p>
           </div>
         </div>
-        <button
-          onClick={loadAllQuestions}
-          disabled={loading}
-          className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold disabled:opacity-40"
-          style={{ background: "#1F1F1F", color: "#FF5722", border: "1px solid #FF572244" }}
-        >
-          <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-          {loading ? "Sync..." : "Actualizar"}
-        </button>
-      </div>
+        <div className="flex items-center gap-2">
+          {/* Botón configuración de alerta */}
+          <button
+            onClick={() => { unlockAudio(); setShowSoundPanel(p => !p); }}
+            className="relative flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold"
+            style={{ background: showSoundPanel ? "#FF572230" : "#1F1F1F", color: "#FF5722", border: `1px solid ${showSoundPanel ? "#FF572266" : "#FF572244"}` }}
+            title="Configurar alerta sonora"
+          >
+            <Bell className="w-4 h-4" />
+            <span className="hidden sm:inline text-xs">Alerta</span>
+          </button>
+
+          <button
+            onClick={loadAllQuestions}
+            disabled={loading}
+            className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold disabled:opacity-40"
+            style={{ background: "#1F1F1F", color: "#FF5722", border: "1px solid #FF572244" }}
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+            {loading ? "Sync..." : "Actualizar"}
+          </button>
+        </div>
+
+        {/* Panel de configuración de alerta sonora */}
+        {showSoundPanel && (
+          <div
+            className="absolute right-4 top-full mt-2 rounded-2xl p-4 z-50 w-80 shadow-2xl"
+            style={{ background: "#1A1A1A", border: "1px solid rgba(255,255,255,0.12)" }}
+          >
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Bell className="w-4 h-4" style={{ color: "#FF5722" }} />
+                <span className="text-sm font-bold text-white">Configurar Alerta Sonora</span>
+              </div>
+              <button onClick={() => setShowSoundPanel(false)}>
+                <X className="w-4 h-4 text-gray-400 hover:text-white" />
+              </button>
+            </div>
+
+            {/* Volumen */}
+            <div className="mb-4">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-xs font-semibold" style={{ color: "#9CA3AF" }}>
+                  {alertVolume === 0 ? <VolumeX className="w-3.5 h-3.5 inline" /> : <Volume2 className="w-3.5 h-3.5 inline" />}
+                  {" "}Volumen
+                </span>
+                <span className="text-xs font-bold" style={{ color: "#FF5722" }}>{Math.round(alertVolume * 100)}%</span>
+              </div>
+              <input
+                type="range" min={0} max={1} step={0.05}
+                value={alertVolume}
+                onChange={e => saveVolume(parseFloat(e.target.value))}
+                className="w-full h-1.5 rounded-full accent-orange-500 cursor-pointer"
+                style={{ accentColor: "#FF5722" }}
+              />
+            </div>
+
+            {/* Selector de sonido */}
+            <div className="space-y-1.5 mb-3">
+              <p className="text-xs font-semibold mb-2" style={{ color: "#9CA3AF" }}>Tipo de alerta</p>
+              {ALERT_SOUNDS.map(s => (
+                <div key={s.id}
+                  className="flex items-center justify-between px-3 py-2 rounded-xl cursor-pointer transition-all"
+                  style={{
+                    background: alertSoundId === s.id ? "#FF572220" : "#121212",
+                    border: `1px solid ${alertSoundId === s.id ? "#FF572266" : "rgba(255,255,255,0.06)"}`,
+                  }}
+                  onClick={() => saveSoundId(s.id)}
+                >
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full border-2 flex items-center justify-center"
+                      style={{ borderColor: alertSoundId === s.id ? "#FF5722" : "#4B5563" }}>
+                      {alertSoundId === s.id && <div className="w-1.5 h-1.5 rounded-full" style={{ background: "#FF5722" }} />}
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-white">{s.label}</p>
+                      <p className="text-[10px]" style={{ color: "#6B7280" }}>{s.desc}</p>
+                    </div>
+                  </div>
+                  {s.id !== "custom" && (
+                    <button
+                      className="p-1.5 rounded-lg hover:bg-white/10 transition-colors"
+                      onClick={e => { e.stopPropagation(); unlockAudio(); previewSound(s.id); }}
+                      title="Escuchar preview"
+                    >
+                      <Play className="w-3 h-3" style={{ color: "#FF5722" }} />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Upload archivo personalizado */}
+            {alertSoundId === "custom" && (
+              <div className="mt-2">
+                <input
+                  ref={fileInputRef} type="file" accept="audio/*"
+                  className="hidden"
+                  onChange={handleCustomFile}
+                />
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-bold"
+                  style={{ background: "#FF572218", color: "#FF5722", border: "1px dashed #FF572266" }}
+                >
+                  <Upload className="w-3.5 h-3.5" />
+                  {customSoundDataUrl ? "Cambiar archivo" : "Subir MP3 / WAV"}
+                </button>
+                {customSoundDataUrl && (
+                  <button
+                    className="w-full mt-1.5 flex items-center justify-center gap-2 py-1.5 rounded-xl text-xs"
+                    style={{ color: "#6B7280" }}
+                    onClick={() => { unlockAudio(); previewSound("custom"); }}
+                  >
+                    <Play className="w-3 h-3" /> Escuchar mi alerta
+                  </button>
+                )}
+              </div>
+            )}
+
+            <p className="text-[10px] mt-3 text-center" style={{ color: "#4B5563" }}>
+              Hacé clic en la página primero para activar el audio del navegador
+            </p>
+          </div>
+        )}
+      </div>  {/* fin sticky header */}
 
       {!accountsLoading && accounts.length === 0 && (
         <div className="max-w-6xl mx-auto px-4 pt-4">
