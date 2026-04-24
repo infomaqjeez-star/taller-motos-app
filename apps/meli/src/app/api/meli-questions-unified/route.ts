@@ -26,6 +26,13 @@ export async function GET(request: NextRequest) {
   const startTime = Date.now();
 
   try {
+    // Parámetro de estado: UNANSWERED (default) o ANSWERED
+    const { searchParams } = new URL(request.url);
+    const rawStatus = (searchParams.get("status") || "UNANSWERED").toUpperCase();
+    const VALID_STATUSES = ["UNANSWERED", "ANSWERED", "CLOSED_UNANSWERED"];
+    const meliStatus = VALID_STATUSES.includes(rawStatus) ? rawStatus : "UNANSWERED";
+    const limitPerAccount = meliStatus === "UNANSWERED" ? 50 : 20;
+
     // Auth
     const supabase = getSupabase();
     const authHeader = request.headers.get("authorization");
@@ -73,7 +80,7 @@ export async function GET(request: NextRequest) {
         // Preguntas + response time en paralelo POR CUENTA
         const [qRes, rtRes] = await Promise.allSettled([
           fetch(
-            `https://api.mercadolibre.com/questions/search?seller_id=${meliId}&status=UNANSWERED&api_version=4&limit=50&sort_fields=date_created&sort_types=DESC`,
+            `https://api.mercadolibre.com/questions/search?seller_id=${meliId}&status=${meliStatus}&limit=${limitPerAccount}`,
             { headers, signal: AbortSignal.timeout(10000) }
           ),
           fetch(
@@ -94,7 +101,7 @@ export async function GET(request: NextRequest) {
           // Fallback: /my/received_questions/search
           try {
             const fallbackRes = await fetch(
-              `https://api.mercadolibre.com/my/received_questions/search?status=UNANSWERED&api_version=4&limit=50`,
+              `https://api.mercadolibre.com/my/received_questions/search?status=${meliStatus}&limit=${limitPerAccount}`,
               { headers, signal: AbortSignal.timeout(10000) }
             );
             if (fallbackRes.ok) {

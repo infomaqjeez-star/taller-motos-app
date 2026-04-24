@@ -133,8 +133,11 @@ export default function PreguntasPage() {
   const [accountFilter, setAccountFilter] = useState<string>("all");
   const [accountStats, setAccountStats] = useState<AccountStats[]>([]);
   const [answering, setAnswering] = useState<number | null>(null);
-  // IDs de preguntas recién respondidas: quedan visibles hasta el siguiente poll
+  // IDs de preguntas recién respondidas: quedan visibles con badge verde hasta el siguiente poll
   const [justAnsweredIds, setJustAnsweredIds] = useState<Set<number>>(new Set());
+  // Ref para acceder a justAnsweredIds dentro de callbacks sin stale closure
+  const justAnsweredIdsRef = useRef<Set<number>>(new Set());
+  useEffect(() => { justAnsweredIdsRef.current = justAnsweredIds; }, [justAnsweredIds]);
   const prevUnansweredCountRef = useRef<number | null>(null);
 
   // ── Configuración de alerta sonora (persiste en localStorage) ────────────
@@ -359,7 +362,7 @@ export default function PreguntasPage() {
     prevUnansweredCountRef.current = currentUnanswered;
   }, [playAlertSound, questions]);
 
-  const loadAllQuestions = useCallback(async () => {
+  const loadAllQuestions = useCallback(async (fetchStatus: string = QUESTION_STATUSES.UNANSWERED) => {
     if (!accounts.length) {
       setQuestions([]);
       setAccountStats([]);
@@ -368,7 +371,8 @@ export default function PreguntasPage() {
       return;
     }
 
-    setLoading(true);
+    // Solo mostrar spinner en el estado principal cuando cargamos UNANSWERED
+    if (fetchStatus !== QUESTION_STATUSES.ANSWERED) setLoading(true);
     setError(null);
 
     try {
@@ -385,7 +389,7 @@ export default function PreguntasPage() {
       };
 
       // Una sola request al endpoint unificado (hace todo en paralelo server-side)
-      const res = await fetch(`/api/meli-questions-unified?_t=${Date.now()}`, { headers });
+      const res = await fetch(`/api/meli-questions-unified?status=${fetchStatus}&_t=${Date.now()}`, { headers });
       const payload = await res.json().catch(() => null);
 
       if (!res.ok) {
@@ -420,12 +424,26 @@ export default function PreguntasPage() {
           new Date(secondQuestion.date_created).getTime() - new Date(firstQuestion.date_created).getTime()
       );
 
-      setQuestions(unified);
-      setAccountStats(stats);
-      setLastUpdate(new Date());
-      lastPollTimeRef.current = Date.now();
-      // Limpiar las preguntas "recién respondidas" — ahora el estado viene fresco de MeLi
-      setJustAnsweredIds(new Set());
+      if (fetchStatus === QUESTION_STATUSES.ANSWERED) {
+        // Merge: conservar preguntas UNANSWERED existentes + agregar las ANSWERED recién cargadas
+        setQuestions(prev => {
+          const unanswered = prev.filter(q => q.status !== QUESTION_STATUSES.ANSWERED);
+          return [...unanswered, ...unified];
+        });
+      } else {
+        // UNANSWERED (default): reemplazar estado con datos frescos de MeLi
+        // Preservar preguntas recién respondidas durante 1 ciclo más para que el usuario las vea
+        const justAnswered = justAnsweredIdsRef.current;
+        setQuestions(prev => {
+          if (justAnswered.size === 0) return unified;
+          const answeredLocally = prev.filter(q => justAnswered.has(q.id) && q.status === QUESTION_STATUSES.ANSWERED);
+          return [...unified, ...answeredLocally];
+        });
+        setAccountStats(stats);
+        setLastUpdate(new Date());
+        lastPollTimeRef.current = Date.now();
+        setJustAnsweredIds(new Set());
+      }
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Error cargando preguntas");
     } finally {
@@ -478,6 +496,20 @@ export default function PreguntasPage() {
     document.addEventListener("visibilitychange", handleVisible);
     return () => document.removeEventListener("visibilitychange", handleVisible);
   }, []); // montado una sola vez
+
+  // Cuando el usuario cambia al tab "Respondidas", cargar preguntas respondidas de MeLi
+  const prevStatusFilterRef = useRef<string>(QUESTION_STATUSES.UNANSWERED);
+  useEffect(() => {
+    const prev = prevStatusFilterRef.current;
+    prevStatusFilterRef.current = statusFilter;
+    if (
+      statusFilter === QUESTION_STATUSES.ANSWERED &&
+      prev !== QUESTION_STATUSES.ANSWERED &&
+      accounts.length > 0
+    ) {
+      loadAllQuestionsRef.current(QUESTION_STATUSES.ANSWERED);
+    }
+  }, [statusFilter, accounts.length]);
 
   // ── SSE: notificaciones instantáneas via webhooks de MeLi ──────────────────
   // Cuando llega un webhook de pregunta, el servidor guarda en meli_notifications
@@ -536,9 +568,12 @@ export default function PreguntasPage() {
 
   const filteredQuestions = useMemo(() => {
     return questions.filter((question) => {
-      // Las preguntas recién respondidas SIEMPRE se muestran hasta el siguiente poll
-      // Filtro por estado: las preguntas respondidas desaparecen inmediatamente del tab "Sin responder"
       if (statusFilter !== "all" && question.status !== statusFilter) {
+        // Bypass: preguntas recién respondidas permanecen visibles en "Sin responder"
+        // con badge verde hasta el siguiente poll, para que el usuario vea la confirmación
+        if (justAnsweredIds.has(question.id) && statusFilter === QUESTION_STATUSES.UNANSWERED) {
+          return true;
+        }
         return false;
       }
 
