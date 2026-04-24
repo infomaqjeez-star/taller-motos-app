@@ -23,6 +23,7 @@ import {
   X,
 } from "lucide-react";
 import { useMeliAccounts } from "@/components/auth/MeliAccountsProvider";
+import { useAuth } from "@/components/auth/AuthProvider";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import type { MeliResponseTime } from "@/types/meli";
@@ -122,6 +123,7 @@ type AlertSoundId = typeof ALERT_SOUNDS[number]["id"];
 
 export default function PreguntasPage() {
   const { accounts, loading: accountsLoading } = useMeliAccounts();
+  const { user } = useAuth();
   const [questions, setQuestions] = useState<UnifiedQuestion[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -447,10 +449,10 @@ export default function PreguntasPage() {
     }
   }, [accounts.length, accountsLoading]);
 
-  // Polling cada 30s — el interval NUNCA se resetea por cambios de referencia
+  // Polling cada 10s — el interval NUNCA se resetea por cambios de referencia
   useEffect(() => {
     if (!accounts.length) return;
-    const id = setInterval(() => loadAllQuestionsRef.current(), 30000);
+    const id = setInterval(() => loadAllQuestionsRef.current(), 10000);
     return () => clearInterval(id);
   }, [accounts.length]); // solo depende de si hay cuentas, no de la función
 
@@ -468,6 +470,61 @@ export default function PreguntasPage() {
     document.addEventListener("visibilitychange", handleVisible);
     return () => document.removeEventListener("visibilitychange", handleVisible);
   }, []); // montado una sola vez
+
+  // ── SSE: notificaciones instantáneas via webhooks de MeLi ──────────────────
+  // Cuando llega un webhook de pregunta, el servidor guarda en meli_notifications
+  // y el SSE endpoint lo reenvía aquí → actualizamos inmediatamente sin esperar el poll.
+  useEffect(() => {
+    if (!user?.id) return;
+
+    let es: EventSource | null = null;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    let reconnectDelay = 2000;
+    let mounted = true;
+
+    async function connect() {
+      if (!mounted) return;
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token || !mounted) return;
+
+        es = new EventSource(`/api/sse/notifications?token=${encodeURIComponent(session.access_token)}`);
+
+        es.addEventListener("notification", (evt) => {
+          try {
+            const data = JSON.parse(evt.data);
+            if (data.type === "question") {
+              console.log("[SSE] Nueva pregunta via webhook → actualizando");
+              loadAllQuestionsRef.current();
+            }
+          } catch { /* skip */ }
+        });
+
+        // Conexión exitosa → resetear delay
+        es.addEventListener("connected", () => { reconnectDelay = 2000; });
+        es.addEventListener("heartbeat", () => { reconnectDelay = 2000; });
+
+        es.onerror = () => {
+          es?.close();
+          es = null;
+          if (mounted) {
+            reconnectTimer = setTimeout(() => {
+              reconnectDelay = Math.min(reconnectDelay * 2, 60000); // máx 60s
+              connect();
+            }, reconnectDelay);
+          }
+        };
+      } catch { /* no SSE disponible, polling como fallback */ }
+    }
+
+    connect();
+
+    return () => {
+      mounted = false;
+      es?.close();
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+    };
+  }, [user?.id]); // re-conectar solo si cambia el usuario
 
   const filteredQuestions = useMemo(() => {
     return questions.filter((question) => {
