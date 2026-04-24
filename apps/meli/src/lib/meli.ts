@@ -1,6 +1,46 @@
 import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 
+// ── DECODIFICACIÓN JWT LOCAL ─────────────────────────────────
+// Extrae el user_id del JWT de Supabase sin hacer llamadas de red.
+// Más rápido y robusto que supabase.auth.getUser(token) que puede tardar ~10s.
+export function getUserIdFromJwt(token: string): string | null {
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) return null;
+    const b64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const padding = "=".repeat((4 - (b64.length % 4)) % 4);
+    const payload = JSON.parse(Buffer.from(b64 + padding, "base64").toString("utf8"));
+    // Verificar expiración (exp en segundos)
+    if (payload.exp && Math.floor(Date.now() / 1000) > payload.exp) return null;
+    return typeof payload.sub === "string" ? payload.sub : null;
+  } catch {
+    return null;
+  }
+}
+
+// Extrae el userId del header Authorization: Bearer <jwt>
+// Usa decodificación local primero, luego Supabase como fallback.
+export async function getUserIdFromRequest(request: { headers: { get: (k: string) => string | null } }): Promise<string | null> {
+  const authHeader = request.headers.get("authorization");
+  if (!authHeader?.startsWith("Bearer ")) return null;
+  const token = authHeader.slice(7);
+
+  // Rápido: decodificación local del JWT (sin red)
+  const userId = getUserIdFromJwt(token);
+  if (userId) return userId;
+
+  // Fallback: validar contra Supabase
+  try {
+    const supabase = getSupabase();
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+    if (error || !user) return null;
+    return user.id;
+  } catch {
+    return null;
+  }
+}
+
 // Configuración
 const SUPA_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;

@@ -3,25 +3,43 @@ import { getSupabase, getValidToken, type LinkedMeliAccount } from "@/lib/meli";
 
 export const dynamic = "force-dynamic";
 
+/**
+ * Decodifica el JWT de Supabase localmente para obtener el user_id (claim "sub").
+ * No hace llamadas de red — evita timeouts de ~10s cuando Supabase está lento.
+ */
+function getUserIdFromJwt(token: string): string | null {
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) return null;
+    const b64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const padding = "=".repeat((4 - (b64.length % 4)) % 4);
+    const payload = JSON.parse(Buffer.from(b64 + padding, "base64").toString("utf8"));
+    // Verificar expiración
+    if (payload.exp && Math.floor(Date.now() / 1000) > payload.exp) return null;
+    return typeof payload.sub === "string" ? payload.sub : null;
+  } catch {
+    return null;
+  }
+}
+
 async function getAuthenticatedUserId(request: NextRequest): Promise<string | null> {
   const authHeader = request.headers.get("authorization");
-
-  if (!authHeader?.startsWith("Bearer ")) {
-    return null;
-  }
-
-  const supabase = getSupabase();
+  if (!authHeader?.startsWith("Bearer ")) return null;
   const token = authHeader.slice(7);
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser(token);
 
-  if (error || !user) {
+  // Intento 1: decodificar JWT localmente (< 1ms, sin red)
+  const userId = getUserIdFromJwt(token);
+  if (userId) return userId;
+
+  // Fallback: validar contra Supabase (por si el token tiene formato inesperado)
+  try {
+    const supabase = getSupabase();
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+    if (error || !user) return null;
+    return user.id;
+  } catch {
     return null;
   }
-
-  return user.id;
 }
 
 async function getLinkedAccountsForUser(userId: string) {

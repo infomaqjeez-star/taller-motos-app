@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSupabase, getValidToken, type LinkedMeliAccount } from "@/lib/meli";
+import { getSupabase, getValidToken, getUserIdFromJwt, type LinkedMeliAccount } from "@/lib/meli";
 
 export const dynamic = "force-dynamic";
 
@@ -33,15 +33,20 @@ export async function GET(request: NextRequest) {
     const meliStatus = VALID_STATUSES.includes(rawStatus) ? rawStatus : "UNANSWERED";
     const limitPerAccount = meliStatus === "UNANSWERED" ? 50 : 20;
 
-    // Auth
+    // Auth — decodificación local del JWT (sin red, evita timeouts de Supabase)
     const supabase = getSupabase();
     const authHeader = request.headers.get("authorization");
     let userId: string | null = null;
 
     if (authHeader?.startsWith("Bearer ")) {
       const token = authHeader.slice(7);
-      const { data: { user }, error } = await supabase.auth.getUser(token);
-      if (!error && user) userId = user.id;
+      // Rápido: JWT local primero
+      userId = getUserIdFromJwt(token);
+      // Fallback: Supabase si el JWT no se puede decodificar localmente
+      if (!userId) {
+        const { data: { user }, error } = await supabase.auth.getUser(token);
+        if (!error && user) userId = user.id;
+      }
     }
 
     if (!userId) {
