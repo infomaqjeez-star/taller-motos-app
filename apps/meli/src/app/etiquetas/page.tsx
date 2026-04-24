@@ -22,6 +22,7 @@ interface ShipmentInfo {
   shipment_id: number;
   order_id: number | null;
   account: string;
+  account_id?: string | null;
   type: LogisticType;
   buyer: string;
   buyer_nickname: string | null;
@@ -854,9 +855,10 @@ function EtiquetasInner() {
           tracking_number: (s as any).tracking_number || null,
           buyer_nickname: s.buyer_nickname || null,
           sku: s.seller_sku || null,
+          meli_sku: s.seller_sku || null,
           variation: s.attributes || null,
           quantity: s.quantity,
-          account_id: s.account,
+          account_id: s.account_id || null,
           meli_user_id: s.meli_user_id,
           shipping_method: s.type,
         }));

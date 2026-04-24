@@ -1,20 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSupabase, getValidToken, type LinkedMeliAccount } from "@/lib/meli";
+import { getSupabase } from "@/lib/meli";
+import {
+  adjustUnifiedStockByIdentifier,
+  findLinkedAccount,
+  setUnifiedQuantityForRows,
+  updateMeliCustomSku,
+  updateMeliStockQuantity,
+  type UnifiedStockRow,
+} from "@/lib/stock";
 
 export const dynamic = "force-dynamic";
-
-type StockRow = {
-  id: string;
-  sku: string;
-  nombre: string;
-  cantidad: number;
-  precio: number;
-  item_id?: string | null;
-  cuenta_id?: string | null;
-  meli_sku?: string | null;
-  created_at?: string;
-  updated_at?: string;
-};
 
 async function getAuthenticatedUserId(request: NextRequest): Promise<string | null> {
   const authHeader = request.headers.get("authorization");
@@ -37,97 +32,13 @@ async function getAuthenticatedUserId(request: NextRequest): Promise<string | nu
   return user.id;
 }
 
-async function findLinkedAccount(cuentaId: string, userId?: string | null) {
-  const supabase = getSupabase();
-  let query = supabase
-    .from("linked_meli_accounts")
-    .select(
-      "id, user_id, meli_user_id, meli_nickname, access_token_enc, refresh_token_enc, token_expiry_date, is_active"
-    )
-    .eq("id", cuentaId)
-    .eq("is_active", true);
-
-  if (userId) {
-    query = query.eq("user_id", userId);
-  }
-
-  const { data, error } = await query.single();
-
-  if (error || !data) {
-    return null;
-  }
-
-  return data as LinkedMeliAccount;
-}
-
-async function updateMeliStock(
-  account: LinkedMeliAccount,
-  itemId: string,
-  newQuantity: number
-): Promise<void> {
-  const token = await getValidToken(account);
-
-  if (!token) {
-    throw new Error("Token inválido para sincronizar stock con Mercado Libre");
-  }
-
-  const itemResponse = await fetch(`https://api.mercadolibre.com/items/${itemId}`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-    signal: AbortSignal.timeout(10000),
-  });
-
-  if (!itemResponse.ok) {
-    throw new Error(`No se pudo leer la publicación en MeLi (${itemResponse.status})`);
-  }
-
-  const itemData = await itemResponse.json();
-  let body: Record<string, unknown>;
-
-  if (Array.isArray(itemData.variations) && itemData.variations.length > 1) {
-    throw new Error(
-      "La publicación tiene múltiples variaciones; ajustá el stock desde Mercado Libre o una vista por variación."
-    );
-  }
-
-  if (Array.isArray(itemData.variations) && itemData.variations.length === 1) {
-    body = {
-      variations: [
-        {
-          id: itemData.variations[0].id,
-          available_quantity: newQuantity,
-        },
-      ],
-    };
-  } else {
-    body = {
-      available_quantity: newQuantity,
-    };
-  }
-
-  const updateResponse = await fetch(`https://api.mercadolibre.com/items/${itemId}`, {
-    method: "PUT",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout(12000),
-  });
-
-  if (!updateResponse.ok) {
-    const errorText = await updateResponse.text().catch(() => "");
-    throw new Error(errorText || `No se pudo actualizar stock en MeLi (${updateResponse.status})`);
-  }
-}
-
 export async function GET() {
   try {
     const supabase = getSupabase();
     const { data: stock, error } = await supabase
       .from("stock_unificado")
       .select("*")
+      .order("updated_at", { ascending: false })
       .order("sku", { ascending: true });
 
     if (error) {
@@ -146,7 +57,13 @@ export async function POST(request: NextRequest) {
   try {
     const supabase = getSupabase();
     const body = await request.json();
-    const { sku, nombre, cantidad, precio, item_id, cuenta_id, meli_sku } = body;
+    const sku = String(body.sku ?? "").trim();
+    const nombre = String(body.nombre ?? "").trim();
+    const cantidad = Math.max(0, Number(body.cantidad ?? 0));
+    const precio = Number(body.precio ?? 0);
+    const item_id = body.item_id ? String(body.item_id) : null;
+    const cuenta_id = body.cuenta_id ? String(body.cuenta_id) : null;
+    const meli_sku = body.meli_sku ? String(body.meli_sku).trim() : null;
 
     if (!sku || !nombre) {
       return NextResponse.json({ error: "SKU y nombre son requeridos" }, { status: 400 });
@@ -156,7 +73,7 @@ export async function POST(request: NextRequest) {
       .from("stock_unificado")
       .select("id, cantidad")
       .eq("sku", sku)
-      .single();
+      .maybeSingle();
 
     let result;
 
@@ -165,7 +82,7 @@ export async function POST(request: NextRequest) {
         .from("stock_unificado")
         .update({
           nombre,
-          cantidad: cantidad ?? existing.cantidad,
+          cantidad,
           precio,
           item_id,
           cuenta_id,
@@ -176,7 +93,10 @@ export async function POST(request: NextRequest) {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
+
       result = data;
     } else {
       const { data, error } = await supabase
@@ -184,7 +104,7 @@ export async function POST(request: NextRequest) {
         .insert({
           sku,
           nombre,
-          cantidad: cantidad || 0,
+          cantidad,
           precio,
           item_id,
           cuenta_id,
@@ -193,7 +113,10 @@ export async function POST(request: NextRequest) {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
+
       result = data;
     }
 
@@ -231,7 +154,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Item no encontrado" }, { status: 404 });
     }
 
-    const currentRow = row as StockRow;
+    const currentRow = row as UnifiedStockRow;
     let newQuantity = Number(currentRow.cantidad || 0);
 
     if (body.cantidad_vendida !== undefined) {
@@ -242,8 +165,57 @@ export async function PUT(request: NextRequest) {
       newQuantity = Math.max(0, Number(body.cantidad || 0));
     }
 
-    if (currentRow.item_id && currentRow.cuenta_id && newQuantity !== Number(currentRow.cantidad || 0)) {
-      const linkedAccount = await findLinkedAccount(String(currentRow.cuenta_id), userId);
+    const quantityChanged = newQuantity !== Number(currentRow.cantidad || 0);
+
+    if (quantityChanged && body.apply_to_all_same_meli_sku === true) {
+      const targetMeliSku = String(body.meli_sku ?? currentRow.meli_sku ?? "").trim();
+
+      if (!targetMeliSku) {
+        return NextResponse.json(
+          { error: "No hay SKU de identificación para propagar stock" },
+          { status: 400 }
+        );
+      }
+
+      const { data: relatedRows, error: relatedRowsError } = await supabase
+        .from("stock_unificado")
+        .select("*")
+        .eq("meli_sku", targetMeliSku);
+
+      if (relatedRowsError) {
+        throw relatedRowsError;
+      }
+
+      await setUnifiedQuantityForRows({
+        supabase,
+        rows: (relatedRows ?? []) as UnifiedStockRow[],
+        newQuantity,
+        userId,
+      });
+    } else if (quantityChanged && body.apply_to_all_same_sku === true) {
+      const targetInternalSku = String(body.sku ?? currentRow.sku ?? "").trim();
+
+      if (!targetInternalSku) {
+        return NextResponse.json({ error: "No hay SKU para propagar stock" }, { status: 400 });
+      }
+
+      const { data: relatedRows, error: relatedRowsError } = await supabase
+        .from("stock_unificado")
+        .select("*")
+        .eq("sku", targetInternalSku);
+
+      if (relatedRowsError) {
+        throw relatedRowsError;
+      }
+
+      await setUnifiedQuantityForRows({
+        supabase,
+        rows: (relatedRows ?? []) as UnifiedStockRow[],
+        newQuantity,
+        userId,
+      });
+    } else if (quantityChanged && currentRow.item_id && currentRow.cuenta_id) {
+      const linkedAccount = await findLinkedAccount(supabase, String(currentRow.cuenta_id), userId);
 
       if (!linkedAccount) {
         return NextResponse.json(
@@ -252,20 +224,22 @@ export async function PUT(request: NextRequest) {
         );
       }
 
-      await updateMeliStock(linkedAccount, String(currentRow.item_id), newQuantity);
+      await updateMeliStockQuantity(linkedAccount, String(currentRow.item_id), newQuantity);
     }
 
     const updatePayload: Record<string, unknown> = {
       updated_at: new Date().toISOString(),
+      cantidad: newQuantity,
     };
 
-    if (body.nombre !== undefined) updatePayload.nombre = body.nombre;
+    if (body.nombre !== undefined) updatePayload.nombre = String(body.nombre ?? "");
     if (body.precio !== undefined) updatePayload.precio = Number(body.precio || 0);
-    if (body.item_id !== undefined) updatePayload.item_id = body.item_id;
-    if (body.cuenta_id !== undefined) updatePayload.cuenta_id = body.cuenta_id;
-    if (body.meli_sku !== undefined) updatePayload.meli_sku = body.meli_sku;
-    if (body.sku !== undefined) updatePayload.sku = body.sku;
-    updatePayload.cantidad = newQuantity;
+    if (body.item_id !== undefined) updatePayload.item_id = body.item_id ? String(body.item_id) : null;
+    if (body.cuenta_id !== undefined)
+      updatePayload.cuenta_id = body.cuenta_id ? String(body.cuenta_id) : null;
+    if (body.meli_sku !== undefined)
+      updatePayload.meli_sku = body.meli_sku ? String(body.meli_sku).trim() : null;
+    if (body.sku !== undefined) updatePayload.sku = String(body.sku ?? "").trim();
 
     const { data, error } = await supabase
       .from("stock_unificado")
@@ -278,6 +252,24 @@ export async function PUT(request: NextRequest) {
       throw error;
     }
 
+    if (
+      body.push_meli_sku === true &&
+      body.meli_sku !== undefined &&
+      data?.item_id &&
+      data?.cuenta_id
+    ) {
+      const linkedAccount = await findLinkedAccount(supabase, String(data.cuenta_id), userId);
+
+      if (!linkedAccount) {
+        return NextResponse.json(
+          { error: "No se encontró la cuenta vinculada para actualizar el SKU en MeLi" },
+          { status: 404 }
+        );
+      }
+
+      await updateMeliCustomSku(linkedAccount, String(data.item_id), String(body.meli_sku));
+    }
+
     return NextResponse.json({
       success: true,
       item: data,
@@ -285,6 +277,160 @@ export async function PUT(request: NextRequest) {
     });
   } catch (error: any) {
     console.error("[stock] Error:", error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  try {
+    const supabase = getSupabase();
+    const userId = await getAuthenticatedUserId(request);
+    const body = await request.json();
+    const action = String(body.action ?? "").trim();
+
+    if (action === "discount-sale") {
+      const rawItems = Array.isArray(body.items) ? body.items : [body];
+      const results = [];
+
+      for (const rawItem of rawItems) {
+        const quantity = Math.max(
+          0,
+          Number(rawItem.quantity ?? rawItem.cantidad ?? rawItem.cantidad_vendida ?? 0)
+        );
+        const candidates = [
+          {
+            identifier: String(rawItem.meli_sku ?? "").trim(),
+            matchBy: "meli_sku" as const,
+          },
+          {
+            identifier: String(rawItem.sku ?? "").trim(),
+            matchBy: "sku" as const,
+          },
+        ].filter((candidate) => candidate.identifier.length > 0);
+
+        if (quantity <= 0 || candidates.length === 0) {
+          results.push({
+            success: false,
+            sku: rawItem.sku ?? null,
+            meli_sku: rawItem.meli_sku ?? null,
+            quantity,
+            error: "No hay identificador o cantidad válida",
+          });
+          continue;
+        }
+
+        let appliedResult:
+          | {
+              identifier: string | null;
+              matchedRows: number;
+              updatedRows: number;
+              newQuantity: number | null;
+            }
+          | null = null;
+
+        for (const candidate of candidates) {
+          const currentResult = await adjustUnifiedStockByIdentifier({
+            supabase,
+            identifier: candidate.identifier,
+            quantityDelta: -quantity,
+            userId,
+            matchBy: candidate.matchBy,
+          });
+
+          if (currentResult.matchedRows > 0) {
+            appliedResult = currentResult;
+            break;
+          }
+        }
+
+        results.push({
+          success: appliedResult !== null,
+          sku: rawItem.sku ?? null,
+          meli_sku: rawItem.meli_sku ?? null,
+          quantity,
+          result: appliedResult,
+        });
+      }
+
+      return NextResponse.json({
+        success: true,
+        results,
+      });
+    }
+
+    if (action === "bulk-assign-meli-sku") {
+      const assignments = Array.isArray(body.assignments) ? body.assignments : [];
+
+      if (assignments.length === 0) {
+        return NextResponse.json({ error: "No hay asignaciones para procesar" }, { status: 400 });
+      }
+
+      const updated = [];
+      const errors = [];
+
+      for (const entry of assignments) {
+        const stockId = String(entry.id ?? "").trim();
+        const itemId = String(entry.item_id ?? "").trim();
+        const cuentaId = String(entry.cuenta_id ?? "").trim();
+        const meliSku = String(entry.meli_sku ?? "").trim();
+
+        if (!stockId || !itemId || !cuentaId || !meliSku) {
+          errors.push({
+            id: stockId || itemId || Math.random().toString(36).slice(2),
+            error: "Faltan datos para asignar SKU",
+          });
+          continue;
+        }
+
+        try {
+          const linkedAccount = await findLinkedAccount(supabase, cuentaId, userId);
+
+          if (!linkedAccount) {
+            throw new Error("Cuenta no encontrada");
+          }
+
+          await updateMeliCustomSku(linkedAccount, itemId, meliSku);
+
+          const { error: updateError } = await supabase
+            .from("stock_unificado")
+            .update({
+              meli_sku: meliSku,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", stockId);
+
+          if (updateError) {
+            throw updateError;
+          }
+
+          updated.push({
+            id: stockId,
+            item_id: itemId,
+            cuenta_id: cuentaId,
+            meli_sku: meliSku,
+          });
+        } catch (assignmentError) {
+          errors.push({
+            id: stockId,
+            item_id: itemId,
+            error:
+              assignmentError instanceof Error
+                ? assignmentError.message
+                : "Error actualizando SKU",
+          });
+        }
+      }
+
+      return NextResponse.json({
+        success: errors.length === 0,
+        updated,
+        errors,
+      });
+    }
+
+    return NextResponse.json({ error: "Acción no soportada" }, { status: 400 });
+  } catch (error: any) {
+    console.error("[stock PATCH] Error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
@@ -301,7 +447,9 @@ export async function DELETE(request: NextRequest) {
 
     const { error } = await supabase.from("stock_unificado").delete().eq("sku", sku);
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
 
     return NextResponse.json({ success: true, mensaje: `Item ${sku} eliminado` });
   } catch (error: any) {

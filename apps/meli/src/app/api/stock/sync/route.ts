@@ -1,187 +1,236 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-import { getValidToken } from "@/lib/meli";
+import { getSupabase, getValidToken, type LinkedMeliAccount } from "@/lib/meli";
+import { extractItemSellerSku } from "@/lib/stock";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+export const dynamic = "force-dynamic";
 
-const supabase = supabaseUrl && supabaseServiceKey 
-  ? createClient(supabaseUrl, supabaseServiceKey)
-  : null;
+function buildAutomaticSku(nextNumber: number) {
+  return `MAQ-${String(nextNumber).padStart(5, "0")}`;
+}
 
-export const dynamic = 'force-dynamic';
+async function getAuthenticatedUserId(request: NextRequest): Promise<string | null> {
+  const authHeader = request.headers.get("authorization");
 
-/**
- * POST /api/stock/sync
- * 
- * Sincroniza publicaciones de MeLi con el stock unificado
- * Asigna SKUs automáticamente: MAQ-00001, MAQ-00002, etc.
- */
+  if (!authHeader?.startsWith("Bearer ")) {
+    return null;
+  }
+
+  const supabase = getSupabase();
+  const token = authHeader.slice(7);
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser(token);
+
+  if (error || !user) {
+    return null;
+  }
+
+  return user.id;
+}
+
+async function getNextAutomaticSkuNumber() {
+  const supabase = getSupabase();
+  const { data: lastItem } = await supabase
+    .from("stock_unificado")
+    .select("sku")
+    .like("sku", "MAQ-%")
+    .order("sku", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!lastItem?.sku) {
+    return 1;
+  }
+
+  const match = String(lastItem.sku).match(/MAQ-(\d+)/);
+  return match ? Number(match[1]) + 1 : 1;
+}
+
 export async function POST(request: NextRequest) {
   try {
-    if (!supabase) {
-      return NextResponse.json({ error: "Supabase no configurado" }, { status: 500 });
-    }
-
-    // Obtener usuario
-    const authHeader = request.headers.get("authorization");
-    let userId: string | null = null;
-
-    if (authHeader?.startsWith("Bearer ")) {
-      const token = authHeader.slice(7);
-      const { data: { user }, error } = await supabase.auth.getUser(token);
-      if (!error && user) userId = user.id;
-    }
+    const supabase = getSupabase();
+    const userId = await getAuthenticatedUserId(request);
 
     if (!userId) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
 
-    // Obtener cuenta MAQJEEZ I (la principal)
-    const { data: account, error: accountError } = await supabase
+    const body = await request.json().catch(() => ({}));
+    const selectedAccountIds = Array.isArray(body.account_ids)
+      ? body.account_ids.map((value: unknown) => String(value).trim()).filter(Boolean)
+      : [];
+
+    let accountsQuery = supabase
       .from("linked_meli_accounts")
-      .select("id, user_id, meli_user_id, meli_nickname, access_token_enc, refresh_token_enc, token_expiry_date, is_active")
+      .select(
+        "id, user_id, meli_user_id, meli_nickname, access_token_enc, refresh_token_enc, token_expiry_date, is_active"
+      )
       .eq("user_id", userId)
-      .eq("meli_nickname", "MAQJEEZ I")
       .eq("is_active", true)
-      .single();
+      .order("created_at", { ascending: true });
 
-    if (accountError || !account) {
-      return NextResponse.json({ error: "Cuenta MAQJEEZ I no encontrada" }, { status: 404 });
+    if (selectedAccountIds.length > 0) {
+      accountsQuery = accountsQuery.in("id", selectedAccountIds);
     }
 
-    // Obtener token
-    const token = await getValidToken(account);
-    
-    if (!token) {
-      return NextResponse.json({ error: "Token inválido" }, { status: 401 });
+    const { data: accounts, error: accountsError } = await accountsQuery;
+
+    if (accountsError) {
+      throw accountsError;
     }
 
-    // Obtener último SKU usado
-    const { data: lastItem } = await supabase
-      .from("stock_unificado")
-      .select("sku")
-      .like("sku", "MAQ-%")
-      .order("sku", { ascending: false })
-      .limit(1)
-      .single();
-
-    let nextNumber = 1;
-    if (lastItem?.sku) {
-      const match = lastItem.sku.match(/MAQ-(\d+)/);
-      if (match) {
-        nextNumber = parseInt(match[1], 10) + 1;
-      }
+    if (!accounts?.length) {
+      return NextResponse.json({ error: "No hay cuentas activas para sincronizar" }, { status: 404 });
     }
 
-    // Obtener publicaciones de MeLi
-    const response = await fetch(
-      `https://api.mercadolibre.com/users/${account.meli_user_id}/items/search?limit=100`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: "application/json",
-        },
-      }
-    );
+    let nextNumber = await getNextAutomaticSkuNumber();
+    const processed = [];
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      return NextResponse.json(
-        { error: `Error MeLi: ${response.status}`, details: errorText },
-        { status: response.status }
-      );
-    }
+    for (const account of accounts as LinkedMeliAccount[]) {
+      try {
+        const token = await getValidToken(account);
 
-    const data = await response.json();
-    const itemIds = data.results || [];
-
-    // Obtener detalles de los items
-    const items: any[] = [];
-    for (let i = 0; i < itemIds.length; i += 20) {
-      const batch = itemIds.slice(i, i + 20);
-      const itemsResponse = await fetch(
-        `https://api.mercadolibre.com/items?ids=${batch.join(',')}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: "application/json",
-          },
+        if (!token) {
+          processed.push({
+            account: account.meli_nickname,
+            status: "error",
+            error: "Token inválido",
+          });
+          continue;
         }
-      );
 
-      if (itemsResponse.ok) {
-        const itemsData = await itemsResponse.json();
-        itemsData.forEach((item: any) => {
-          if (item.code === 200 && item.body) {
-            items.push(item.body);
+        const searchResponse = await fetch(
+          `https://api.mercadolibre.com/users/${account.meli_user_id}/items/search?limit=100&status=active`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              Accept: "application/json",
+            },
+            signal: AbortSignal.timeout(15000),
           }
-        });
-      }
-    }
+        );
 
-    // Procesar items y asignar SKUs
-    const resultados = [];
-    for (const item of items) {
-      // Verificar si ya existe en stock
-      const { data: existing } = await supabase
-        .from("stock_unificado")
-        .select("id, sku")
-        .eq("item_id", item.id)
-        .single();
+        if (!searchResponse.ok) {
+          const errorText = await searchResponse.text().catch(() => "");
+          processed.push({
+            account: account.meli_nickname,
+            status: "error",
+            error: errorText || `HTTP ${searchResponse.status}`,
+          });
+          continue;
+        }
 
-      if (existing) {
-        // Actualizar información
-        await supabase
-          .from("stock_unificado")
-          .update({
+        const searchData = await searchResponse.json();
+        const itemIds: string[] = searchData.results || [];
+
+        const accountItems = [];
+
+        for (let index = 0; index < itemIds.length; index += 20) {
+          const batch = itemIds.slice(index, index + 20);
+          const itemsResponse = await fetch(
+            `https://api.mercadolibre.com/items?ids=${batch.join(",")}`,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                Accept: "application/json",
+              },
+              signal: AbortSignal.timeout(15000),
+            }
+          );
+
+          if (!itemsResponse.ok) {
+            continue;
+          }
+
+          const itemsData = await itemsResponse.json();
+
+          for (const item of itemsData) {
+            if (item?.code === 200 && item?.body) {
+              accountItems.push(item.body);
+            }
+          }
+        }
+
+        let updatedItems = 0;
+        let createdItems = 0;
+
+        for (const item of accountItems) {
+          const sellerSku = extractItemSellerSku(item);
+
+          const { data: existingByItemId } = await supabase
+            .from("stock_unificado")
+            .select("id, sku")
+            .eq("item_id", item.id)
+            .maybeSingle();
+
+          if (existingByItemId) {
+            const { error: updateError } = await supabase
+              .from("stock_unificado")
+              .update({
+                nombre: item.title,
+                precio: Number(item.price || 0),
+                cantidad: Number(item.available_quantity || 0),
+                cuenta_id: account.id,
+                meli_sku: sellerSku,
+                updated_at: new Date().toISOString(),
+              })
+              .eq("id", existingByItemId.id);
+
+            if (!updateError) {
+              updatedItems++;
+            }
+
+            continue;
+          }
+
+          const newSku = buildAutomaticSku(nextNumber++);
+          const { error: insertError } = await supabase.from("stock_unificado").insert({
+            sku: newSku,
             nombre: item.title,
-            precio: item.price,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", existing.id);
-
-        resultados.push({
-          item_id: item.id,
-          sku: existing.sku,
-          nombre: item.title,
-          accion: "actualizado",
-        });
-      } else {
-        // Crear nuevo con SKU automático
-        const sku = `MAQ-${String(nextNumber).padStart(5, '0')}`;
-        nextNumber++;
-
-        await supabase
-          .from("stock_unificado")
-          .insert({
-            sku,
-            nombre: item.title,
-            cantidad: item.available_quantity || 0,
-            precio: item.price,
+            cantidad: Number(item.available_quantity || 0),
+            precio: Number(item.price || 0),
             item_id: item.id,
             cuenta_id: account.id,
-            meli_sku: item.seller_sku || null,
+            meli_sku: sellerSku,
           });
 
-        resultados.push({
-          item_id: item.id,
-          sku,
-          nombre: item.title,
-          accion: "creado",
+          if (!insertError) {
+            createdItems++;
+          }
+        }
+
+        processed.push({
+          account: account.meli_nickname,
+          status: "ok",
+          total_items: accountItems.length,
+          updated_items: updatedItems,
+          created_items: createdItems,
+        });
+      } catch (accountError) {
+        processed.push({
+          account: account.meli_nickname,
+          status: "error",
+          error: accountError instanceof Error ? accountError.message : "Error desconocido",
         });
       }
     }
+
+    const totalProcessed = processed.reduce((sum, entry) => {
+      if (entry.status !== "ok") {
+        return sum;
+      }
+
+      return sum + Number(entry.updated_items || 0) + Number(entry.created_items || 0);
+    }, 0);
 
     return NextResponse.json({
       success: true,
-      total: items.length,
-      procesados: resultados.length,
-      items: resultados,
+      procesados: totalProcessed,
+      cuentas: processed,
     });
-
-  } catch (err: any) {
-    console.error("[stock/sync] Error:", err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (error: any) {
+    console.error("[stock/sync] Error:", error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

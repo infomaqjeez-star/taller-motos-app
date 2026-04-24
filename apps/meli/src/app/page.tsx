@@ -553,6 +553,7 @@ function AppJeezInner() {
     { label: "Publicaciones",   icon: <Package className="w-4 h-4" />,         href: "/publicaciones", active: false },
     { label: "Sincronizar",     icon: <Copy className="w-4 h-4" />,            href: "/sincronizar",   active: false },
     { label: "Precios/Stock",   icon: <DollarSign className="w-4 h-4" />,     href: "/precios",       active: false },
+    { label: "Stock Unif.",     icon: <Package className="w-4 h-4" />,        href: "/stock",         active: false },
     { label: "Promociones",     icon: <Zap className="w-4 h-4" />,            href: "/promociones",   active: false },
     { label: "Post-Venta",      icon: <AlertTriangle className="w-4 h-4" />,  href: "/post-venta",    active: false },
     { label: "Marketing",       icon: <Share2 className="w-4 h-4" />,          href: "/marketing-social", active: false },

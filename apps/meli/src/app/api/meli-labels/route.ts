@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { getValidToken, type LinkedMeliAccount } from "@/lib/meli";
+import { extractItemSellerSku } from "@/lib/stock";
 
 export const dynamic = "force-dynamic";
 
@@ -174,11 +175,35 @@ export async function GET(request: NextRequest) {
             let itemThumbnail = null;
             let quantity = 1;
             let itemId = null;
+            let sellerSku: string | null = null;
+            let variationSummary: string | null = null;
+            let unitPrice: number | null = null;
             
             if (order.order_items && order.order_items.length > 0) {
               const orderItem = order.order_items[0];
               itemId = orderItem.item?.id;
               quantity = orderItem.quantity || 1;
+              unitPrice = orderItem.unit_price || null;
+              sellerSku = orderItem.item?.seller_custom_field || null;
+              variationSummary = Array.isArray(orderItem.item?.variation_attributes)
+                ? orderItem.item.variation_attributes
+                    .map((attribute: any) => {
+                      const name = attribute?.name || attribute?.id;
+                      const value =
+                        attribute?.value_name ||
+                        attribute?.value?.name ||
+                        attribute?.values?.[0]?.name ||
+                        "";
+
+                      if (!name || !value) {
+                        return null;
+                      }
+
+                      return `${name}: ${value}`;
+                    })
+                    .filter(Boolean)
+                    .join(" · ") || null
+                : null;
               
               if (itemId) {
                 console.log(`[meli-labels] [${account.meli_nickname}] Obteniendo item ${itemId}...`);
@@ -191,6 +216,8 @@ export async function GET(request: NextRequest) {
                   const itemData = await itemRes.json();
                   itemTitle = itemData.title || itemTitle;
                   itemThumbnail = itemData.thumbnail || itemData.pictures?.[0]?.url || null;
+                  sellerSku =
+                    extractItemSellerSku(itemData, orderItem.item?.variation_id ?? null) || sellerSku;
                 } else {
                   console.log(`[meli-labels] [${account.meli_nickname}] Error obteniendo item ${itemId}: ${itemRes.status}`);
                 }
@@ -264,6 +291,9 @@ export async function GET(request: NextRequest) {
               tracking_number: shipData.tracking_number || shipData.tracking_method || null,
               shipping_cost: order.shipping_cost || 0,
               total_price: order.total_amount || 0,
+              unit_price: unitPrice,
+              seller_sku: sellerSku,
+              attributes: variationSummary,
               
               // Etiqueta
               label_url: shipData.label?.url || null,
