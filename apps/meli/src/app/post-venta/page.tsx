@@ -7,6 +7,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, AlertTriangle } from "lucide-react";
 import UnifiedPostSalePanel from "@/components/UnifiedPostSalePanel";
+import { supabase } from "@/lib/supabase";
 
 interface AccountData {
   meli_user_id: string;
@@ -31,35 +32,32 @@ function PostVentaContent() {
   useEffect(() => {
     const fetchAccounts = async () => {
       try {
-        const res = await fetch("/api/meli-accounts");
+        // Get session token for auth header
+        const { data: { session } } = await supabase.auth.getSession();
+        const authToken = session?.access_token;
+
+        const headers: HeadersInit = { "Content-Type": "application/json" };
+        if (authToken) {
+          headers["Authorization"] = `Bearer ${authToken}`;
+        }
+
+        const res = await fetch("/api/meli-accounts", { headers });
         if (!res.ok) throw new Error("Failed to fetch accounts");
         const data = await res.json();
 
         // Transformar datos al formato requerido
+        // Endpoint returns: {id, meli_user_id, nickname, is_active}
         const transformed = data.map((acc: any) => {
-          const claimsPercent = acc.claims_count ?? 0;
-          let riskLevel: "low" | "medium" | "high" | "critical" = "low";
-
-          if (claimsPercent > 2) {
-            riskLevel = "critical";
-          } else if (claimsPercent > 1.5) {
-            riskLevel = "high";
-          } else if (claimsPercent > 1) {
-            riskLevel = "medium";
-          }
-
           return {
             meli_user_id: acc.meli_user_id,
-            account_name: acc.account,
-            claims_count: acc.claims_count ?? 0,
-            claims_percent: acc.reputation?.claims ? (acc.reputation.claims * 100) : undefined,
-            mediations_count: 0, // TODO: Obtener de API
-            mediations_percent: acc.reputation?.cancellations ? (acc.reputation.cancellations * 100) : undefined,
-            delayed_shipments: 0, // TODO: Obtener de API
-            cancellations_percent: acc.reputation?.delayed_handling_time
-              ? (acc.reputation.delayed_handling_time * 100)
-              : undefined,
-            reputation_risk: riskLevel,
+            account_name: acc.nickname ?? acc.meli_nickname ?? acc.account_name ?? acc.meli_user_id,
+            claims_count: 0,
+            claims_percent: undefined,
+            mediations_count: 0,
+            mediations_percent: undefined,
+            delayed_shipments: 0,
+            cancellations_percent: undefined,
+            reputation_risk: "low" as const,
           };
         });
 

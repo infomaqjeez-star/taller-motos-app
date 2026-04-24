@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
 
     const { data: accounts } = await supabase
       .from("linked_meli_accounts")
-      .select("id, meli_user_id, meli_nickname, access_token_enc, refresh_token_enc, token_expiry_date, is_active")
+      .select("id, user_id, meli_user_id, meli_nickname, access_token_enc, refresh_token_enc, token_expiry_date, is_active")
       .eq("user_id", userId)
       .eq("is_active", true);
 
@@ -133,6 +133,7 @@ export async function GET(request: NextRequest) {
           }
 
           const data: MeliResponseTimeData = await response.json();
+          console.log(`[response-time] Account ${account.meli_nickname} (${sellerId}) raw data:`, JSON.stringify(data));
 
           return {
             accountId: account.id,

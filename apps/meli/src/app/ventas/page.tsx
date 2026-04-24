@@ -1,7 +1,6 @@
 "use client";
 
 export const dynamic = 'force-dynamic';
-export const runtime = 'edge';
 
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
@@ -24,9 +23,8 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { useMeliAccounts } from "@/components/auth/MeliAccountsProvider";
-import { ordersService } from "@/services/meli";
 import { ORDER_STATUSES } from "@/lib/meli/constants";
-import type { MeliOrder } from "@/types/meli";
+import { supabase } from "@/lib/supabase";
 
 // ============ TIPOS ============
 interface UnifiedOrder {
@@ -105,6 +103,15 @@ export default function VentasPage() {
     setError(null);
     
     try {
+      // Obtener token de sesión
+      const { data: { session } } = await supabase.auth.getSession();
+      const authToken = session?.access_token;
+
+      if (!authToken) {
+        setError("No hay sesión activa. Por favor iniciá sesión.");
+        return;
+      }
+
       // Calcular fechas por defecto (últimos 30 días)
       const today = new Date();
       const thirtyDaysAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
@@ -112,37 +119,44 @@ export default function VentasPage() {
       const dateFromStr = dateFrom || thirtyDaysAgo.toISOString().split('T')[0];
       const dateToStr = dateTo || today.toISOString().split('T')[0];
       
-      // Obtener órdenes de todas las cuentas
-      const accountsData = accounts.map(acc => ({
-        id: acc.id,
-        sellerId: acc.meli_user_id,
-        nickname: acc.meli_nickname,
-      }));
-      
-      const results = await ordersService.getOrdersFromMultipleAccounts(
-        accountsData,
-        {
-          status: statusFilter !== "all" ? statusFilter : undefined,
-          dateFrom: dateFromStr,
-          dateTo: dateToStr,
-          limit: 100,
-        }
+      // Llamar al proxy en paralelo para cada cuenta
+      const proxyResults = await Promise.allSettled(
+        accounts.map(acc =>
+          fetch("/api/meli-orders-proxy", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${authToken}`,
+            },
+            body: JSON.stringify({
+              accountId: acc.id,
+              dateFrom: dateFromStr,
+              dateTo: dateToStr,
+              status: statusFilter !== "all" ? statusFilter : undefined,
+            }),
+          }).then(res => res.json())
+        )
       );
       
-      // Unificar órdenes
+      // Unificar órdenes de todas las cuentas
       const unified: UnifiedOrder[] = [];
       
-      for (const result of results) {
-        const accountOrders = result.orders.map(o => ({
-          ...o,
-          account: {
-            id: result.accountId,
-            nickname: result.nickname,
-            sellerId: result.sellerId,
-          },
-        }));
+      for (let i = 0; i < proxyResults.length; i++) {
+        const result = proxyResults[i];
+        const acc = accounts[i];
         
-        unified.push(...accountOrders);
+        if (result.status === "fulfilled" && result.value?.orders) {
+          const { orders: accountOrders, account: accountInfo } = result.value;
+          const accountOrdsWithMeta = accountOrders.map((o: any) => ({
+            ...o,
+            account: {
+              id: acc.id,
+              nickname: accountInfo?.nickname ?? acc.meli_nickname,
+              sellerId: String(accountInfo?.sellerId ?? acc.meli_user_id),
+            },
+          }));
+          unified.push(...accountOrdsWithMeta);
+        }
       }
       
       // Ordenar por fecha (más recientes primero)
@@ -152,13 +166,21 @@ export default function VentasPage() {
       
       setOrders(unified);
       
-      // Calcular estadísticas
-      const salesStats = await ordersService.getSalesStats(
-        accountsData,
-        dateFromStr,
-        dateToStr
-      );
-      setStats(salesStats);
+      // Calcular estadísticas localmente
+      const paidOrders = unified.filter(o => o.status !== ORDER_STATUSES.CANCELLED);
+      const totalAmount = paidOrders.reduce((sum, o) => sum + (o.total_amount || 0), 0);
+      const byAccount: Record<string, { sales: number; amount: number }> = {};
+      for (const o of unified) {
+        if (!byAccount[o.account.id]) byAccount[o.account.id] = { sales: 0, amount: 0 };
+        byAccount[o.account.id].sales += 1;
+        byAccount[o.account.id].amount += o.total_amount || 0;
+      }
+      setStats({
+        totalSales: unified.length,
+        totalAmount,
+        averageTicket: unified.length > 0 ? totalAmount / unified.length : 0,
+        byAccount,
+      });
       
       setLastUpdate(new Date());
     } catch (err) {
