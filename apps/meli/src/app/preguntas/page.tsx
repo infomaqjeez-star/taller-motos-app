@@ -118,7 +118,7 @@ export default function PreguntasPage() {
   const [error, setError] = useState<string | null>(null);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>(QUESTION_STATUSES.UNANSWERED);
   const [accountFilter, setAccountFilter] = useState<string>("all");
   const [accountStats, setAccountStats] = useState<AccountStats[]>([]);
   const [answering, setAnswering] = useState<number | null>(null);

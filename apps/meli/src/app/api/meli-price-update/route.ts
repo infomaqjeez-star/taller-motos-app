@@ -1,441 +1,541 @@
 import { NextRequest } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { getSupabase, getValidToken, type LinkedMeliAccount } from "@/lib/meli";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
-const supabase = supabaseUrl && supabaseServiceKey
-  ? createClient(supabaseUrl, supabaseServiceKey)
-  : null;
+const RATE_LIMIT_DELAY = 120;
 
-// Rate limiting: 500 requests por minuto por cuenta
-const RATE_LIMIT_DELAY = 120; // ms entre requests (aprox 500 por minuto)
+type AdjustmentType =
+  | "percentage"
+  | "percentage_decrease"
+  | "fixed_floor"
+  | "fixed_ceiling"
+  | "fixed_add"
+  | "fixed_subtract";
 
-/**
- * POST /api/meli-price-update
- * 
- * Actualiza precios masivamente basado en palabra clave.
- * Soporta SSE (Server-Sent Events) para progreso en tiempo real.
- * Procesa múltiples cuentas secuencialmente.
- */
+type PriceResultStatus =
+  | "updated"
+  | "skipped"
+  | "excluded"
+  | "error"
+  | "promo_blocked";
+
+interface PriceResult {
+  account: string;
+  item_id: string;
+  title: string;
+  old_price: number;
+  new_price: number;
+  status: PriceResultStatus;
+  reason?: string;
+}
+
+function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function getAuthenticatedUserId(request: NextRequest): Promise<string | null> {
+  const authHeader = request.headers.get("authorization");
+
+  if (!authHeader?.startsWith("Bearer ")) {
+    return null;
+  }
+
+  const token = authHeader.slice(7);
+  const supabase = getSupabase();
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser(token);
+
+  if (error || !user) {
+    return null;
+  }
+
+  return user.id;
+}
+
+function normalizeAccountSelection(accountIds: unknown): string[] {
+  if (!Array.isArray(accountIds)) {
+    return [];
+  }
+
+  return accountIds
+    .map((value) => String(value).trim())
+    .filter(Boolean);
+}
+
+function calculateNewPrice(
+  oldPrice: number,
+  adjustmentType: AdjustmentType,
+  adjustmentValue: number
+): { shouldUpdate: boolean; newPrice: number; skipReason?: string } {
+  let newPrice = oldPrice;
+
+  switch (adjustmentType) {
+    case "percentage":
+      newPrice = oldPrice * (1 + adjustmentValue / 100);
+      break;
+    case "percentage_decrease":
+      newPrice = oldPrice * (1 - adjustmentValue / 100);
+      break;
+    case "fixed_add":
+      newPrice = oldPrice + adjustmentValue;
+      break;
+    case "fixed_subtract":
+      newPrice = oldPrice - adjustmentValue;
+      break;
+    case "fixed_floor":
+      if (oldPrice < adjustmentValue) {
+        newPrice = adjustmentValue;
+      } else {
+        return {
+          shouldUpdate: false,
+          newPrice: oldPrice,
+          skipReason: "Ya está por encima del piso",
+        };
+      }
+      break;
+    case "fixed_ceiling":
+      if (oldPrice > adjustmentValue) {
+        newPrice = adjustmentValue;
+      } else {
+        return {
+          shouldUpdate: false,
+          newPrice: oldPrice,
+          skipReason: "Ya está por debajo del techo",
+        };
+      }
+      break;
+    default:
+      return {
+        shouldUpdate: false,
+        newPrice: oldPrice,
+        skipReason: "Tipo de ajuste desconocido",
+      };
+  }
+
+  const roundedPrice = Math.max(1, Math.round(newPrice));
+
+  if (roundedPrice === Math.round(oldPrice)) {
+    return {
+      shouldUpdate: false,
+      newPrice: Math.round(oldPrice),
+      skipReason: "El precio no cambia con este ajuste",
+    };
+  }
+
+  return {
+    shouldUpdate: true,
+    newPrice: roundedPrice,
+  };
+}
+
+function buildSseEvent(data: unknown) {
+  return `data: ${JSON.stringify(data)}\n\n`;
+}
+
 export async function POST(request: NextRequest) {
   try {
-    if (!supabase) {
-      return new Response(
-        JSON.stringify({ error: "Supabase no configurado" }),
-        { status: 500, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
-
     const body = await request.json();
-    const { 
-      keyword, 
-      exclude_words, 
-      adjustment_type, 
-      adjustment_value, 
-      dry_run = false,
-      clear_cache = false,
-      account_ids = []
-    } = body;
+    const keyword = String(body.keyword ?? "").trim();
+    const excludeWords = String(body.exclude_words ?? "").trim();
+    const adjustmentType = body.adjustment_type as AdjustmentType;
+    const adjustmentValue = Number(body.adjustment_value);
+    const dryRun = Boolean(body.dry_run);
+    const selectedAccountIds = normalizeAccountSelection(body.account_ids);
 
-    if (!keyword || !adjustment_type || adjustment_value === undefined) {
+    if (!keyword || !adjustmentType || Number.isNaN(adjustmentValue)) {
       return new Response(
-        JSON.stringify({ error: "Faltan campos requeridos: keyword, adjustment_type, adjustment_value" }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
+        JSON.stringify({
+          error: "Faltan campos requeridos: keyword, adjustment_type, adjustment_value",
+        }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
       );
     }
 
-    // Auth
-    const authHeader = request.headers.get("authorization");
-    let userId: string | null = null;
-    if (authHeader?.startsWith("Bearer ")) {
-      const { data: { user } } = await supabase.auth.getUser(authHeader.slice(7));
-      if (user) userId = user.id;
-    }
+    const userId = await getAuthenticatedUserId(request);
+
     if (!userId) {
-      return new Response(
-        JSON.stringify({ error: "No autorizado" }),
-        { status: 401, headers: { 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ error: "No autorizado" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
     }
 
-    // Obtener cuentas
-    let query = supabase
+    const supabase = getSupabase();
+    const { data: allAccounts, error: accountsError } = await supabase
       .from("linked_meli_accounts")
-      .select("id, meli_user_id, meli_nickname, access_token_enc, access_token, refresh_token, token_expires_at")
+      .select(
+        "id, user_id, meli_user_id, meli_nickname, access_token_enc, refresh_token_enc, token_expiry_date, is_active"
+      )
       .eq("user_id", userId)
-      .eq("is_active", true);
-    
-    console.log("[meli-price-update] account_ids recibidos:", account_ids);
-    console.log("[meli-price-update] userId:", userId);
-    
-    // Convertir account_ids a números (meli_user_id son números, no strings)
-    const numericAccountIds = account_ids.map((id: string) => parseInt(id, 10)).filter((id: number) => !isNaN(id));
-    console.log("[meli-price-update] numericAccountIds:", numericAccountIds);
-    
-    // Si no hay account_ids válidos, usar todas las cuentas del usuario
-    if (numericAccountIds.length === 0) {
-      console.log("[meli-price-update] No hay account_ids válidos, usando todas las cuentas del usuario");
-    } else {
-      // Filtrar por meli_user_id (números)
-      query = query.in('meli_user_id', numericAccountIds);
-    }
-    
-    const { data: accounts, error: accountsError } = await query;
+      .eq("is_active", true)
+      .order("created_at", { ascending: true });
 
-    console.log("[meli-price-update] Cuentas encontradas:", accounts?.length || 0);
-    console.log("[meli-price-update] Error:", accountsError);
-
-    if (accountsError || !accounts || accounts.length === 0) {
+    if (accountsError || !allAccounts?.length) {
       return new Response(
         JSON.stringify({ error: "No hay cuentas activas", details: accountsError }),
-        { status: 404, headers: { 'Content-Type': 'application/json' } }
+        { status: 404, headers: { "Content-Type": "application/json" } }
       );
     }
 
-    // Configurar SSE
-    const encoder = new TextEncoder();
+    const accounts = (selectedAccountIds.length
+      ? allAccounts.filter(
+          (account) =>
+            selectedAccountIds.includes(account.id) ||
+            selectedAccountIds.includes(String(account.meli_user_id))
+        )
+      : allAccounts) as LinkedMeliAccount[];
+
+    if (!accounts.length) {
+      return new Response(JSON.stringify({ error: "No hay cuentas seleccionadas" }), {
+        status: 404,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    const excludedWordsList = excludeWords
+      .split(",")
+      .map((word) => word.trim().toLowerCase())
+      .filter(Boolean);
+
     const stream = new ReadableStream({
       async start(controller) {
-        const send = (data: any) => {
-          try {
-            controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
-          } catch (e) {
-            console.error("[meli-price-update] Error enviando SSE:", e);
-          }
+        const encoder = new TextEncoder();
+        const send = (data: unknown) => {
+          controller.enqueue(encoder.encode(buildSseEvent(data)));
         };
 
-        const results: any[] = [];
+        const results: PriceResult[] = [];
         let totalScanned = 0;
         let updated = 0;
         let skipped = 0;
         let excluded = 0;
         let errors = 0;
 
-        // Procesar cada cuenta
         for (const account of accounts) {
-          // Obtener token válido (puede ser access_token o access_token_enc)
-          const token = account.access_token || account.access_token_enc;
-          
-          console.log(`[meli-price-update] Procesando cuenta ${account.meli_nickname}, token válido:`, !!token);
-          
-          if (!token?.startsWith('APP_USR')) {
-            console.log(`[meli-price-update] Saltando cuenta ${account.meli_nickname}: token inválido`);
-            errors++;
-            continue;
-          }
-
-          // Notificar inicio de cuenta
-          send({
-            type: "account_start",
-            account: account.meli_nickname
-          });
-
           try {
-            // Buscar items por palabra clave
-            const searchUrl = `https://api.mercadolibre.com/users/${account.meli_user_id}/items/search?q=${encodeURIComponent(keyword)}&status=active&limit=100`;
-            console.log(`[meli-price-update] Buscando: ${searchUrl}`);
-            
-            const searchRes = await fetch(
-              searchUrl,
-              {
-                headers: { Authorization: `Bearer ${token}` },
-                signal: AbortSignal.timeout(15000),
-              }
-            );
+            const token = await getValidToken(account);
 
-            console.log(`[meli-price-update] Respuesta búsqueda para ${account.meli_nickname}:`, searchRes.status);
-
-            if (!searchRes.ok) {
-              const errorText = await searchRes.text().catch(() => "No error text");
-              console.error(`[meli-price-update] Error buscando items para ${account.meli_nickname}:`, searchRes.status, errorText);
+            if (!token) {
               errors++;
               send({
-                type: "progress",
-                current: 0,
-                total: 0,
-                item_id: "",
-                title: `Error en búsqueda: ${errorText}`,
-                status: "error",
+                type: "error",
                 account: account.meli_nickname,
-                reason: `HTTP ${searchRes.status}`
+                message: `Token inválido para ${account.meli_nickname}`,
               });
               continue;
             }
 
-            const searchData = await searchRes.json();
-            const itemIds = searchData.results || [];
+            send({
+              type: "account_start",
+              account: account.meli_nickname,
+            });
 
-            // Notificar total de items
+            const searchResponse = await fetch(
+              `https://api.mercadolibre.com/users/${account.meli_user_id}/items/search?q=${encodeURIComponent(
+                keyword
+              )}&status=active&limit=100`,
+              {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+                signal: AbortSignal.timeout(15000),
+              }
+            );
+
+            if (!searchResponse.ok) {
+              const errorText = await searchResponse.text().catch(() => "");
+              errors++;
+              send({
+                type: "error",
+                account: account.meli_nickname,
+                message: errorText || `HTTP ${searchResponse.status}`,
+              });
+              continue;
+            }
+
+            const searchData = await searchResponse.json();
+            const itemIds: string[] = searchData.results || [];
+
             send({
               type: "account_total",
               account: account.meli_nickname,
-              total: itemIds.length
+              total: itemIds.length,
             });
 
-            // Procesar cada item con delay para rate limiting
-            for (let i = 0; i < itemIds.length; i++) {
-              const itemId = itemIds[i];
+            for (let index = 0; index < itemIds.length; index++) {
+              const itemId = itemIds[index];
               totalScanned++;
 
+              if (index > 0) {
+                await delay(RATE_LIMIT_DELAY);
+              }
+
               try {
-                // Delay para rate limiting
-                if (i > 0) {
-                  await new Promise(resolve => setTimeout(resolve, RATE_LIMIT_DELAY));
-                }
+                const itemResponse = await fetch(`https://api.mercadolibre.com/items/${itemId}`, {
+                  headers: {
+                    Authorization: `Bearer ${token}`,
+                  },
+                  signal: AbortSignal.timeout(10000),
+                });
 
-                // Obtener detalles del item
-                const itemRes = await fetch(
-                  `https://api.mercadolibre.com/items/${itemId}`,
-                  {
-                    headers: { Authorization: `Bearer ${token}` },
-                    signal: AbortSignal.timeout(10000),
-                  }
-                );
-
-                if (!itemRes.ok) {
+                if (!itemResponse.ok) {
                   errors++;
+                  const reason = `HTTP ${itemResponse.status}`;
+                  results.push({
+                    account: account.meli_nickname,
+                    item_id: itemId,
+                    title: "Error al obtener item",
+                    old_price: 0,
+                    new_price: 0,
+                    status: "error",
+                    reason,
+                  });
                   send({
                     type: "progress",
-                    current: i + 1,
+                    current: index + 1,
                     total: itemIds.length,
                     item_id: itemId,
                     title: "Error al obtener item",
                     status: "error",
                     account: account.meli_nickname,
-                    reason: `HTTP ${itemRes.status}`
+                    reason,
                   });
                   continue;
                 }
 
-                const item = await itemRes.json();
+                const item = await itemResponse.json();
+                const oldPrice = Number(item.price || 0);
+                const title = String(item.title || itemId);
+                const titleLower = title.toLowerCase();
 
-                // Verificar si está en promoción
-                if (item.deal_ids && item.deal_ids.length > 0) {
+                if (Array.isArray(item.deal_ids) && item.deal_ids.length > 0) {
                   skipped++;
-                  send({
-                    type: "progress",
-                    current: i + 1,
-                    total: itemIds.length,
-                    item_id: itemId,
-                    title: item.title,
-                    status: "promo_blocked",
+                  results.push({
                     account: account.meli_nickname,
-                    old_price: item.price,
-                    new_price: item.price,
-                    reason: "Item en promoción"
+                    item_id: itemId,
+                    title,
+                    old_price: oldPrice,
+                    new_price: oldPrice,
+                    status: "promo_blocked",
+                    reason: "Item en promoción",
                   });
-                  continue;
-                }
-
-                // Verificar palabras excluidas
-                if (exclude_words) {
-                  const excludeList = exclude_words.split(',').map((w: string) => w.trim().toLowerCase()).filter(Boolean);
-                  if (excludeList.length > 0) {
-                    const titleLower = item.title.toLowerCase();
-                    const hasExcludedWord = excludeList.some((word: string) => titleLower.includes(word));
-                    if (hasExcludedWord) {
-                      excluded++;
-                      send({
-                        type: "progress",
-                        current: i + 1,
-                        total: itemIds.length,
-                        item_id: itemId,
-                        title: item.title,
-                        status: "excluded",
-                        account: account.meli_nickname,
-                        excluded_by: excludeList.find((word: string) => titleLower.includes(word))
-                      });
-                      continue;
-                    }
-                  }
-                }
-
-                // Calcular nuevo precio
-                const oldPrice = item.price;
-                let newPrice = oldPrice;
-                let shouldUpdate = true;
-                let skipReason = "";
-
-                switch (adjustment_type) {
-                  case "percentage":
-                    newPrice = oldPrice * (1 + adjustment_value / 100);
-                    break;
-                  case "percentage_decrease":
-                    newPrice = oldPrice * (1 - adjustment_value / 100);
-                    break;
-                  case "fixed_add":
-                    newPrice = oldPrice + adjustment_value;
-                    break;
-                  case "fixed_subtract":
-                    newPrice = oldPrice - adjustment_value;
-                    break;
-                  case "fixed_floor":
-                    if (oldPrice < adjustment_value) {
-                      newPrice = adjustment_value;
-                    } else {
-                      shouldUpdate = false;
-                      skipReason = "Ya está por encima del piso";
-                    }
-                    break;
-                  case "fixed_ceiling":
-                    if (oldPrice > adjustment_value) {
-                      newPrice = adjustment_value;
-                    } else {
-                      shouldUpdate = false;
-                      skipReason = "Ya está por debajo del techo";
-                    }
-                    break;
-                  default:
-                    shouldUpdate = false;
-                    skipReason = "Tipo de ajuste desconocido";
-                }
-
-                if (!shouldUpdate) {
-                  skipped++;
                   send({
                     type: "progress",
-                    current: i + 1,
+                    current: index + 1,
                     total: itemIds.length,
                     item_id: itemId,
-                    title: item.title,
-                    status: "skipped",
+                    title,
+                    status: "promo_blocked",
                     account: account.meli_nickname,
                     old_price: oldPrice,
                     new_price: oldPrice,
-                    reason: skipReason
+                    reason: "Item en promoción",
                   });
                   continue;
                 }
 
-                newPrice = Math.round(newPrice);
+                const excludedBy = excludedWordsList.find((word) => titleLower.includes(word));
 
-                // Si es dry_run, solo simular
-                if (dry_run) {
-                  updated++;
+                if (excludedBy) {
+                  excluded++;
+                  results.push({
+                    account: account.meli_nickname,
+                    item_id: itemId,
+                    title,
+                    old_price: oldPrice,
+                    new_price: oldPrice,
+                    status: "excluded",
+                    reason: `Excluido por "${excludedBy}"`,
+                  });
                   send({
                     type: "progress",
-                    current: i + 1,
+                    current: index + 1,
                     total: itemIds.length,
                     item_id: itemId,
-                    title: item.title,
-                    status: "updated",
+                    title,
+                    status: "excluded",
                     account: account.meli_nickname,
                     old_price: oldPrice,
-                    new_price: newPrice
+                    new_price: oldPrice,
+                    excluded_by: excludedBy,
                   });
                   continue;
                 }
 
-                // Actualizar precio en MeLi
-                const updateRes = await fetch(
-                  `https://api.mercadolibre.com/items/${itemId}`,
-                  {
-                    method: "PUT",
-                    headers: {
-                      Authorization: `Bearer ${token}`,
-                      "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({ price: newPrice }),
-                    signal: AbortSignal.timeout(10000),
-                  }
+                const priceCalculation = calculateNewPrice(
+                  oldPrice,
+                  adjustmentType,
+                  adjustmentValue
                 );
 
-                if (updateRes.ok) {
+                if (!priceCalculation.shouldUpdate) {
+                  skipped++;
+                  results.push({
+                    account: account.meli_nickname,
+                    item_id: itemId,
+                    title,
+                    old_price: oldPrice,
+                    new_price: priceCalculation.newPrice,
+                    status: "skipped",
+                    reason: priceCalculation.skipReason,
+                  });
+                  send({
+                    type: "progress",
+                    current: index + 1,
+                    total: itemIds.length,
+                    item_id: itemId,
+                    title,
+                    status: "skipped",
+                    account: account.meli_nickname,
+                    old_price: oldPrice,
+                    new_price: priceCalculation.newPrice,
+                    reason: priceCalculation.skipReason,
+                  });
+                  continue;
+                }
+
+                if (dryRun) {
                   updated++;
                   results.push({
                     account: account.meli_nickname,
                     item_id: itemId,
-                    title: item.title,
+                    title,
                     old_price: oldPrice,
-                    new_price: newPrice,
-                    status: "updated"
+                    new_price: priceCalculation.newPrice,
+                    status: "updated",
                   });
-                  
                   send({
                     type: "progress",
-                    current: i + 1,
+                    current: index + 1,
                     total: itemIds.length,
                     item_id: itemId,
-                    title: item.title,
+                    title,
                     status: "updated",
                     account: account.meli_nickname,
                     old_price: oldPrice,
-                    new_price: newPrice
+                    new_price: priceCalculation.newPrice,
                   });
-                } else {
-                  const errorData = await updateRes.json().catch(() => ({}));
+                  continue;
+                }
+
+                const updateResponse = await fetch(`https://api.mercadolibre.com/items/${itemId}`, {
+                  method: "PUT",
+                  headers: {
+                    Authorization: `Bearer ${token}`,
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({ price: priceCalculation.newPrice }),
+                  signal: AbortSignal.timeout(10000),
+                });
+
+                if (!updateResponse.ok) {
+                  const errorData = await updateResponse.json().catch(() => null);
+                  const reason = errorData?.message || `HTTP ${updateResponse.status}`;
                   errors++;
                   results.push({
                     account: account.meli_nickname,
                     item_id: itemId,
-                    title: item.title,
+                    title,
                     old_price: oldPrice,
                     new_price: oldPrice,
                     status: "error",
-                    reason: errorData.message || `HTTP ${updateRes.status}`
+                    reason,
                   });
-                  
                   send({
                     type: "progress",
-                    current: i + 1,
+                    current: index + 1,
                     total: itemIds.length,
                     item_id: itemId,
-                    title: item.title,
+                    title,
                     status: "error",
                     account: account.meli_nickname,
-                    reason: errorData.message || `HTTP ${updateRes.status}`
+                    old_price: oldPrice,
+                    new_price: oldPrice,
+                    reason,
                   });
+                  continue;
                 }
 
-              } catch (e) {
+                updated++;
+                results.push({
+                  account: account.meli_nickname,
+                  item_id: itemId,
+                  title,
+                  old_price: oldPrice,
+                  new_price: priceCalculation.newPrice,
+                  status: "updated",
+                });
+                send({
+                  type: "progress",
+                  current: index + 1,
+                  total: itemIds.length,
+                  item_id: itemId,
+                  title,
+                  status: "updated",
+                  account: account.meli_nickname,
+                  old_price: oldPrice,
+                  new_price: priceCalculation.newPrice,
+                });
+              } catch (error) {
                 errors++;
-                console.error(`[meli-price-update] Error procesando item ${itemId}:`, e);
+                results.push({
+                  account: account.meli_nickname,
+                  item_id: itemId,
+                  title: itemId,
+                  old_price: 0,
+                  new_price: 0,
+                  status: "error",
+                  reason: error instanceof Error ? error.message : "Error procesando item",
+                });
               }
             }
-
-          } catch (e) {
-            console.error(`[meli-price-update] Error cuenta ${account.meli_nickname}:`, e);
+          } catch (error) {
+            errors++;
+            send({
+              type: "error",
+              account: account.meli_nickname,
+              message: error instanceof Error ? error.message : "Error procesando cuenta",
+            });
           }
         }
 
-        // Enviar resumen final
         send({
           type: "done",
           results,
           summary: {
             total_items_scanned: totalScanned,
             cache_hits_skipped: 0,
-            matched: totalScanned,
+            matched: results.length,
             updated,
             skipped,
             excluded,
             errors,
-            stopped: false
+            stopped: false,
           },
-          adjustment_type,
-          adjustment_value,
-          dry_run
+          adjustment_type: adjustmentType,
+          adjustment_value: adjustmentValue,
+          dry_run: dryRun,
         });
 
         controller.close();
-      }
+      },
     });
 
     return new Response(stream, {
       headers: {
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive',
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        Connection: "keep-alive",
       },
     });
-
-  } catch (e) {
-    console.error("[meli-price-update] Error:", e);
-    return new Response(
-      JSON.stringify({ error: "Error interno" }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
-    );
+  } catch (error) {
+    console.error("[meli-price-update] Error:", error);
+    return new Response(JSON.stringify({ error: "Error interno" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 }

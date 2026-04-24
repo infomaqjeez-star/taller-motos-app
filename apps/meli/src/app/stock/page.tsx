@@ -114,7 +114,7 @@ export default function StockPage() {
       const { data: { session } } = await supabase.auth.getSession();
       
       const response = await fetch("/api/stock", {
-        method: "POST",
+        method: "PUT",
         headers: {
           "Content-Type": "application/json",
           Authorization: session?.access_token ? `Bearer ${session.access_token}` : "",
@@ -122,7 +122,10 @@ export default function StockPage() {
         body: JSON.stringify(editForm),
       });
 
-      if (!response.ok) throw new Error("Error guardando");
+      if (!response.ok) {
+        const error = await response.json().catch(() => null);
+        throw new Error(error?.error || "Error guardando");
+      }
       
       toast.success("Item actualizado");
       setEditingId(null);
