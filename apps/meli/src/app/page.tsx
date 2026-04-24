@@ -545,19 +545,20 @@ function AppJeezInner() {
   });
 
   const navItems = [
-    { label: "Dashboard",       icon: <BarChart2 className="w-4 h-4" />,       href: "/",               active: true  },
-    { label: "Preguntas Unif.", icon: <HelpCircle className="w-4 h-4" />,      href: "/preguntas",     active: false },
-    { label: "Ventas Unif.",    icon: <ShoppingCart className="w-4 h-4" />,    href: "/ventas",        active: false },
-    { label: "Mensajes",        icon: <MessageCircle className="w-4 h-4" />,   href: "/mensajes",      active: false },
-    { label: "Etiquetas",       icon: <Tag className="w-4 h-4" />,             href: "/etiquetas",     active: false },
-    { label: "Publicaciones",   icon: <Package className="w-4 h-4" />,         href: "/publicaciones", active: false },
-    { label: "Sincronizar",     icon: <Copy className="w-4 h-4" />,            href: "/sincronizar",   active: false },
-    { label: "Precios/Stock",   icon: <DollarSign className="w-4 h-4" />,     href: "/precios",       active: false },
-    { label: "Stock Unif.",     icon: <Package className="w-4 h-4" />,        href: "/stock",         active: false },
-    { label: "Promociones",     icon: <Zap className="w-4 h-4" />,            href: "/promociones",   active: false },
-    { label: "Post-Venta",      icon: <AlertTriangle className="w-4 h-4" />,  href: "/post-venta",    active: false },
-    { label: "Marketing",       icon: <Share2 className="w-4 h-4" />,          href: "/marketing-social", active: false },
-    { label: "Cuentas MeLi",    icon: <Store className="w-4 h-4" />,           href: "/configuracion/meli",    active: false },
+    { label: "Dashboard",       icon: <BarChart2 className="w-4 h-4" />,       href: "/",                   active: true  },
+    { label: "Preguntas",       icon: <HelpCircle className="w-4 h-4" />,      href: "/preguntas",          active: false },
+    { label: "Ventas Unif.",    icon: <ShoppingCart className="w-4 h-4" />,    href: "/ventas",             active: false },
+    { label: "Post-Venta",      icon: <AlertTriangle className="w-4 h-4" />,   href: "/post-venta",         active: false },
+    { label: "Mensajes Ventas", icon: <MessageSquare className="w-4 h-4" />,   href: "/mensajes-ventas",    active: false },
+    { label: "Reputación",      icon: <Star className="w-4 h-4" />,            href: "/reputacion",         active: false },
+    { label: "Publicaciones",   icon: <Package className="w-4 h-4" />,         href: "/publicaciones",      active: false },
+    { label: "Precios/Stock",   icon: <DollarSign className="w-4 h-4" />,      href: "/precios",            active: false },
+    { label: "Stock Unif.",     icon: <Package className="w-4 h-4" />,         href: "/stock",              active: false },
+    { label: "Etiquetas",       icon: <Tag className="w-4 h-4" />,             href: "/etiquetas",          active: false },
+    { label: "Sincronizar",     icon: <Copy className="w-4 h-4" />,            href: "/sincronizar",        active: false },
+    { label: "Promociones",     icon: <Zap className="w-4 h-4" />,             href: "/promociones",        active: false },
+    { label: "Marketing",       icon: <Share2 className="w-4 h-4" />,          href: "/marketing-social",   active: false },
+    { label: "Cuentas MeLi",    icon: <Store className="w-4 h-4" />,           href: "/configuracion/meli", active: false },
   ];
 
   return (
@@ -585,7 +586,7 @@ function AppJeezInner() {
             >
               <span className="relative">
                 {n.icon}
-                {n.label === "Mensajería" && totalQuestionsAlert > 0 && (
+                {n.label === "Preguntas" && totalQuestionsAlert > 0 && (
                   <span
                     className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-black text-black"
                     style={{ background: "#FF5722" }}
