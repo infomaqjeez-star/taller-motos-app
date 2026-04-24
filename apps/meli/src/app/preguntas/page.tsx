@@ -731,7 +731,7 @@ export default function PreguntasPage() {
           </button>
 
           <button
-            onClick={loadAllQuestions}
+            onClick={() => loadAllQuestions()}
             disabled={loading}
             className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold disabled:opacity-40"
             style={{ background: "#1F1F1F", color: "#FF5722", border: "1px solid #FF572244" }}
