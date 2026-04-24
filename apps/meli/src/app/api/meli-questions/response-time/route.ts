@@ -1,13 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-import { getValidToken, type LinkedMeliAccount } from "@/lib/meli";
+import { getSupabase, getValidToken, type LinkedMeliAccount } from "@/lib/meli";
 
 export const dynamic = "force-dynamic";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co",
-  process.env.SUPABASE_SERVICE_ROLE_KEY || "placeholder-key"
-);
+async function resolveSellerId(token: string, account: LinkedMeliAccount): Promise<string> {
+  try {
+    const response = await fetch("https://api.mercadolibre.com/users/me", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      signal: AbortSignal.timeout(5000),
+    });
+
+    if (!response.ok) {
+      return String(account.meli_user_id);
+    }
+
+    const data = await response.json();
+    return String(data.id ?? account.meli_user_id);
+  } catch {
+    return String(account.meli_user_id);
+  }
+}
 
 interface ResponseTimePeriod {
   response_time?: number;
@@ -35,6 +49,7 @@ export interface AccountResponseTime {
 
 export async function GET(request: NextRequest) {
   try {
+    const supabase = getSupabase();
     const authHeader = request.headers.get("authorization");
     let userId: string | null = null;
 
@@ -80,8 +95,10 @@ export async function GET(request: NextRequest) {
             };
           }
 
+          const sellerId = await resolveSellerId(token, account as LinkedMeliAccount);
+
           const response = await fetch(
-            `https://api.mercadolibre.com/users/${account.meli_user_id}/questions/response_time`,
+            `https://api.mercadolibre.com/users/${sellerId}/questions/response_time`,
             {
               headers: {
                 Authorization: `Bearer ${token}`,
@@ -94,7 +111,7 @@ export async function GET(request: NextRequest) {
             return {
               accountId: account.id,
               nickname: account.meli_nickname,
-              sellerId: String(account.meli_user_id),
+              sellerId,
               total_minutes: 0,
               weekdays_working_hours_minutes: null,
               weekdays_extra_hours_minutes: null,
@@ -106,7 +123,7 @@ export async function GET(request: NextRequest) {
             return {
               accountId: account.id,
               nickname: account.meli_nickname,
-              sellerId: String(account.meli_user_id),
+              sellerId,
               total_minutes: 0,
               weekdays_working_hours_minutes: null,
               weekdays_extra_hours_minutes: null,
@@ -120,7 +137,7 @@ export async function GET(request: NextRequest) {
           return {
             accountId: account.id,
             nickname: account.meli_nickname,
-            sellerId: String(account.meli_user_id),
+            sellerId,
             total_minutes: data.total?.response_time ?? 0,
             weekdays_working_hours_minutes: data.weekdays_working_hours?.response_time ?? null,
             weekdays_extra_hours_minutes: data.weekdays_extra_hours?.response_time ?? null,

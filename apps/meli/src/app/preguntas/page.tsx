@@ -107,7 +107,7 @@ export default function PreguntasPage() {
   const [error, setError] = useState<string | null>(null);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>(QUESTION_STATUSES.UNANSWERED);
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [accountFilter, setAccountFilter] = useState<string>("all");
   const [accountStats, setAccountStats] = useState<AccountStats[]>([]);
   const [answering, setAnswering] = useState<number | null>(null);
@@ -213,6 +213,7 @@ export default function PreguntasPage() {
 
       const unified: UnifiedQuestion[] = [];
       const stats: AccountStats[] = [];
+      const accountQuestionsMap = new Map<string, UnifiedQuestion[]>();
 
       for (const result of data.questions ?? []) {
         const accountQuestions = (result.questions ?? [])
@@ -226,13 +227,18 @@ export default function PreguntasPage() {
           .filter((question: UnifiedQuestion | null): question is UnifiedQuestion => question !== null);
 
         unified.push(...accountQuestions);
+        accountQuestionsMap.set(result.accountId, accountQuestions);
+      }
+
+      for (const account of data.accounts ?? []) {
+        const accountQuestions = accountQuestionsMap.get(account.accountId) ?? [];
 
         stats.push({
-          accountId: result.accountId,
-          nickname: result.nickname,
-          total: result.total ?? accountQuestions.length,
+          accountId: account.accountId,
+          nickname: account.nickname,
+          total: account.total ?? accountQuestions.length,
           unanswered: accountQuestions.filter((question: UnifiedQuestion) => question.status === QUESTION_STATUSES.UNANSWERED).length,
-          responseTime: result.responseTime ?? null,
+          responseTime: account.responseTime ?? null,
         });
       }
 

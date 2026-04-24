@@ -1,10 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-import { getValidToken, type LinkedMeliAccount } from "@/lib/meli";
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co";
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "placeholder-key";
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+import { getSupabase, getValidToken, type LinkedMeliAccount } from "@/lib/meli";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +10,7 @@ type AccountResult = {
   questions: any[];
   total: number;
   responseTime: any | null;
+  source?: string;
   error?: string;
 };
 
@@ -92,6 +88,110 @@ async function fetchResponseTime(token: string, sellerId: string): Promise<any |
   }
 }
 
+async function resolveAccountIdentity(
+  token: string,
+  account: LinkedMeliAccount
+): Promise<{ sellerId: string; nickname: string }> {
+  try {
+    const response = await fetch("https://api.mercadolibre.com/users/me", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/json",
+      },
+      signal: AbortSignal.timeout(5000),
+    });
+
+    if (!response.ok) {
+      return {
+        sellerId: String(account.meli_user_id),
+        nickname: account.meli_nickname,
+      };
+    }
+
+    const data = await response.json();
+
+    return {
+      sellerId: String(data.id ?? account.meli_user_id),
+      nickname: data.nickname || account.meli_nickname,
+    };
+  } catch {
+    return {
+      sellerId: String(account.meli_user_id),
+      nickname: account.meli_nickname,
+    };
+  }
+}
+
+async function fetchQuestionsCandidate(
+  url: string,
+  headers: Record<string, string>,
+  source: string
+): Promise<{
+  ok: boolean;
+  source: string;
+  questions: any[];
+  total: number;
+  error?: string;
+}> {
+  try {
+    const response = await fetchWithRetry(url, {
+      headers,
+      signal: AbortSignal.timeout(8000),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => "");
+      return {
+        ok: false,
+        source,
+        questions: [],
+        total: 0,
+        error: errorText ? `HTTP ${response.status}: ${errorText}` : `HTTP ${response.status}`,
+      };
+    }
+
+    const data = await response.json();
+
+    return {
+      ok: true,
+      source,
+      questions: data.questions || [],
+      total: data.total || data.paging?.total || data.questions?.length || 0,
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      source,
+      questions: [],
+      total: 0,
+      error: error instanceof Error ? error.message : "Error de red",
+    };
+  }
+}
+
+function chooseBestQuestionsSource(
+  primary: { ok: boolean; source: string; questions: any[]; total: number; error?: string },
+  fallback: { ok: boolean; source: string; questions: any[]; total: number; error?: string }
+) {
+  if (primary.ok && primary.questions.length > 0) {
+    return primary;
+  }
+
+  if (fallback.ok && fallback.questions.length > 0) {
+    return fallback;
+  }
+
+  if (primary.ok) {
+    return primary;
+  }
+
+  if (fallback.ok) {
+    return fallback;
+  }
+
+  return primary.error ? primary : fallback;
+}
+
 async function enrichQuestionsWithItems(
   questions: any[],
   headers: Record<string, string>
@@ -154,41 +254,59 @@ async function fetchAccountQuestions(account: LinkedMeliAccount): Promise<Accoun
     };
   }
 
+  const identity = await resolveAccountIdentity(token, account);
+
   const headers = {
     Authorization: `Bearer ${token}`,
     Accept: "application/json",
   };
 
-  const response = await fetchWithRetry(
-    `https://api.mercadolibre.com/questions/search?seller_id=${account.meli_user_id}&status=UNANSWERED&api_version=4&limit=${QUESTIONS_LIMIT}&sort_fields=date_created&sort_types=DESC`,
-    {
+  const [sellerQuestions, receivedQuestions, responseTime] = await Promise.all([
+    fetchQuestionsCandidate(
+      `https://api.mercadolibre.com/questions/search?seller_id=${identity.sellerId}&api_version=4&limit=${QUESTIONS_LIMIT}&sort_fields=date_created&sort_types=DESC`,
       headers,
-      signal: AbortSignal.timeout(8000),
-    }
-  );
+      "seller_id"
+    ),
+    fetchQuestionsCandidate(
+      `https://api.mercadolibre.com/my/received_questions/search?api_version=4&limit=${QUESTIONS_LIMIT}`,
+      headers,
+      "received_questions"
+    ),
+    fetchResponseTime(token, identity.sellerId),
+  ]);
 
-  if (!response.ok) {
-    const errorText = await response.text().catch(() => "");
+  const chosenSource = chooseBestQuestionsSource(sellerQuestions, receivedQuestions);
 
+  if (!chosenSource.ok) {
     return {
       ...baseResult,
-      error: errorText ? `HTTP ${response.status}: ${errorText}` : `HTTP ${response.status}`,
+      nickname: identity.nickname,
+      sellerId: identity.sellerId,
+      responseTime,
+      source: chosenSource.source,
+      error: chosenSource.error,
     };
   }
 
-  const [questionsData, responseTime] = await Promise.all([
-    response.json(),
-    fetchResponseTime(token, String(account.meli_user_id)),
-  ]);
+  const rawQuestions = chosenSource.questions || [];
 
-  const rawQuestions = questionsData.questions || [];
-  const enrichedQuestions = await enrichQuestionsWithItems(rawQuestions, headers);
+  const enrichedQuestions = await enrichQuestionsWithItems(
+    rawQuestions.map((question: any) => ({
+      ...question,
+      account_id: account.id,
+      account_nickname: identity.nickname,
+    })),
+    headers
+  );
 
   return {
     ...baseResult,
+    nickname: identity.nickname,
+    sellerId: identity.sellerId,
     questions: enrichedQuestions,
-    total: questionsData.total || questionsData.paging?.total || enrichedQuestions.length || 0,
+    total: chosenSource.total || enrichedQuestions.length || 0,
     responseTime,
+    source: chosenSource.source,
   };
 }
 
@@ -196,6 +314,7 @@ export async function GET(request: NextRequest) {
   const startTime = Date.now();
 
   try {
+    const supabase = getSupabase();
     const authHeader = request.headers.get("authorization");
     let userId: string | null = null;
 

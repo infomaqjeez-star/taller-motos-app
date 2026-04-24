@@ -1,9 +1,78 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getActiveAccounts, getValidToken, meliGet, getSupabase } from "@/lib/meli";
+import { getSupabase, getValidToken, meliGet, type LinkedMeliAccount } from "@/lib/meli";
 
 export const dynamic = "force-dynamic";
 
-const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+async function getAuthenticatedUserId(request: NextRequest): Promise<string | null> {
+  const authHeader = request.headers.get("authorization");
+
+  if (!authHeader?.startsWith("Bearer ")) {
+    return null;
+  }
+
+  const supabase = getSupabase();
+  const token = authHeader.slice(7);
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser(token);
+
+  if (error || !user) {
+    return null;
+  }
+
+  return user.id;
+}
+
+async function getLinkedAccountsForUser(userId: string): Promise<LinkedMeliAccount[]> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase
+    .from("linked_meli_accounts")
+    .select("id, user_id, meli_user_id, meli_nickname, access_token_enc, refresh_token_enc, token_expiry_date, is_active")
+    .eq("user_id", userId)
+    .eq("is_active", true)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    console.error("[meli-questions] Error obteniendo cuentas:", error);
+    return [];
+  }
+
+  return (data ?? []) as LinkedMeliAccount[];
+}
+
+async function resolveAccountIdentity(
+  token: string,
+  account: LinkedMeliAccount
+): Promise<{ sellerId: string; nickname: string }> {
+  try {
+    const response = await fetch("https://api.mercadolibre.com/users/me", {
+      headers: { Authorization: `Bearer ${token}` },
+      signal: AbortSignal.timeout(5000),
+    });
+
+    if (!response.ok) {
+      return {
+        sellerId: String(account.meli_user_id),
+        nickname: account.meli_nickname,
+      };
+    }
+
+    const data = await response.json();
+
+    return {
+      sellerId: String(data.id ?? account.meli_user_id),
+      nickname: data.nickname || account.meli_nickname,
+    };
+  } catch {
+    return {
+      sellerId: String(account.meli_user_id),
+      nickname: account.meli_nickname,
+    };
+  }
+}
 
 async function fetchWithRetry(
   url: string,
@@ -13,205 +82,289 @@ async function fetchWithRetry(
 ): Promise<Response | null> {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      const res = await fetch(url, options);
-      if (res.status === 502) {
+      const response = await fetch(url, options);
+
+      if (response.status === 502 || response.status === 429) {
         const waitTime = attempt * 1000;
-        console.log(`[meli-questions] [${accountName}] 502, esperando ${waitTime}ms...`);
+        console.log(`[meli-questions] [${accountName}] ${response.status}, esperando ${waitTime}ms...`);
         await sleep(waitTime);
         continue;
       }
-      return res;
-    } catch (err: any) {
-      console.error(`[meli-questions] [${accountName}] Error intento ${attempt}:`, err.message);
-      if (attempt < maxRetries) await sleep(attempt * 1000);
+
+      return response;
+    } catch (error: any) {
+      console.error(`[meli-questions] [${accountName}] Error intento ${attempt}:`, error.message);
+      if (attempt < maxRetries) {
+        await sleep(attempt * 1000);
+      }
     }
   }
+
   return null;
 }
 
-/**
- * GET /api/meli-questions
- * 
- * ?sync=true  → sincroniza desde MeLi API y guarda en DB antes de devolver
- * (default)   → trae directo de MeLi API para todas las cuentas activas
- */
+async function fetchQuestionsCandidate(
+  url: string,
+  token: string,
+  accountName: string
+): Promise<{ questions: any[]; total: number; source: string; ok: boolean }> {
+  const response = await fetchWithRetry(
+    url,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+      signal: AbortSignal.timeout(12000),
+    },
+    3,
+    accountName
+  );
+
+  if (!response || !response.ok) {
+    return { questions: [], total: 0, source: url, ok: false };
+  }
+
+  const data = await response.json();
+
+  return {
+    questions: data.questions || [],
+    total: data.total || data.paging?.total || data.questions?.length || 0,
+    source: url,
+    ok: true,
+  };
+}
+
+async function enrichItemInfo(
+  questions: any[],
+  token: string
+): Promise<Map<string, { title: string; thumbnail: string }>> {
+  const itemCache = new Map<string, { title: string; thumbnail: string }>();
+  const uniqueItemIds = [...new Set(questions.map((question) => String(question.item_id)).filter(Boolean))];
+
+  for (let index = 0; index < uniqueItemIds.length; index += 5) {
+    const batch = uniqueItemIds.slice(index, index + 5);
+
+    await Promise.all(
+      batch.map(async (itemId) => {
+        if (itemCache.has(itemId)) {
+          return;
+        }
+
+        try {
+          const response = await fetch(
+            `https://api.mercadolibre.com/items/${itemId}?attributes=id,title,thumbnail`,
+            {
+              headers: { Authorization: `Bearer ${token}` },
+              signal: AbortSignal.timeout(5000),
+            }
+          );
+
+          if (!response.ok) {
+            itemCache.set(itemId, { title: itemId, thumbnail: "" });
+            return;
+          }
+
+          const data = await response.json();
+          itemCache.set(itemId, {
+            title: data.title || itemId,
+            thumbnail: String(data.thumbnail || "").replace("http://", "https://"),
+          });
+        } catch {
+          itemCache.set(itemId, { title: itemId, thumbnail: "" });
+        }
+      })
+    );
+  }
+
+  return itemCache;
+}
+
+function mapQuestionsToFrontend(
+  questions: any[],
+  account: { id: string; nickname: string; sellerId: string },
+  itemCache: Map<string, { title: string; thumbnail: string }>
+) {
+  return questions.map((question) => {
+    const itemId = String(question.item_id);
+    const itemInfo = itemCache.get(itemId) || { title: itemId, thumbnail: "" };
+
+    return {
+      meli_question_id: question.id,
+      meli_account_id: account.id,
+      item_id: itemId,
+      item_title: itemInfo.title,
+      item_thumbnail: itemInfo.thumbnail,
+      buyer_id: question.from?.id || 0,
+      buyer_nickname: question.from?.nickname || (question.from?.id ? `Usuario ${question.from.id}` : "Comprador"),
+      question_text: question.text || "",
+      status: question.status,
+      date_created: question.date_created,
+      answer_text: question.answer?.text ?? null,
+      meli_accounts: { nickname: account.nickname },
+    };
+  });
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const shouldSync = searchParams.get("sync") === "true";
+    const userId = await getAuthenticatedUserId(request);
 
-    // Si se pide sync, guardar en DB para el webhook/polling
+    if (!userId) {
+      return NextResponse.json([]);
+    }
+
     if (shouldSync) {
       try {
         const supabase = getSupabase();
-        await syncQuestionsFromMeli(supabase);
-      } catch (e) {
-        console.warn("[meli-questions] Sync a DB falló, continuando con fetch directo:", e);
+        await syncQuestionsFromMeli(supabase, userId);
+      } catch (error) {
+        console.warn("[meli-questions] Sync a DB falló, continuando con fetch directo:", error);
       }
     }
 
-    // Siempre traer directo de MeLi API (fuente de verdad)
-    return await fetchQuestionsDirectFromMeli();
+    return await fetchQuestionsDirectFromMeli(userId);
   } catch (error) {
     console.error("[meli-questions] Error fatal:", error);
     return NextResponse.json([]);
   }
 }
 
-/**
- * Trae preguntas UNANSWERED de TODAS las cuentas activas directo desde MeLi API
- */
-async function fetchQuestionsDirectFromMeli() {
-  const accounts = await getActiveAccounts();
-  if (!accounts.length) return NextResponse.json([]);
+async function fetchQuestionsDirectFromMeli(userId: string) {
+  const accounts = await getLinkedAccountsForUser(userId);
 
-  const allQuestions: any[] = [];
-  const itemCache = new Map<string, { title: string; thumbnail: string }>();
-
-  // Procesar en batches de 2 cuentas
-  const batchSize = 2;
-  for (let i = 0; i < accounts.length; i += batchSize) {
-    const batch = accounts.slice(i, i + batchSize);
-
-    const batchResults = await Promise.all(
-      batch.map(async (acc) => {
-        try {
-          const token = await getValidToken(acc);
-          if (!token) return { acc, questions: [] };
-
-          const res = await fetchWithRetry(
-            `https://api.mercadolibre.com/questions/search?seller_id=${acc.meli_user_id}&status=UNANSWERED&limit=50&api_version=4`,
-            { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(20000) },
-            3,
-            acc.nickname
-          );
-
-          if (!res || !res.ok) return { acc, questions: [] };
-          const data = await res.json();
-          return { acc, questions: data.questions || [], token };
-        } catch {
-          return { acc, questions: [] };
-        }
-      })
-    );
-
-    for (const { acc, questions, token } of batchResults as any[]) {
-      if (!questions.length) continue;
-
-      // Obtener info de items únicos en paralelo
-      const uniqueItemIds = [...new Set(questions.map((q: any) => String(q.item_id)))] as string[];
-      await Promise.all(
-        uniqueItemIds.map(async (itemId) => {
-          if (itemCache.has(itemId)) return;
-          try {
-            const t = token || await getValidToken(acc);
-            if (!t) return;
-            const res = await fetch(`https://api.mercadolibre.com/items/${itemId}?attributes=id,title,thumbnail`, {
-              headers: { Authorization: `Bearer ${t}` },
-              signal: AbortSignal.timeout(5000),
-            });
-            if (res.ok) {
-              const data = await res.json();
-              itemCache.set(itemId, { title: data.title, thumbnail: data.thumbnail });
-            }
-          } catch {
-            itemCache.set(itemId, { title: itemId, thumbnail: "" });
-          }
-        })
-      );
-
-      for (const q of questions) {
-        const itemId = String(q.item_id);
-        const itemInfo = itemCache.get(itemId) || { title: itemId, thumbnail: "" };
-        allQuestions.push({
-          meli_question_id: q.id,
-          meli_account_id: String(acc.meli_user_id),
-          item_id: itemId,
-          item_title: itemInfo.title,
-          item_thumbnail: (itemInfo.thumbnail || "").replace("http://", "https://"),
-          buyer_id: q.from?.id || 0,
-          buyer_nickname: q.from?.nickname || q.from?.id ? `Usuario ${q.from.id}` : "Comprador",
-          question_text: q.text || "",
-          status: q.status,
-          date_created: q.date_created,
-          answer_text: null,
-          meli_accounts: { nickname: acc.nickname },
-        });
-      }
-    }
-
-    if (i + batchSize < accounts.length) await sleep(500);
+  if (!accounts.length) {
+    return NextResponse.json([]);
   }
 
-  allQuestions.sort((a, b) =>
-    new Date(b.date_created).getTime() - new Date(a.date_created).getTime()
-  );
+  const allQuestions: any[] = [];
 
-  console.log(`[meli-questions] TOTAL: ${allQuestions.length} preguntas de ${accounts.length} cuentas`);
+  for (const account of accounts) {
+    try {
+      const token = await getValidToken(account);
+      if (!token) {
+        continue;
+      }
+
+      const identity = await resolveAccountIdentity(token, account);
+
+      const [sellerQuestions, receivedQuestions] = await Promise.all([
+        fetchQuestionsCandidate(
+          `https://api.mercadolibre.com/questions/search?seller_id=${identity.sellerId}&api_version=4&limit=50&sort_fields=date_created&sort_types=DESC`,
+          token,
+          identity.nickname
+        ),
+        fetchQuestionsCandidate(
+          "https://api.mercadolibre.com/my/received_questions/search?api_version=4&limit=50",
+          token,
+          identity.nickname
+        ),
+      ]);
+
+      const chosenQuestions =
+        sellerQuestions.ok && sellerQuestions.questions.length > 0
+          ? sellerQuestions.questions
+          : receivedQuestions.questions.length > 0
+            ? receivedQuestions.questions
+            : sellerQuestions.questions;
+
+      if (!chosenQuestions.length) {
+        continue;
+      }
+
+      const itemCache = await enrichItemInfo(chosenQuestions, token);
+
+      allQuestions.push(
+        ...mapQuestionsToFrontend(chosenQuestions, {
+          id: account.id,
+          nickname: identity.nickname,
+          sellerId: identity.sellerId,
+        }, itemCache)
+      );
+    } catch (error) {
+      console.error(`[meli-questions] Error cuenta ${account.meli_nickname}:`, error);
+    }
+  }
+
+  allQuestions.sort(
+    (firstQuestion, secondQuestion) =>
+      new Date(secondQuestion.date_created).getTime() - new Date(firstQuestion.date_created).getTime()
+  );
 
   const response = NextResponse.json(allQuestions);
   response.headers.set("Cache-Control", "no-store");
   return response;
 }
 
-/**
- * Sincroniza preguntas UNANSWERED de todas las cuentas activas desde MeLi API → DB
- */
-async function syncQuestionsFromMeli(supabase: any) {
-  const accounts = await getActiveAccounts();
+async function syncQuestionsFromMeli(supabase: any, userId: string) {
+  const accounts = await getLinkedAccountsForUser(userId);
 
-  for (const acc of accounts) {
+  for (const account of accounts) {
     try {
-      const token = await getValidToken(acc);
-      if (!token) continue;
+      const token = await getValidToken(account);
+      if (!token) {
+        continue;
+      }
 
-      const qRes = await meliGet(
-        `/questions/search?seller_id=${acc.meli_user_id}&status=UNANSWERED&api_version=4&limit=50`,
+      const identity = await resolveAccountIdentity(token, account);
+
+      const sellerQuestions = await meliGet(
+        `/questions/search?seller_id=${identity.sellerId}&api_version=4&limit=50`,
         token
       ) as { questions?: any[] } | null;
 
-      const questions = qRes?.questions ?? [];
+      const receivedQuestions = await meliGet(
+        "/my/received_questions/search?api_version=4&limit=50",
+        token
+      ) as { questions?: any[] } | null;
 
-      for (const q of questions) {
+      const questions =
+        (sellerQuestions?.questions?.length ? sellerQuestions.questions : null) ??
+        receivedQuestions?.questions ??
+        [];
+
+      for (const question of questions) {
         try {
           const itemData = await meliGet(
-            `/items/${q.item_id}?attributes=id,title,thumbnail`,
+            `/items/${question.item_id}?attributes=id,title,thumbnail`,
             token
           ) as { title?: string; thumbnail?: string } | null;
 
           await supabase
             .from("meli_questions_sync")
-            .upsert({
-              id: String(q.id),
-              meli_user_id: String(acc.meli_user_id),
-              item_id: q.item_id,
-              title_item: itemData?.title || "Producto",
-              item_thumbnail: (itemData?.thumbnail || "").replace("http://", "https://"),
-              question_text: q.text || "",
-              status: q.status || "UNANSWERED",
-              buyer_nickname: q.from?.nickname || `Usuario ${q.from?.id || ""}`,
-              buyer_id: q.from?.id || null,
-              meli_created_date: q.date_created,
-              account_nickname: acc.nickname,
-              updated_at: new Date().toISOString(),
-            }, { onConflict: "id" });
-        } catch (e) {
-          console.warn(`[sync] Error pregunta ${q.id}:`, e);
+            .upsert(
+              {
+                id: String(question.id),
+                meli_user_id: identity.sellerId,
+                item_id: question.item_id,
+                title_item: itemData?.title || "Producto",
+                item_thumbnail: String(itemData?.thumbnail || "").replace("http://", "https://"),
+                question_text: question.text || "",
+                status: question.status || "UNANSWERED",
+                buyer_nickname: question.from?.nickname || `Usuario ${question.from?.id || ""}`,
+                buyer_id: question.from?.id || null,
+                meli_created_date: question.date_created,
+                account_nickname: identity.nickname,
+                updated_at: new Date().toISOString(),
+              },
+              { onConflict: "id" }
+            );
+        } catch (error) {
+          console.warn(`[sync] Error pregunta ${question.id}:`, error);
         }
       }
 
-      // Marcar como ANSWERED las que ya no aparecen
-      const meliIds = questions.map((q: any) => String(q.id));
+      const meliIds = questions.map((question: any) => String(question.id));
       const { data: dbQuestions } = await supabase
         .from("meli_questions_sync")
         .select("id")
-        .eq("meli_user_id", String(acc.meli_user_id))
+        .eq("meli_user_id", identity.sellerId)
         .eq("status", "UNANSWERED");
 
       if (dbQuestions) {
         const staleIds = dbQuestions
-          .filter((dbQ: any) => !meliIds.includes(dbQ.id))
-          .map((dbQ: any) => dbQ.id);
+          .filter((dbQuestion: any) => !meliIds.includes(dbQuestion.id))
+          .map((dbQuestion: any) => dbQuestion.id);
+
         if (staleIds.length > 0) {
           await supabase
             .from("meli_questions_sync")
@@ -219,8 +372,8 @@ async function syncQuestionsFromMeli(supabase: any) {
             .in("id", staleIds);
         }
       }
-    } catch (e) {
-      console.error(`[sync] Error cuenta ${acc.nickname}:`, e);
+    } catch (error) {
+      console.error(`[sync] Error cuenta ${account.meli_nickname}:`, error);
     }
   }
 }

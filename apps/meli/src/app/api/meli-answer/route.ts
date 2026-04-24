@@ -1,7 +1,63 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getActiveAccounts, getSupabase, getValidToken } from "@/lib/meli";
+import { getSupabase, getValidToken, type LinkedMeliAccount } from "@/lib/meli";
 
 export const dynamic = "force-dynamic";
+
+async function getAuthenticatedUserId(request: NextRequest): Promise<string | null> {
+  const authHeader = request.headers.get("authorization");
+
+  if (!authHeader?.startsWith("Bearer ")) {
+    return null;
+  }
+
+  const supabase = getSupabase();
+  const token = authHeader.slice(7);
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser(token);
+
+  if (error || !user) {
+    return null;
+  }
+
+  return user.id;
+}
+
+async function getLinkedAccountsForUser(userId: string) {
+  const supabase = getSupabase();
+  const { data, error } = await supabase
+    .from("linked_meli_accounts")
+    .select("id, user_id, meli_user_id, meli_nickname, is_active, access_token_enc, refresh_token_enc, token_expiry_date")
+    .eq("user_id", userId)
+    .eq("is_active", true);
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []) as LinkedMeliAccount[];
+}
+
+async function resolveSellerId(token: string, account: LinkedMeliAccount): Promise<string> {
+  try {
+    const response = await fetch("https://api.mercadolibre.com/users/me", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      signal: AbortSignal.timeout(5000),
+    });
+
+    if (!response.ok) {
+      return String(account.meli_user_id);
+    }
+
+    const data = await response.json();
+    return String(data.id ?? account.meli_user_id);
+  } catch {
+    return String(account.meli_user_id);
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,7 +74,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const accounts = await getActiveAccounts();
+    const userId = await getAuthenticatedUserId(request);
+
+    if (!userId) {
+      return NextResponse.json(
+        { status: "error", error: "No autorizado", code: "UNAUTHORIZED" },
+        { status: 401 }
+      );
+    }
+
+    const accounts = await getLinkedAccountsForUser(userId);
     let account =
       accountSelector != null
         ? accounts.find(
@@ -51,8 +116,9 @@ export async function POST(request: NextRequest) {
         }
 
         const questionData = await questionResponse.json();
+        const sellerId = await resolveSellerId(token, currentAccount);
 
-        if (String(questionData.seller_id) === String(currentAccount.meli_user_id)) {
+        if (String(questionData.seller_id) === sellerId) {
           account = currentAccount;
           break;
         }
@@ -144,7 +210,7 @@ export async function POST(request: NextRequest) {
       status: "ok",
       message: "Respuesta enviada exitosamente",
       question_id: questionId,
-      account: account.nickname,
+      account: account.meli_nickname,
       meli_response: responseData,
     });
   } catch (error) {
