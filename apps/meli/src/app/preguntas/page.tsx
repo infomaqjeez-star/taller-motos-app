@@ -158,7 +158,7 @@ export default function PreguntasPage() {
     };
   }, []);
 
-  const playAlertSound = useCallback(() => {
+  const playAlertSound = useCallback(async () => {
     try {
       const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
 
@@ -168,23 +168,31 @@ export default function PreguntasPage() {
 
       const context = new AudioContextClass();
 
+      // Los navegadores modernos suspenden AudioContext hasta interacción del usuario
+      if (context.state === "suspended") {
+        await context.resume();
+      }
+
       const beep = (frequency: number, startOffset: number, duration: number) => {
         const oscillator = context.createOscillator();
         const gain = context.createGain();
 
         oscillator.connect(gain);
         gain.connect(context.destination);
+        oscillator.type = "sine";
         oscillator.frequency.value = frequency;
-        gain.gain.value = 0.3;
+        gain.gain.setValueAtTime(0, context.currentTime + startOffset);
+        gain.gain.linearRampToValueAtTime(0.35, context.currentTime + startOffset + 0.01);
+        gain.gain.linearRampToValueAtTime(0, context.currentTime + startOffset + duration);
         oscillator.start(context.currentTime + startOffset);
-        oscillator.stop(context.currentTime + startOffset + duration);
+        oscillator.stop(context.currentTime + startOffset + duration + 0.05);
       };
 
-      beep(800, 0, 0.15);
-      beep(1000, 0.2, 0.15);
-      beep(1200, 0.4, 0.15);
+      beep(880, 0, 0.18);
+      beep(1100, 0.22, 0.18);
+      beep(1320, 0.44, 0.22);
 
-      setTimeout(() => context.close(), 1000);
+      setTimeout(() => context.close().catch(() => null), 1200);
     } catch (soundError) {
       console.warn("[Preguntas] No se pudo reproducir sonido:", soundError);
     }
@@ -205,7 +213,7 @@ export default function PreguntasPage() {
     ) {
       const newCount = currentUnanswered - prevUnansweredCountRef.current;
 
-      playAlertSound();
+      playAlertSound().catch(() => null);
 
       if ("Notification" in window && Notification.permission === "granted") {
         new Notification(`${newCount} pregunta${newCount > 1 ? "s" : ""} nueva${newCount > 1 ? "s" : ""}`, {
@@ -282,7 +290,7 @@ export default function PreguntasPage() {
               return [];
             })();
 
-      if (!questionsData.length && loadErrors.length > 0 && questions.length === 0) {
+      if (!questionsData.length && loadErrors.length > 0) {
         throw new Error(loadErrors[0]);
       }
 
@@ -339,7 +347,7 @@ export default function PreguntasPage() {
     } finally {
       setLoading(false);
     }
-  }, [accounts, buildResponseTime, questions.length]);
+  }, [accounts, buildResponseTime]);
 
   useEffect(() => {
     if (!accountsLoading && accounts.length > 0) {
