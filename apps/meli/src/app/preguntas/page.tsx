@@ -61,6 +61,17 @@ interface AccountStats {
   responseTime: MeliResponseTime | null;
 }
 
+interface ResponseTimeApiItem {
+  accountId: string;
+  nickname: string;
+  sellerId: string;
+  total_minutes: number;
+  weekdays_working_hours_minutes: number | null;
+  weekdays_extra_hours_minutes: number | null;
+  weekend_minutes: number | null;
+  error?: string;
+}
+
 function normalizeQuestion(rawQuestion: any, account: { accountId: string; nickname: string; sellerId: string }): UnifiedQuestion | null {
   const id = Number(rawQuestion.id ?? rawQuestion.meli_question_id);
 
@@ -112,6 +123,40 @@ export default function PreguntasPage() {
   const [accountStats, setAccountStats] = useState<AccountStats[]>([]);
   const [answering, setAnswering] = useState<number | null>(null);
   const prevUnansweredCountRef = useRef<number | null>(null);
+
+  const buildResponseTime = useCallback((item?: ResponseTimeApiItem): MeliResponseTime | null => {
+    if (!item) {
+      return null;
+    }
+
+    return {
+      user_id: Number(item.sellerId) || 0,
+      total: {
+        response_time: item.total_minutes,
+      },
+      weekdays_working_hours:
+        item.weekdays_working_hours_minutes !== null
+          ? {
+              response_time: item.weekdays_working_hours_minutes,
+              sales_percent_increase: null,
+            }
+          : undefined,
+      weekdays_extra_hours:
+        item.weekdays_extra_hours_minutes !== null
+          ? {
+              response_time: item.weekdays_extra_hours_minutes,
+              sales_percent_increase: null,
+            }
+          : undefined,
+      weekend:
+        item.weekend_minutes !== null
+          ? {
+              response_time: item.weekend_minutes,
+              sales_percent_increase: null,
+            }
+          : undefined,
+    };
+  }, []);
 
   const playAlertSound = useCallback(() => {
     try {
@@ -199,48 +244,82 @@ export default function PreguntasPage() {
         throw new Error("No hay sesión activa");
       }
 
-      const response = await fetch(`/api/meli-questions-unified?_t=${Date.now()}`, {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
+      const headers = {
+        Authorization: `Bearer ${session.access_token}`,
+      };
 
-      const data = await response.json().catch(() => null);
+      const fetchJson = async <T,>(url: string): Promise<T> => {
+        const response = await fetch(url, { headers });
+        const data = await response.json().catch(() => null);
 
-      if (!response.ok || data?.error) {
-        throw new Error(data?.error || `Error ${response.status}`);
+        if (!response.ok) {
+          throw new Error(data?.error || `Error ${response.status}`);
+        }
+
+        return data as T;
+      };
+
+      const [questionsResult, responseTimesResult] = await Promise.allSettled([
+        fetchJson<any[]>(`/api/meli-questions?_t=${Date.now()}`),
+        fetchJson<ResponseTimeApiItem[]>(`/api/meli-questions/response-time?_t=${Date.now()}`),
+      ]);
+
+      const loadErrors: string[] = [];
+
+      const questionsData =
+        questionsResult.status === "fulfilled"
+          ? questionsResult.value
+          : (() => {
+              loadErrors.push(questionsResult.reason instanceof Error ? questionsResult.reason.message : "Error cargando preguntas");
+              return [];
+            })();
+
+      const responseTimesData =
+        responseTimesResult.status === "fulfilled"
+          ? responseTimesResult.value
+          : (() => {
+              loadErrors.push(responseTimesResult.reason instanceof Error ? responseTimesResult.reason.message : "Error cargando tiempos");
+              return [];
+            })();
+
+      if (!questionsData.length && loadErrors.length > 0 && questions.length === 0) {
+        throw new Error(loadErrors[0]);
       }
 
-      const unified: UnifiedQuestion[] = [];
-      const stats: AccountStats[] = [];
+      const responseTimeMap = new Map(
+        responseTimesData.map((item) => [item.accountId, item] as const)
+      );
+
+      const unified = questionsData
+        .map((question) => {
+          const account = accounts.find((item) => item.id === String(question.meli_account_id));
+
+          return normalizeQuestion(question, {
+            accountId: String(question.meli_account_id),
+            nickname: account?.meli_nickname || question.meli_accounts?.nickname || "Cuenta",
+            sellerId: account?.meli_user_id || "",
+          });
+        })
+        .filter((question: UnifiedQuestion | null): question is UnifiedQuestion => question !== null);
+
       const accountQuestionsMap = new Map<string, UnifiedQuestion[]>();
-
-      for (const result of data.questions ?? []) {
-        const accountQuestions = (result.questions ?? [])
-          .map((question: any) =>
-            normalizeQuestion(question, {
-              accountId: result.accountId,
-              nickname: result.nickname,
-              sellerId: result.sellerId,
-            })
-          )
-          .filter((question: UnifiedQuestion | null): question is UnifiedQuestion => question !== null);
-
-        unified.push(...accountQuestions);
-        accountQuestionsMap.set(result.accountId, accountQuestions);
+      for (const question of unified) {
+        const existing = accountQuestionsMap.get(question.account.id) ?? [];
+        existing.push(question);
+        accountQuestionsMap.set(question.account.id, existing);
       }
 
-      for (const account of data.accounts ?? []) {
-        const accountQuestions = accountQuestionsMap.get(account.accountId) ?? [];
+      const stats: AccountStats[] = accounts.map((account) => {
+        const accountQuestions = accountQuestionsMap.get(account.id) ?? [];
 
-        stats.push({
-          accountId: account.accountId,
-          nickname: account.nickname,
-          total: account.total ?? accountQuestions.length,
-          unanswered: accountQuestions.filter((question: UnifiedQuestion) => question.status === QUESTION_STATUSES.UNANSWERED).length,
-          responseTime: account.responseTime ?? null,
-        });
-      }
+        return {
+          accountId: account.id,
+          nickname: account.meli_nickname,
+          total: accountQuestions.length,
+          unanswered: accountQuestions.filter((question) => question.status === QUESTION_STATUSES.UNANSWERED).length,
+          responseTime: buildResponseTime(responseTimeMap.get(account.id)),
+        };
+      });
 
       unified.sort(
         (firstQuestion, secondQuestion) =>
@@ -250,12 +329,17 @@ export default function PreguntasPage() {
       setQuestions(unified);
       setAccountStats(stats);
       setLastUpdate(new Date());
+
+      if (loadErrors.length > 0) {
+        toast.warning(loadErrors[0]);
+        setError(null);
+      }
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Error cargando preguntas");
     } finally {
       setLoading(false);
     }
-  }, [accounts]);
+  }, [accounts, buildResponseTime, questions.length]);
 
   useEffect(() => {
     if (!accountsLoading && accounts.length > 0) {
