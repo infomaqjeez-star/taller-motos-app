@@ -433,12 +433,22 @@ export default function PreguntasPage() {
         });
       } else {
         // UNANSWERED (default): reemplazar estado con datos frescos de MeLi
-        // Preservar preguntas recién respondidas hasta que MeLi propague el cambio
+        // PERO preservar preguntas recién respondidas: excluir de unified si están en justAnsweredIds
         const justAnswered = justAnsweredIdsRef.current;
         setQuestions(prev => {
-          if (justAnswered.size === 0) return unified;
-          const answeredLocally = prev.filter(q => justAnswered.has(q.id) && q.status === QUESTION_STATUSES.ANSWERED);
-          return [...unified, ...answeredLocally];
+          // Filtrar unified para no incluir preguntas que tenemos localmente como ANSWERED
+          const filteredUnified = justAnswered.size === 0
+            ? unified
+            : unified.filter(q => !justAnswered.has(q.id));
+
+          if (justAnswered.size === 0) return filteredUnified;
+
+          // Mantener las preguntas respondidas localmente que aún no propagaron a MeLi
+          const answeredLocally = prev.filter(q =>
+            justAnswered.has(q.id) && q.status === QUESTION_STATUSES.ANSWERED
+          );
+
+          return [...filteredUnified, ...answeredLocally];
         });
         setAccountStats(stats);
         setLastUpdate(new Date());
