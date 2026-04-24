@@ -3,26 +3,6 @@ import { getSupabase, getValidToken, type LinkedMeliAccount } from "@/lib/meli";
 
 export const dynamic = "force-dynamic";
 
-async function resolveSellerId(token: string, account: LinkedMeliAccount): Promise<string> {
-  try {
-    const response = await fetch("https://api.mercadolibre.com/users/me", {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      signal: AbortSignal.timeout(5000),
-    });
-
-    if (!response.ok) {
-      return String(account.meli_user_id);
-    }
-
-    const data = await response.json();
-    return String(data.id ?? account.meli_user_id);
-  } catch {
-    return String(account.meli_user_id);
-  }
-}
-
 interface ResponseTimePeriod {
   response_time?: number;
   sales_percent_increase?: number | null;
@@ -54,13 +34,8 @@ export async function GET(request: NextRequest) {
     let userId: string | null = null;
 
     if (authHeader?.startsWith("Bearer ")) {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser(authHeader.slice(7));
-
-      if (user) {
-        userId = user.id;
-      }
+      const { data: { user } } = await supabase.auth.getUser(authHeader.slice(7));
+      if (user) userId = user.id;
     }
 
     if (!userId) {
@@ -79,61 +54,25 @@ export async function GET(request: NextRequest) {
 
     const results: AccountResponseTime[] = await Promise.all(
       accounts.map(async (account) => {
+        // Usar meli_user_id directamente — evita llamada extra a /users/me
+        const sellerId = String(account.meli_user_id);
         try {
           const token = await getValidToken(account as LinkedMeliAccount);
 
           if (!token) {
-            return {
-              accountId: account.id,
-              nickname: account.meli_nickname,
-              sellerId: String(account.meli_user_id),
-              total_minutes: 0,
-              weekdays_working_hours_minutes: null,
-              weekdays_extra_hours_minutes: null,
-              weekend_minutes: null,
-              error: "Token no disponible",
-            };
+            return { accountId: account.id, nickname: account.meli_nickname, sellerId, total_minutes: 0, weekdays_working_hours_minutes: null, weekdays_extra_hours_minutes: null, weekend_minutes: null, error: "Token no disponible" };
           }
-
-          const sellerId = await resolveSellerId(token, account as LinkedMeliAccount);
 
           const response = await fetch(
             `https://api.mercadolibre.com/users/${sellerId}/questions/response_time`,
-            {
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-              signal: AbortSignal.timeout(8000),
-            }
+            { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(8000) }
           );
 
-          if (response.status === 404) {
-            return {
-              accountId: account.id,
-              nickname: account.meli_nickname,
-              sellerId,
-              total_minutes: 0,
-              weekdays_working_hours_minutes: null,
-              weekdays_extra_hours_minutes: null,
-              weekend_minutes: null,
-            };
-          }
-
           if (!response.ok) {
-            return {
-              accountId: account.id,
-              nickname: account.meli_nickname,
-              sellerId,
-              total_minutes: 0,
-              weekdays_working_hours_minutes: null,
-              weekdays_extra_hours_minutes: null,
-              weekend_minutes: null,
-              error: `HTTP ${response.status}`,
-            };
+            return { accountId: account.id, nickname: account.meli_nickname, sellerId, total_minutes: 0, weekdays_working_hours_minutes: null, weekdays_extra_hours_minutes: null, weekend_minutes: null, ...(response.status !== 404 ? { error: `HTTP ${response.status}` } : {}) };
           }
 
           const data: MeliResponseTimeData = await response.json();
-          console.log(`[response-time] Account ${account.meli_nickname} (${sellerId}) raw data:`, JSON.stringify(data));
 
           return {
             accountId: account.id,
@@ -145,16 +84,7 @@ export async function GET(request: NextRequest) {
             weekend_minutes: data.weekend?.response_time ?? null,
           };
         } catch (error) {
-          return {
-            accountId: account.id,
-            nickname: account.meli_nickname,
-            sellerId: String(account.meli_user_id),
-            total_minutes: 0,
-            weekdays_working_hours_minutes: null,
-            weekdays_extra_hours_minutes: null,
-            weekend_minutes: null,
-            error: error instanceof Error ? error.message : "Error desconocido",
-          };
+          return { accountId: account.id, nickname: account.meli_nickname, sellerId, total_minutes: 0, weekdays_working_hours_minutes: null, weekdays_extra_hours_minutes: null, weekend_minutes: null, error: error instanceof Error ? error.message : "Error desconocido" };
         }
       })
     );

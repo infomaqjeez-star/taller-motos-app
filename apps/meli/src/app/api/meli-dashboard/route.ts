@@ -73,13 +73,10 @@ export async function GET(request: NextRequest) {
     // Verificar caché
     const cachedData = getCachedData(userId);
     if (cachedData) {
-      console.log(`[meli-dashboard] ✅ Usando caché para ${userId}`);
       return NextResponse.json(cachedData);
     }
 
     // Obtener las cuentas de Mercado Libre del usuario
-    console.log(`[meli-dashboard] Buscando cuentas para userId: ${userId}`);
-    
     const { data: accounts, error: accountsError } = await supabase
       .from("linked_meli_accounts")
       .select("id, user_id, meli_user_id, meli_nickname, is_active, access_token_enc, refresh_token_enc, token_expiry_date")
@@ -88,15 +85,7 @@ export async function GET(request: NextRequest) {
 
     if (accountsError) {
       console.error("[meli-dashboard] Error al obtener cuentas:", accountsError);
-      return NextResponse.json(
-        { error: "Error al obtener cuentas" },
-        { status: 500 }
-      );
-    }
-
-    console.log(`[meli-dashboard] Cuentas encontradas: ${accounts?.length || 0}`);
-    if (accounts && accounts.length > 0) {
-      console.log(`[meli-dashboard] Primeras cuentas:`, accounts.map(a => ({ id: a.id, nickname: a.meli_nickname, meli_user_id: a.meli_user_id })));
+      return NextResponse.json({ error: "Error al obtener cuentas" }, { status: 500 });
     }
 
     // Si no hay cuentas, devolver array vacío
@@ -140,8 +129,6 @@ export async function GET(request: NextRequest) {
           const meliHeaders = { Authorization: `Bearer ${validToken}` };
           const meliId = String(account.meli_user_id);
 
-          console.log(`[meli-dashboard] ✅ Token válido para ${account.meli_nickname}, consultando API...`);
-
           // ── Llamadas paralelas a MeLi API ───────────────────────────────
           let userRes, questionsRes, ordersReadyRes, itemsRes, claimsRes, unreadRes, 
               todayOrdersPaidRes, todayOrdersConfirmedRes, todayOrdersProcessingRes;
@@ -183,19 +170,6 @@ export async function GET(request: NextRequest) {
             return defaultReturn("Error en llamadas API");
           }
 
-          // Log de resultados
-          console.log(`[meli-dashboard] 📊 Resultados para ${account.meli_nickname}:`, {
-            user: userRes?.status,
-            questions: questionsRes?.status,
-            orders: ordersReadyRes?.status,
-            items: itemsRes?.status,
-            claims: claimsRes?.status,
-            unread: unreadRes?.status,
-            todayOrdersPaid: todayOrdersPaidRes?.status,
-            todayOrdersConfirmed: todayOrdersConfirmedRes?.status,
-            todayOrdersProcessing: todayOrdersProcessingRes?.status,
-          });
-
           // ── Parsear resultados ──────────────────────────────────────────
           const safeJson = async (r: PromiseSettledResult<Response>) => {
             if (r.status === "fulfilled" && r.value.ok) {
@@ -212,15 +186,6 @@ export async function GET(request: NextRequest) {
           // Reputación
           const rep = userData?.seller_reputation ?? {};
           
-          // Log detallado para debugging
-          console.log(`[meli-dashboard] 📊 Datos de reputación para ${account.meli_nickname}:`, {
-            level_id: rep.level_id,
-            power_seller_status: rep.power_seller_status,
-            transactions: rep.transactions,
-            metrics: rep.metrics,
-            raw_metrics_keys: rep.metrics ? Object.keys(rep.metrics) : 'no metrics',
-          });
-          
           const reputation: Reputation = {
             level_id:               rep.level_id ?? null,
             power_seller_status:    rep.power_seller_status ?? null,
@@ -234,13 +199,6 @@ export async function GET(request: NextRequest) {
             cancellations:          rep.metrics?.cancellations?.rate ?? 0,
             immediate_payment:      false,
           };
-          
-          // Log del resultado final
-          console.log(`[meli-dashboard] ✅ Reputación procesada para ${account.meli_nickname}:`, {
-            delayed_handling_time: reputation.delayed_handling_time,
-            claims: reputation.claims,
-            cancellations: reputation.cancellations,
-          });
 
           // Contadores
           const unansweredQuestions = questionsData?.total ?? questionsData?.paging?.total ?? 0;
@@ -269,14 +227,6 @@ export async function GET(request: NextRequest) {
           const todaySalesAmount = allOrders.reduce((sum: number, order: any) => {
             return sum + (order.total_amount || order.paid_amount || 0);
           }, 0);
-          
-          console.log(`[meli-dashboard] 💰 Ventas hoy para ${account.meli_nickname}:`, {
-            paid: paidOrders.length,
-            confirmed: confirmedOrders.length,
-            processing: processingOrders.length,
-            unique: todayOrders,
-            total: todaySalesAmount,
-          });
 
           return {
             account: account.meli_nickname || `Cuenta ${account.meli_user_id}`,

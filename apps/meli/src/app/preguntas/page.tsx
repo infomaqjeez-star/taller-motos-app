@@ -61,16 +61,7 @@ interface AccountStats {
   responseTime: MeliResponseTime | null;
 }
 
-interface ResponseTimeApiItem {
-  accountId: string;
-  nickname: string;
-  sellerId: string;
-  total_minutes: number;
-  weekdays_working_hours_minutes: number | null;
-  weekdays_extra_hours_minutes: number | null;
-  weekend_minutes: number | null;
-  error?: string;
-}
+
 
 function normalizeQuestion(rawQuestion: any, account: { accountId: string; nickname: string; sellerId: string }): UnifiedQuestion | null {
   const id = Number(rawQuestion.id ?? rawQuestion.meli_question_id);
@@ -124,38 +115,21 @@ export default function PreguntasPage() {
   const [answering, setAnswering] = useState<number | null>(null);
   const prevUnansweredCountRef = useRef<number | null>(null);
 
-  const buildResponseTime = useCallback((item?: ResponseTimeApiItem): MeliResponseTime | null => {
-    if (!item) {
-      return null;
+  const buildResponseTime = useCallback((data: any): MeliResponseTime | null => {
+    if (!data) return null;
+    // Formato directo de MeLi (viene de /api/meli-questions-unified)
+    if (data.total?.response_time !== undefined) return data as MeliResponseTime;
+    // Formato antiguo (total_minutes)
+    if (data.total_minutes !== undefined) {
+      return {
+        user_id: Number(data.sellerId) || 0,
+        total: { response_time: data.total_minutes },
+        weekdays_working_hours: data.weekdays_working_hours_minutes !== null ? { response_time: data.weekdays_working_hours_minutes, sales_percent_increase: null } : undefined,
+        weekdays_extra_hours: data.weekdays_extra_hours_minutes !== null ? { response_time: data.weekdays_extra_hours_minutes, sales_percent_increase: null } : undefined,
+        weekend: data.weekend_minutes !== null ? { response_time: data.weekend_minutes, sales_percent_increase: null } : undefined,
+      };
     }
-
-    return {
-      user_id: Number(item.sellerId) || 0,
-      total: {
-        response_time: item.total_minutes,
-      },
-      weekdays_working_hours:
-        item.weekdays_working_hours_minutes !== null
-          ? {
-              response_time: item.weekdays_working_hours_minutes,
-              sales_percent_increase: null,
-            }
-          : undefined,
-      weekdays_extra_hours:
-        item.weekdays_extra_hours_minutes !== null
-          ? {
-              response_time: item.weekdays_extra_hours_minutes,
-              sales_percent_increase: null,
-            }
-          : undefined,
-      weekend:
-        item.weekend_minutes !== null
-          ? {
-              response_time: item.weekend_minutes,
-              sales_percent_increase: null,
-            }
-          : undefined,
-    };
+    return null;
   }, []);
 
   const playAlertSound = useCallback(async () => {
@@ -256,78 +230,36 @@ export default function PreguntasPage() {
         Authorization: `Bearer ${session.access_token}`,
       };
 
-      const fetchJson = async <T,>(url: string): Promise<T> => {
-        const response = await fetch(url, { headers });
-        const data = await response.json().catch(() => null);
+      // Una sola request al endpoint unificado (hace todo en paralelo server-side)
+      const res = await fetch(`/api/meli-questions-unified?_t=${Date.now()}`, { headers });
+      const payload = await res.json().catch(() => null);
 
-        if (!response.ok) {
-          throw new Error(data?.error || `Error ${response.status}`);
-        }
-
-        return data as T;
-      };
-
-      const [questionsResult, responseTimesResult] = await Promise.allSettled([
-        fetchJson<any[]>(`/api/meli-questions?_t=${Date.now()}`),
-        fetchJson<ResponseTimeApiItem[]>(`/api/meli-questions/response-time?_t=${Date.now()}`),
-      ]);
-
-      const loadErrors: string[] = [];
-
-      const questionsData =
-        questionsResult.status === "fulfilled"
-          ? questionsResult.value
-          : (() => {
-              loadErrors.push(questionsResult.reason instanceof Error ? questionsResult.reason.message : "Error cargando preguntas");
-              return [];
-            })();
-
-      const responseTimesData =
-        responseTimesResult.status === "fulfilled"
-          ? responseTimesResult.value
-          : (() => {
-              loadErrors.push(responseTimesResult.reason instanceof Error ? responseTimesResult.reason.message : "Error cargando tiempos");
-              return [];
-            })();
-
-      if (!questionsData.length && loadErrors.length > 0) {
-        throw new Error(loadErrors[0]);
+      if (!res.ok) {
+        throw new Error(payload?.error || `Error ${res.status}`);
       }
 
-      const responseTimeMap = new Map(
-        responseTimesData.map((item) => [item.accountId, item] as const)
-      );
+      // payload = { questions: AccountResult[], accounts: AccountSummary[], totalQuestions }
+      const accountResults: any[] = payload?.questions ?? [];
 
-      const unified = questionsData
-        .map((question) => {
-          const account = accounts.find((item) => item.id === String(question.meli_account_id));
-
-          return normalizeQuestion(question, {
-            accountId: String(question.meli_account_id),
-            nickname: account?.meli_nickname || question.meli_accounts?.nickname || "Cuenta",
-            sellerId: account?.meli_user_id || "",
+      const unified: UnifiedQuestion[] = [];
+      for (const ar of accountResults) {
+        for (const question of ar.questions ?? []) {
+          const normalized = normalizeQuestion(question, {
+            accountId: ar.accountId,
+            nickname: ar.nickname,
+            sellerId: ar.sellerId,
           });
-        })
-        .filter((question: UnifiedQuestion | null): question is UnifiedQuestion => question !== null);
-
-      const accountQuestionsMap = new Map<string, UnifiedQuestion[]>();
-      for (const question of unified) {
-        const existing = accountQuestionsMap.get(question.account.id) ?? [];
-        existing.push(question);
-        accountQuestionsMap.set(question.account.id, existing);
+          if (normalized) unified.push(normalized);
+        }
       }
 
-      const stats: AccountStats[] = accounts.map((account) => {
-        const accountQuestions = accountQuestionsMap.get(account.id) ?? [];
-
-        return {
-          accountId: account.id,
-          nickname: account.meli_nickname,
-          total: accountQuestions.length,
-          unanswered: accountQuestions.filter((question) => question.status === QUESTION_STATUSES.UNANSWERED).length,
-          responseTime: buildResponseTime(responseTimeMap.get(account.id)),
-        };
-      });
+      const stats: AccountStats[] = accountResults.map((ar) => ({
+        accountId: ar.accountId,
+        nickname: ar.nickname,
+        total: (ar.questions ?? []).length,
+        unanswered: (ar.questions ?? []).filter((q: any) => q.status === QUESTION_STATUSES.UNANSWERED).length,
+        responseTime: buildResponseTime(ar.responseTime),
+      }));
 
       unified.sort(
         (firstQuestion, secondQuestion) =>
@@ -337,11 +269,6 @@ export default function PreguntasPage() {
       setQuestions(unified);
       setAccountStats(stats);
       setLastUpdate(new Date());
-
-      if (loadErrors.length > 0) {
-        toast.warning(loadErrors[0]);
-        setError(null);
-      }
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Error cargando preguntas");
     } finally {
