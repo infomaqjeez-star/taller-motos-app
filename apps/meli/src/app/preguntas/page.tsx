@@ -1009,7 +1009,7 @@ export default function PreguntasPage() {
             <p className="text-xs mt-2" style={{ color: "#9CA3AF" }}>
               Cuentas: {accounts.length} | Loading: {accountsLoading ? "Sí" : "No"}
             </p>
-            <button onClick={loadAllQuestions} className="mt-2 px-4 py-1.5 rounded-lg text-xs font-bold bg-red-500 text-white">
+            <button onClick={() => loadAllQuestions()} className="mt-2 px-4 py-1.5 rounded-lg text-xs font-bold bg-red-500 text-white">
               Reintentar
             </button>
           </div>
