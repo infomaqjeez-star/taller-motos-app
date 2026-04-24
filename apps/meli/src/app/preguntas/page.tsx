@@ -263,6 +263,12 @@ export default function PreguntasPage() {
         beep(587, 0.00, 0.12, "square");
         beep(880, 0.16, 0.20, "sine");
         break;
+      default:
+        // Fallback: triple beep para cualquier valor desconocido
+        beep(880,  0.00, 0.18);
+        beep(1100, 0.22, 0.18);
+        beep(1320, 0.44, 0.22);
+        break;
     }
   }, []);
 
@@ -275,7 +281,9 @@ export default function PreguntasPage() {
         await audio.play();
         return;
       }
-      await playWebAudioPattern(alertSoundId, alertVolume);
+      // Si "custom" pero sin archivo, usar "triple" como fallback
+      const effectiveSound = alertSoundId === "custom" ? "triple" : alertSoundId;
+      await playWebAudioPattern(effectiveSound, alertVolume);
     } catch (e) {
       console.warn("[Preguntas] Error audio:", e);
     }
@@ -529,8 +537,8 @@ export default function PreguntasPage() {
   const filteredQuestions = useMemo(() => {
     return questions.filter((question) => {
       // Las preguntas recién respondidas SIEMPRE se muestran hasta el siguiente poll
-      const justAnswered = justAnsweredIds.has(question.id);
-      if (!justAnswered && statusFilter !== "all" && question.status !== statusFilter) {
+      // Filtro por estado: las preguntas respondidas desaparecen inmediatamente del tab "Sin responder"
+      if (statusFilter !== "all" && question.status !== statusFilter) {
         return false;
       }
 
@@ -620,7 +628,17 @@ export default function PreguntasPage() {
       toast.success("Respuesta enviada correctamente");
       return true;
     } catch (answerError) {
-      toast.error(answerError instanceof Error ? answerError.message : "Error enviando respuesta");
+      const errMsg = answerError instanceof Error ? answerError.message : "Error enviando respuesta";
+      toast.error(errMsg);
+      // Si MeLi dice que la pregunta ya no está sin responder → actualizar estado local
+      // para que se mueva al tab "Respondidas" y no quede bloqueada
+      if (/unanswered|answered/i.test(errMsg)) {
+        setQuestions((prev) =>
+          prev.map((q) =>
+            q.id === questionId ? { ...q, status: QUESTION_STATUSES.ANSWERED } : q
+          )
+        );
+      }
       return false;
     } finally {
       setAnswering(null);
