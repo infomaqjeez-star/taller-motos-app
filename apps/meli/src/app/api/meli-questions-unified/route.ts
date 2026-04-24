@@ -3,6 +3,19 @@ import { getSupabase, getValidToken, type LinkedMeliAccount } from "@/lib/meli";
 
 export const dynamic = "force-dynamic";
 
+// ── Caché de items (título + thumbnail) — persiste entre polls en el servidor ──
+const ITEM_CACHE_TTL = 60 * 60 * 1000; // 1 hora
+const itemCache = new Map<string, { title: string; thumbnail: string; ts: number }>();
+
+function getCachedItem(itemId: string) {
+  const c = itemCache.get(itemId);
+  if (c && Date.now() - c.ts < ITEM_CACHE_TTL) return c;
+  return null;
+}
+function setCachedItem(itemId: string, title: string, thumbnail: string) {
+  itemCache.set(itemId, { title, thumbnail, ts: Date.now() });
+}
+
 /**
  * GET /api/meli-questions-unified
  * 
@@ -99,35 +112,42 @@ export async function GET(request: NextRequest) {
           responseTime = await rtRes.value.json();
         }
 
-        // Enriquecer con datos de items — en paralelo, batch de 10
-        const itemCache = new Map<string, { title: string; thumbnail: string }>();
+        // Enriquecer con datos de items — usa caché del servidor, batch de 20
+        const localItemMap = new Map<string, { title: string; thumbnail: string }>();
         const uniqueItems = [...new Set(questions.map((q: any) => String(q.item_id)).filter(Boolean))];
+        const itemsToFetch = uniqueItems.filter(id => !getCachedItem(id));
         
-        for (let i = 0; i < uniqueItems.length; i += 10) {
-          const batch = uniqueItems.slice(i, i + 10);
+        // Solo fetchar los items que no están en caché
+        for (let i = 0; i < itemsToFetch.length; i += 20) {
+          const batch = itemsToFetch.slice(i, i + 20);
           await Promise.allSettled(
             batch.map(async (itemId) => {
               try {
                 const res = await fetch(
                   `https://api.mercadolibre.com/items/${itemId}?attributes=id,title,thumbnail`,
-                  { headers, signal: AbortSignal.timeout(3000) }
+                  { headers, signal: AbortSignal.timeout(2000) }
                 );
                 if (res.ok) {
                   const d = await res.json();
-                  itemCache.set(itemId, {
-                    title: d.title || itemId,
-                    thumbnail: String(d.thumbnail || "").replace("http://", "https://"),
-                  });
+                  const title = d.title || itemId;
+                  const thumb = String(d.thumbnail || "").replace("http://", "https://");
+                  setCachedItem(itemId, title, thumb);
                 }
               } catch { /* skip */ }
             })
           );
         }
 
+        // Resolver desde caché
+        for (const id of uniqueItems) {
+          const c = getCachedItem(id);
+          if (c) localItemMap.set(id, { title: c.title, thumbnail: c.thumbnail });
+        }
+
         // Mapear al formato del frontend
         const mappedQuestions = questions.map((q: any) => {
           const itemId = String(q.item_id);
-          const item = itemCache.get(itemId) || { title: itemId, thumbnail: "" };
+          const item = localItemMap.get(itemId) || { title: itemId, thumbnail: "" };
           return {
             meli_question_id: q.id,
             meli_account_id: account.id,

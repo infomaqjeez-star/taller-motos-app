@@ -131,6 +131,8 @@ export default function PreguntasPage() {
   const [accountFilter, setAccountFilter] = useState<string>("all");
   const [accountStats, setAccountStats] = useState<AccountStats[]>([]);
   const [answering, setAnswering] = useState<number | null>(null);
+  // IDs de preguntas recién respondidas: quedan visibles hasta el siguiente poll
+  const [justAnsweredIds, setJustAnsweredIds] = useState<Set<number>>(new Set());
   const prevUnansweredCountRef = useRef<number | null>(null);
 
   // ── Configuración de alerta sonora (persiste en localStorage) ────────────
@@ -411,6 +413,8 @@ export default function PreguntasPage() {
       setQuestions(unified);
       setAccountStats(stats);
       setLastUpdate(new Date());
+      // Limpiar las preguntas "recién respondidas" — ahora el estado viene fresco de MeLi
+      setJustAnsweredIds(new Set());
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Error cargando preguntas");
     } finally {
@@ -448,7 +452,9 @@ export default function PreguntasPage() {
 
   const filteredQuestions = useMemo(() => {
     return questions.filter((question) => {
-      if (statusFilter !== "all" && question.status !== statusFilter) {
+      // Las preguntas recién respondidas SIEMPRE se muestran hasta el siguiente poll
+      const justAnswered = justAnsweredIds.has(question.id);
+      if (!justAnswered && statusFilter !== "all" && question.status !== statusFilter) {
         return false;
       }
 
@@ -470,7 +476,7 @@ export default function PreguntasPage() {
         (question.from.nickname?.toLowerCase().includes(term) ?? false)
       );
     });
-  }, [accountFilter, questions, searchTerm, statusFilter]);
+  }, [accountFilter, justAnsweredIds, questions, searchTerm, statusFilter]);
 
   const handleAnswer = async (questionId: number, accountId: string, text: string) => {
     const trimmedText = text.trim();
@@ -509,6 +515,8 @@ export default function PreguntasPage() {
         throw new Error(data?.error || `Error ${response.status}`);
       }
 
+      // Marcar como respondida: queda visible con badge "✓ Respondida" hasta el siguiente poll
+      setJustAnsweredIds(prev => new Set(prev).add(questionId));
       setQuestions((previousQuestions) =>
         previousQuestions.map((question) =>
           question.id === questionId
@@ -901,6 +909,7 @@ export default function PreguntasPage() {
                 key={question.id}
                 question={question}
                 isAnswering={answering === question.id}
+                isJustAnswered={justAnsweredIds.has(question.id)}
                 onAnswer={(text) => handleAnswer(question.id, question.account.id, text)}
               />
             ))
@@ -914,10 +923,11 @@ export default function PreguntasPage() {
 interface QuestionCardProps {
   question: UnifiedQuestion;
   isAnswering: boolean;
+  isJustAnswered: boolean;
   onAnswer: (text: string) => Promise<boolean>;
 }
 
-function QuestionCard({ question, isAnswering, onAnswer }: QuestionCardProps) {
+function QuestionCard({ question, isAnswering, isJustAnswered, onAnswer }: QuestionCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [localAnswer, setLocalAnswer] = useState("");
 
@@ -1052,7 +1062,19 @@ function QuestionCard({ question, isAnswering, onAnswer }: QuestionCardProps) {
             </div>
           )}
 
-          {isUnanswered && (
+          {isJustAnswered && (
+            <div
+              className="flex items-center gap-2 px-3 py-2.5 rounded-xl mt-2"
+              style={{ background: "#22c55e18", border: "1px solid #22c55e44" }}
+            >
+              <CheckCircle2 className="w-4 h-4 flex-shrink-0" style={{ color: "#22c55e" }} />
+              <span className="text-sm font-bold" style={{ color: "#22c55e" }}>
+                ✓ Respuesta enviada — desaparecerá en el próximo poll
+              </span>
+            </div>
+          )}
+
+          {isUnanswered && !isJustAnswered && (
             <div className="pt-2">
               <p className="text-[10px] font-bold uppercase tracking-wider mb-1.5" style={{ color: "#6B7280" }}>
                 Responder

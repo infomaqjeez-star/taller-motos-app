@@ -198,53 +198,39 @@ export async function getValidToken(
   account: LinkedMeliAccount | MeliAccount
 ): Promise<string | null> {
   try {
-    // Normalizar campos (soportar ambos formatos)
     const tokenExpiryDate = (account as LinkedMeliAccount).token_expiry_date || (account as MeliAccount).expires_at;
-    const meliUserId = (account as LinkedMeliAccount).meli_user_id || (account as MeliAccount).meli_user_id;
     const accountId = account.id;
 
-    // Intentar desencriptar el token (puede estar encriptado o en texto plano)
+    // Desencriptar el access token
     let accessToken: string;
     try {
       accessToken = await decrypt(account.access_token_enc);
     } catch {
-      // Si falla el decrypt, asumir que está en texto plano
       accessToken = account.access_token_enc;
     }
 
-    // Verificar si está por expirar (con margen de 5 minutos)
-    const isExpired = tokenExpiryDate && 
+    // Si el token no está expirado (margen 5 min), devolverlo directamente
+    // SIN verificación live contra MeLi — evita 8 requests innecesarias por carga
+    const isExpired = tokenExpiryDate &&
       new Date(tokenExpiryDate).getTime() < Date.now() + 5 * 60 * 1000;
 
     if (!isExpired && accessToken) {
-      try {
-        // Verificar que el token funcione
-        const testUserId = typeof meliUserId === 'string' ? meliUserId : String(meliUserId);
-        const test = await fetch(`https://api.mercadolibre.com/users/${testUserId}`, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-          signal: AbortSignal.timeout(5000),
-        });
-        if (test.ok) return accessToken;
-      } catch {
-        // Si falla el test, continuar a refresh
-      }
+      return accessToken;
     }
 
-    // Intentar refresh
+    // Token expirado → intentar refresh
     if (!account.refresh_token_enc) return null;
-    
-    // Desencriptar refresh token
+
     let refreshToken: string;
     try {
       refreshToken = await decrypt(account.refresh_token_enc);
     } catch {
       refreshToken = account.refresh_token_enc;
     }
-    
+
     const newTokens = await refreshMeliToken(refreshToken);
     if (!newTokens) return null;
-    
-    // Guardar nuevos tokens encriptados
+
     await updateLinkedAccountTokens(accountId, newTokens);
     return newTokens.access_token;
   } catch (err) {
