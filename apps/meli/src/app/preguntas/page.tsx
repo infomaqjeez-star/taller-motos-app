@@ -115,6 +115,34 @@ export default function PreguntasPage() {
   const [answering, setAnswering] = useState<number | null>(null);
   const prevUnansweredCountRef = useRef<number | null>(null);
 
+  // ── AudioContext persistente ── creado UNA VEZ en primera interacción ──────
+  const audioCtxRef = useRef<AudioContext | null>(null);
+
+  const unlockAudio = useCallback(() => {
+    if (audioCtxRef.current) return;
+    try {
+      const Cls = window.AudioContext || (window as any).webkitAudioContext;
+      if (!Cls) return;
+      const ctx = new Cls();
+      audioCtxRef.current = ctx;
+      // Desbloquear inmediatamente en el contexto del gesto del usuario
+      if (ctx.state === "suspended") ctx.resume().catch(() => null);
+    } catch { /* silencioso */ }
+  }, []);
+
+  // Registrar listeners para desbloquear audio en la primera interacción
+  useEffect(() => {
+    const opts = { once: true, capture: true } as const;
+    document.addEventListener("click",      unlockAudio, opts);
+    document.addEventListener("keydown",    unlockAudio, opts);
+    document.addEventListener("touchstart", unlockAudio, opts);
+    return () => {
+      document.removeEventListener("click",      unlockAudio, true);
+      document.removeEventListener("keydown",    unlockAudio, true);
+      document.removeEventListener("touchstart", unlockAudio, true);
+    };
+  }, [unlockAudio]);
+
   const buildResponseTime = useCallback((data: any): MeliResponseTime | null => {
     if (!data) return null;
     // Formato directo de MeLi (viene de /api/meli-questions-unified)
@@ -132,43 +160,39 @@ export default function PreguntasPage() {
     return null;
   }, []);
 
+  // ── Sonido de alerta usando el AudioContext persistente ─────────────────────
   const playAlertSound = useCallback(async () => {
     try {
-      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-
-      if (!AudioContextClass) {
-        return;
+      let ctx = audioCtxRef.current;
+      if (!ctx) {
+        // Último intento: crear contexto nuevo (puede fallar sin gesto de usuario)
+        const Cls = window.AudioContext || (window as any).webkitAudioContext;
+        if (!Cls) return;
+        ctx = new Cls();
+        audioCtxRef.current = ctx;
       }
+      if (ctx.state === "suspended") await ctx.resume();
+      if (ctx.state !== "running") return; // Chrome lo bloqueó
 
-      const context = new AudioContextClass();
-
-      // Los navegadores modernos suspenden AudioContext hasta interacción del usuario
-      if (context.state === "suspended") {
-        await context.resume();
-      }
-
-      const beep = (frequency: number, startOffset: number, duration: number) => {
-        const oscillator = context.createOscillator();
-        const gain = context.createGain();
-
-        oscillator.connect(gain);
-        gain.connect(context.destination);
-        oscillator.type = "sine";
-        oscillator.frequency.value = frequency;
-        gain.gain.setValueAtTime(0, context.currentTime + startOffset);
-        gain.gain.linearRampToValueAtTime(0.35, context.currentTime + startOffset + 0.01);
-        gain.gain.linearRampToValueAtTime(0, context.currentTime + startOffset + duration);
-        oscillator.start(context.currentTime + startOffset);
-        oscillator.stop(context.currentTime + startOffset + duration + 0.05);
+      const beep = (freq: number, start: number, dur: number) => {
+        const osc  = ctx!.createOscillator();
+        const gain = ctx!.createGain();
+        osc.connect(gain);
+        gain.connect(ctx!.destination);
+        osc.type = "sine";
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0, ctx!.currentTime + start);
+        gain.gain.linearRampToValueAtTime(0.35, ctx!.currentTime + start + 0.01);
+        gain.gain.linearRampToValueAtTime(0, ctx!.currentTime + start + dur);
+        osc.start(ctx!.currentTime + start);
+        osc.stop(ctx!.currentTime + start + dur + 0.05);
       };
 
-      beep(880, 0, 0.18);
+      beep(880,  0.00, 0.18);
       beep(1100, 0.22, 0.18);
       beep(1320, 0.44, 0.22);
-
-      setTimeout(() => context.close().catch(() => null), 1200);
-    } catch (soundError) {
-      console.warn("[Preguntas] No se pudo reproducir sonido:", soundError);
+    } catch (e) {
+      console.warn("[Preguntas] Error audio:", e);
     }
   }, []);
 
@@ -276,11 +300,17 @@ export default function PreguntasPage() {
     }
   }, [accounts, buildResponseTime]);
 
+  // Ref para que el interval siempre llame la versión más reciente sin resetear el timer
+  const loadAllQuestionsRef = useRef(loadAllQuestions);
+  useEffect(() => { loadAllQuestionsRef.current = loadAllQuestions; }, [loadAllQuestions]);
+
+  // Carga inicial
   useEffect(() => {
     if (!accountsLoading && accounts.length > 0) {
-      loadAllQuestions();
+      loadAllQuestionsRef.current();
     }
-  }, [accounts, accountsLoading, loadAllQuestions]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accountsLoading, accounts.length]);
 
   useEffect(() => {
     if (!accountsLoading && accounts.length === 0) {
@@ -291,14 +321,12 @@ export default function PreguntasPage() {
     }
   }, [accounts.length, accountsLoading]);
 
+  // Polling cada 30s — el interval NUNCA se resetea por cambios de referencia
   useEffect(() => {
-    if (!accounts.length) {
-      return;
-    }
-
-    const intervalId = setInterval(loadAllQuestions, 60000);
-    return () => clearInterval(intervalId);
-  }, [accounts.length, loadAllQuestions]);
+    if (!accounts.length) return;
+    const id = setInterval(() => loadAllQuestionsRef.current(), 30000);
+    return () => clearInterval(id);
+  }, [accounts.length]); // solo depende de si hay cuentas, no de la función
 
   const filteredQuestions = useMemo(() => {
     return questions.filter((question) => {
