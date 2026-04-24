@@ -137,7 +137,8 @@ export async function GET(request: NextRequest) {
             [userRes, questionsRes, ordersReadyRes, itemsRes, claimsRes, claimsOngoingRes, unreadRes, 
              todayOrdersPaidRes, todayOrdersConfirmedRes, todayOrdersProcessingRes] =
               await Promise.allSettled([
-                fetch(`https://api.mercadolibre.com/users/${meliId}?attributes=seller_reputation,nickname`, {
+                // Sin filtro de attributes para recibir seller_reputation.metrics completo
+                fetch(`https://api.mercadolibre.com/users/${meliId}`, {
                   headers: meliHeaders, signal: AbortSignal.timeout(5000),
                 }),
                 fetch(`https://api.mercadolibre.com/questions/search?seller_id=${meliId}&status=UNANSWERED&limit=1`, {
