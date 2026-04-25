@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { getValidToken, getBuenosAiresDateString, getStartOfDayBuenosAires, type LinkedMeliAccount } from "@/lib/meli";
+import { getValidToken, getBuenosAiresDateString, getStartOfDayBuenosAires, type LinkedMeliAccount, getUserIdFromJwt } from "@/lib/meli";
 import { getCachedData, setCachedData } from "@/lib/dashboard-cache";
 
 // Forzar renderizado dinámico - evita error de generación estática
@@ -59,9 +59,14 @@ export async function GET(request: NextRequest) {
 
     if (authHeader?.startsWith("Bearer ")) {
       const token = authHeader.slice(7);
-      const { data: { user }, error } = await supabase.auth.getUser(token);
-      if (!error && user) {
-        userId = user.id;
+      // Intento rápido: decodificar JWT localmente
+      userId = getUserIdFromJwt(token);
+      // Fallback: validar contra Supabase
+      if (!userId) {
+        const { data: { user }, error } = await supabase.auth.getUser(token);
+        if (!error && user) {
+          userId = user.id;
+        }
       }
     }
 
