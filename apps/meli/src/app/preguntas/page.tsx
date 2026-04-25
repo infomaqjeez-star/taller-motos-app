@@ -736,10 +736,21 @@ export default function PreguntasPage() {
           ) : filteredQuestions.length === 0 ? (
             <div className="rounded-2xl p-10 text-center" style={{ background: "#1F1F1F" }}>
               <CheckCircle2 className="w-10 h-10 mx-auto mb-2" style={{ color: "#39FF14" }} />
-              <p className="text-white font-bold">{searchTerm ? "Sin resultados" : "¡Todas las preguntas respondidas!"}</p>
-              <p className="text-sm mt-1" style={{ color: "#6B7280" }}>
-                {searchTerm ? "Intenta con otros filtros" : "No hay preguntas pendientes en ninguna cuenta"}
+              <p className="text-white font-bold">
+                {searchTerm ? "Sin resultados" : accountsLoading ? "Cargando cuentas..." : accounts.length === 0 ? "No hay cuentas conectadas" : "¡Todas las preguntas respondidas!"}
               </p>
+              <p className="text-sm mt-1" style={{ color: "#6B7280" }}>
+                {searchTerm ? "Intenta con otros filtros" : accountsLoading ? "Conectando con Mercado Libre..." : accounts.length === 0 ? "Conecta una cuenta de MeLi para ver las preguntas" : "No hay preguntas pendientes en ninguna cuenta"}
+              </p>
+              {!accountsLoading && accounts.length === 0 && (
+                <Link
+                  href="/configuracion/meli"
+                  className="inline-block mt-4 px-4 py-2 rounded-xl text-sm font-bold text-black"
+                  style={{ background: "#FFE600" }}
+                >
+                  Conectar cuenta
+                </Link>
+              )}
             </div>
           ) : (
             filteredQuestions.map((question) => (
