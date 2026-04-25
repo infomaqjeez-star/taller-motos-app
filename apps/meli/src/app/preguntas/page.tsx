@@ -171,8 +171,12 @@ export default function PreguntasPage() {
       };
 
       // Una sola request al endpoint unificado (hace todo en paralelo server-side)
+      console.log(`[Preguntas] Llamando a API con status: ${fetchStatus}`);
       const res = await fetch(`/api/meli-questions-unified?status=${fetchStatus}&_t=${Date.now()}`, { headers });
+      console.log(`[Preguntas] Response status: ${res.status}`);
+      
       const payload = await res.json().catch(() => null);
+      console.log(`[Preguntas] Payload recibido:`, payload ? `totalQuestions=${payload.totalQuestions}, accounts=${payload.accounts?.length}` : 'null');
 
       if (!res.ok) {
         throw new Error(payload?.error || `Error ${res.status}`);

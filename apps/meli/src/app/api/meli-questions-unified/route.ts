@@ -24,6 +24,7 @@ function setCachedItem(itemId: string, title: string, thumbnail: string) {
  */
 export async function GET(request: NextRequest) {
   const startTime = Date.now();
+  console.log(`[Questions] ====== NUEVA REQUEST ${new Date().toISOString()} ======`);
 
   try {
     // Parámetro de estado: UNANSWERED (default) o ANSWERED
@@ -32,36 +33,48 @@ export async function GET(request: NextRequest) {
     const VALID_STATUSES = ["UNANSWERED", "ANSWERED", "CLOSED_UNANSWERED"];
     const meliStatus = VALID_STATUSES.includes(rawStatus) ? rawStatus : "UNANSWERED";
     const limitPerAccount = meliStatus === "UNANSWERED" ? 50 : 20;
+    console.log(`[Questions] Status solicitado: ${meliStatus}`);
 
     // Auth — decodificación local del JWT (sin red, evita timeouts de Supabase)
     const supabase = getSupabase();
     const authHeader = request.headers.get("authorization");
+    console.log(`[Questions] Auth header presente: ${!!authHeader}`);
     let userId: string | null = null;
 
     if (authHeader?.startsWith("Bearer ")) {
       const token = authHeader.slice(7);
+      console.log(`[Questions] Token length: ${token.length}`);
       // Rápido: JWT local primero
       userId = getUserIdFromJwt(token);
+      console.log(`[Questions] UserId from JWT: ${userId}`);
       // Fallback: Supabase si el JWT no se puede decodificar localmente
       if (!userId) {
+        console.log(`[Questions] Intentando fallback a Supabase...`);
         const { data: { user }, error } = await supabase.auth.getUser(token);
         if (!error && user) userId = user.id;
+        console.log(`[Questions] UserId from Supabase: ${userId}, error: ${error?.message}`);
       }
     }
 
     if (!userId) {
+      console.log(`[Questions] ❌ No autorizado - sin userId`);
       return NextResponse.json({ error: "No autorizado", questions: [], accounts: [] }, { status: 401 });
     }
 
+    console.log(`[Questions] UserId final: ${userId}`);
+
     // Cuentas — mismo query que dashboard
+    console.log(`[Questions] Buscando cuentas en Supabase...`);
     const { data: accounts, error: accountsError } = await supabase
       .from("linked_meli_accounts")
       .select("id, user_id, meli_user_id, meli_nickname, is_active, access_token_enc, refresh_token_enc, token_expiry_date")
       .eq("user_id", userId)
       .eq("is_active", true);
 
+    console.log(`[Questions] Cuentas encontradas: ${accounts?.length || 0}, error: ${accountsError?.message || 'ninguno'}`);
+
     if (accountsError || !accounts?.length) {
-      console.log(`[Questions] No hay cuentas activas para ${userId}`);
+      console.log(`[Questions] ❌ No hay cuentas activas para ${userId}`);
       return NextResponse.json({ questions: [], accounts: [], totalQuestions: 0 });
     }
 
@@ -227,6 +240,7 @@ export async function GET(request: NextRequest) {
 
     const duration = Date.now() - startTime;
     console.log(`[Questions] ✅ TOTAL: ${allQuestions.length} preguntas, ${accounts.length} cuentas, ${duration}ms`);
+    console.log(`[Questions] ====== FIN REQUEST ${new Date().toISOString()} ======`);
 
     const response = NextResponse.json({
       questions: results.map(r => ({
