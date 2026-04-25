@@ -189,6 +189,7 @@ export async function GET(request: NextRequest) {
           const itemId = String(q.item_id);
           const item = localItemMap.get(itemId) || { title: itemId, thumbnail: "" };
           return {
+            id: q.id,  // <-- AGREGAR ESTO: el frontend espera 'id'
             meli_question_id: q.id,
             meli_account_id: account.id,
             item_id: itemId,
