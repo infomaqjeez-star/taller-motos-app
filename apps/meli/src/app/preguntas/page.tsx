@@ -239,15 +239,20 @@ export default function PreguntasPage() {
         setAccountStats(stats);
         setLastUpdate(new Date());
         lastPollTimeRef.current = Date.now();
-        // Cleanup inteligente: solo eliminar de justAnsweredIds si MeLi ya no lo devuelve
-        // como UNANSWERED (propagación confirmada) o si pasaron 2+ minutos (safety timeout)
+        // Cleanup inteligente: eliminar de justAnsweredIds si MeLi YA NO lo devuelve
+        // como UNANSWERED (propagación confirmada) O si pasaron 2+ minutos (safety timeout)
         setJustAnsweredIds(prev => {
           if (prev.size === 0) return prev;
           const now = Date.now();
           const next = new Map<number, number>();
           for (const [id, ts] of prev) {
-            // Mantener si MeLi AÚN lo devuelve como UNANSWERED y no pasaron 2 min
-            if (freshUnansweredIds.has(id) && now - ts < 120_000) {
+            // Eliminar si MeLi YA NO lo devuelve (propagación confirmada)
+            // O si pasaron 2+ minutos (safety timeout)
+            const propagationConfirmed = !freshUnansweredIds.has(id);
+            const timeoutExpired = now - ts >= 120_000;
+            
+            // Mantener solo si NO se confirmó propagación Y NO expiró el timeout
+            if (!propagationConfirmed && !timeoutExpired) {
               next.set(id, ts);
             }
           }
@@ -305,13 +310,13 @@ export default function PreguntasPage() {
       if (document.visibilityState === "visible") {
         const elapsed = Date.now() - lastPollTimeRef.current;
         if (elapsed > 20000) { // solo si el último poll fue hace más de 20s
-          loadAllQuestionsRef.current();
+          loadAllQuestionsRef.current(statusFilter);
         }
       }
     };
     document.addEventListener("visibilitychange", handleVisible);
     return () => document.removeEventListener("visibilitychange", handleVisible);
-  }, []); // montado una sola vez
+  }, [statusFilter]); // re-crear cuando cambia el tab activo
 
   // Cuando el usuario cambia al tab "Respondidas", cargar preguntas respondidas de MeLi
   const prevStatusFilterRef = useRef<string>(QUESTION_STATUSES.UNANSWERED);
@@ -484,6 +489,8 @@ export default function PreguntasPage() {
       // Si MeLi dice que la pregunta ya no está sin responder → actualizar estado local
       // para que se mueva al tab "Respondidas" y no quede bloqueada
       if (/unanswered|answered/i.test(errMsg)) {
+        // Agregar a justAnsweredIds para mostrar badge verde
+        setJustAnsweredIds(prev => new Map(prev).set(questionId, Date.now()));
         setQuestions((prev) =>
           prev.map((q) =>
             q.id === questionId ? { ...q, status: QUESTION_STATUSES.ANSWERED } : q

@@ -91,6 +91,19 @@ export default function QuestionAlertGlobal() {
     console.log("[QuestionAlertGlobal] Inicializado con modo:", storedMode || "taller");
   }, []);
 
+  // Limpiar alertedIdsRef cuando cambia el usuario (logout/login)
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_OUT" || event === "USER_UPDATED") {
+        alertedIdsRef.current.clear();
+        lastPollRef.current = null;
+        setNewCount(0);
+        console.log("[QuestionAlertGlobal] IDs limpiados por cambio de usuario");
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
   // Keep ref in sync
   useEffect(() => {
     enabledRef.current = enabled;
