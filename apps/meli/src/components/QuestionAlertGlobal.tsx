@@ -169,7 +169,8 @@ export default function QuestionAlertGlobal() {
       }
 
       // Usa el endpoint unificado que consulta MeLi directamente (no Supabase)
-      const res = await fetch(`/api/meli-questions-unified?_t=${Date.now()}`, {
+      // Solo trae UNANSWERED para no contar preguntas ya respondidas como "nuevas"
+      const res = await fetch(`/api/meli-questions-unified?status=UNANSWERED&_t=${Date.now()}`, {
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
       if (!res.ok) {
@@ -342,14 +343,18 @@ export default function QuestionAlertGlobal() {
 
       {/* Floating alert controls — fixed bottom-right */}
       <div className="fixed bottom-4 right-4 z-50 flex items-center gap-2">
-        {/* Contador de nuevas preguntas */}
+        {/* Contador de nuevas preguntas — clickeable para limpiar */}
         {newCount > 0 && (
-          <div className="relative">
-            <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black text-black animate-pulse"
-              style={{ background: "#ef4444" }}>
+          <button
+            onClick={() => setNewCount(0)}
+            className="relative flex items-center justify-center w-10 h-10 rounded-full transition-all hover:scale-110"
+            style={{ background: "#ef4444", border: "2px solid #ef444460" }}
+            title="Limpiar contador"
+          >
+            <span className="text-sm font-black text-white">
               {newCount > 99 ? "99+" : newCount}
             </span>
-          </div>
+          </button>
         )}
 
         {enabled ? (

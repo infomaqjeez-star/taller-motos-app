@@ -900,7 +900,7 @@ function QuestionCard({ question, isAnswering, isJustAnswered, onAnswer }: Quest
             >
               <CheckCircle2 className="w-4 h-4 flex-shrink-0" style={{ color: "#22c55e" }} />
               <span className="text-sm font-bold" style={{ color: "#22c55e" }}>
-                ✓ Respuesta enviada — desaparecerá en el próximo poll
+                ✓ Respuesta enviada — sincronizando con MeLi
               </span>
             </div>
           )}
