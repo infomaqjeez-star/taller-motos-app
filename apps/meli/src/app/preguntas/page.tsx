@@ -161,6 +161,7 @@ export default function PreguntasPage() {
       const {
         data: { session },
       } = await supabase.auth.getSession();
+      console.log(`[Preguntas] Session obtenida:`, session ? `token length=${session.access_token?.length}` : 'null');
 
       if (!session?.access_token) {
         throw new Error("No hay sesión activa");
