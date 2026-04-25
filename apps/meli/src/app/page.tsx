@@ -649,10 +649,10 @@ function AppJeezInner() {
             <div>
               <h1 className="font-black text-white text-base sm:text-lg">Dashboard</h1>
               <p className="text-[10px]" style={{ color: "#6B7280" }}>
-                {streamConnected ? (
-                  <span style={{ color: "#39FF14" }}>🟢 En vivo</span>
+                {accounts.length > 0 ? (
+                  <span style={{ color: "#39FF14" }}>🟢 {accounts.length} cuenta{accounts.length > 1 ? "s" : ""} activa{accounts.length > 1 ? "s" : ""}</span>
                 ) : (
-                  <span style={{ color: "#ef4444" }}>🔴 Desconectado</span>
+                  <span style={{ color: "#ef4444" }}>🔴 Sin cuentas conectadas</span>
                 )}
                 {" "} • {lastUpdate ? `Cargado ${lastUpdate.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", hour12: false })}` : "Cargando..."}
               </p>

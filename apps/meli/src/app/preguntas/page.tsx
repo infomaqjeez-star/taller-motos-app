@@ -15,12 +15,6 @@ import {
   Search,
   Users,
   TrendingUp,
-  Bell,
-  Volume2,
-  VolumeX,
-  Play,
-  Upload,
-  X,
 } from "lucide-react";
 import { useMeliAccounts } from "@/components/auth/MeliAccountsProvider";
 import { useAuth } from "@/components/auth/AuthProvider";
@@ -109,18 +103,6 @@ function normalizeQuestion(rawQuestion: any, account: { accountId: string; nickn
   };
 }
 
-// ── Sonidos de alerta disponibles ────────────────────────────────────────────
-const ALERT_SOUNDS = [
-  { id: "triple",   label: "Triple beep",   desc: "3 tonos ascendentes" },
-  { id: "doble",    label: "Doble beep",    desc: "2 tonos rápidos" },
-  { id: "suave",    label: "Suave",         desc: "1 tono suave" },
-  { id: "urgente",  label: "Urgente",       desc: "4 pulsos cortos" },
-  { id: "campana",  label: "Campana",       desc: "Tono tipo campana" },
-  { id: "clasico",  label: "Clásico",       desc: "Notificación clásica" },
-  { id: "custom",   label: "Personalizado", desc: "Tu propio archivo" },
-] as const;
-type AlertSoundId = typeof ALERT_SOUNDS[number]["id"];
-
 export default function PreguntasPage() {
   const { accounts, loading: accountsLoading } = useMeliAccounts();
   const { user } = useAuth();
@@ -139,49 +121,6 @@ export default function PreguntasPage() {
   // Ref para acceder a justAnsweredIds dentro de callbacks sin stale closure
   const justAnsweredIdsRef = useRef<Map<number, number>>(new Map());
   useEffect(() => { justAnsweredIdsRef.current = justAnsweredIds; }, [justAnsweredIds]);
-  const prevUnansweredCountRef = useRef<number | null>(null);
-
-  // ── Configuración de alerta sonora (persiste en localStorage) ────────────
-  const [alertSoundId, setAlertSoundId] = useState<AlertSoundId>(() => {
-    if (typeof window === "undefined") return "triple";
-    return (localStorage.getItem("maqjeez_alert_sound") as AlertSoundId) || "triple";
-  });
-  const [alertVolume, setAlertVolume] = useState<number>(() => {
-    if (typeof window === "undefined") return 0.7;
-    return parseFloat(localStorage.getItem("maqjeez_alert_volume") || "0.7");
-  });
-  const [customSoundDataUrl, setCustomSoundDataUrl] = useState<string | null>(() => {
-    if (typeof window === "undefined") return null;
-    return localStorage.getItem("maqjeez_custom_sound") || null;
-  });
-  const [showSoundPanel, setShowSoundPanel] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const audioCtxRef = useRef<AudioContext | null>(null);
-
-  const unlockAudio = useCallback(() => {
-    if (audioCtxRef.current) return;
-    try {
-      const Cls = window.AudioContext || (window as any).webkitAudioContext;
-      if (!Cls) return;
-      const ctx = new Cls();
-      audioCtxRef.current = ctx;
-      // Desbloquear inmediatamente en el contexto del gesto del usuario
-      if (ctx.state === "suspended") ctx.resume().catch(() => null);
-    } catch { /* silencioso */ }
-  }, []);
-
-  // Registrar listeners para desbloquear audio en la primera interacción
-  useEffect(() => {
-    const opts = { once: true, capture: true } as const;
-    document.addEventListener("click",      unlockAudio, opts);
-    document.addEventListener("keydown",    unlockAudio, opts);
-    document.addEventListener("touchstart", unlockAudio, opts);
-    return () => {
-      document.removeEventListener("click",      unlockAudio, true);
-      document.removeEventListener("keydown",    unlockAudio, true);
-      document.removeEventListener("touchstart", unlockAudio, true);
-    };
-  }, [unlockAudio]);
 
   const buildResponseTime = useCallback((data: any): MeliResponseTime | null => {
     if (!data) return null;
@@ -200,175 +139,17 @@ export default function PreguntasPage() {
     return null;
   }, []);
 
-  // ── Motor de audio: beep con Web Audio API ────────────────────────────────
-  const playWebAudioPattern = useCallback(async (soundId: AlertSoundId, vol: number) => {
-    let ctx = audioCtxRef.current;
-    if (!ctx) {
-      const Cls = window.AudioContext || (window as any).webkitAudioContext;
-      if (!Cls) return;
-      ctx = new Cls();
-      audioCtxRef.current = ctx;
-    }
-    if (ctx.state === "suspended") await ctx.resume();
-    if (ctx.state !== "running") return;
-
-    const masterGain = ctx.createGain();
-    masterGain.gain.value = Math.max(0, Math.min(1, vol));
-    masterGain.connect(ctx.destination);
-
-    const beep = (freq: number, start: number, dur: number, type: OscillatorType = "sine") => {
-      const osc  = ctx!.createOscillator();
-      const g    = ctx!.createGain();
-      osc.connect(g); g.connect(masterGain);
-      osc.type = type; osc.frequency.value = freq;
-      const t = ctx!.currentTime + start;
-      g.gain.setValueAtTime(0, t);
-      g.gain.linearRampToValueAtTime(vol, t + 0.015);
-      g.gain.setValueAtTime(vol, t + dur - 0.04);
-      g.gain.linearRampToValueAtTime(0, t + dur);
-      osc.start(t); osc.stop(t + dur + 0.05);
-    };
-
-    switch (soundId) {
-      case "triple":
-        beep(880,  0.00, 0.18);
-        beep(1100, 0.22, 0.18);
-        beep(1320, 0.44, 0.22);
-        break;
-      case "doble":
-        beep(1047, 0.00, 0.14);
-        beep(1047, 0.20, 0.14);
-        break;
-      case "suave":
-        beep(660, 0.00, 0.35);
-        break;
-      case "urgente":
-        beep(1200, 0.00, 0.08);
-        beep(1200, 0.12, 0.08);
-        beep(1200, 0.24, 0.08);
-        beep(1200, 0.36, 0.08);
-        break;
-      case "campana": {
-        // Campana: tono fundamental + armónico, decay largo
-        const t = ctx.currentTime;
-        const osc1 = ctx.createOscillator(); const g1 = ctx.createGain();
-        const osc2 = ctx.createOscillator(); const g2 = ctx.createGain();
-        osc1.connect(g1); g1.connect(masterGain);
-        osc2.connect(g2); g2.connect(masterGain);
-        osc1.frequency.value = 1047; osc1.type = "sine";
-        osc2.frequency.value = 1568; osc2.type = "sine";
-        g1.gain.setValueAtTime(vol * 0.8, t); g1.gain.exponentialRampToValueAtTime(0.001, t + 1.2);
-        g2.gain.setValueAtTime(vol * 0.4, t); g2.gain.exponentialRampToValueAtTime(0.001, t + 0.8);
-        osc1.start(t); osc1.stop(t + 1.3);
-        osc2.start(t); osc2.stop(t + 0.9);
-        break;
-      }
-      case "clasico":
-        beep(587, 0.00, 0.12, "square");
-        beep(880, 0.16, 0.20, "sine");
-        break;
-      default:
-        // Fallback: triple beep para cualquier valor desconocido
-        beep(880,  0.00, 0.18);
-        beep(1100, 0.22, 0.18);
-        beep(1320, 0.44, 0.22);
-        break;
-    }
-  }, []);
-
-  // ── Reproducir alerta (sonido seleccionado) ────────────────────────────────
-  const playAlertSound = useCallback(async () => {
-    try {
-      if (alertSoundId === "custom" && customSoundDataUrl) {
-        const audio = new Audio(customSoundDataUrl);
-        audio.volume = alertVolume;
-        await audio.play();
-        return;
-      }
-      // Si "custom" pero sin archivo, usar "triple" como fallback
-      const effectiveSound = alertSoundId === "custom" ? "triple" : alertSoundId;
-      await playWebAudioPattern(effectiveSound, alertVolume);
-    } catch (e) {
-      console.warn("[Preguntas] Error audio:", e);
-    }
-  }, [alertSoundId, alertVolume, customSoundDataUrl, playWebAudioPattern]);
-
-  // ── Preview desde el panel de configuración ───────────────────────────────
-  const previewSound = useCallback(async (id: AlertSoundId) => {
-    try {
-      if (id === "custom" && customSoundDataUrl) {
-        const audio = new Audio(customSoundDataUrl);
-        audio.volume = alertVolume;
-        await audio.play();
-        return;
-      }
-      await playWebAudioPattern(id, alertVolume);
-    } catch { /* silencioso */ }
-  }, [alertVolume, customSoundDataUrl, playWebAudioPattern]);
-
-  // ── Guardar configuración en localStorage ────────────────────────────────
-  const saveSoundId = useCallback((id: AlertSoundId) => {
-    setAlertSoundId(id);
-    localStorage.setItem("maqjeez_alert_sound", id);
-  }, []);
-
-  const saveVolume = useCallback((vol: number) => {
-    setAlertVolume(vol);
-    localStorage.setItem("maqjeez_alert_volume", String(vol));
-  }, []);
-
-  const handleCustomFile = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const dataUrl = ev.target?.result as string;
-      setCustomSoundDataUrl(dataUrl);
-      try { localStorage.setItem("maqjeez_custom_sound", dataUrl); } catch { /* muy grande para localStorage */ }
-      saveSoundId("custom");
-    };
-    reader.readAsDataURL(file);
-  }, [saveSoundId]);
-
-  useEffect(() => {
-    if ("Notification" in window && Notification.permission === "default") {
-      Notification.requestPermission();
-    }
-  }, []);
-
-  useEffect(() => {
-    const currentUnanswered = questions.filter((question) => question.status === QUESTION_STATUSES.UNANSWERED).length;
-
-    if (
-      prevUnansweredCountRef.current !== null &&
-      currentUnanswered > prevUnansweredCountRef.current
-    ) {
-      const newCount = currentUnanswered - prevUnansweredCountRef.current;
-
-      playAlertSound().catch(() => null);
-
-      if ("Notification" in window && Notification.permission === "granted") {
-        new Notification(`${newCount} pregunta${newCount > 1 ? "s" : ""} nueva${newCount > 1 ? "s" : ""}`, {
-          body: "Tenés preguntas nuevas sin responder en MeLi",
-          icon: "/icon.png",
-        });
-      }
-
-      toast.info(`🔔 ${newCount} pregunta${newCount > 1 ? "s" : ""} nueva${newCount > 1 ? "s" : ""}`, {
-        description: "Respondé rápido para mejorar tu reputación",
-        duration: 5000,
-      });
-    }
-
-    prevUnansweredCountRef.current = currentUnanswered;
-  }, [playAlertSound, questions]);
-
   const loadAllQuestions = useCallback(async (fetchStatus: string = QUESTION_STATUSES.UNANSWERED) => {
+    // Evitar race condition: si ya hay un poll en curso, ignorar
+    if (isPollingRef.current) return;
+    isPollingRef.current = true;
+
     if (!accounts.length) {
       setQuestions([]);
       setAccountStats([]);
       setError(null);
       setLoading(false);
+      isPollingRef.current = false;
       return;
     }
 
@@ -435,6 +216,11 @@ export default function PreguntasPage() {
         // UNANSWERED (default): reemplazar estado con datos frescos de MeLi
         // PERO preservar preguntas recién respondidas: excluir de unified si están en justAnsweredIds
         const justAnswered = justAnsweredIdsRef.current;
+
+        // IDs que MeLi devuelve como UNANSWERED (datos crudos, ANTES de filtrar)
+        // Necesario para el cleanup de justAnsweredIds más abajo
+        const freshUnansweredIds = new Set(unified.map(q => q.id));
+
         setQuestions(prev => {
           // Filtrar unified para no incluir preguntas que tenemos localmente como ANSWERED
           const filteredUnified = justAnswered.size === 0
@@ -458,7 +244,6 @@ export default function PreguntasPage() {
         setJustAnsweredIds(prev => {
           if (prev.size === 0) return prev;
           const now = Date.now();
-          const freshUnansweredIds = new Set(unified.map(q => q.id));
           const next = new Map<number, number>();
           for (const [id, ts] of prev) {
             // Mantener si MeLi AÚN lo devuelve como UNANSWERED y no pasaron 2 min
@@ -473,6 +258,7 @@ export default function PreguntasPage() {
       setError(loadError instanceof Error ? loadError.message : "Error cargando preguntas");
     } finally {
       setLoading(false);
+      isPollingRef.current = false;
     }
   }, [accounts, buildResponseTime]);
 
@@ -500,12 +286,17 @@ export default function PreguntasPage() {
     }
   }, [accounts.length, accountsLoading]);
 
-  // Polling cada 10s — el interval NUNCA se resetea por cambios de referencia
+  // Polling cada 10s — respeta el tab activo (UNANSWERED o ANSWERED)
+  // y evita race conditions con flag isPolling
+  const isPollingRef = useRef(false);
   useEffect(() => {
     if (!accounts.length) return;
-    const id = setInterval(() => loadAllQuestionsRef.current(), 10000);
+    const id = setInterval(() => {
+      if (isPollingRef.current) return; // skip si hay un poll en curso
+      loadAllQuestionsRef.current(statusFilter);
+    }, 10000);
     return () => clearInterval(id);
-  }, [accounts.length]); // solo depende de si hay cuentas, no de la función
+  }, [accounts.length, statusFilter]); // resetear cuando cambia el tab
 
   // Page Visibility API: re-poll inmediato cuando el usuario vuelve a la pestaña.
   // Corrige el throttling de Chrome/Safari que retrasa setInterval a ≥60s en background.
@@ -744,17 +535,6 @@ export default function PreguntasPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {/* Botón configuración de alerta */}
-          <button
-            onClick={() => { unlockAudio(); setShowSoundPanel(p => !p); }}
-            className="relative flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold"
-            style={{ background: showSoundPanel ? "#FF572230" : "#1F1F1F", color: "#FF5722", border: `1px solid ${showSoundPanel ? "#FF572266" : "#FF572244"}` }}
-            title="Configurar alerta sonora"
-          >
-            <Bell className="w-4 h-4" />
-            <span className="hidden sm:inline text-xs">Alerta</span>
-          </button>
-
           <button
             onClick={() => loadAllQuestions()}
             disabled={loading}
@@ -765,109 +545,6 @@ export default function PreguntasPage() {
             {loading ? "Sync..." : "Actualizar"}
           </button>
         </div>
-
-        {/* Panel de configuración de alerta sonora */}
-        {showSoundPanel && (
-          <div
-            className="absolute right-4 top-full mt-2 rounded-2xl p-4 z-50 w-80 shadow-2xl"
-            style={{ background: "#1A1A1A", border: "1px solid rgba(255,255,255,0.12)" }}
-          >
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <Bell className="w-4 h-4" style={{ color: "#FF5722" }} />
-                <span className="text-sm font-bold text-white">Configurar Alerta Sonora</span>
-              </div>
-              <button onClick={() => setShowSoundPanel(false)}>
-                <X className="w-4 h-4 text-gray-400 hover:text-white" />
-              </button>
-            </div>
-
-            {/* Volumen */}
-            <div className="mb-4">
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-xs font-semibold" style={{ color: "#9CA3AF" }}>
-                  {alertVolume === 0 ? <VolumeX className="w-3.5 h-3.5 inline" /> : <Volume2 className="w-3.5 h-3.5 inline" />}
-                  {" "}Volumen
-                </span>
-                <span className="text-xs font-bold" style={{ color: "#FF5722" }}>{Math.round(alertVolume * 100)}%</span>
-              </div>
-              <input
-                type="range" min={0} max={1} step={0.05}
-                value={alertVolume}
-                onChange={e => saveVolume(parseFloat(e.target.value))}
-                className="w-full h-1.5 rounded-full accent-orange-500 cursor-pointer"
-                style={{ accentColor: "#FF5722" }}
-              />
-            </div>
-
-            {/* Selector de sonido */}
-            <div className="space-y-1.5 mb-3">
-              <p className="text-xs font-semibold mb-2" style={{ color: "#9CA3AF" }}>Tipo de alerta</p>
-              {ALERT_SOUNDS.map(s => (
-                <div key={s.id}
-                  className="flex items-center justify-between px-3 py-2 rounded-xl cursor-pointer transition-all"
-                  style={{
-                    background: alertSoundId === s.id ? "#FF572220" : "#121212",
-                    border: `1px solid ${alertSoundId === s.id ? "#FF572266" : "rgba(255,255,255,0.06)"}`,
-                  }}
-                  onClick={() => saveSoundId(s.id)}
-                >
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full border-2 flex items-center justify-center"
-                      style={{ borderColor: alertSoundId === s.id ? "#FF5722" : "#4B5563" }}>
-                      {alertSoundId === s.id && <div className="w-1.5 h-1.5 rounded-full" style={{ background: "#FF5722" }} />}
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-white">{s.label}</p>
-                      <p className="text-[10px]" style={{ color: "#6B7280" }}>{s.desc}</p>
-                    </div>
-                  </div>
-                  {s.id !== "custom" && (
-                    <button
-                      className="p-1.5 rounded-lg hover:bg-white/10 transition-colors"
-                      onClick={e => { e.stopPropagation(); unlockAudio(); previewSound(s.id); }}
-                      title="Escuchar preview"
-                    >
-                      <Play className="w-3 h-3" style={{ color: "#FF5722" }} />
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
-
-            {/* Upload archivo personalizado */}
-            {alertSoundId === "custom" && (
-              <div className="mt-2">
-                <input
-                  ref={fileInputRef} type="file" accept="audio/*"
-                  className="hidden"
-                  onChange={handleCustomFile}
-                />
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-bold"
-                  style={{ background: "#FF572218", color: "#FF5722", border: "1px dashed #FF572266" }}
-                >
-                  <Upload className="w-3.5 h-3.5" />
-                  {customSoundDataUrl ? "Cambiar archivo" : "Subir MP3 / WAV"}
-                </button>
-                {customSoundDataUrl && (
-                  <button
-                    className="w-full mt-1.5 flex items-center justify-center gap-2 py-1.5 rounded-xl text-xs"
-                    style={{ color: "#6B7280" }}
-                    onClick={() => { unlockAudio(); previewSound("custom"); }}
-                  >
-                    <Play className="w-3 h-3" /> Escuchar mi alerta
-                  </button>
-                )}
-              </div>
-            )}
-
-            <p className="text-[10px] mt-3 text-center" style={{ color: "#4B5563" }}>
-              Hacé clic en la página primero para activar el audio del navegador
-            </p>
-          </div>
-        )}
       </div>  {/* fin sticky header */}
 
       {!accountsLoading && accounts.length === 0 && (
@@ -1090,7 +767,7 @@ function QuestionCard({ question, isAnswering, isJustAnswered, onAnswer }: Quest
   const itemTitle = question.item_title || question.item_id;
   const itemThumbnail = question.item_thumbnail || "";
   const itemPermalink = question.item_id
-    ? `https://articulo.mercadolibre.com.ar/${question.item_id.replace(/^([A-Z]+)(\\d+)$/, "$1-$2")}`
+    ? `https://articulo.mercadolibre.com.ar/${question.item_id.replace(/^([A-Z]+)(\d+)$/, "$1-$2")}`
     : "";
 
   const statusColors: Record<string, string> = {
@@ -1277,6 +954,10 @@ function getTimeAgo(dateString: string): string {
   const date = new Date(dateString);
   const now = new Date();
   const diff = now.getTime() - date.getTime();
+
+  // Si la fecha es futura (clock skew), mostrar "ahora"
+  if (diff < 0) return "ahora";
+
   const minutes = Math.floor(diff / 60000);
   const hours = Math.floor(minutes / 60);
   const days = Math.floor(hours / 24);
