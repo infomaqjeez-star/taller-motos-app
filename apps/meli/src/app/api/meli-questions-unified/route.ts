@@ -122,24 +122,6 @@ export async function GET(request: NextRequest) {
           if (qRes.status === "fulfilled") {
             const errBody = await qRes.value.text().catch(() => "?");
             fetchError = `HTTP ${qRes.value.status}: ${errBody.substring(0, 200)}`;
-            
-            // Si el token es inválido (403), marcar la cuenta como necesitando re-conexión
-            if (qRes.value.status === 403 && errBody.includes("invalid token")) {
-              console.error(`[Questions] ❌ ${nickname} TOKEN INVÁLIDO - necesita re-conectar cuenta`);
-              // Actualizar en Supabase que la cuenta necesita re-conexión
-              try {
-                await supabase
-                  .from("linked_meli_accounts")
-                  .update({ 
-                    is_active: false, 
-                    updated_at: new Date().toISOString(),
-                    meli_nickname: `${nickname} (TOKEN INVÁLIDO - Reconectar)` 
-                  })
-                  .eq("id", account.id);
-              } catch (dbError) {
-                console.error(`[Questions] Error actualizando cuenta ${nickname}:`, dbError);
-              }
-            }
           } else {
             fetchError = `Fetch rejected: ${(qRes as any).reason?.message || (qRes as any).reason}`;
           }
