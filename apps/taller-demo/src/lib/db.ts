@@ -522,13 +522,14 @@ function toVenta(r: Record<string, unknown>, items: VentaItem[]): VentaRepuesto 
 
 function toVentaItem(r: Record<string, unknown>): VentaItem {
   return {
-    id:         r.id as string,
-    ventaId:    r.venta_id as string,
-    producto:   r.producto as string,
-    sku:        (r.sku as string) ?? "",
-    cantidad:   r.cantidad as number,
-    precioUnit: r.precio_unit as number,
-    subtotal:   r.subtotal as number,
+    id:           r.id as string,
+    ventaId:      r.venta_id as string,
+    producto:     r.producto as string,
+    sku:          (r.sku as string) ?? "",
+    cantidad:     r.cantidad as number,
+    precioUnit:   r.precio_unit as number,
+    subtotal:     r.subtotal as number,
+    warrantyDays: (r.warranty_days as number) ?? 30,
   };
 }
 
@@ -550,9 +551,18 @@ export const ventasDb = {
     // Usar fecha local del cliente (Argentina) para evitar desfase UTC
     const now = new Date();
     const localDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    console.log("[ventasDb] Consultando ventas para:", localDate);
+    
     const res = await fetch(`/api/ventas?action=today&fecha=${localDate}`);
-    if (!res.ok) { const e = await res.json(); throw new Error(e.error ?? "Error al obtener ventas"); }
+    if (!res.ok) { 
+      const e = await res.json().catch(() => ({ error: "Error desconocido" }));
+      console.error("[ventasDb] Error HTTP:", res.status, e);
+      throw new Error(e.error ?? `Error HTTP ${res.status}`); 
+    }
+    
     const data = await res.json();
+    console.log("[ventasDb] Datos recibidos:", data?.length || 0, "ventas");
+    
     return (data ?? []).map((r: Record<string, unknown>) => {
       const items = ((r.ventas_items as Record<string, unknown>[]) ?? []).map(toVentaItem);
       return toVenta(r, items);

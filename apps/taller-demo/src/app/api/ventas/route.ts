@@ -31,12 +31,19 @@ export async function GET(request: NextRequest) {
       case "today": {
         // Ventas del día específico
         const targetDate = fecha || new Date().toISOString().split("T")[0];
+        console.log("[API Ventas] Consultando ventas para fecha:", targetDate);
+        
         result = await supabase
           .from("ventas_repuestos")
           .select("*, ventas_items(*)")
           .gte("created_at", `${targetDate}T00:00:00`)
           .lt("created_at", `${targetDate}T23:59:59`)
           .order("created_at", { ascending: false });
+        
+        console.log("[API Ventas] Resultado:", result.data?.length || 0, "ventas encontradas");
+        if (result.error) {
+          console.error("[API Ventas] Error en consulta:", result.error);
+        }
         break;
       }
 
@@ -192,13 +199,17 @@ export async function POST(request: NextRequest) {
             cantidad: item.cantidad,
             precio_unit: item.precioUnit,
             subtotal: item.subtotal,
+            warranty_days: item.warrantyDays || 30,
           }));
 
           const { error: itemsError } = await supabase
             .from("ventas_items")
             .insert(itemsToInsert);
 
-          if (itemsError) throw itemsError;
+          if (itemsError) {
+            console.error("[API Ventas] Error insertando items:", itemsError);
+            throw itemsError;
+          }
         }
 
         return NextResponse.json({ success: true, id: ventaData?.id });
