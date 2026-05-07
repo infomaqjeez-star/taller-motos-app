@@ -668,8 +668,11 @@ function toTarea(r: Record<string, unknown>): Tarea {
     asignadoA:  r.asignado_a as string,
     status:     r.status as Tarea["status"],
     creadaEn:   r.creada_en as string,
+    creador:    r.creador as string,
     iniciadaEn: (r.iniciada_en as string) ?? undefined,
+    iniciador:  (r.iniciador as string) ?? undefined,
     completadaEn: (r.completada_en as string) ?? undefined,
+    completador: (r.completador as string) ?? undefined,
     vista:      r.vista as boolean,
     prioridad:  r.prioridad as Tarea["prioridad"],
   };
@@ -722,20 +725,20 @@ export const tareasDb = {
     if (!res.ok) { const e = await res.json(); throw new Error(e.error ?? "Error al actualizar tarea"); }
   },
 
-  async iniciarTarea(id: string): Promise<void> {
+  async iniciarTarea(id: string, iniciador: string): Promise<void> {
     const res = await fetch("/api/tareas", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "iniciar", id }),
+      body: JSON.stringify({ action: "iniciar", id, iniciador }),
     });
     if (!res.ok) { const e = await res.json(); throw new Error(e.error ?? "Error al iniciar tarea"); }
   },
 
-  async completarTarea(id: string): Promise<void> {
+  async completarTarea(id: string, completador: string): Promise<void> {
     const res = await fetch("/api/tareas", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "completar", id }),
+      body: JSON.stringify({ action: "completar", id, completador }),
     });
     if (!res.ok) { const e = await res.json(); throw new Error(e.error ?? "Error al completar tarea"); }
   },

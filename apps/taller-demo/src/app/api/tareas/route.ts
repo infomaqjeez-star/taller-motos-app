@@ -91,9 +91,9 @@ export async function POST(request: NextRequest) {
 
     switch (action) {
       case "create": {
-        const { titulo, descripcion, asignadoA, prioridad } = tarea;
+        const { titulo, descripcion, asignadoA, prioridad, creador } = tarea;
         const now = new Date().toISOString();
-        
+
         result = await supabase
           .from("tareas")
           .insert({
@@ -103,6 +103,7 @@ export async function POST(request: NextRequest) {
             asignado_a: asignadoA,
             status: "pendiente",
             creada_en: now,
+            creador: creador || "admin",
             vista: false,
             prioridad: prioridad || "media",
           })
@@ -113,7 +114,7 @@ export async function POST(request: NextRequest) {
 
       case "update": {
         const { id: tareaId, titulo, descripcion, asignadoA, prioridad } = tarea;
-        
+
         result = await supabase
           .from("tareas")
           .update({
@@ -127,22 +128,26 @@ export async function POST(request: NextRequest) {
       }
 
       case "iniciar": {
+        const { iniciador } = body;
         result = await supabase
           .from("tareas")
           .update({
             status: "en_progreso",
             iniciada_en: new Date().toISOString(),
+            iniciador: iniciador || null,
           })
           .eq("id", id);
         break;
       }
 
       case "completar": {
+        const { completador } = body;
         result = await supabase
           .from("tareas")
           .update({
             status: "completada",
             completada_en: new Date().toISOString(),
+            completador: completador || null,
           })
           .eq("id", id);
         break;

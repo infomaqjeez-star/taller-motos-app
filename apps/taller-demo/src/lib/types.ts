@@ -342,8 +342,11 @@ export interface Tarea {
   asignadoA: string; // Nombre del empleado
   status: TareaStatus;
   creadaEn: string; // ISO string
+  creador: string; // Quién creó la tarea
   iniciadaEn?: string; // ISO string - cuando el empleado la empieza
+  iniciador?: string; // Quién inició la tarea
   completadaEn?: string; // ISO string - cuando el empleado la termina
+  completador?: string; // Quién completó la tarea
   vista: boolean; // Si el empleado ya vio la tarea
   prioridad: "baja" | "media" | "alta";
 }
