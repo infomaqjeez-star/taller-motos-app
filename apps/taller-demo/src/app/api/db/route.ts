@@ -21,13 +21,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    let result;
+    let result: any;
 
     switch (action) {
       case "select": {
-        let query = supabase.from(table).select(select || "*");
+        let query: any = supabase.from(table).select(select || "*");
         
-        if (filters) {
+        if (filters && Array.isArray(filters)) {
           for (const f of filters) {
             if (f.op === "eq") query = query.eq(f.col, f.val);
             else if (f.op === "not.is") query = query.not(f.col, "is", f.val);
@@ -44,9 +44,9 @@ export async function POST(request: NextRequest) {
       }
 
       case "selectSingle": {
-        let query = supabase.from(table).select("*");
+        let query: any = supabase.from(table).select("*");
         
-        if (filters) {
+        if (filters && Array.isArray(filters)) {
           for (const f of filters) {
             if (f.op === "eq") query = query.eq(f.col, f.val);
           }
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
       }
 
       case "update": {
-        let query = supabase.from(table).update(data);
+        let query: any = supabase.from(table).update(data);
         if (id) {
           const idCol = body.idCol || "id";
           query = query.eq(idCol, id);
@@ -77,8 +77,8 @@ export async function POST(request: NextRequest) {
       }
 
       case "deleteWhere": {
-        let query = supabase.from(table).delete();
-        if (filters) {
+        let query: any = supabase.from(table).delete();
+        if (filters && Array.isArray(filters)) {
           for (const f of filters) {
             if (f.op === "eq") query = query.eq(f.col, f.val);
           }
