@@ -29,7 +29,7 @@ export default function Navbar({
     { href: "/ventas",       label: "Vender",       icon: ShoppingCart,    badge: 0,             badgeColor: "" },
     { href: "/estadisticas", label: "Estadísticas", icon: BarChart2,       badge: 0,             badgeColor: "" },
     { href: "/agenda",       label: "Agenda",       icon: Users,           badge: 0,             badgeColor: "" },
-    { href: "/inventario",   label: "Inventario",   icon: Package,         badge: lowStockCount, badgeColor: "bg-yellow-500" },
+    { href: "/inventario",   label: "Solicitud de compra",   icon: Package,         badge: lowStockCount, badgeColor: "bg-yellow-500" },
   ];
 
   return (
