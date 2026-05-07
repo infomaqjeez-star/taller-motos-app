@@ -136,7 +136,6 @@ export default function Navbar({
                 <span className="font-mono font-bold text-[#1E3A8A] text-sm tracking-wider">
                   {currentTime || "--:--:--"}
                 </span>
-                <span className="text-[10px] font-bold text-[#1E3A8A]/60 bg-[#1E3A8A]/10 px-1.5 py-0.5 rounded">ARG</span>
               </div>
 
               {/* Alarma Flex con Cuenta Regresiva debajo */}
