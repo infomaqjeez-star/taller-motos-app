@@ -547,6 +547,28 @@ export const ventasDb = {
     });
   },
 
+  async getAllVentas(): Promise<VentaRepuesto[]> {
+    console.log("[ventasDb] Consultando todas las ventas (sin filtro de fecha)");
+    const res = await fetch("/api/ventas?action=all");
+    if (!res.ok) {
+      const e = await res.json().catch(() => ({ error: "Error desconocido" }));
+      console.error("[ventasDb] Error HTTP:", res.status, e);
+      throw new Error(e.error ?? `Error HTTP ${res.status}`);
+    }
+
+    const data = await res.json();
+    console.log("[ventasDb] Datos recibidos:", data?.length || 0, "ventas");
+    console.log("[ventasDb] Datos crudos:", JSON.stringify(data, null, 2));
+
+    return (data ?? []).map((r: Record<string, unknown>) => {
+      const itemsRaw = r.ventas_items as Record<string, unknown>[] ?? [];
+      console.log("[ventasDb] Items raw para venta", r.id, ":", itemsRaw);
+      const items = itemsRaw.map(toVentaItem);
+      console.log("[ventasDb] Items mapeados:", items);
+      return toVenta(r, items);
+    });
+  },
+
   async getToday(): Promise<VentaRepuesto[]> {
     // Usar fecha local del cliente (Argentina) para evitar desfase UTC
     const now = new Date();

@@ -447,7 +447,7 @@ export default function VentasPage() {
 
   const loadVentasHoy = useCallback(async () => {
     setLoadingHoy(true);
-    try { setVentasHoy(await ventasDb.getToday()); }
+    try { setVentasHoy(await ventasDb.getAllVentas()); }
     catch { /* no-op */ }
     finally { setLoadingHoy(false); }
   }, []);
