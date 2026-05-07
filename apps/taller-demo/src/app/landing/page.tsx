@@ -39,9 +39,15 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-2">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                <Wrench className="w-6 h-6" />
-              </div>
+              <img
+                src="/logo-maqjeez.png"
+                alt="MAQJEEZ"
+                className="h-10 w-auto object-contain"
+                style={{ maxHeight: "40px" }}
+                onError={(e) => {
+                  e.currentTarget.src = "/appjeez-logo.jpg";
+                }}
+              />
               <span className="text-xl font-bold">TechSolutions</span>
             </div>
             
