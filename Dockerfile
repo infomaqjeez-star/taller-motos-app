@@ -1,5 +1,5 @@
-# Dockerfile para Railway - Next.js App Router (apps/meli)
-# Version: 6.0 - Fix env vars in build
+# Dockerfile para Railway - Next.js App Router (apps/taller-demo)
+# Version: 1.0 - Taller Demo App
 FROM node:20-alpine AS base
 
 # Instalar dependencias
@@ -7,9 +7,9 @@ FROM base AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-# Copiar package.json de meli
-COPY apps/meli/package.json ./package.json
-COPY apps/meli/package-lock.json ./package-lock.json
+# Copiar package.json de taller-demo
+COPY apps/taller-demo/package.json ./package.json
+COPY apps/taller-demo/package-lock.json ./package-lock.json
 RUN npm ci
 
 # Build
@@ -19,14 +19,12 @@ WORKDIR /app
 # Pasar variables de entorno al build (Railway las inyecta como ARG)
 ARG NEXT_PUBLIC_SUPABASE_URL
 ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
-ARG NEXT_PUBLIC_MELI_APP_ID
 ENV NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
 ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
-ENV NEXT_PUBLIC_MELI_APP_ID=${NEXT_PUBLIC_MELI_APP_ID}
 
-# Copiar node_modules y código fuente de meli
+# Copiar node_modules y código fuente de taller-demo
 COPY --from=deps /app/node_modules ./node_modules
-COPY apps/meli .
+COPY apps/taller-demo .
 
 # Limpiar caché de Next.js antes de build
 RUN rm -rf .next
