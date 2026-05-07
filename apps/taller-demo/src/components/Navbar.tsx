@@ -173,11 +173,11 @@ export default function Navbar({
               </div>
 
               {/* Alarma Flex con Cuenta Regresiva debajo */}
-              {config.flexAlarm.enabled && flexAlarm && (
+              {config.flexAlarms.some(a => a.enabled) && flexAlarm && (
                 <div className="flex flex-col gap-1">
-                  <div 
+                  <div
                     className="flex items-center gap-2 px-3 py-1 rounded-xl shadow-md border-2 bg-gradient-to-br from-orange-100 to-orange-50 border-orange-400"
-                    title={`Alarma Flex: ${config.flexAlarm.message}`}
+                    title={`Próxima alarma Flex`}
                   >
                     <Clock className="w-3.5 h-3.5 text-orange-600" />
                     <span className="font-mono font-bold text-black text-xs tracking-wider">
@@ -199,11 +199,11 @@ export default function Navbar({
               )}
 
               {/* Alarma Correo con Cuenta Regresiva debajo */}
-              {config.correoAlarm.enabled && correoAlarm && (
+              {config.correoAlarms.some(a => a.enabled) && correoAlarm && (
                 <div className="flex flex-col gap-1">
-                  <div 
+                  <div
                     className="flex items-center gap-2 px-3 py-1 rounded-xl shadow-md border-2 bg-gradient-to-br from-blue-100 to-blue-50 border-blue-400"
-                    title={`Alarma Correo: ${config.correoAlarm.message}`}
+                    title={`Próxima alarma Correo`}
                   >
                     <Clock className="w-3.5 h-3.5 text-blue-600" />
                     <span className="font-mono font-bold text-black text-xs tracking-wider">
