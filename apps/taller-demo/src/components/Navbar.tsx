@@ -155,7 +155,7 @@ export default function Navbar({
                     className={`flex items-center justify-center gap-1 px-2 py-0.5 rounded-lg border text-[10px] font-mono font-bold shadow-md ${
                       flexAlarm.diff < 1800000 // menos de 30 minutos
                         ? "bg-red-600 border-red-700 text-white animate-pulse shadow-lg"
-                        : "bg-green-500 border-green-600 text-white"
+                        : "bg-yellow-400 border-yellow-500 text-black"
                     }`}
                   >
                     <Timer className="w-3 h-3" />
@@ -181,7 +181,7 @@ export default function Navbar({
                     className={`flex items-center justify-center gap-1 px-2 py-0.5 rounded-lg border text-[10px] font-mono font-bold shadow-md ${
                       correoAlarm.diff < 1800000 // menos de 30 minutos
                         ? "bg-red-600 border-red-700 text-white animate-pulse shadow-lg"
-                        : "bg-green-500 border-green-600 text-white"
+                        : "bg-blue-400 border-blue-500 text-black"
                     }`}
                   >
                     <Timer className="w-3 h-3" />
