@@ -10,7 +10,7 @@ import {
   Clock, Timer, Settings,
 } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
-import { useAlarms } from "@/hooks/useAlarms";
+import { useAlarms } from "../hooks/useAlarms";
 
 interface NavbarProps {
   overdueCount?: number;
