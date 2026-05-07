@@ -40,13 +40,10 @@ export default function LandingPage() {
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-2">
               <img
-                src="/logo-maqjeez.png"
+                src="/appjeez-logo.jpg"
                 alt="MAQJEEZ"
                 className="h-10 w-auto object-contain"
                 style={{ maxHeight: "40px" }}
-                onError={(e) => {
-                  e.currentTarget.src = "/appjeez-logo.jpg";
-                }}
               />
               <span className="text-xl font-bold">TechSolutions</span>
             </div>

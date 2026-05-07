@@ -81,13 +81,10 @@ export default function Navbar({
           {/* Logo — clic lleva a la landing page */}
           <Link href="/landing" className="flex items-center h-full py-1">
             <img
-              src="/logo-maqjeez.png"
+              src="/appjeez-logo.jpg"
               alt="MAQJEEZ"
               className="object-contain h-12 w-auto"
               style={{ maxHeight: "48px" }}
-              onError={(e) => {
-                e.currentTarget.src = "/appjeez-logo.jpg";
-              }}
             />
           </Link>
 
