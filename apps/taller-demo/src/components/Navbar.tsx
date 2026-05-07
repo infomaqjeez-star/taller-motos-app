@@ -3,11 +3,14 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
+import { useState, useEffect } from "react";
 import {
   Package, LayoutDashboard, AlertTriangle,
   MessageCircle, BarChart2, Users, Truck, ShoppingCart,
+  Clock, Timer, Settings,
 } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
+import { useAlarms } from "@/hooks/useAlarms";
 
 interface NavbarProps {
   overdueCount?: number;
@@ -23,13 +26,34 @@ export default function Navbar({
   onOpenNotifications,
 }: NavbarProps) {
   const pathname = usePathname();
+  const [currentTime, setCurrentTime] = useState<string>("");
+  const { nextAlarm, formatCountdown, config } = useAlarms();
+
+  // Actualizar reloj cada segundo
+  useEffect(() => {
+    const updateTime = () => {
+      const now = new Date();
+      setCurrentTime(
+        now.toLocaleTimeString("es-AR", {
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+          timeZone: "America/Argentina/Buenos_Aires",
+        })
+      );
+    };
+    
+    updateTime();
+    const interval = setInterval(updateTime, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   const links = [
     { href: "/taller",       label: "Taller",       icon: LayoutDashboard, badge: overdueCount,  badgeColor: "bg-red-500" },
     { href: "/ventas",       label: "Vender",       icon: ShoppingCart,    badge: 0,             badgeColor: "" },
     { href: "/estadisticas", label: "Estadísticas", icon: BarChart2,       badge: 0,             badgeColor: "" },
     { href: "/agenda",       label: "Agenda",       icon: Users,           badge: 0,             badgeColor: "" },
-    { href: "/inventario",   label: "Solicitud de compra",   icon: Package,         badge: lowStockCount, badgeColor: "bg-yellow-500" },
+    { href: "/inventario",   label: "Pedidos",     icon: Package,         badge: lowStockCount, badgeColor: "bg-yellow-500" },
   ];
 
   return (
@@ -48,6 +72,61 @@ export default function Navbar({
               priority
             />
           </Link>
+
+          {/* Reloj y Cuenta Regresiva */}
+          <div className="hidden sm:flex items-center gap-3">
+            {/* Reloj */}
+            <div className="flex items-center gap-1.5 bg-[#1E3A8A]/20 px-3 py-1.5 rounded-xl border border-[#1E3A8A]/30">
+              <Clock className="w-4 h-4 text-[#1E3A8A]" />
+              <span className="font-mono font-bold text-[#1E3A8A] text-sm">
+                {currentTime || "--:--:--"}
+              </span>
+              <span className="text-xs text-[#1E3A8A]/70">ARG</span>
+            </div>
+
+            {/* Cuenta regresiva a próxima alarma */}
+            {nextAlarm && (
+              <div 
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border ${
+                  nextAlarm.diff < 300000 // menos de 5 minutos
+                    ? "bg-red-500/20 border-red-500/50 animate-pulse"
+                    : nextAlarm.diff < 900000 // menos de 15 minutos
+                    ? "bg-yellow-500/20 border-yellow-500/50"
+                    : "bg-green-500/20 border-green-500/50"
+                }`}
+                title={`Próxima alarma: ${nextAlarm.type} a las ${nextAlarm.time.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}`}
+              >
+                <Timer className={`w-4 h-4 ${
+                  nextAlarm.diff < 300000 
+                    ? "text-red-600" 
+                    : nextAlarm.diff < 900000 
+                    ? "text-yellow-600" 
+                    : "text-green-600"
+                }`} />
+                <span className={`font-mono font-bold text-sm ${
+                  nextAlarm.diff < 300000 
+                    ? "text-red-700" 
+                    : nextAlarm.diff < 900000 
+                    ? "text-yellow-700" 
+                    : "text-green-700"
+                }`}>
+                  {formatCountdown(nextAlarm.diff)}
+                </span>
+                <span className="text-xs opacity-70">
+                  → {nextAlarm.type}
+                </span>
+              </div>
+            )}
+
+            {/* Configuración de alarmas */}
+            <Link 
+              href="/configuracion/alarmas"
+              className="p-2 rounded-xl bg-[#1E3A8A]/10 hover:bg-[#1E3A8A]/20 transition-colors"
+              title="Configurar alarmas"
+            >
+              <Settings className="w-4 h-4 text-[#1E3A8A]" />
+            </Link>
+          </div>
 
           {/* Desktop nav */}
           <nav className="hidden sm:flex items-center gap-1">
