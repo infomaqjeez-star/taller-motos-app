@@ -73,61 +73,6 @@ export default function Navbar({
             />
           </Link>
 
-          {/* Reloj y Cuenta Regresiva */}
-          <div className="hidden sm:flex items-center gap-3">
-            {/* Reloj */}
-            <div className="flex items-center gap-1.5 bg-[#1E3A8A]/20 px-3 py-1.5 rounded-xl border border-[#1E3A8A]/30">
-              <Clock className="w-4 h-4 text-[#1E3A8A]" />
-              <span className="font-mono font-bold text-[#1E3A8A] text-sm">
-                {currentTime || "--:--:--"}
-              </span>
-              <span className="text-xs text-[#1E3A8A]/70">ARG</span>
-            </div>
-
-            {/* Cuenta regresiva a próxima alarma */}
-            {nextAlarm && (
-              <div 
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border ${
-                  nextAlarm.diff < 300000 // menos de 5 minutos
-                    ? "bg-red-500/20 border-red-500/50 animate-pulse"
-                    : nextAlarm.diff < 900000 // menos de 15 minutos
-                    ? "bg-yellow-500/20 border-yellow-500/50"
-                    : "bg-green-500/20 border-green-500/50"
-                }`}
-                title={`Próxima alarma: ${nextAlarm.type} a las ${nextAlarm.time.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}`}
-              >
-                <Timer className={`w-4 h-4 ${
-                  nextAlarm.diff < 300000 
-                    ? "text-red-600" 
-                    : nextAlarm.diff < 900000 
-                    ? "text-yellow-600" 
-                    : "text-green-600"
-                }`} />
-                <span className={`font-mono font-bold text-sm ${
-                  nextAlarm.diff < 300000 
-                    ? "text-red-700" 
-                    : nextAlarm.diff < 900000 
-                    ? "text-yellow-700" 
-                    : "text-green-700"
-                }`}>
-                  {formatCountdown(nextAlarm.diff)}
-                </span>
-                <span className="text-xs opacity-70">
-                  → {nextAlarm.type}
-                </span>
-              </div>
-            )}
-
-            {/* Configuración de alarmas */}
-            <Link 
-              href="/configuracion/alarmas"
-              className="p-2 rounded-xl bg-[#1E3A8A]/10 hover:bg-[#1E3A8A]/20 transition-colors"
-              title="Configurar alarmas"
-            >
-              <Settings className="w-4 h-4 text-[#1E3A8A]" />
-            </Link>
-          </div>
-
           {/* Desktop nav */}
           <nav className="hidden sm:flex items-center gap-1">
             {links.map(({ href, label, icon: Icon, badge, badgeColor }) => {
@@ -178,6 +123,70 @@ export default function Navbar({
             )}
 
             <ThemeToggle />
+
+            {/* Reloj y Cuenta Regresiva - Diseño Profesional */}
+            <div className="hidden sm:flex items-center gap-3 ml-4 pl-4 border-l border-[#E09A00]/30">
+              {/* Reloj */}
+              <div 
+                className="flex items-center gap-2 bg-gradient-to-br from-white/95 to-white/90 px-3 py-1.5 rounded-xl shadow-lg border-2 border-[#1E3A8A]/20 hover:border-[#1E3A8A]/40 transition-all"
+                title="Hora Argentina"
+              >
+                <Clock className="w-4 h-4 text-[#1E3A8A]" />
+                <span className="font-mono font-bold text-[#1E3A8A] text-sm tracking-wider">
+                  {currentTime || "--:--:--"}
+                </span>
+                <span className="text-[10px] font-bold text-[#1E3A8A]/60 bg-[#1E3A8A]/10 px-1.5 py-0.5 rounded">ARG</span>
+              </div>
+
+              {/* Cuenta regresiva a próxima alarma */}
+              {nextAlarm && (
+                <div 
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-xl shadow-lg border-2 transition-all ${
+                    nextAlarm.diff < 300000 // menos de 5 minutos
+                      ? "bg-gradient-to-br from-red-100 to-red-50 border-red-400 animate-pulse"
+                      : nextAlarm.diff < 900000 // menos de 15 minutos
+                      ? "bg-gradient-to-br from-yellow-100 to-yellow-50 border-yellow-400"
+                      : "bg-gradient-to-br from-green-100 to-green-50 border-green-400"
+                  }`}
+                  title={`Próxima alarma: ${nextAlarm.type} a las ${nextAlarm.time.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}`}
+                >
+                  <Timer className={`w-4 h-4 ${
+                    nextAlarm.diff < 300000 
+                      ? "text-red-600" 
+                      : nextAlarm.diff < 900000 
+                      ? "text-yellow-600" 
+                      : "text-green-600"
+                  }`} />
+                  <span className={`font-mono font-bold text-sm tracking-wider ${
+                    nextAlarm.diff < 300000 
+                      ? "text-red-700" 
+                      : nextAlarm.diff < 900000 
+                      ? "text-yellow-700" 
+                      : "text-green-700"
+                  }`}>
+                    {formatCountdown(nextAlarm.diff)}
+                  </span>
+                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                    nextAlarm.diff < 300000 
+                      ? "bg-red-500 text-white" 
+                      : nextAlarm.diff < 900000 
+                      ? "bg-yellow-500 text-white" 
+                      : "bg-green-500 text-white"
+                  }`}>
+                    {nextAlarm.type}
+                  </span>
+                </div>
+              )}
+
+              {/* Configuración de alarmas */}
+              <Link 
+                href="/configuracion/alarmas"
+                className="p-2 rounded-xl bg-[#1E3A8A]/10 hover:bg-[#1E3A8A]/20 transition-all hover:scale-110"
+                title="Configurar alarmas"
+              >
+                <Settings className="w-4 h-4 text-[#1E3A8A]" />
+              </Link>
+            </div>
           </nav>
 
           {/* Mobile: iconos rápidos */}
