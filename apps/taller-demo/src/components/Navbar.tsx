@@ -83,9 +83,11 @@ export default function Navbar({
             <img
               src="/logo-maqjeez.png"
               alt="MAQJEEZ"
-              width={130}
-              height={44}
-              className="object-contain h-full w-auto"
+              className="object-contain h-12 w-auto"
+              style={{ maxHeight: "48px" }}
+              onError={(e) => {
+                e.currentTarget.src = "/appjeez-logo.jpg";
+              }}
             />
           </Link>
 
