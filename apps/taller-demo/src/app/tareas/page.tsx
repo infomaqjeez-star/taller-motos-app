@@ -114,18 +114,18 @@ function TareaCard({
           <div className="space-y-2 text-xs text-gray-400">
             <div className="flex items-center gap-2">
               <Calendar className="w-3.5 h-3.5" />
-              <span>Creada: {formatDate(tarea.creadaEn)}</span>
+              <span>Creada: {formatDate(tarea.creadaEn)} por <strong className="text-white">{tarea.creador}</strong></span>
             </div>
             {tarea.iniciadaEn && (
               <div className="flex items-center gap-2">
                 <Play className="w-3.5 h-3.5 text-blue-400" />
-                <span>Iniciada: {formatDate(tarea.iniciadaEn)}</span>
+                <span>Iniciada: {formatDate(tarea.iniciadaEn)}{tarea.iniciador ? ` por <strong className="text-white">${tarea.iniciador}</strong>` : ""}</span>
               </div>
             )}
             {tarea.completadaEn && (
               <div className="flex items-center gap-2">
                 <CheckCircle className="w-3.5 h-3.5 text-green-400" />
-                <span>Completada: {formatDate(tarea.completadaEn)}</span>
+                <span>Completada: {formatDate(tarea.completadaEn)}{tarea.completador ? ` por <strong className="text-white">${tarea.completador}</strong>` : ""}</span>
               </div>
             )}
           </div>
@@ -305,9 +305,16 @@ function NuevaTareaModal({
 // ─── Página Principal ─────────────────────────────────────────
 
 export default function TareasPage() {
+  const { user, isAuthenticated, login, logout, verifyPassword } = useAuth();
   const [tareas, setTareas] = useState<Tarea[]>([]);
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [passwordInput, setPasswordInput] = useState("");
+  const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
+  const [loginUsername, setLoginUsername] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
   const [filter, setFilter] = useState<string>("todas");
 
   const loadTareas = useCallback(async () => {
@@ -337,7 +344,10 @@ export default function TareasPage() {
 
   const handleCrear = async (tarea: Omit<Tarea, "id" | "creadaEn">) => {
     try {
-      await tareasDb.create(tarea);
+      await tareasDb.create({
+        ...tarea,
+        creador: user || "admin",
+      });
       setShowModal(false);
       loadTareas();
     } catch (e) {
@@ -348,7 +358,7 @@ export default function TareasPage() {
 
   const handleIniciar = async (id: string) => {
     try {
-      await tareasDb.iniciarTarea(id, "usuario"); // Se sobrescribirá con usuario autenticado
+      await tareasDb.iniciarTarea(id, user || "usuario");
       loadTareas();
     } catch (e) {
       console.error("Error iniciando tarea:", e);
@@ -358,7 +368,7 @@ export default function TareasPage() {
 
   const handleCompletar = async (id: string) => {
     try {
-      await tareasDb.completarTarea(id, "usuario"); // Se sobrescribirá con usuario autenticado
+      await tareasDb.completarTarea(id, user || "usuario");
       loadTareas();
     } catch (e) {
       console.error("Error completando tarea:", e);
@@ -367,12 +377,45 @@ export default function TareasPage() {
   };
 
   const handleDelete = async (id: string) => {
-    try {
-      await tareasDb.delete(id);
-      loadTareas();
-    } catch (e) {
-      console.error("Error eliminando tarea:", e);
-      alert("Error al eliminar tarea");
+    if (!isAuthenticated) {
+      setShowLoginModal(true);
+      return;
+    }
+
+    const action = async () => {
+      try {
+        await tareasDb.delete(id);
+        loadTareas();
+      } catch (e) {
+        console.error("Error eliminando tarea:", e);
+        alert("Error al eliminar tarea");
+      }
+    };
+
+    setPendingAction(() => action);
+    setShowPasswordModal(true);
+  };
+
+  const handlePasswordSubmit = () => {
+    if (verifyPassword(passwordInput)) {
+      if (pendingAction) {
+        pendingAction();
+      }
+      setShowPasswordModal(false);
+      setPasswordInput("");
+      setPendingAction(null);
+    } else {
+      alert("Contraseña incorrecta");
+    }
+  };
+
+  const handleLoginSubmit = () => {
+    if (login(loginUsername, loginPassword)) {
+      setShowLoginModal(false);
+      setLoginUsername("");
+      setLoginPassword("");
+    } else {
+      alert("Contraseña incorrecta");
     }
   };
 
@@ -396,18 +439,35 @@ export default function TareasPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-black text-white flex items-center gap-2">
-              <AlertCircle className="w-6 h-6 text-[#E09A00]" />
+            <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+              <CheckCircle className="w-6 h-6 text-[#FDB71A]" />
               Tareas
             </h1>
             <p className="text-sm text-gray-400 mt-1">Gestión de tareas del equipo</p>
           </div>
-          <button
-            onClick={() => setShowModal(true)}
-            className="flex items-center gap-2 py-2 px-4 rounded-xl bg-green-600 hover:bg-green-700 text-white font-bold transition-colors"
-          >
-            <Plus className="w-5 h-5" /> Nueva Tarea
-          </button>
+          <div className="flex gap-2">
+            {isAuthenticated ? (
+              <button
+                onClick={logout}
+                className="flex items-center gap-2 py-2 px-4 rounded-xl bg-gray-600 hover:bg-gray-700 text-white font-bold transition-colors"
+              >
+                <LogOut className="w-5 h-5" /> {user}
+              </button>
+            ) : (
+              <button
+                onClick={() => setShowLoginModal(true)}
+                className="flex items-center gap-2 py-2 px-4 rounded-xl bg-[#FDB71A] hover:bg-[#E09A00] text-black font-bold transition-colors"
+              >
+                <Lock className="w-5 h-5" /> Ingresar
+              </button>
+            )}
+            <button
+              onClick={() => setShowModal(true)}
+              className="flex items-center gap-2 py-2 px-4 rounded-xl bg-green-600 hover:bg-green-700 text-white font-bold transition-colors"
+            >
+              <Plus className="w-5 h-5" /> Nueva Tarea
+            </button>
+          </div>
         </div>
 
         {/* Stats */}
@@ -474,7 +534,94 @@ export default function TareasPage() {
         )}
       </div>
 
-      <BottomNav />
+      {/* Modal de Login */}
+      {showLoginModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(6px)" }}>
+          <div className="w-full max-w-sm rounded-2xl p-6" style={{ background: "#1a1a1a", border: "1px solid rgba(255,255,255,0.10)" }}>
+            <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+              <Lock className="w-5 h-5 text-[#FDB71A]" /> Iniciar Sesión
+            </h2>
+            <div className="space-y-4">
+              <div>
+                <label className="label">Usuario</label>
+                <input
+                  className="input"
+                  value={loginUsername}
+                  onChange={(e) => setLoginUsername(e.target.value)}
+                  placeholder="Tu nombre"
+                />
+              </div>
+              <div>
+                <label className="label">Contraseña</label>
+                <input
+                  type="password"
+                  className="input"
+                  value={loginPassword}
+                  onChange={(e) => setLoginPassword(e.target.value)}
+                  placeholder="Contraseña"
+                />
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowLoginModal(false)}
+                  className="flex-1 py-3 px-4 rounded-xl bg-gray-600 hover:bg-gray-700 text-white font-bold transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleLoginSubmit}
+                  className="flex-1 py-3 px-4 rounded-xl bg-[#FDB71A] hover:bg-[#E09A00] text-black font-bold transition-colors"
+                >
+                  Ingresar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Contraseña */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(6px)" }}>
+          <div className="w-full max-w-sm rounded-2xl p-6" style={{ background: "#1a1a1a", border: "1px solid rgba(255,255,255,0.10)" }}>
+            <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+              <Lock className="w-5 h-5 text-red-400" /> Verificar Contraseña
+            </h2>
+            <div className="space-y-4">
+              <div>
+                <label className="label">Contraseña de administrador</label>
+                <input
+                  type="password"
+                  className="input"
+                  value={passwordInput}
+                  onChange={(e) => setPasswordInput(e.target.value)}
+                  placeholder="Ingresa la contraseña"
+                />
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowPasswordModal(false);
+                    setPasswordInput("");
+                    setPendingAction(null);
+                  }}
+                  className="flex-1 py-3 px-4 rounded-xl bg-gray-600 hover:bg-gray-700 text-white font-bold transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handlePasswordSubmit}
+                  className="flex-1 py-3 px-4 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold transition-colors"
+                >
+                  Confirmar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showModal && (
         <NuevaTareaModal
