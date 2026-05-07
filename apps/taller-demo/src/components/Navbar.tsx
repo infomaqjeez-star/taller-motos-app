@@ -80,12 +80,9 @@ export default function Navbar({
 
           {/* Logo — clic lleva a la landing page */}
           <Link href="/landing" className="flex items-center h-full py-1">
-            <img
-              src="/appjeez-logo.jpg"
-              alt="MAQJEEZ"
-              className="object-contain h-12 w-auto"
-              style={{ maxHeight: "48px" }}
-            />
+            <div className="w-10 h-10 bg-gradient-to-br from-[#FDB71A] to-[#E09A00] rounded-lg flex items-center justify-center font-bold text-black text-lg">
+              M
+            </div>
           </Link>
 
           {/* Desktop nav */}
