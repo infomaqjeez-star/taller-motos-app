@@ -256,6 +256,17 @@ export default function PrintOrder({ order, onClose }: Props) {
           <p>• El presupuesto tiene una validez de {validez} días desde su emisión.</p>
           <p>• Los repuestos no incluidos en este presupuesto serán cotizados por separado.</p>
           <p>• Una vez aceptado el presupuesto, no se realizarán cambios sin previo aviso.</p>
+          {/* Garantía para máquinas reparadas */}
+          {order.status !== "entregado" && (
+            <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="font-bold text-blue-800">🔧 GARANTÍA DE REPARACIÓN: 30 DÍAS</p>
+              <p className="text-blue-600 mt-1">
+                La reparación incluye garantía de 30 días desde la fecha de entrega. 
+                Cubre defectos de mano de obra y repuestos utilizados. 
+                No cubre daños por mal uso, accidentes o modificaciones.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* ── Firmas ── */}

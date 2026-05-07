@@ -61,6 +61,8 @@ export interface WorkOrder {
   // Pagos
   totalPaid?: number;
   deposit?: number;       // seña / pago parcial al ingresar
+  // Garantía
+  warrantyDays?: number;  // días de garantía (default 30 para reparaciones)
 }
 
 export interface Pago {
@@ -276,6 +278,7 @@ export interface VentaItem {
   cantidad: number;
   precioUnit: number;
   subtotal: number;
+  warrantyDays?: number; // días de garantía por producto (opcional)
 }
 
 export interface VentaRepuesto {

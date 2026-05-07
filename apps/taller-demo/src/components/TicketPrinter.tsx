@@ -167,19 +167,30 @@ export default function TicketPrinter({ isOpen, venta, clientData, onClose }: Pr
               >
                 <thead>
                   <tr style={{ backgroundColor: "#000", color: "#fff" }}>
-                    <th style={{ padding: "10px", textAlign: "left", border: "1px solid #000", width: "10%" }}>Cant.</th>
-                    <th style={{ padding: "10px", textAlign: "left", border: "1px solid #000", width: "45%" }}>
+                    <th style={{ padding: "10px", textAlign: "left", border: "1px solid #000", width: "8%" }}>Cant.</th>
+                    <th style={{ padding: "10px", textAlign: "left", border: "1px solid #000", width: "37%" }}>
                       Descripción del Producto / Servicio
                     </th>
-                    <th style={{ padding: "10px", textAlign: "right", border: "1px solid #000", width: "20%" }}>Precio Unit.</th>
-                    <th style={{ padding: "10px", textAlign: "right", border: "1px solid #000", width: "25%" }}>Subtotal</th>
+                    <th style={{ padding: "10px", textAlign: "center", border: "1px solid #000", width: "15%" }}>Garantía</th>
+                    <th style={{ padding: "10px", textAlign: "right", border: "1px solid #000", width: "18%" }}>Precio Unit.</th>
+                    <th style={{ padding: "10px", textAlign: "right", border: "1px solid #000", width: "22%" }}>Subtotal</th>
                   </tr>
                 </thead>
                 <tbody>
                   {venta.items.map((item) => (
                     <tr key={item.id}>
                       <td style={{ padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>{item.cantidad}</td>
-                      <td style={{ padding: "10px", border: "1px solid #ddd" }}>{item.producto}</td>
+                      <td style={{ padding: "10px", border: "1px solid #ddd" }}>
+                        {item.producto}
+                        {item.sku && <div style={{ fontSize: "10px", color: "#666", marginTop: "2px" }}>SKU: {item.sku}</div>}
+                      </td>
+                      <td style={{ padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>
+                        {item.warrantyDays ? (
+                          <span style={{ fontWeight: "bold", color: "#2563EB" }}>{item.warrantyDays} días</span>
+                        ) : (
+                          <span style={{ color: "#999" }}>—</span>
+                        )}
+                      </td>
                       <td style={{ padding: "10px", border: "1px solid #ddd", textAlign: "right" }}>
                         {formatCurrency(item.precioUnit)}
                       </td>
@@ -191,7 +202,7 @@ export default function TicketPrinter({ isOpen, venta, clientData, onClose }: Pr
                 </tbody>
                 <tfoot>
                   <tr>
-                    <td colSpan={3} style={{ padding: "10px", textAlign: "right", fontWeight: "bold", fontSize: "14px" }}>
+                    <td colSpan={4} style={{ padding: "10px", textAlign: "right", fontWeight: "bold", fontSize: "14px" }}>
                       TOTAL:
                     </td>
                     <td
@@ -210,10 +221,40 @@ export default function TicketPrinter({ isOpen, venta, clientData, onClose }: Pr
                 </tfoot>
               </table>
 
+              {/* Sección de Garantía */}
+              {venta.items.some(i => i.warrantyDays && i.warrantyDays > 0) && (
+                <div
+                  style={{
+                    margin: "20px 0",
+                    padding: "15px",
+                    backgroundColor: "#EBF4FF",
+                    borderRadius: "5px",
+                    border: "1px solid #2563EB",
+                  }}
+                >
+                  <h4 style={{ margin: "0 0 10px 0", fontSize: "13px", fontWeight: "bold", color: "#2563EB" }}>
+                    🛡️ GARANTÍA DE PRODUCTOS
+                  </h4>
+                  <ul style={{ margin: "0", paddingLeft: "20px", fontSize: "11px", color: "#333" }}>
+                    {venta.items
+                      .filter(item => item.warrantyDays && item.warrantyDays > 0)
+                      .map(item => (
+                        <li key={item.id} style={{ marginBottom: "5px" }}>
+                          <strong>{item.producto}</strong>: Garantía de {item.warrantyDays} días desde la fecha de compra.
+                          Cubre defectos de fábrica. No cubre daños por mal uso, accidentes o modificaciones.
+                        </li>
+                      ))}
+                  </ul>
+                </div>
+              )}
+
               {/* Pie */}
-              <div style={{ marginTop: "50px", textAlign: "center", fontSize: "11px", color: "#777" }}>
+              <div style={{ marginTop: "30px", textAlign: "center", fontSize: "11px", color: "#777" }}>
                 <p>Gracias por confiar en MaqJeez para sus herramientas y servicios técnicos.</p>
                 <p>Este documento es un resumen de operación comercial interna.</p>
+                <p style={{ marginTop: "10px", fontWeight: "bold" }}>
+                  MAQJEEZ · Carlos Spegazzini, Ezeiza · Tel: 11 5900-0486 / 11 2181-6064
+                </p>
               </div>
             </div>
           </div>

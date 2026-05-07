@@ -63,7 +63,7 @@ function ItemRow({
 }) {
   return (
     <div className="grid grid-cols-12 gap-2 items-center">
-      <div className="col-span-5">
+      <div className="col-span-4">
         <input
           className="input input-sm"
           placeholder="Producto / descripción"
@@ -97,6 +97,17 @@ function ItemRow({
           placeholder="$Precio"
           value={item.precioUnit || ""}
           onChange={e => onChange(item.id, "precioUnit", parseFloat(e.target.value) || 0)}
+        />
+      </div>
+      <div className="col-span-1">
+        <input
+          type="number"
+          min={0}
+          className="input input-sm text-xs"
+          placeholder="Garantía (días)"
+          title="Días de garantía"
+          value={item.warrantyDays || ""}
+          onChange={e => onChange(item.id, "warrantyDays", Math.max(0, parseInt(e.target.value) || 0))}
         />
       </div>
       <div className="col-span-1 flex justify-end">
@@ -352,7 +363,7 @@ type Tab = "nueva" | "movimientos" | "estadisticas";
 type RangoStats = "hoy" | "semana" | "mes" | "custom";
 
 function newItem(): VentaItem {
-  return { id: generateId(), ventaId: "", producto: "", sku: "", cantidad: 1, precioUnit: 0, subtotal: 0 };
+  return { id: generateId(), ventaId: "", producto: "", sku: "", cantidad: 1, precioUnit: 0, subtotal: 0, warrantyDays: 30 };
 }
 
 export default function VentasPage() {
@@ -544,10 +555,11 @@ export default function VentasPage() {
 
               {/* Header de columnas */}
               <div className="grid grid-cols-12 gap-2 mb-2 px-1">
-                <p className="col-span-5 text-xs text-gray-600 font-semibold">PRODUCTO</p>
+                <p className="col-span-4 text-xs text-gray-600 font-semibold">PRODUCTO</p>
                 <p className="col-span-2 text-xs text-gray-600 font-semibold">SKU</p>
                 <p className="col-span-2 text-xs text-gray-600 font-semibold">CANT.</p>
                 <p className="col-span-2 text-xs text-gray-600 font-semibold">PRECIO</p>
+                <p className="col-span-1 text-xs text-gray-600 font-semibold">GARANTÍA</p>
                 <p className="col-span-1" />
               </div>
 
