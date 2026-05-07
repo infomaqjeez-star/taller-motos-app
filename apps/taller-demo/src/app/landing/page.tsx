@@ -290,9 +290,9 @@ export default function LandingPage() {
           </div>
           <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
             {[
-              { name:"Starter", price:"$29", desc:"1 plataforma", color:"border-white/10", features:["1 plataforma a elegir","Hasta 3 usuarios","Soporte por email","Funciones básicas"] },
-              { name:"Pro", price:"$79", desc:"2 plataformas", color:"border-[#FFE600]", popular:true, features:["2 plataformas combinadas","Hasta 10 usuarios","Soporte prioritario","IA para respuestas ML","Reportes avanzados"] },
-              { name:"Business", price:"$149", desc:"3 plataformas completas", color:"border-white/10", features:["Las 3 plataformas","Usuarios ilimitados","Soporte 24/7","Personalización total","Multi-sucursal","API access"] },
+              { name:"Starter", price:"$9.999", desc:"Cualquier plataforma", color:"border-white/10", features:["1 plataforma a elegir","Hasta 3 usuarios","Soporte por email","Funciones básicas"] },
+              { name:"Pro", price:"$29.999", desc:"Cualquier plataforma", color:"border-[#FFE600]", popular:true, features:["1 plataforma completa","Hasta 10 usuarios","Soporte prioritario","IA para respuestas ML","Reportes avanzados"] },
+              { name:"Business", price:"$49.999", desc:"Cualquier plataforma", color:"border-white/10", features:["1 plataforma full","Usuarios ilimitados","Soporte 24/7","Personalización total","Multi-sucursal","API access"] },
             ].map(p => (
               <div key={p.name} className={`bg-white/5 border ${p.color} rounded-2xl p-8 relative ${p.popular ? "bg-[#FFE600]/5" : ""}`}>
                 {p.popular && <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-[#FFE600] text-[#003087] text-xs font-black px-4 py-1 rounded-full">MÁS POPULAR</div>}
