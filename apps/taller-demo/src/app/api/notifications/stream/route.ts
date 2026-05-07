@@ -1,8 +1,11 @@
 import { NextRequest } from "next/server";
 
+// Forzar esta ruta a ser dinámica (no estática)
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/notifications/stream
- * 
+ *
  * Endpoint SSE (Server-Sent Events) para notificaciones en tiempo real.
  * Envía notificaciones de Mercado Libre a los clientes conectados.
  */
