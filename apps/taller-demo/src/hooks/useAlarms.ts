@@ -2,25 +2,32 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 
+export interface SingleAlarm {
+  hour: number;
+  minute: number;
+  enabled: boolean;
+  message: string;
+  id: string;
+}
+
 export interface AlarmConfig {
-  flexAlarm: {
-    hour: number;
-    minute: number;
-    enabled: boolean;
-    message: string;
-  };
-  correoAlarm: {
-    hour: number;
-    minute: number;
-    enabled: boolean;
-    message: string;
-  };
+  flexAlarms: SingleAlarm[];
+  correoAlarms: SingleAlarm[];
+  danielaAlarm: SingleAlarm;
   workDays: boolean[]; // [lunes, martes, miercoles, jueves, viernes, sabado, domingo]
 }
 
 const DEFAULT_CONFIG: AlarmConfig = {
-  flexAlarm: { hour: 12, minute: 0, enabled: true, message: "revisar flex" },
-  correoAlarm: { hour: 17, minute: 0, enabled: true, message: "entregar correo" },
+  flexAlarms: [
+    { hour: 11, minute: 51, enabled: true, message: "chequear flex", id: "flex-10min-before" },
+    { hour: 11, minute: 56, enabled: true, message: "chequear flex", id: "flex-5min-before" },
+    { hour: 12, minute: 1, enabled: true, message: "chequear flex", id: "flex-corte" },
+    { hour: 12, minute: 10, enabled: true, message: "chequear flex", id: "flex-10min-after" },
+  ],
+  correoAlarms: [
+    { hour: 17, minute: 0, enabled: true, message: "avisar a oscar de entregar correo", id: "correo-main" },
+  ],
+  danielaAlarm: { hour: 12, minute: 0, enabled: true, message: "daniela ponete las pilas y revisa flex", id: "daniela" },
   workDays: [true, true, true, true, true, true, false], // Lun-Sab
 };
 
@@ -31,6 +38,7 @@ export function useAlarms() {
   const [nextAlarm, setNextAlarm] = useState<{ type: string; time: Date; diff: number } | null>(null);
   const [flexAlarm, setFlexAlarm] = useState<{ time: Date; diff: number } | null>(null);
   const [correoAlarm, setCorreoAlarm] = useState<{ time: Date; diff: number } | null>(null);
+  const [danielaAlarm, setDanielaAlarm] = useState<{ time: Date; diff: number } | null>(null);
   const lastPlayedRef = useRef<{ [key: string]: string }>({});
 
   // Cargar configuración guardada
@@ -89,35 +97,49 @@ export function useAlarms() {
 
       const timeKey = `${currentHour}:${currentMinute}`;
 
-      // Verificar alarma de flex (12:00)
-      if (config.flexAlarm.enabled) {
-        const flexKey = `flex-${timeKey}`;
-        if (
-          currentHour === config.flexAlarm.hour &&
-          currentMinute === config.flexAlarm.minute &&
-          lastPlayedRef.current["flex"] !== timeKey
-        ) {
-          lastPlayedRef.current["flex"] = timeKey;
-          speak(config.flexAlarm.message);
-          
-          // También mostrar alerta visual
-          alert(`🔔 ALARMA: ${config.flexAlarm.message.toUpperCase()}`);
+      // Verificar alarmas de flex
+      config.flexAlarms.forEach(alarm => {
+        if (alarm.enabled) {
+          const alarmKey = `flex-${alarm.id}-${timeKey}`;
+          if (
+            currentHour === alarm.hour &&
+            currentMinute === alarm.minute &&
+            lastPlayedRef.current[alarmKey] !== timeKey
+          ) {
+            lastPlayedRef.current[alarmKey] = timeKey;
+            speak(alarm.message);
+            alert(`🔔 FLEX: ${alarm.message.toUpperCase()}`);
+          }
         }
-      }
+      });
 
-      // Verificar alarma de correo (17:00)
-      if (config.correoAlarm.enabled) {
-        const correoKey = `correo-${timeKey}`;
+      // Verificar alarmas de correo
+      config.correoAlarms.forEach(alarm => {
+        if (alarm.enabled) {
+          const alarmKey = `correo-${alarm.id}-${timeKey}`;
+          if (
+            currentHour === alarm.hour &&
+            currentMinute === alarm.minute &&
+            lastPlayedRef.current[alarmKey] !== timeKey
+          ) {
+            lastPlayedRef.current[alarmKey] = timeKey;
+            speak(alarm.message);
+            alert(`� CORREO: ${alarm.message.toUpperCase()}`);
+          }
+        }
+      });
+
+      // Verificar alarma de Daniela
+      if (config.danielaAlarm.enabled) {
+        const alarmKey = `daniela-${timeKey}`;
         if (
-          currentHour === config.correoAlarm.hour &&
-          currentMinute === config.correoAlarm.minute &&
-          lastPlayedRef.current["correo"] !== timeKey
+          currentHour === config.danielaAlarm.hour &&
+          currentMinute === config.danielaAlarm.minute &&
+          lastPlayedRef.current[alarmKey] !== timeKey
         ) {
-          lastPlayedRef.current["correo"] = timeKey;
-          speak(config.correoAlarm.message);
-          
-          // También mostrar alerta visual
-          alert(`📦 ALARMA: ${config.correoAlarm.message.toUpperCase()}`);
+          lastPlayedRef.current[alarmKey] = timeKey;
+          speak(config.danielaAlarm.message);
+          alert(`� DANIELA: ${config.danielaAlarm.message.toUpperCase()}`);
         }
       }
     };
@@ -132,69 +154,104 @@ export function useAlarms() {
 
       let nextFlex: Date | null = null;
       let nextCorreo: Date | null = null;
+      let nextDaniela: Date | null = null;
 
       // Buscar próxima alarma de flex
-      if (config.flexAlarm.enabled) {
-        const flexTime = new Date(now);
-        flexTime.setHours(config.flexAlarm.hour, config.flexAlarm.minute, 0, 0);
-        
-        if (flexTime <= now) {
-          flexTime.setDate(flexTime.getDate() + 1);
+      const allFlexTimes: Date[] = [];
+      config.flexAlarms.forEach(alarm => {
+        if (alarm.enabled) {
+          const flexTime = new Date(now);
+          flexTime.setHours(alarm.hour, alarm.minute, 0, 0);
+
+          if (flexTime <= now) {
+            flexTime.setDate(flexTime.getDate() + 1);
+          }
+
+          // Buscar día laborable
+          while (!config.workDays[flexTime.getDay() === 0 ? 6 : flexTime.getDay() - 1]) {
+            flexTime.setDate(flexTime.getDate() + 1);
+          }
+
+          allFlexTimes.push(flexTime);
         }
-        
-        // Buscar día laborable
-        while (!config.workDays[flexTime.getDay() === 0 ? 6 : flexTime.getDay() - 1]) {
-          flexTime.setDate(flexTime.getDate() + 1);
-        }
-        
-        nextFlex = flexTime;
+      });
+
+      if (allFlexTimes.length > 0) {
+        nextFlex = allFlexTimes.reduce((a, b) => (a < b ? a : b));
       }
 
       // Buscar próxima alarma de correo
-      if (config.correoAlarm.enabled) {
-        const correoTime = new Date(now);
-        correoTime.setHours(config.correoAlarm.hour, config.correoAlarm.minute, 0, 0);
-        
-        if (correoTime <= now) {
-          correoTime.setDate(correoTime.getDate() + 1);
+      const allCorreoTimes: Date[] = [];
+      config.correoAlarms.forEach(alarm => {
+        if (alarm.enabled) {
+          const correoTime = new Date(now);
+          correoTime.setHours(alarm.hour, alarm.minute, 0, 0);
+
+          if (correoTime <= now) {
+            correoTime.setDate(correoTime.getDate() + 1);
+          }
+
+          // Buscar día laborable
+          while (!config.workDays[correoTime.getDay() === 0 ? 6 : correoTime.getDay() - 1]) {
+            correoTime.setDate(correoTime.getDate() + 1);
+          }
+
+          allCorreoTimes.push(correoTime);
         }
-        
+      });
+
+      if (allCorreoTimes.length > 0) {
+        nextCorreo = allCorreoTimes.reduce((a, b) => (a < b ? a : b));
+      }
+
+      // Buscar próxima alarma de Daniela
+      if (config.danielaAlarm.enabled) {
+        const danielaTime = new Date(now);
+        danielaTime.setHours(config.danielaAlarm.hour, config.danielaAlarm.minute, 0, 0);
+
+        if (danielaTime <= now) {
+          danielaTime.setDate(danielaTime.getDate() + 1);
+        }
+
         // Buscar día laborable
-        while (!config.workDays[correoTime.getDay() === 0 ? 6 : correoTime.getDay() - 1]) {
-          correoTime.setDate(correoTime.getDate() + 1);
+        while (!config.workDays[danielaTime.getDay() === 0 ? 6 : danielaTime.getDay() - 1]) {
+          danielaTime.setDate(danielaTime.getDate() + 1);
         }
-        
-        nextCorreo = correoTime;
+
+        nextDaniela = danielaTime;
       }
 
       // Determinar cuál es la próxima
+      const allTimes: { type: string; time: Date }[] = [];
+      if (nextFlex) allTimes.push({ type: "Flex", time: nextFlex });
+      if (nextCorreo) allTimes.push({ type: "Correo", time: nextCorreo });
+      if (nextDaniela) allTimes.push({ type: "Daniela", time: nextDaniela });
+
       let next: { type: string; time: Date; diff: number } | null = null;
-      
-      if (nextFlex && nextCorreo) {
-        if (nextFlex < nextCorreo) {
-          next = { type: "Flex", time: nextFlex, diff: nextFlex.getTime() - now.getTime() };
-        } else {
-          next = { type: "Correo", time: nextCorreo, diff: nextCorreo.getTime() - now.getTime() };
-        }
-      } else if (nextFlex) {
-        next = { type: "Flex", time: nextFlex, diff: nextFlex.getTime() - now.getTime() };
-      } else if (nextCorreo) {
-        next = { type: "Correo", time: nextCorreo, diff: nextCorreo.getTime() - now.getTime() };
+      if (allTimes.length > 0) {
+        const earliest = allTimes.reduce((a, b) => (a.time < b.time ? a : b));
+        next = { type: earliest.type, time: earliest.time, diff: earliest.time.getTime() - now.getTime() };
       }
 
       setNextAlarm(next);
-      
+
       // Actualizar alarmas individuales
       if (nextFlex) {
         setFlexAlarm({ time: nextFlex, diff: nextFlex.getTime() - now.getTime() });
       } else {
         setFlexAlarm(null);
       }
-      
+
       if (nextCorreo) {
         setCorreoAlarm({ time: nextCorreo, diff: nextCorreo.getTime() - now.getTime() });
       } else {
         setCorreoAlarm(null);
+      }
+
+      if (nextDaniela) {
+        setDanielaAlarm({ time: nextDaniela, diff: nextDaniela.getTime() - now.getTime() });
+      } else {
+        setDanielaAlarm(null);
       }
     };
 
@@ -226,6 +283,7 @@ export function useAlarms() {
     nextAlarm,
     flexAlarm,
     correoAlarm,
+    danielaAlarm,
     formatCountdown,
     speak,
   };
