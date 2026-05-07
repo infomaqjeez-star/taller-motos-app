@@ -2,7 +2,7 @@
 // CAPA DE DATOS — API Routes server-side (Railway + Supabase)
 // ============================================================
 
-import { WorkOrder, StockItem, PartToOrder, Pago, PlantillaWhatsApp, AgendaCliente, HistorialReparacion, FlexEnvio, VentaRepuesto, VentaItem, VentasStats, VentasPorDia, TopProducto } from "./types";
+import { WorkOrder, StockItem, PartToOrder, Pago, PlantillaWhatsApp, AgendaCliente, HistorialReparacion, FlexEnvio, VentaRepuesto, VentaItem, VentasStats, VentasPorDia, TopProducto, Tarea } from "./types";
 
 // ─── Helper genérico para llamar a /api/db ────────────────────
 
@@ -655,5 +655,106 @@ export const ventasDb = {
       cantidad: Number(r.cantidad),
       total:    Number(r.total),
     }));
+  },
+};
+
+// ─── Tareas ─────────────────────────────────────────────────────────────
+
+function toTarea(r: Record<string, unknown>): Tarea {
+  return {
+    id:         r.id as string,
+    titulo:     r.titulo as string,
+    descripcion: r.descripcion as string,
+    asignadoA:  r.asignado_a as string,
+    status:     r.status as Tarea["status"],
+    creadaEn:   r.creada_en as string,
+    iniciadaEn: (r.iniciada_en as string) ?? undefined,
+    completadaEn: (r.completada_en as string) ?? undefined,
+    vista:      r.vista as boolean,
+    prioridad:  r.prioridad as Tarea["prioridad"],
+  };
+}
+
+export const tareasDb = {
+  async getAll(): Promise<Tarea[]> {
+    const res = await fetch("/api/tareas");
+    if (!res.ok) { const e = await res.json(); throw new Error(e.error ?? "Error al obtener tareas"); }
+    const data = await res.json();
+    return ((data as Record<string, unknown>[]) ?? []).map(toTarea);
+  },
+
+  async getByEmpleado(empleado: string): Promise<Tarea[]> {
+    const res = await fetch(`/api/tareas?empleado=${encodeURIComponent(empleado)}`);
+    if (!res.ok) { const e = await res.json(); throw new Error(e.error ?? "Error al obtener tareas del empleado"); }
+    const data = await res.json();
+    return ((data as Record<string, unknown>[]) ?? []).map(toTarea);
+  },
+
+  async getPendientesCount(): Promise<number> {
+    const res = await fetch("/api/tareas?action=count_pendientes");
+    if (!res.ok) { const e = await res.json(); throw new Error(e.error ?? "Error al contar tareas pendientes"); }
+    const data = await res.json();
+    return Number(data.count ?? 0);
+  },
+
+  async getNuevasCount(): Promise<number> {
+    const res = await fetch("/api/tareas?action=count_nuevas");
+    if (!res.ok) { const e = await res.json(); throw new Error(e.error ?? "Error al contar tareas nuevas"); }
+    const data = await res.json();
+    return Number(data.count ?? 0);
+  },
+
+  async create(t: Omit<Tarea, "id" | "creadaEn">): Promise<void> {
+    const res = await fetch("/api/tareas", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "create", tarea: t }),
+    });
+    if (!res.ok) { const e = await res.json(); throw new Error(e.error ?? "Error al crear tarea"); }
+  },
+
+  async update(t: Tarea): Promise<void> {
+    const res = await fetch("/api/tareas", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "update", tarea: t }),
+    });
+    if (!res.ok) { const e = await res.json(); throw new Error(e.error ?? "Error al actualizar tarea"); }
+  },
+
+  async iniciarTarea(id: string): Promise<void> {
+    const res = await fetch("/api/tareas", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "iniciar", id }),
+    });
+    if (!res.ok) { const e = await res.json(); throw new Error(e.error ?? "Error al iniciar tarea"); }
+  },
+
+  async completarTarea(id: string): Promise<void> {
+    const res = await fetch("/api/tareas", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "completar", id }),
+    });
+    if (!res.ok) { const e = await res.json(); throw new Error(e.error ?? "Error al completar tarea"); }
+  },
+
+  async marcarVistas(ids: string[]): Promise<void> {
+    const res = await fetch("/api/tareas", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "marcar_vistas", ids }),
+    });
+    if (!res.ok) { const e = await res.json(); throw new Error(e.error ?? "Error al marcar tareas como vistas"); }
+  },
+
+  async delete(id: string): Promise<void> {
+    const res = await fetch("/api/tareas", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "delete", id }),
+    });
+    if (!res.ok) { const e = await res.json(); throw new Error(e.error ?? "Error al eliminar tarea"); }
   },
 };

@@ -330,3 +330,20 @@ export interface FlexEnvio {
   packId: string;
   createdAt: string;
 }
+
+// ─── Tareas ─────────────────────────────────────────────────────────────
+
+export type TareaStatus = "pendiente" | "en_progreso" | "completada";
+
+export interface Tarea {
+  id: string;
+  titulo: string;
+  descripcion: string;
+  asignadoA: string; // Nombre del empleado
+  status: TareaStatus;
+  creadaEn: string; // ISO string
+  iniciadaEn?: string; // ISO string - cuando el empleado la empieza
+  completadaEn?: string; // ISO string - cuando el empleado la termina
+  vista: boolean; // Si el empleado ya vio la tarea
+  prioridad: "baja" | "media" | "alta";
+}

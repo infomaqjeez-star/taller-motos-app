@@ -7,7 +7,7 @@ import { useState, useEffect } from "react";
 import {
   Package, LayoutDashboard, AlertTriangle,
   MessageCircle, BarChart2, Users, Truck, ShoppingCart,
-  Clock, Timer, Settings,
+  Clock, Timer, Settings, CheckCircle,
 } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
 import { useAlarms } from "../hooks/useAlarms";
@@ -27,6 +27,7 @@ export default function Navbar({
 }: NavbarProps) {
   const pathname = usePathname();
   const [currentTime, setCurrentTime] = useState<string>("");
+  const [tareasPendientes, setTareasPendientes] = useState<number>(0);
   const { flexAlarm, correoAlarm, formatCountdown, config } = useAlarms();
 
   // Actualizar reloj cada segundo
@@ -43,9 +44,25 @@ export default function Navbar({
         })
       );
     };
-    
+
     updateTime();
     const interval = setInterval(updateTime, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Cargar conteo de tareas nuevas
+  useEffect(() => {
+    const loadTareasCount = async () => {
+      try {
+        const res = await fetch("/api/tareas?action=count_nuevas");
+        const data = await res.json();
+        setTareasPendientes(data.count || 0);
+      } catch (e) {
+        console.error("Error cargando conteo de tareas:", e);
+      }
+    };
+    loadTareasCount();
+    const interval = setInterval(loadTareasCount, 30000); // Actualizar cada 30s
     return () => clearInterval(interval);
   }, []);
 
@@ -122,6 +139,23 @@ export default function Navbar({
                 )}
               </button>
             )}
+
+            <Link
+              href="/tareas"
+              className={`relative flex items-center gap-2 px-3 py-2 rounded-xl font-semibold text-sm transition-colors
+                ${pathname === "/tareas"
+                  ? "text-white bg-[#1E3A8A]/90 hover:bg-[#1E3A8A]"
+                  : "text-[#1E3A8A] hover:bg-[#E09A00]/40"}`}
+            >
+              <CheckCircle className="w-4 h-4" />
+              <span>Tareas</span>
+              {tareasPendientes > 0 && (
+                <span className="absolute -top-1 -right-1 bg-blue-600 text-white text-[10px]
+                  font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 animate-pulse">
+                  {tareasPendientes}
+                </span>
+              )}
+            </Link>
 
             <ThemeToggle />
 
