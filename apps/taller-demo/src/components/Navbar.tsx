@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import {
@@ -81,13 +80,12 @@ export default function Navbar({
 
           {/* Logo — clic lleva a la landing page */}
           <Link href="/landing" className="flex items-center h-full py-1">
-            <Image
+            <img
               src="/logo-maqjeez.png"
               alt="MAQJEEZ"
               width={130}
               height={44}
               className="object-contain h-full w-auto"
-              priority
             />
           </Link>
 
