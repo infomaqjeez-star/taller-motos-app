@@ -79,8 +79,8 @@ export default function Navbar({
       <div className="max-w-3xl mx-auto px-4">
         <div className="flex items-center justify-between h-14">
 
-          {/* Logo — clic lleva al inicio */}
-          <Link href="/" className="flex items-center h-full py-1">
+          {/* Logo — clic lleva a la landing page */}
+          <Link href="/landing" className="flex items-center h-full py-1">
             <Image
               src="/logo-maqjeez.png"
               alt="MAQJEEZ"
