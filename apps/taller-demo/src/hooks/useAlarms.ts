@@ -29,6 +29,8 @@ const STORAGE_KEY = "maqjeez_alarm_config";
 export function useAlarms() {
   const [config, setConfig] = useState<AlarmConfig>(DEFAULT_CONFIG);
   const [nextAlarm, setNextAlarm] = useState<{ type: string; time: Date; diff: number } | null>(null);
+  const [flexAlarm, setFlexAlarm] = useState<{ time: Date; diff: number } | null>(null);
+  const [correoAlarm, setCorreoAlarm] = useState<{ time: Date; diff: number } | null>(null);
   const lastPlayedRef = useRef<{ [key: string]: string }>({});
 
   // Cargar configuración guardada
@@ -120,8 +122,8 @@ export function useAlarms() {
       }
     };
 
-    // Calcular próxima alarma
-    const calculateNextAlarm = () => {
+    // Calcular próxima alarma y horarios de corte
+    const calculateAlarms = () => {
       const now = new Date();
       const currentHour = now.getHours();
       const currentMinute = now.getMinutes();
@@ -181,14 +183,27 @@ export function useAlarms() {
       }
 
       setNextAlarm(next);
+      
+      // Actualizar alarmas individuales
+      if (nextFlex) {
+        setFlexAlarm({ time: nextFlex, diff: nextFlex.getTime() - now.getTime() });
+      } else {
+        setFlexAlarm(null);
+      }
+      
+      if (nextCorreo) {
+        setCorreoAlarm({ time: nextCorreo, diff: nextCorreo.getTime() - now.getTime() });
+      } else {
+        setCorreoAlarm(null);
+      }
     };
 
     checkAlarms();
-    calculateNextAlarm();
+    calculateAlarms();
 
     const interval = setInterval(() => {
       checkAlarms();
-      calculateNextAlarm();
+      calculateAlarms();
     }, 10000); // Revisar cada 10 segundos
 
     return () => clearInterval(interval);
@@ -209,6 +224,8 @@ export function useAlarms() {
     config,
     saveConfig,
     nextAlarm,
+    flexAlarm,
+    correoAlarm,
     formatCountdown,
     speak,
   };

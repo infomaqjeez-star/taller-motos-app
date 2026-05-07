@@ -27,7 +27,7 @@ export default function Navbar({
 }: NavbarProps) {
   const pathname = usePathname();
   const [currentTime, setCurrentTime] = useState<string>("");
-  const { nextAlarm, formatCountdown, config } = useAlarms();
+  const { flexAlarm, correoAlarm, formatCountdown, config } = useAlarms();
 
   // Actualizar reloj cada segundo
   useEffect(() => {
@@ -38,6 +38,7 @@ export default function Navbar({
           hour: "2-digit",
           minute: "2-digit",
           second: "2-digit",
+          hour12: false,
           timeZone: "America/Argentina/Buenos_Aires",
         })
       );
@@ -124,9 +125,9 @@ export default function Navbar({
 
             <ThemeToggle />
 
-            {/* Reloj y Cuenta Regresiva - Diseño Profesional */}
+            {/* Reloj y Cuenta Regresiva - Diseño Profesional con 3 Relojes */}
             <div className="hidden sm:flex items-center gap-3 ml-4 pl-4 border-l border-[#E09A00]/30">
-              {/* Reloj */}
+              {/* Reloj Principal */}
               <div 
                 className="flex items-center gap-2 bg-gradient-to-br from-white/95 to-white/90 px-3 py-1.5 rounded-xl shadow-lg border-2 border-[#1E3A8A]/20 hover:border-[#1E3A8A]/40 transition-all"
                 title="Hora Argentina"
@@ -138,43 +139,45 @@ export default function Navbar({
                 <span className="text-[10px] font-bold text-[#1E3A8A]/60 bg-[#1E3A8A]/10 px-1.5 py-0.5 rounded">ARG</span>
               </div>
 
-              {/* Cuenta regresiva a próxima alarma */}
-              {nextAlarm && (
+              {/* Alarma Flex con Cuenta Regresiva debajo */}
+              {config.flexAlarm.enabled && flexAlarm && (
+                <div className="flex flex-col gap-1">
+                  <div 
+                    className="flex items-center gap-2 px-3 py-1 rounded-xl shadow-md border-2 bg-gradient-to-br from-orange-100 to-orange-50 border-orange-400"
+                    title={`Alarma Flex: ${config.flexAlarm.message}`}
+                  >
+                    <Clock className="w-3.5 h-3.5 text-orange-600" />
+                    <span className="font-mono font-bold text-orange-700 text-xs tracking-wider">
+                      {flexAlarm.time.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", hour12: false })}
+                    </span>
+                    <span className="text-[9px] font-bold text-orange-600 bg-orange-200 px-1.5 py-0.5 rounded">FLEX</span>
+                  </div>
+                  <div 
+                    className={`flex items-center justify-center gap-1 px-2 py-0.5 rounded-lg border text-[10px] font-mono font-bold ${
+                      flexAlarm.diff < 300000
+                        ? "bg-red-100 border-red-300 text-red-700 animate-pulse"
+                        : flexAlarm.diff < 900000
+                        ? "bg-yellow-100 border-yellow-300 text-yellow-700"
+                        : "bg-green-100 border-green-300 text-green-700"
+                    }`}
+                  >
+                    <Timer className="w-3 h-3" />
+                    {formatCountdown(flexAlarm.diff)}
+                  </div>
+                </div>
+              )}
+
+              {/* Alarma Correo */}
+              {config.correoAlarm.enabled && correoAlarm && (
                 <div 
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-xl shadow-lg border-2 transition-all ${
-                    nextAlarm.diff < 300000 // menos de 5 minutos
-                      ? "bg-gradient-to-br from-red-100 to-red-50 border-red-400 animate-pulse"
-                      : nextAlarm.diff < 900000 // menos de 15 minutos
-                      ? "bg-gradient-to-br from-yellow-100 to-yellow-50 border-yellow-400"
-                      : "bg-gradient-to-br from-green-100 to-green-50 border-green-400"
-                  }`}
-                  title={`Próxima alarma: ${nextAlarm.type} a las ${nextAlarm.time.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}`}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-xl shadow-md border-2 bg-gradient-to-br from-blue-100 to-blue-50 border-blue-400"
+                  title={`Alarma Correo: ${config.correoAlarm.message}`}
                 >
-                  <Timer className={`w-4 h-4 ${
-                    nextAlarm.diff < 300000 
-                      ? "text-red-600" 
-                      : nextAlarm.diff < 900000 
-                      ? "text-yellow-600" 
-                      : "text-green-600"
-                  }`} />
-                  <span className={`font-mono font-bold text-sm tracking-wider ${
-                    nextAlarm.diff < 300000 
-                      ? "text-red-700" 
-                      : nextAlarm.diff < 900000 
-                      ? "text-yellow-700" 
-                      : "text-green-700"
-                  }`}>
-                    {formatCountdown(nextAlarm.diff)}
+                  <Clock className="w-4 h-4 text-blue-600" />
+                  <span className="font-mono font-bold text-blue-700 text-sm tracking-wider">
+                    {correoAlarm.time.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", hour12: false })}
                   </span>
-                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                    nextAlarm.diff < 300000 
-                      ? "bg-red-500 text-white" 
-                      : nextAlarm.diff < 900000 
-                      ? "bg-yellow-500 text-white" 
-                      : "bg-green-500 text-white"
-                  }`}>
-                    {nextAlarm.type}
-                  </span>
+                  <span className="text-[10px] font-bold text-blue-600 bg-blue-200 px-1.5 py-0.5 rounded">CORREO</span>
                 </div>
               )}
 
