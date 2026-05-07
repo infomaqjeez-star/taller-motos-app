@@ -60,7 +60,7 @@ export default function LandingPage() {
     },
     {
       id: "marketplace",
-      name: "JeezMarket",
+      name: "MadsJeez",
       tagline: "Marketplace Digital + Físico",
       description: "La combinación perfecta entre MercadoLibre y Hotmart. Vende productos físicos y digitales, cursos, suscripciones y servicios desde una sola plataforma.",
       color: "#7C3AED",
