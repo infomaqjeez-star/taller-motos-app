@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   Plus, CheckCircle, Clock, User, AlertCircle, Calendar,
-  Play, Trash2, Eye, EyeOff, ArrowRight, Lock, LogOut,
+  Play, Trash2, Eye, EyeOff, ArrowRight, Lock, LogOut, History,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import BottomNav from "@/components/BottomNav";
@@ -11,6 +11,7 @@ import { tareasDb } from "@/lib/db";
 import { generateId } from "@/lib/utils";
 import { Tarea, TareaStatus } from "@/lib/types";
 import { useAuth } from "@/hooks/useAuth";
+import Link from "next/link";
 
 // ─── Helpers ─────────────────────────────────────────────────
 
@@ -446,6 +447,12 @@ export default function TareasPage() {
             <p className="text-sm text-gray-400 mt-1">Gestión de tareas del equipo</p>
           </div>
           <div className="flex gap-2">
+            <Link
+              href="/tareas/historial"
+              className="flex items-center gap-2 py-2 px-4 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold transition-colors"
+            >
+              <History className="w-5 h-5" /> Historial
+            </Link>
             {isAuthenticated ? (
               <button
                 onClick={logout}
