@@ -29,6 +29,7 @@ import Link from "next/link";
 export default function LandingPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeApp, setActiveApp] = useState(0);
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   const scrollToSection = (id: string) => {
     const element = document.getElementById(id);
@@ -346,19 +347,133 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Testimonios */}
+      <section className="py-24 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl sm:text-5xl font-black mb-4">Lo que dicen <span className="text-[#FFE600]">nuestros clientes</span></h2>
+            <p className="text-gray-400 text-lg">Negocios reales que ya usan AppJeez</p>
+          </div>
+          <div className="grid md:grid-cols-3 gap-6">
+            {[
+              { name:"Carlos M.", role:"Taller de motos, Córdoba", text:"Con MaqJeez organicé todo mi taller. Antes perdía turnos y materiales, ahora tengo todo bajo control. En 2 semanas noté la diferencia.", stars:5 },
+              { name:"Lucía R.", role:"Vendedora MercadoLibre, Buenos Aires", text:"AppJeezPro me cambió la vida. Administro 4 cuentas de ML desde un solo lugar. Las respuestas automáticas con IA me ahorran 3 horas por día.", stars:5 },
+              { name:"Diego F.", role:"Técnico de celulares, Rosario", text:"El sistema es súper fácil de usar. Mis clientes reciben notificaciones cuando su equipo está listo. El soporte responde rápido, muy recomendable.", stars:5 },
+            ].map(t => (
+              <div key={t.name} className="bg-white/5 border border-white/10 rounded-2xl p-6">
+                <div className="flex gap-1 mb-4">{Array.from({length:t.stars}).map((_,i) => <Star key={i} className="w-4 h-4 fill-[#FFE600] text-[#FFE600]" />)}</div>
+                <p className="text-gray-300 mb-6 leading-relaxed italic">&ldquo;{t.text}&rdquo;</p>
+                <div>
+                  <div className="font-bold">{t.name}</div>
+                  <div className="text-gray-400 text-sm">{t.role}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section className="py-24 px-4 sm:px-6 lg:px-8 bg-white/[0.02]">
+        <div className="max-w-3xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl sm:text-5xl font-black mb-4">Preguntas <span className="text-[#FFE600]">frecuentes</span></h2>
+          </div>
+          <div className="space-y-3">
+            {[
+              { q:"¿Necesito conocimientos técnicos para usar las plataformas?", a:"No. Todas las plataformas están diseñadas para ser intuitivas. Si sabés usar WhatsApp, podés usar AppJeez. Además, te acompañamos en el onboarding." },
+              { q:"¿Puedo cancelar mi suscripción en cualquier momento?", a:"Sí. No hay contratos de permanencia. Podés cancelar cuando quieras desde tu panel. El acceso se mantiene hasta el fin del período pagado." },
+              { q:"¿Los precios son en pesos argentinos?", a:"Sí. Todos los precios están expresados en pesos argentinos (ARS). Aceptamos transferencia bancaria, Mercado Pago y tarjetas de crédito/débito." },
+              { q:"¿Mis datos están seguros?", a:"Absolutamente. Usamos Supabase con encriptación de datos en reposo y en tránsito, autenticación OAuth2 y backups automáticos diarios. Nunca vendemos tus datos a terceros." },
+              { q:"¿Puedo usar más de una plataforma?", a:"Sí. Podés contratar cada plataforma por separado. Si usás más de una, contactanos para un precio combinado personalizado." },
+              { q:"¿Hay período de prueba gratuito?", a:"Sí. Ofrecemos 14 días de prueba gratuita en cualquier plataforma sin necesidad de tarjeta de crédito. Solo creá tu cuenta y empezá." },
+              { q:"¿Qué pasa si tengo un problema técnico?", a:"Tenemos soporte por email y WhatsApp. Los planes Pro y Business tienen soporte prioritario con respuesta en menos de 4 horas hábiles." },
+            ].map((faq, i) => (
+              <div key={i} className="border border-white/10 rounded-2xl overflow-hidden">
+                <button
+                  onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                  className="w-full flex items-center justify-between p-6 text-left hover:bg-white/5 transition-colors"
+                >
+                  <span className="font-semibold pr-4">{faq.q}</span>
+                  <ChevronDown className={`w-5 h-5 text-[#FFE600] flex-shrink-0 transition-transform ${openFaq === i ? "rotate-180" : ""}`} />
+                </button>
+                {openFaq === i && (
+                  <div className="px-6 pb-6 text-gray-400 leading-relaxed">{faq.a}</div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Final */}
+      <section className="py-24 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-4xl mx-auto">
+          <div className="bg-gradient-to-br from-[#FFE600]/10 to-purple-500/10 border border-[#FFE600]/20 rounded-3xl p-12 text-center">
+            <div className="inline-flex items-center gap-2 bg-[#FFE600]/10 border border-[#FFE600]/20 rounded-full px-4 py-2 mb-6">
+              <Zap className="w-4 h-4 text-[#FFE600]" />
+              <span className="text-[#FFE600] text-sm font-semibold">14 días gratis, sin tarjeta</span>
+            </div>
+            <h2 className="text-4xl sm:text-5xl font-black mb-4">Empezá hoy mismo</h2>
+            <p className="text-gray-400 text-lg mb-8 max-w-2xl mx-auto">Creá tu cuenta en minutos y empezá a organizar tu negocio. Sin compromisos, sin letra chica.</p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link href="/login" className="bg-[#FFE600] hover:bg-[#ffd700] text-[#003087] px-10 py-4 rounded-xl font-black text-lg transition-all flex items-center justify-center gap-2">
+                Crear Cuenta Gratis <ArrowRight className="w-5 h-5" />
+              </Link>
+              <button onClick={() => scrollToSection("contact")} className="bg-white/5 hover:bg-white/10 border border-white/10 px-10 py-4 rounded-xl font-semibold text-lg transition-all">
+                Hablar con un asesor
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Footer */}
-      <footer className="py-12 px-4 sm:px-6 lg:px-8 border-t border-white/10">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-[#FFE600] rounded-xl flex items-center justify-center font-black text-[#003087]">MJ</div>
-            <span className="font-bold text-xl">AppJeez</span>
+      <footer className="pt-16 pb-8 px-4 sm:px-6 lg:px-8 border-t border-white/10 bg-[#050505]">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid md:grid-cols-4 gap-10 mb-12">
+            <div className="md:col-span-1">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 bg-[#FFE600] rounded-xl flex items-center justify-center font-black text-[#003087]">MJ</div>
+                <span className="font-bold text-xl">AppJeez</span>
+              </div>
+              <p className="text-gray-400 text-sm leading-relaxed mb-4">Ecosistema de software para negocios argentinos. Soluciones simples para problemas complejos.</p>
+              <p className="text-gray-500 text-xs">CUIT: A definir<br />Razón Social: AppJeez SRL<br />Argentina</p>
+            </div>
+            <div>
+              <h4 className="font-bold mb-4 text-sm uppercase tracking-wider text-gray-300">Plataformas</h4>
+              <ul className="space-y-2 text-gray-400 text-sm">
+                <li><button onClick={() => setActiveApp(0)} className="hover:text-[#FFE600] transition-colors">AppJeezPro</button></li>
+                <li><button onClick={() => setActiveApp(1)} className="hover:text-[#FFE600] transition-colors">MadsJeez</button></li>
+                <li><button onClick={() => setActiveApp(2)} className="hover:text-[#FFE600] transition-colors">MaqJeez</button></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-bold mb-4 text-sm uppercase tracking-wider text-gray-300">Empresa</h4>
+              <ul className="space-y-2 text-gray-400 text-sm">
+                <li><button onClick={() => scrollToSection("features")} className="hover:text-white transition-colors">Características</button></li>
+                <li><button onClick={() => scrollToSection("pricing")} className="hover:text-white transition-colors">Precios</button></li>
+                <li><button onClick={() => scrollToSection("contact")} className="hover:text-white transition-colors">Contacto</button></li>
+                <li><a href="mailto:info@appjeezpro.store" className="hover:text-white transition-colors">info@appjeezpro.store</a></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-bold mb-4 text-sm uppercase tracking-wider text-gray-300">Legal</h4>
+              <ul className="space-y-2 text-gray-400 text-sm">
+                <li><a href="/terminos" className="hover:text-white transition-colors">Términos y Condiciones</a></li>
+                <li><a href="/privacidad" className="hover:text-white transition-colors">Política de Privacidad</a></li>
+                <li><a href="/cookies" className="hover:text-white transition-colors">Política de Cookies</a></li>
+                <li><a href="/cancelacion" className="hover:text-white transition-colors">Política de Cancelación</a></li>
+              </ul>
+            </div>
           </div>
-          <div className="flex gap-6 text-gray-400 text-sm">
-            <button onClick={() => scrollToSection("plataformas")} className="hover:text-white transition-colors">Plataformas</button>
-            <button onClick={() => scrollToSection("pricing")} className="hover:text-white transition-colors">Precios</button>
-            <button onClick={() => scrollToSection("contact")} className="hover:text-white transition-colors">Contacto</button>
+          <div className="border-t border-white/10 pt-8">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-gray-500 text-xs">
+              <p>&copy; 2026 AppJeez. Todos los derechos reservados.</p>
+              <p className="text-center">El uso de esta plataforma implica la aceptación de nuestros <a href="/terminos" className="underline hover:text-gray-300">Términos y Condiciones</a> y <a href="/privacidad" className="underline hover:text-gray-300">Política de Privacidad</a>.</p>
+              <p>Hecho en Argentina 🇦🇷</p>
+            </div>
           </div>
-          <p className="text-gray-500 text-sm">&copy; 2026 AppJeez. Todos los derechos reservados.</p>
         </div>
       </footer>
     </div>
