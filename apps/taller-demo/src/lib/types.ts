@@ -344,6 +344,8 @@ export interface Tarea {
   creadaEn: string; // ISO string
   creador: string; // Quién creó la tarea
   password: string; // Contraseña para modificar/eliminar
+  tiempoEstimado: number; // Tiempo estimado en minutos
+  tiempoReal?: number; // Tiempo real en minutos (se calcula al completar)
   iniciadaEn?: string; // ISO string - cuando el empleado la empieza
   iniciador?: string; // Quién inició la tarea
   completadaEn?: string; // ISO string - cuando el empleado la termina

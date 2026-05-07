@@ -132,8 +132,24 @@ function TareaCard({
 
           {/* Tiempos */}
           <div className="bg-black/30 rounded-lg p-3 space-y-2">
-            {tiempoCreacionInicio && (
+            <div className="flex justify-between text-xs">
+              <span className="text-gray-400">Tiempo Estimado:</span>
+              <span className="text-purple-400 font-mono font-bold">{tarea.tiempoEstimado} min</span>
+            </div>
+            {tarea.tiempoReal && (
               <div className="flex justify-between text-xs">
+                <span className="text-gray-400">Tiempo Real:</span>
+                <span className={`font-mono font-bold ${
+                  tarea.tiempoReal <= tarea.tiempoEstimado ? "text-green-400" : "text-red-400"
+                }`}>
+                  {tarea.tiempoReal} min
+                  {tarea.tiempoReal > tarea.tiempoEstimado && ` (+${tarea.tiempoReal - tarea.tiempoEstimado})`}
+                  {tarea.tiempoReal < tarea.tiempoEstimado && ` (-${tarea.tiempoEstimado - tarea.tiempoReal})`}
+                </span>
+              </div>
+            )}
+            {tiempoCreacionInicio && (
+              <div className="flex justify-between text-xs border-t border-white/10 pt-2">
                 <span className="text-gray-400">Creación → Inicio:</span>
                 <span className="text-blue-400 font-mono font-bold">{formatDuration(tiempoCreacionInicio)}</span>
               </div>
@@ -202,6 +218,7 @@ function NuevaTareaModal({
   const [creador, setCreador] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
+  const [tiempoEstimado, setTiempoEstimado] = useState(30);
 
   const handleSubmit = () => {
     if (!titulo.trim() || !asignadoA.trim() || !creador.trim()) return;
@@ -213,6 +230,10 @@ function NuevaTareaModal({
       alert("Debes ingresar una contraseña");
       return;
     }
+    if (tiempoEstimado <= 0) {
+      alert("El tiempo estimado debe ser mayor a 0");
+      return;
+    }
     onCrear({
       titulo: titulo.trim(),
       descripcion: descripcion.trim(),
@@ -220,6 +241,7 @@ function NuevaTareaModal({
       status: "pendiente",
       creador: creador.trim(),
       password: password.trim(),
+      tiempoEstimado,
       vista: false,
       prioridad,
     });
@@ -301,6 +323,18 @@ function NuevaTareaModal({
               value={passwordConfirm}
               onChange={e => setPasswordConfirm(e.target.value)}
               placeholder="Confirmar contraseña"
+            />
+          </div>
+
+          <div>
+            <label className="label">Tiempo estimado (minutos)</label>
+            <input
+              type="number"
+              className="input"
+              value={tiempoEstimado}
+              onChange={e => setTiempoEstimado(parseInt(e.target.value) || 0)}
+              placeholder="30"
+              min="1"
             />
           </div>
 

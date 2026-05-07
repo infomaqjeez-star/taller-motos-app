@@ -8,6 +8,8 @@ CREATE TABLE IF NOT EXISTS tareas (
   creada_en TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
   creador TEXT NOT NULL DEFAULT 'admin',
   password TEXT NOT NULL DEFAULT 'admin',
+  tiempo_estimado INTEGER NOT NULL DEFAULT 0,
+  tiempo_real INTEGER,
   iniciada_en TIMESTAMP WITH TIME ZONE,
   iniciador TEXT,
   completada_en TIMESTAMP WITH TIME ZONE,
@@ -50,6 +52,14 @@ BEGIN
 
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'tareas' AND column_name = 'password') THEN
     ALTER TABLE tareas ADD COLUMN password TEXT NOT NULL DEFAULT 'admin';
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'tareas' AND column_name = 'tiempo_estimado') THEN
+    ALTER TABLE tareas ADD COLUMN tiempo_estimado INTEGER NOT NULL DEFAULT 0;
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'tareas' AND column_name = 'tiempo_real') THEN
+    ALTER TABLE tareas ADD COLUMN tiempo_real INTEGER;
   END IF;
 
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'tareas' AND column_name = 'iniciador') THEN

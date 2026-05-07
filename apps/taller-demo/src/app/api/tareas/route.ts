@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
 
     switch (action) {
       case "create": {
-        const { titulo, descripcion, asignadoA, prioridad, creador, password } = tarea;
+        const { titulo, descripcion, asignadoA, prioridad, creador, password, tiempoEstimado } = tarea;
         const now = new Date().toISOString();
 
         result = await supabase
@@ -105,6 +105,7 @@ export async function POST(request: NextRequest) {
             creada_en: now,
             creador: creador || "admin",
             password: password || "admin",
+            tiempo_estimado: tiempoEstimado || 0,
             vista: false,
             prioridad: prioridad || "media",
           })
@@ -114,7 +115,7 @@ export async function POST(request: NextRequest) {
       }
 
       case "update": {
-        const { id: tareaId, titulo, descripcion, asignadoA, prioridad } = tarea;
+        const { id: tareaId, titulo, descripcion, asignadoA, prioridad, tiempoEstimado } = tarea;
 
         result = await supabase
           .from("tareas")
@@ -123,6 +124,7 @@ export async function POST(request: NextRequest) {
             descripcion,
             asignado_a: asignadoA,
             prioridad,
+            tiempo_estimado: tiempoEstimado,
           })
           .eq("id", tareaId);
         break;
@@ -143,12 +145,34 @@ export async function POST(request: NextRequest) {
 
       case "completar": {
         const { completador } = body;
+        
+        // Primero obtener la tarea para calcular el tiempo real
+        const tareaData = await supabase
+          .from("tareas")
+          .select("*")
+          .eq("id", id)
+          .single();
+
+        if (tareaData.error) {
+          throw new Error(tareaData.error.message);
+        }
+
+        const tarea = tareaData.data;
+        let tiempoReal = null;
+
+        if (tarea.iniciada_en) {
+          const iniciadaEn = new Date(tarea.iniciada_en);
+          const completadaEn = new Date();
+          tiempoReal = Math.round((completadaEn.getTime() - iniciadaEn.getTime()) / 60000); // Convertir a minutos
+        }
+
         result = await supabase
           .from("tareas")
           .update({
             status: "completada",
             completada_en: new Date().toISOString(),
             completador: completador || null,
+            tiempo_real: tiempoReal,
           })
           .eq("id", id);
         break;

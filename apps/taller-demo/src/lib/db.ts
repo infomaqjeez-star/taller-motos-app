@@ -670,6 +670,8 @@ function toTarea(r: Record<string, unknown>): Tarea {
     creadaEn:   r.creada_en as string,
     creador:    r.creador as string,
     password:   r.password as string,
+    tiempoEstimado: r.tiempo_estimado as number,
+    tiempoReal: (r.tiempo_real as number) ?? undefined,
     iniciadaEn: (r.iniciada_en as string) ?? undefined,
     iniciador:  (r.iniciador as string) ?? undefined,
     completadaEn: (r.completada_en as string) ?? undefined,
