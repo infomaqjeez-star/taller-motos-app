@@ -12,9 +12,11 @@ import { supabase } from "@/lib/supabase";
 export default function LoginPage() {
   const router = useRouter();
   const [loginType, setLoginType] = useState<"email" | "username">("email");
+  const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -31,6 +33,30 @@ export default function LoginPage() {
         redirectTo: `${window.location.origin}/auth/callback`,
       },
     });
+  };
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          name: name || username,
+        },
+      },
+    });
+
+    if (error) {
+      setError(error.message);
+      setLoading(false);
+    } else {
+      // Registro exitoso, intentar hacer login automático
+      router.push("/taller");
+    }
   };
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -207,18 +233,22 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">
-          <Link href="/" className="inline-flex items-center gap-2 mb-6">
+          <Link href="/landing" className="inline-flex items-center gap-2 mb-6">
             <div className="w-10 h-10 bg-[#FFE600] rounded-xl flex items-center justify-center">
               <span className="text-[#003087] font-black">MJ</span>
             </div>
             <span className="font-bold text-xl text-white">MaqJeez</span>
           </Link>
           
-          <h1 className="text-2xl font-bold text-white mb-2">Bienvenido de vuelta</h1>
-          <p className="text-gray-400">Inicia sesión para acceder a tu panel</p>
+          <h1 className="text-2xl font-bold text-white mb-2">
+            {isLogin ? "Bienvenido de vuelta" : "Crea tu cuenta"}
+          </h1>
+          <p className="text-gray-400">
+            {isLogin ? "Inicia sesión para acceder a tu panel" : "Regístrate gratis para comenzar"}
+          </p>
         </div>
 
-        {/* Login Card */}
+        {/* Login/Register Card */}
         <div className="bg-white/5 border border-white/10 rounded-2xl p-8">
           {/* Google Button */}
           <button
@@ -242,52 +272,52 @@ export default function LoginPage() {
             <div className="flex-1 h-px bg-white/10" />
           </div>
 
-          {/* Login Type Toggle */}
+          {/* Login/Register Toggle */}
           <div className="flex gap-2 mb-6">
             <button
               type="button"
-              onClick={() => setLoginType("email")}
+              onClick={() => { setIsLogin(true); setError(""); }}
               className={`flex-1 py-2 rounded-lg text-sm font-medium transition ${
-                loginType === "email" 
+                isLogin 
                   ? "bg-[#FFE600] text-[#003087]" 
                   : "bg-white/5 text-gray-400 hover:bg-white/10"
               }`}
             >
-              <Mail className="w-4 h-4 inline mr-2" />
-              Email
+              Iniciar Sesión
             </button>
             <button
               type="button"
-              onClick={() => setLoginType("username")}
+              onClick={() => { setIsLogin(false); setError(""); }}
               className={`flex-1 py-2 rounded-lg text-sm font-medium transition ${
-                loginType === "username" 
+                !isLogin 
                   ? "bg-[#FFE600] text-[#003087]" 
                   : "bg-white/5 text-gray-400 hover:bg-white/10"
               }`}
             >
-              <User className="w-4 h-4 inline mr-2" />
-              Usuario
+              Registrarse
             </button>
           </div>
 
-          {/* Login Form */}
-          <form onSubmit={handleLogin} className="space-y-4">
-            {loginType === "email" ? (
+          {/* Login/Register Form */}
+          <form onSubmit={isLogin ? handleLogin : handleRegister} className="space-y-4">
+            {!isLogin && (
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">Email</label>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Nombre completo</label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
                   <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="tu@email.com"
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Tu nombre"
                     className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[#FFE600] transition"
-                    required
+                    required={!isLogin}
                   />
                 </div>
               </div>
-            ) : (
+            )}
+
+            {isLogin && loginType === "username" ? (
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">Nombre de Usuario</label>
                 <div className="relative">
@@ -297,6 +327,21 @@ export default function LoginPage() {
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     placeholder="tu_usuario"
+                    className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[#FFE600] transition"
+                    required
+                  />
+                </div>
+              </div>
+            ) : (
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Email</label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="tu@email.com"
                     className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[#FFE600] transition"
                     required
                   />
@@ -340,39 +385,26 @@ export default function LoginPage() {
               {loading ? (
                 <Loader2 className="w-5 h-5 animate-spin mx-auto" />
               ) : (
-                "Iniciar Sesión"
+                isLogin ? "Iniciar Sesión" : "Crear Cuenta"
               )}
             </button>
           </form>
 
-          {/* Recovery Links */}
-          <div className="mt-6 flex flex-col gap-2 text-center">
-            <button
-              type="button"
-              onClick={() => setShowRecovery(true)}
-              className="text-sm text-gray-400 hover:text-[#FFE600] transition flex items-center justify-center gap-1"
-            >
-              <KeyRound className="w-4 h-4" />
-              ¿Olvidaste tu contraseña?
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowForgotUsername(true)}
-              className="text-sm text-gray-400 hover:text-[#FFE600] transition flex items-center justify-center gap-1"
-            >
-              <HelpCircle className="w-4 h-4" />
-              ¿Olvidaste tu usuario?
-            </button>
-          </div>
-
-          <div className="mt-6 pt-6 border-t border-white/10 text-center">
-            <p className="text-gray-400">
-              ¿No tienes cuenta?{" "}
-              <Link href="/register" className="text-[#FFE600] hover:underline font-semibold">
-                Regístrate gratis
-              </Link>
-            </p>
-          </div>
+          {/* Recovery Links - Solo en modo login */}
+          {isLogin && (
+            <>
+              <div className="mt-6 flex flex-col gap-2 text-center">
+                <button
+                  type="button"
+                  onClick={() => setShowRecovery(true)}
+                  className="text-sm text-gray-400 hover:text-[#FFE600] transition flex items-center justify-center gap-1"
+                >
+                  <KeyRound className="w-4 h-4" />
+                  ¿Olvidaste tu contraseña?
+                </button>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Back Link */}
