@@ -3,13 +3,14 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   Plus, CheckCircle, Clock, User, AlertCircle, Calendar,
-  Play, Trash2, Eye, EyeOff, ArrowRight,
+  Play, Trash2, Eye, EyeOff, ArrowRight, Lock, LogOut,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import BottomNav from "@/components/BottomNav";
 import { tareasDb } from "@/lib/db";
 import { generateId } from "@/lib/utils";
 import { Tarea, TareaStatus } from "@/lib/types";
+import { useAuth } from "@/hooks/useAuth";
 
 // ─── Helpers ─────────────────────────────────────────────────
 
@@ -206,6 +207,7 @@ function NuevaTareaModal({
       descripcion: descripcion.trim(),
       asignadoA: asignadoA.trim(),
       status: "pendiente",
+      creador: "admin", // Se sobrescribirá con el usuario autenticado
       vista: false,
       prioridad,
     });
@@ -346,7 +348,7 @@ export default function TareasPage() {
 
   const handleIniciar = async (id: string) => {
     try {
-      await tareasDb.iniciarTarea(id);
+      await tareasDb.iniciarTarea(id, "usuario"); // Se sobrescribirá con usuario autenticado
       loadTareas();
     } catch (e) {
       console.error("Error iniciando tarea:", e);
@@ -356,7 +358,7 @@ export default function TareasPage() {
 
   const handleCompletar = async (id: string) => {
     try {
-      await tareasDb.completarTarea(id);
+      await tareasDb.completarTarea(id, "usuario"); // Se sobrescribirá con usuario autenticado
       loadTareas();
     } catch (e) {
       console.error("Error completando tarea:", e);
