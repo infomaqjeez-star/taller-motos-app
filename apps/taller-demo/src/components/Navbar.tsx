@@ -125,7 +125,7 @@ export default function Navbar({
 
             <ThemeToggle />
 
-            {/* Reloj y Cuenta Regresiva - Diseño Profesional con 3 Relojes */}
+            {/* Reloj y Cuenta Regresiva - Diseño Profesional con 5 Relojes */}
             <div className="hidden sm:flex items-center gap-3 ml-4 pl-4 border-l border-[#E09A00]/30">
               {/* Reloj Principal */}
               <div 
@@ -133,7 +133,7 @@ export default function Navbar({
                 title="Hora Argentina"
               >
                 <Clock className="w-4 h-4 text-[#1E3A8A]" />
-                <span className="font-mono font-bold text-[#1E3A8A] text-sm tracking-wider">
+                <span className="font-mono font-bold text-black text-sm tracking-wider">
                   {currentTime || "--:--:--"}
                 </span>
               </div>
@@ -146,18 +146,16 @@ export default function Navbar({
                     title={`Alarma Flex: ${config.flexAlarm.message}`}
                   >
                     <Clock className="w-3.5 h-3.5 text-orange-600" />
-                    <span className="font-mono font-bold text-orange-700 text-xs tracking-wider">
+                    <span className="font-mono font-bold text-black text-xs tracking-wider">
                       {flexAlarm.time.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", hour12: false })}
                     </span>
                     <span className="text-[9px] font-bold text-orange-600 bg-orange-200 px-1.5 py-0.5 rounded">FLEX</span>
                   </div>
                   <div 
-                    className={`flex items-center justify-center gap-1 px-2 py-0.5 rounded-lg border text-[10px] font-mono font-bold ${
-                      flexAlarm.diff < 300000
-                        ? "bg-red-100 border-red-300 text-red-700 animate-pulse"
-                        : flexAlarm.diff < 900000
-                        ? "bg-yellow-100 border-yellow-300 text-yellow-700"
-                        : "bg-green-100 border-green-300 text-green-700"
+                    className={`flex items-center justify-center gap-1 px-2 py-0.5 rounded-lg border text-[10px] font-mono font-bold shadow-md ${
+                      flexAlarm.diff < 1800000 // menos de 30 minutos
+                        ? "bg-red-600 border-red-700 text-white animate-pulse shadow-lg"
+                        : "bg-green-500 border-green-600 text-white"
                     }`}
                   >
                     <Timer className="w-3 h-3" />
@@ -166,17 +164,29 @@ export default function Navbar({
                 </div>
               )}
 
-              {/* Alarma Correo */}
+              {/* Alarma Correo con Cuenta Regresiva debajo */}
               {config.correoAlarm.enabled && correoAlarm && (
-                <div 
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-xl shadow-md border-2 bg-gradient-to-br from-blue-100 to-blue-50 border-blue-400"
-                  title={`Alarma Correo: ${config.correoAlarm.message}`}
-                >
-                  <Clock className="w-4 h-4 text-blue-600" />
-                  <span className="font-mono font-bold text-blue-700 text-sm tracking-wider">
-                    {correoAlarm.time.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", hour12: false })}
-                  </span>
-                  <span className="text-[10px] font-bold text-blue-600 bg-blue-200 px-1.5 py-0.5 rounded">CORREO</span>
+                <div className="flex flex-col gap-1">
+                  <div 
+                    className="flex items-center gap-2 px-3 py-1 rounded-xl shadow-md border-2 bg-gradient-to-br from-blue-100 to-blue-50 border-blue-400"
+                    title={`Alarma Correo: ${config.correoAlarm.message}`}
+                  >
+                    <Clock className="w-3.5 h-3.5 text-blue-600" />
+                    <span className="font-mono font-bold text-black text-xs tracking-wider">
+                      {correoAlarm.time.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", hour12: false })}
+                    </span>
+                    <span className="text-[9px] font-bold text-blue-600 bg-blue-200 px-1.5 py-0.5 rounded">CORREO</span>
+                  </div>
+                  <div 
+                    className={`flex items-center justify-center gap-1 px-2 py-0.5 rounded-lg border text-[10px] font-mono font-bold shadow-md ${
+                      correoAlarm.diff < 1800000 // menos de 30 minutos
+                        ? "bg-red-600 border-red-700 text-white animate-pulse shadow-lg"
+                        : "bg-green-500 border-green-600 text-white"
+                    }`}
+                  >
+                    <Timer className="w-3 h-3" />
+                    {formatCountdown(correoAlarm.diff)}
+                  </div>
                 </div>
               )}
 
