@@ -552,19 +552,23 @@ export const ventasDb = {
     const now = new Date();
     const localDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
     console.log("[ventasDb] Consultando ventas para:", localDate);
-    
+
     const res = await fetch(`/api/ventas?action=today&fecha=${localDate}`);
-    if (!res.ok) { 
+    if (!res.ok) {
       const e = await res.json().catch(() => ({ error: "Error desconocido" }));
       console.error("[ventasDb] Error HTTP:", res.status, e);
-      throw new Error(e.error ?? `Error HTTP ${res.status}`); 
+      throw new Error(e.error ?? `Error HTTP ${res.status}`);
     }
-    
+
     const data = await res.json();
     console.log("[ventasDb] Datos recibidos:", data?.length || 0, "ventas");
-    
+    console.log("[ventasDb] Datos crudos:", JSON.stringify(data, null, 2));
+
     return (data ?? []).map((r: Record<string, unknown>) => {
-      const items = ((r.ventas_items as Record<string, unknown>[]) ?? []).map(toVentaItem);
+      const itemsRaw = r.ventas_items as Record<string, unknown>[] ?? [];
+      console.log("[ventasDb] Items raw para venta", r.id, ":", itemsRaw);
+      const items = itemsRaw.map(toVentaItem);
+      console.log("[ventasDb] Items mapeados:", items);
       return toVenta(r, items);
     });
   },

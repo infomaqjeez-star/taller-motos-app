@@ -32,15 +32,16 @@ export async function GET(request: NextRequest) {
         // Ventas del día específico
         const targetDate = fecha || new Date().toISOString().split("T")[0];
         console.log("[API Ventas] Consultando ventas para fecha:", targetDate);
-        
+
         result = await supabase
           .from("ventas_repuestos")
           .select("*, ventas_items(*)")
           .gte("created_at", `${targetDate}T00:00:00`)
           .lt("created_at", `${targetDate}T23:59:59`)
           .order("created_at", { ascending: false });
-        
+
         console.log("[API Ventas] Resultado:", result.data?.length || 0, "ventas encontradas");
+        console.log("[API Ventas] Datos crudos:", JSON.stringify(result.data, null, 2));
         if (result.error) {
           console.error("[API Ventas] Error en consulta:", result.error);
         }
