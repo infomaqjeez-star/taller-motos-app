@@ -343,6 +343,7 @@ export interface Tarea {
   status: TareaStatus;
   creadaEn: string; // ISO string
   creador: string; // Quién creó la tarea
+  password: string; // Contraseña para modificar/eliminar
   iniciadaEn?: string; // ISO string - cuando el empleado la empieza
   iniciador?: string; // Quién inició la tarea
   completadaEn?: string; // ISO string - cuando el empleado la termina

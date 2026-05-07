@@ -669,6 +669,7 @@ function toTarea(r: Record<string, unknown>): Tarea {
     status:     r.status as Tarea["status"],
     creadaEn:   r.creada_en as string,
     creador:    r.creador as string,
+    password:   r.password as string,
     iniciadaEn: (r.iniciada_en as string) ?? undefined,
     iniciador:  (r.iniciador as string) ?? undefined,
     completadaEn: (r.completada_en as string) ?? undefined,

@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
 
     switch (action) {
       case "create": {
-        const { titulo, descripcion, asignadoA, prioridad, creador } = tarea;
+        const { titulo, descripcion, asignadoA, prioridad, creador, password } = tarea;
         const now = new Date().toISOString();
 
         result = await supabase
@@ -104,6 +104,7 @@ export async function POST(request: NextRequest) {
             status: "pendiente",
             creada_en: now,
             creador: creador || "admin",
+            password: password || "admin",
             vista: false,
             prioridad: prioridad || "media",
           })

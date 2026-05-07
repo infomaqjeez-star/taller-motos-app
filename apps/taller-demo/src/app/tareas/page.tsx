@@ -3,14 +3,13 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   Plus, CheckCircle, Clock, User, AlertCircle, Calendar,
-  Play, Trash2, Eye, EyeOff, ArrowRight, Lock, LogOut, History,
+  Play, Trash2, Eye, EyeOff, ArrowRight, History,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import BottomNav from "@/components/BottomNav";
 import { tareasDb } from "@/lib/db";
 import { generateId } from "@/lib/utils";
 import { Tarea, TareaStatus } from "@/lib/types";
-import { useAuth } from "@/hooks/useAuth";
 import Link from "next/link";
 
 // ─── Helpers ─────────────────────────────────────────────────
@@ -200,15 +199,27 @@ function NuevaTareaModal({
   const [descripcion, setDescripcion] = useState("");
   const [asignadoA, setAsignadoA] = useState("");
   const [prioridad, setPrioridad] = useState<Tarea["prioridad"]>("media");
+  const [creador, setCreador] = useState("");
+  const [password, setPassword] = useState("");
+  const [passwordConfirm, setPasswordConfirm] = useState("");
 
   const handleSubmit = () => {
-    if (!titulo.trim() || !asignadoA.trim()) return;
+    if (!titulo.trim() || !asignadoA.trim() || !creador.trim()) return;
+    if (password !== passwordConfirm) {
+      alert("Las contraseñas no coinciden");
+      return;
+    }
+    if (!password.trim()) {
+      alert("Debes ingresar una contraseña");
+      return;
+    }
     onCrear({
       titulo: titulo.trim(),
       descripcion: descripcion.trim(),
       asignadoA: asignadoA.trim(),
       status: "pendiente",
-      creador: "admin", // Se sobrescribirá con el usuario autenticado
+      creador: creador.trim(),
+      password: password.trim(),
       vista: false,
       prioridad,
     });
@@ -262,6 +273,38 @@ function NuevaTareaModal({
           </div>
 
           <div>
+            <label className="label">Creador (tu nombre)</label>
+            <input
+              className="input"
+              value={creador}
+              onChange={e => setCreador(e.target.value)}
+              placeholder="Tu nombre"
+            />
+          </div>
+
+          <div>
+            <label className="label">Contraseña para modificar/eliminar</label>
+            <input
+              type="password"
+              className="input"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              placeholder="Contraseña"
+            />
+          </div>
+
+          <div>
+            <label className="label">Confirmar contraseña</label>
+            <input
+              type="password"
+              className="input"
+              value={passwordConfirm}
+              onChange={e => setPasswordConfirm(e.target.value)}
+              placeholder="Confirmar contraseña"
+            />
+          </div>
+
+          <div>
             <label className="label">Prioridad</label>
             <div className="grid grid-cols-3 gap-2">
               {(["baja", "media", "alta"] as Tarea["prioridad"][]).map(p => (
@@ -306,16 +349,9 @@ function NuevaTareaModal({
 // ─── Página Principal ─────────────────────────────────────────
 
 export default function TareasPage() {
-  const { user, isAuthenticated, login, logout, verifyPassword } = useAuth();
   const [tareas, setTareas] = useState<Tarea[]>([]);
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
-  const [showLoginModal, setShowLoginModal] = useState(false);
-  const [showPasswordModal, setShowPasswordModal] = useState(false);
-  const [passwordInput, setPasswordInput] = useState("");
-  const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
-  const [loginUsername, setLoginUsername] = useState("");
-  const [loginPassword, setLoginPassword] = useState("");
   const [filter, setFilter] = useState<string>("todas");
 
   const loadTareas = useCallback(async () => {
@@ -345,10 +381,7 @@ export default function TareasPage() {
 
   const handleCrear = async (tarea: Omit<Tarea, "id" | "creadaEn">) => {
     try {
-      await tareasDb.create({
-        ...tarea,
-        creador: user || "admin",
-      });
+      await tareasDb.create(tarea);
       setShowModal(false);
       loadTareas();
     } catch (e) {
@@ -358,8 +391,10 @@ export default function TareasPage() {
   };
 
   const handleIniciar = async (id: string) => {
+    const iniciador = prompt("Nombre de quien inicia la tarea:");
+    if (!iniciador?.trim()) return;
     try {
-      await tareasDb.iniciarTarea(id, user || "usuario");
+      await tareasDb.iniciarTarea(id, iniciador.trim());
       loadTareas();
     } catch (e) {
       console.error("Error iniciando tarea:", e);
@@ -368,8 +403,10 @@ export default function TareasPage() {
   };
 
   const handleCompletar = async (id: string) => {
+    const completador = prompt("Nombre de quien completa la tarea:");
+    if (!completador?.trim()) return;
     try {
-      await tareasDb.completarTarea(id, user || "usuario");
+      await tareasDb.completarTarea(id, completador.trim());
       loadTareas();
     } catch (e) {
       console.error("Error completando tarea:", e);
@@ -378,45 +415,23 @@ export default function TareasPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!isAuthenticated) {
-      setShowLoginModal(true);
+    const tarea = tareas.find(t => t.id === id);
+    if (!tarea) return;
+
+    const password = prompt("Ingresa la contraseña de la tarea para eliminarla:");
+    if (!password?.trim()) return;
+
+    if (password !== tarea.password) {
+      alert("Contraseña incorrecta");
       return;
     }
 
-    const action = async () => {
-      try {
-        await tareasDb.delete(id);
-        loadTareas();
-      } catch (e) {
-        console.error("Error eliminando tarea:", e);
-        alert("Error al eliminar tarea");
-      }
-    };
-
-    setPendingAction(() => action);
-    setShowPasswordModal(true);
-  };
-
-  const handlePasswordSubmit = () => {
-    if (verifyPassword(passwordInput)) {
-      if (pendingAction) {
-        pendingAction();
-      }
-      setShowPasswordModal(false);
-      setPasswordInput("");
-      setPendingAction(null);
-    } else {
-      alert("Contraseña incorrecta");
-    }
-  };
-
-  const handleLoginSubmit = () => {
-    if (login(loginUsername, loginPassword)) {
-      setShowLoginModal(false);
-      setLoginUsername("");
-      setLoginPassword("");
-    } else {
-      alert("Contraseña incorrecta");
+    try {
+      await tareasDb.delete(id);
+      loadTareas();
+    } catch (e) {
+      console.error("Error eliminando tarea:", e);
+      alert("Error al eliminar tarea");
     }
   };
 
@@ -453,21 +468,6 @@ export default function TareasPage() {
             >
               <History className="w-5 h-5" /> Historial
             </Link>
-            {isAuthenticated ? (
-              <button
-                onClick={logout}
-                className="flex items-center gap-2 py-2 px-4 rounded-xl bg-gray-600 hover:bg-gray-700 text-white font-bold transition-colors"
-              >
-                <LogOut className="w-5 h-5" /> {user}
-              </button>
-            ) : (
-              <button
-                onClick={() => setShowLoginModal(true)}
-                className="flex items-center gap-2 py-2 px-4 rounded-xl bg-[#FDB71A] hover:bg-[#E09A00] text-black font-bold transition-colors"
-              >
-                <Lock className="w-5 h-5" /> Ingresar
-              </button>
-            )}
             <button
               onClick={() => setShowModal(true)}
               className="flex items-center gap-2 py-2 px-4 rounded-xl bg-green-600 hover:bg-green-700 text-white font-bold transition-colors"
@@ -540,95 +540,6 @@ export default function TareasPage() {
           </div>
         )}
       </div>
-
-      {/* Modal de Login */}
-      {showLoginModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(6px)" }}>
-          <div className="w-full max-w-sm rounded-2xl p-6" style={{ background: "#1a1a1a", border: "1px solid rgba(255,255,255,0.10)" }}>
-            <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-              <Lock className="w-5 h-5 text-[#FDB71A]" /> Iniciar Sesión
-            </h2>
-            <div className="space-y-4">
-              <div>
-                <label className="label">Usuario</label>
-                <input
-                  className="input"
-                  value={loginUsername}
-                  onChange={(e) => setLoginUsername(e.target.value)}
-                  placeholder="Tu nombre"
-                />
-              </div>
-              <div>
-                <label className="label">Contraseña</label>
-                <input
-                  type="password"
-                  className="input"
-                  value={loginPassword}
-                  onChange={(e) => setLoginPassword(e.target.value)}
-                  placeholder="Contraseña"
-                />
-              </div>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setShowLoginModal(false)}
-                  className="flex-1 py-3 px-4 rounded-xl bg-gray-600 hover:bg-gray-700 text-white font-bold transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={handleLoginSubmit}
-                  className="flex-1 py-3 px-4 rounded-xl bg-[#FDB71A] hover:bg-[#E09A00] text-black font-bold transition-colors"
-                >
-                  Ingresar
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal de Contraseña */}
-      {showPasswordModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(6px)" }}>
-          <div className="w-full max-w-sm rounded-2xl p-6" style={{ background: "#1a1a1a", border: "1px solid rgba(255,255,255,0.10)" }}>
-            <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-              <Lock className="w-5 h-5 text-red-400" /> Verificar Contraseña
-            </h2>
-            <div className="space-y-4">
-              <div>
-                <label className="label">Contraseña de administrador</label>
-                <input
-                  type="password"
-                  className="input"
-                  value={passwordInput}
-                  onChange={(e) => setPasswordInput(e.target.value)}
-                  placeholder="Ingresa la contraseña"
-                />
-              </div>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => {
-                    setShowPasswordModal(false);
-                    setPasswordInput("");
-                    setPendingAction(null);
-                  }}
-                  className="flex-1 py-3 px-4 rounded-xl bg-gray-600 hover:bg-gray-700 text-white font-bold transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={handlePasswordSubmit}
-                  className="flex-1 py-3 px-4 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold transition-colors"
-                >
-                  Confirmar
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {showModal && (
         <NuevaTareaModal

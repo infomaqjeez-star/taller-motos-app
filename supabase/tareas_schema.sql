@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS tareas (
   status TEXT NOT NULL CHECK (status IN ('pendiente', 'en_progreso', 'completada')),
   creada_en TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
   creador TEXT NOT NULL DEFAULT 'admin',
+  password TEXT NOT NULL DEFAULT 'admin',
   iniciada_en TIMESTAMP WITH TIME ZONE,
   iniciador TEXT,
   completada_en TIMESTAMP WITH TIME ZONE,
@@ -45,6 +46,10 @@ DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'tareas' AND column_name = 'creador') THEN
     ALTER TABLE tareas ADD COLUMN creador TEXT NOT NULL DEFAULT 'admin';
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'tareas' AND column_name = 'password') THEN
+    ALTER TABLE tareas ADD COLUMN password TEXT NOT NULL DEFAULT 'admin';
   END IF;
 
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'tareas' AND column_name = 'iniciador') THEN
