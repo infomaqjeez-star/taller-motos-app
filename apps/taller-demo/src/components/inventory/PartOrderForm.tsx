@@ -90,13 +90,13 @@ export default function PartOrderForm({ initial, onSave, onClose }: PartOrderFor
             <div>
               <label className="label">Estado</label>
               <select
-                className="input"
+                className="input bg-gray-900 text-white"
                 value={form.status}
                 onChange={(e) => set("status", e.target.value as PartToOrder["status"])}
               >
-                <option value="pendiente">Pendiente</option>
-                <option value="pedido">Pedido</option>
-                <option value="recibido">Recibido</option>
+                <option value="pendiente" className="bg-gray-900 text-white">Pendiente</option>
+                <option value="pedido" className="bg-gray-900 text-white">Pedido</option>
+                <option value="recibido" className="bg-gray-900 text-white">Recibido</option>
               </select>
             </div>
           </div>
