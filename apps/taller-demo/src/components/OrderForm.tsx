@@ -403,26 +403,26 @@ export default function OrderForm({ initial, onSave, onClose }: OrderFormProps) 
               <div>
                 <label className="label">Estado de Reparación</label>
                 <select
-                  className="input"
+                  className="input bg-gray-900 text-white"
                   value={form.status}
                   onChange={(e) => set("status", e.target.value as RepairStatus)}
                 >
                   {(Object.keys(REPAIR_STATUS_LABELS) as RepairStatus[]).map((s) => (
-                    <option key={s} value={s}>{REPAIR_STATUS_LABELS[s]}</option>
+                    <option key={s} value={s} className="bg-gray-900 text-white">{REPAIR_STATUS_LABELS[s]}</option>
                   ))}
                 </select>
               </div>
               <div>
                 <label className="label">Aviso al Cliente</label>
                 <select
-                  className="input"
+                  className="input bg-gray-900 text-white"
                   value={form.clientNotification}
                   onChange={(e) =>
                     set("clientNotification", e.target.value as ClientNotification)
                   }
                 >
                   {(Object.keys(CLIENT_NOTIFICATION_LABELS) as ClientNotification[]).map((n) => (
-                    <option key={n} value={n}>{CLIENT_NOTIFICATION_LABELS[n]}</option>
+                    <option key={n} value={n} className="bg-gray-900 text-white">{CLIENT_NOTIFICATION_LABELS[n]}</option>
                   ))}
                 </select>
               </div>
