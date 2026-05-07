@@ -279,13 +279,21 @@ function NuevaTareaModal({
             </div>
           </div>
 
-          <button
-            onClick={handleSubmit}
-            disabled={!titulo.trim() || !asignadoA.trim()}
-            className="w-full py-3 px-4 rounded-xl bg-green-600 hover:bg-green-700 disabled:bg-gray-700 disabled:text-gray-500 text-white font-bold transition-colors"
-          >
-            Crear Tarea
-          </button>
+          <div className="flex gap-3">
+            <button
+              onClick={onClose}
+              className="flex-1 py-3 px-4 rounded-xl bg-gray-600 hover:bg-gray-700 text-white font-bold transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleSubmit}
+              disabled={!titulo.trim() || !asignadoA.trim()}
+              className="flex-1 py-3 px-4 rounded-xl bg-green-600 hover:bg-green-700 disabled:bg-gray-700 disabled:text-gray-500 text-white font-bold transition-colors"
+            >
+              Crear Tarea
+            </button>
+          </div>
         </div>
       </div>
     </div>
