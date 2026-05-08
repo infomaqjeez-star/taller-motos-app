@@ -25,6 +25,7 @@ export interface ExtraMachine {
   brand: string;
   model: string;
   reportedIssues: string;
+  budget?: number;
 }
 
 export interface WorkOrder {

@@ -40,6 +40,7 @@ import PrintOrder from "@/components/PrintOrder";
 import ClientHistory from "@/components/ClientHistory";
 import PhotoManager from "@/components/PhotoManager";
 import BudgetImage from "@/components/BudgetImage";
+import { ordersDb } from "@/lib/db";
 
 interface OrderCardProps {
   order: WorkOrder;
@@ -289,7 +290,20 @@ export default function OrderCard({ order, onEdit, onDelete }: OrderCardProps) {
       </div>
 
       {showPayment && <PaymentModal order={currentOrder} onClose={() => setShowPayment(false)} />}
-      {showPrint && <PrintOrder order={currentOrder} onClose={() => setShowPrint(false)} />}
+      {showPrint && (
+        <PrintOrder
+          order={currentOrder}
+          onClose={() => setShowPrint(false)}
+          onSave={async (updates) => {
+            await ordersDb.update(currentOrder.id, updates);
+            setCurrentOrder(prev => ({
+              ...prev,
+              ...(updates.budget !== undefined ? { budget: updates.budget } : {}),
+              ...(updates.extraMachines !== undefined ? { extraMachines: updates.extraMachines } : {}),
+            }));
+          }}
+        />
+      )}
       {showBudget && <BudgetImage order={currentOrder} onClose={() => setShowBudget(false)} />}
       {showHistory && (
         <ClientHistory

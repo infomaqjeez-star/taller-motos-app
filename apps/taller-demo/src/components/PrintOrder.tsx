@@ -3,9 +3,13 @@
 import { useState } from "react";
 import { WorkOrder, MOTOR_TYPE_LABELS } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
-import { Printer, X, Plus, Trash2 } from "lucide-react";
+import { Printer, X, Plus, Trash2, Save, CheckCircle, Loader2 } from "lucide-react";
 
-interface Props { order: WorkOrder; onClose: () => void; }
+interface Props {
+  order: WorkOrder;
+  onClose: () => void;
+  onSave?: (updates: Partial<WorkOrder>) => Promise<void>;
+}
 
 interface LineItem { desc: string; qty: number; price: number; priceStr?: string; }
 
@@ -22,7 +26,7 @@ function fmt(n: number) {
   return "$\u00a0" + n.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-export default function PrintOrder({ order, onClose }: Props) {
+export default function PrintOrder({ order, onClose, onSave }: Props) {
   const defaultItems: LineItem[] = [
     {
       desc:     `${order.brand} ${order.model} — ${order.reportedIssues || "Servicio de reparación"}`,
@@ -33,8 +37,8 @@ export default function PrintOrder({ order, onClose }: Props) {
     ...(order.extraMachines ?? []).map(m => ({
       desc:     `${m.brand} ${m.model} — ${m.reportedIssues || "Servicio de reparación"}`,
       qty:      1,
-      price:    0,
-      priceStr: "",
+      price:    m.budget ?? 0,
+      priceStr: m.budget ? String(m.budget) : "",
     })),
   ];
 
@@ -43,6 +47,33 @@ export default function PrintOrder({ order, onClose }: Props) {
   const [descType, setDescType]       = useState<"$" | "%">("$");
   const [descValue, setDescValue]     = useState(0);
   const [noPresup, setNoPresup]       = useState(order.id.slice(0, 8).toUpperCase());
+  const [saving, setSaving]           = useState(false);
+  const [saved, setSaved]             = useState(false);
+
+  const handleSave = async () => {
+    if (!onSave) return;
+    setSaving(true);
+    setSaved(false);
+    try {
+      // Primer ítem = máquina principal → budget
+      const newBudget = items[0]?.price ?? order.budget ?? 0;
+
+      // Items restantes = extraMachines con su budget actualizado
+      const newExtraMachines = (order.extraMachines ?? []).map((m, idx) => ({
+        ...m,
+        budget: items[idx + 1]?.price ?? 0,
+      }));
+
+      await onSave({
+        budget:        newBudget,
+        extraMachines: newExtraMachines,
+      });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const subtotal = items.reduce((s, i) => s + i.qty * i.price, 0);
   const descAmount = descType === "$" ? descValue : Math.round(subtotal * descValue / 100);
@@ -93,6 +124,17 @@ export default function PrintOrder({ order, onClose }: Props) {
           </div>
         </div>
         <div className="flex gap-2">
+          {onSave && (
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="btn-sm rounded-xl px-4 py-2 flex items-center gap-2 font-bold text-sm transition-all"
+              style={{ background: saved ? "#16a34a" : "#d97706", color: "#fff" }}
+            >
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : saved ? <CheckCircle className="w-4 h-4" /> : <Save className="w-4 h-4" />}
+              {saving ? "Guardando..." : saved ? "¡Guardado!" : "Guardar cambios"}
+            </button>
+          )}
           <button onClick={() => window.print()}
             className="btn-primary btn-sm rounded-xl">
             <Printer className="w-4 h-4" /> Imprimir / PDF
