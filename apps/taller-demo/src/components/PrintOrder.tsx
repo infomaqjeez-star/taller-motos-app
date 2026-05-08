@@ -7,7 +7,7 @@ import { Printer, X, Plus, Trash2 } from "lucide-react";
 
 interface Props { order: WorkOrder; onClose: () => void; }
 
-interface LineItem { desc: string; qty: number; price: number; }
+interface LineItem { desc: string; qty: number; price: number; priceStr?: string; }
 
 const EMPRESA = {
   nombre: "MAQJEEZ",
@@ -46,14 +46,19 @@ export default function PrintOrder({ order, onClose }: Props) {
   const descAmount = descType === "$" ? descValue : Math.round(subtotal * descValue / 100);
   const total = subtotal - descAmount;
 
-  const addItem = () => setItems([...items, { desc: "", qty: 1, price: 0 }]);
+  const addItem = () => setItems([...items, { desc: "", qty: 1, price: 0, priceStr: "" }]);
   const removeItem = (i: number) => setItems(items.filter((_, idx) => idx !== i));
   const updateItem = (i: number, field: keyof LineItem, val: string) => {
-    setItems(items.map((item, idx) =>
-      idx === i
-        ? { ...item, [field]: field === "desc" ? val : Number(val) || 0 }
-        : item
-    ));
+    setItems(items.map((item, idx) => {
+      if (idx !== i) return item;
+      if (field === "desc") return { ...item, desc: val };
+      if (field === "qty")  return { ...item, qty: Math.max(1, parseInt(val) || 1) };
+      if (field === "priceStr") {
+        const num = parseFloat(val.replace(",", "."));
+        return { ...item, priceStr: val, price: isNaN(num) ? item.price : num };
+      }
+      return item;
+    }));
   };
 
   return (
@@ -194,11 +199,20 @@ export default function PrintOrder({ order, onClose }: Props) {
                 </td>
                 {/* Precio */}
                 <td className="px-3 py-2.5 text-right">
-                  <input type="number" min={0}
-                    className="no-print w-24 text-right border-b border-dashed border-gray-300
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    className="no-print w-28 text-right border-b border-dashed border-gray-300
                                bg-transparent focus:outline-none focus:border-orange-400 text-sm"
-                    value={item.price}
-                    onChange={e => updateItem(i, "price", e.target.value)}
+                    value={item.priceStr ?? String(item.price)}
+                    placeholder="0"
+                    onChange={e => updateItem(i, "priceStr", e.target.value)}
+                    onBlur={e => {
+                      const num = parseFloat(e.target.value.replace(",", ".")) || 0;
+                      setItems(prev => prev.map((it, idx) =>
+                        idx === i ? { ...it, price: num, priceStr: String(num) } : it
+                      ));
+                    }}
                   />
                   <span className="only-print">{fmt(item.price)}</span>
                 </td>
