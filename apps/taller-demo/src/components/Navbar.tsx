@@ -6,10 +6,11 @@ import { useState, useEffect } from "react";
 import {
   Package, LayoutDashboard, AlertTriangle,
   MessageCircle, BarChart2, Users, Truck, ShoppingCart,
-  Clock, Timer, Settings, CheckCircle,
+  Clock, Timer, Settings, CheckCircle, Bug,
 } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
 import { useAlarms } from "../hooks/useAlarms";
+import BugReportModal from "@/components/BugReportModal";
 
 interface NavbarProps {
   overdueCount?: number;
@@ -27,6 +28,7 @@ export default function Navbar({
   const pathname = usePathname();
   const [currentTime, setCurrentTime] = useState<string>("");
   const [tareasPendientes, setTareasPendientes] = useState<number>(0);
+  const [showBugReport, setShowBugReport] = useState(false);
   const { flexAlarm, correoAlarm, formatCountdown, config } = useAlarms();
 
   // Actualizar reloj cada segundo
@@ -153,6 +155,16 @@ export default function Navbar({
 
             <ThemeToggle />
 
+            {/* Botón reporte de bugs */}
+            <button
+              onClick={() => setShowBugReport(true)}
+              className="relative flex items-center gap-1.5 px-3 py-2 rounded-xl font-semibold text-sm transition-colors text-red-700 hover:bg-red-100/40"
+              title="Reportar un error o bug"
+            >
+              <Bug className="w-4 h-4" />
+              <span className="hidden lg:inline">Reportar Error</span>
+            </button>
+
             {/* Reloj y Cuenta Regresiva - Diseño Profesional con 5 Relojes */}
             <div className="hidden sm:flex items-center gap-3 ml-4 pl-4 border-l border-[#E09A00]/30">
               {/* Reloj Principal */}
@@ -243,12 +255,21 @@ export default function Navbar({
                 </span>
               </button>
             )}
+            <button
+              onClick={() => setShowBugReport(true)}
+              className="p-2 rounded-xl bg-red-100/40 text-red-700"
+              title="Reportar error"
+            >
+              <Bug className="w-5 h-5" />
+            </button>
             <ThemeToggle />
           </div>
         </div>
       </div>
 
       {/* Alerta equipos vencidos */}
+      {showBugReport && <BugReportModal onClose={() => setShowBugReport(false)} />}
+
       {overdueCount > 0 && (
         <div className="bg-red-700/20 border-t border-red-500/40 px-4 py-2">
           <div className="max-w-5xl mx-auto flex items-center gap-2 text-red-800 text-sm font-semibold">
