@@ -23,13 +23,20 @@ function fmt(n: number) {
 }
 
 export default function PrintOrder({ order, onClose }: Props) {
-  const defaultItem: LineItem = {
-    desc:  order.reportedIssues || "Servicio de reparación",
-    qty:   1,
-    price: order.budget ?? 0,
-  };
+  const defaultItems: LineItem[] = [
+    {
+      desc:  `${order.brand} ${order.model} — ${order.reportedIssues || "Servicio de reparación"}`,
+      qty:   1,
+      price: order.budget ?? 0,
+    },
+    ...(order.extraMachines ?? []).map(m => ({
+      desc:  `${m.brand} ${m.model} — ${m.reportedIssues || "Servicio de reparación"}`,
+      qty:   1,
+      price: 0,
+    })),
+  ];
 
-  const [items, setItems]             = useState<LineItem[]>([defaultItem]);
+  const [items, setItems]             = useState<LineItem[]>(defaultItems);
   const [validez, setValidez]         = useState("15");
   const [descType, setDescType]       = useState<"$" | "%">("$");
   const [descValue, setDescValue]     = useState(0);

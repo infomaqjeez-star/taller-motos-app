@@ -384,7 +384,7 @@ export default function VentasPage() {
   const [ventasHoy, setVentasHoy] = useState<VentaRepuesto[]>([]);
   const [loadingHoy, setLoadingHoy] = useState(false);
   const [editVenta, setEditVenta] = useState<VentaRepuesto | null>(null);
-  const [ticketModal, setTicketModal] = useState<{ isOpen: boolean; ventaId?: string }>({ isOpen: false });
+  const [ticketModal, setTicketModal] = useState<{ isOpen: boolean; venta?: VentaRepuesto }>({ isOpen: false });
 
   // ── Estadísticas
   const [rango, setRango] = useState<RangoStats>("hoy");
@@ -694,7 +694,7 @@ export default function VentasPage() {
                   venta={v} 
                   onCancelar={handleCancelar} 
                   onEditar={setEditVenta}
-                  onPrintTicket={(venta) => setTicketModal({ isOpen: true, ventaId: venta.id })}
+                  onPrintTicket={(venta) => setTicketModal({ isOpen: true, venta })}
                 />
               ))
             )}
@@ -860,10 +860,10 @@ export default function VentasPage() {
         />
       )}
 
-      {ticketModal.isOpen && (
+      {ticketModal.isOpen && ticketModal.venta && (
         <TicketPrinter
           isOpen={ticketModal.isOpen}
-          venta={ventasHoy.find(v => v.id === ticketModal.ventaId) || { items: [], total: 0, metodoPago: "efectivo", createdAt: "" }}
+          venta={ticketModal.venta}
           clientData={clientData}
           onClose={() => setTicketModal({ isOpen: false })}
         />
