@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useRef } from "react";
-import { X, Bug, Upload, Trash2, Send, CheckCircle, AlertTriangle, Image, Video, Loader2 } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { X, Bug, Upload, Trash2, Send, CheckCircle, AlertTriangle, Image, Video, Loader2, ChevronDown } from "lucide-react";
 
 interface Props {
   onClose: () => void;
@@ -25,7 +25,32 @@ export default function BugReportModal({ onClose }: Props) {
   const [sending, setSending]     = useState(false);
   const [sent, setSent]           = useState(false);
   const [error, setError]         = useState<string | null>(null);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   const fileInputRef              = useRef<HTMLInputElement>(null);
+  const dropdownRef               = useRef<HTMLDivElement>(null);
+
+  const SECCIONES = [
+    { value: "",               label: "— Seleccionar —" },
+    { value: "Taller",         label: "Taller" },
+    { value: "Ventas",         label: "Ventas" },
+    { value: "Inventario",     label: "Inventario / Pedidos" },
+    { value: "Estadísticas",   label: "Estadísticas" },
+    { value: "Agenda",         label: "Agenda" },
+    { value: "Tareas",         label: "Tareas" },
+    { value: "Presupuesto",    label: "Presupuesto (impresión)" },
+    { value: "Configuración",  label: "Configuración" },
+    { value: "Otro",           label: "Otro" },
+  ];
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
 
   const photos = media.filter(m => m.type === "image");
   const videos = media.filter(m => m.type === "video");
@@ -163,18 +188,38 @@ export default function BugReportModal({ onClose }: Props) {
           {/* Página */}
           <div>
             <label className="label text-xs">¿En qué sección ocurre?</label>
-            <select className="input input-sm" value={pagina} onChange={e => setPagina(e.target.value)}>
-              <option value="">— Seleccionar —</option>
-              <option value="Taller">Taller</option>
-              <option value="Ventas">Ventas</option>
-              <option value="Inventario">Inventario / Pedidos</option>
-              <option value="Estadísticas">Estadísticas</option>
-              <option value="Agenda">Agenda</option>
-              <option value="Tareas">Tareas</option>
-              <option value="Presupuesto">Presupuesto (impresión)</option>
-              <option value="Configuración">Configuración</option>
-              <option value="Otro">Otro</option>
-            </select>
+            <div ref={dropdownRef} className="relative">
+              <button
+                type="button"
+                onClick={() => setDropdownOpen(o => !o)}
+                className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl border border-white/15 bg-[#2a2a2a] text-sm text-gray-100 hover:bg-[#333] transition-colors focus:outline-none focus:ring-2 focus:ring-[#FF5722]"
+              >
+                <span className={pagina ? "text-gray-100" : "text-gray-500"}>
+                  {SECCIONES.find(s => s.value === pagina)?.label ?? "— Seleccionar —"}
+                </span>
+                <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${dropdownOpen ? "rotate-180" : ""}`} />
+              </button>
+              {dropdownOpen && (
+                <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-[#2a2a2a] border border-white/15 rounded-xl overflow-hidden shadow-2xl">
+                  {SECCIONES.map(s => (
+                    <button
+                      key={s.value}
+                      type="button"
+                      onClick={() => { setPagina(s.value); setDropdownOpen(false); }}
+                      className={`w-full text-left px-4 py-2.5 text-sm transition-colors
+                        ${pagina === s.value
+                          ? "bg-[#FF5722]/20 text-orange-300 font-semibold"
+                          : s.value === ""
+                            ? "text-gray-500 hover:bg-white/5"
+                            : "text-gray-200 hover:bg-white/8"
+                        }`}
+                    >
+                      {s.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Descripción */}
