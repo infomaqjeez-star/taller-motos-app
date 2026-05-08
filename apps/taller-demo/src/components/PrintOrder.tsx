@@ -25,14 +25,16 @@ function fmt(n: number) {
 export default function PrintOrder({ order, onClose }: Props) {
   const defaultItems: LineItem[] = [
     {
-      desc:  `${order.brand} ${order.model} — ${order.reportedIssues || "Servicio de reparación"}`,
-      qty:   1,
-      price: order.budget ?? 0,
+      desc:     `${order.brand} ${order.model} — ${order.reportedIssues || "Servicio de reparación"}`,
+      qty:      1,
+      price:    order.budget ?? 0,
+      priceStr: String(order.budget ?? 0),
     },
     ...(order.extraMachines ?? []).map(m => ({
-      desc:  `${m.brand} ${m.model} — ${m.reportedIssues || "Servicio de reparación"}`,
-      qty:   1,
-      price: 0,
+      desc:     `${m.brand} ${m.model} — ${m.reportedIssues || "Servicio de reparación"}`,
+      qty:      1,
+      price:    0,
+      priceStr: "",
     })),
   ];
 
@@ -46,19 +48,20 @@ export default function PrintOrder({ order, onClose }: Props) {
   const descAmount = descType === "$" ? descValue : Math.round(subtotal * descValue / 100);
   const total = subtotal - descAmount;
 
-  const addItem = () => setItems([...items, { desc: "", qty: 1, price: 0, priceStr: "" }]);
-  const removeItem = (i: number) => setItems(items.filter((_, idx) => idx !== i));
-  const updateItem = (i: number, field: keyof LineItem, val: string) => {
-    setItems(items.map((item, idx) => {
-      if (idx !== i) return item;
-      if (field === "desc") return { ...item, desc: val };
-      if (field === "qty")  return { ...item, qty: Math.max(1, parseInt(val) || 1) };
-      if (field === "priceStr") {
-        const num = parseFloat(val.replace(",", "."));
-        return { ...item, priceStr: val, price: isNaN(num) ? item.price : num };
-      }
-      return item;
-    }));
+  const addItem    = () => setItems(prev => [...prev, { desc: "", qty: 1, price: 0, priceStr: "" }]);
+  const removeItem  = (i: number) => setItems(prev => prev.filter((_, idx) => idx !== i));
+
+  const updateDesc  = (i: number, val: string) =>
+    setItems(prev => prev.map((it, idx) => idx === i ? { ...it, desc: val } : it));
+
+  const updateQty   = (i: number, val: string) =>
+    setItems(prev => prev.map((it, idx) => idx === i ? { ...it, qty: Math.max(1, parseInt(val) || 1) } : it));
+
+  const updatePrice = (i: number, val: string) => {
+    const num = parseFloat(val.replace(",", "."));
+    setItems(prev => prev.map((it, idx) =>
+      idx === i ? { ...it, priceStr: val, price: isNaN(num) ? 0 : num } : it
+    ));
   };
 
   return (
@@ -183,7 +186,7 @@ export default function PrintOrder({ order, onClose }: Props) {
                                focus:outline-none focus:border-orange-400 text-sm"
                     value={item.desc}
                     placeholder="Descripción del trabajo..."
-                    onChange={e => updateItem(i, "desc", e.target.value)}
+                    onChange={e => updateDesc(i, e.target.value)}
                   />
                   <span className="only-print">{item.desc}</span>
                 </td>
@@ -193,7 +196,7 @@ export default function PrintOrder({ order, onClose }: Props) {
                     className="no-print w-14 text-center border-b border-dashed border-gray-300
                                bg-transparent focus:outline-none focus:border-orange-400 text-sm"
                     value={item.qty}
-                    onChange={e => updateItem(i, "qty", e.target.value)}
+                    onChange={e => updateQty(i, e.target.value)}
                   />
                   <span className="only-print">{item.qty}</span>
                 </td>
@@ -204,15 +207,9 @@ export default function PrintOrder({ order, onClose }: Props) {
                     inputMode="decimal"
                     className="no-print w-28 text-right border-b border-dashed border-gray-300
                                bg-transparent focus:outline-none focus:border-orange-400 text-sm"
-                    value={item.priceStr ?? String(item.price)}
+                    value={item.priceStr ?? ""}
                     placeholder="0"
-                    onChange={e => updateItem(i, "priceStr", e.target.value)}
-                    onBlur={e => {
-                      const num = parseFloat(e.target.value.replace(",", ".")) || 0;
-                      setItems(prev => prev.map((it, idx) =>
-                        idx === i ? { ...it, price: num, priceStr: String(num) } : it
-                      ));
-                    }}
+                    onChange={e => updatePrice(i, e.target.value)}
                   />
                   <span className="only-print">{fmt(item.price)}</span>
                 </td>
