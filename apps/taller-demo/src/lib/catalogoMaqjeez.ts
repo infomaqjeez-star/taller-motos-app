@@ -1,8 +1,8 @@
 /**
  * Catálogo de precios Maqjeez.
- * Datos: public/catalogo/catalogo.json — campo `precio` = precio lista referencia (ej. transferencia Konecta).
- * En pantalla se muestra precio × PRECIO_LISTA_MULTIPLICADOR (×4).
- * Imágenes: public/catalogo/{sku}.webp|jpg|png (480×480 recomendado).
+ * Datos: `data/catalogo-public.json` (servidos por GET /api/catalogo/data). Campo `precio` = lista referencia.
+ * En pantalla: precio × PRECIO_LISTA_MULTIPLICADOR (×4).
+ * Imágenes: `public/catalogo/{sku}.webp|jpg|png` (480×480). Generación: scripts/catalogo/extract_catalogo_pdf.py.
  */
 
 /** Multiplicador aplicado al precio del JSON en la vista del catálogo */
