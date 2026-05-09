@@ -7,6 +7,8 @@
     font-size: 16px;
     -webkit-tap-highlight-color: transparent;
     scroll-behavior: smooth;
+    /* Fallback hasta que Navbar mida la altura real (dos filas + alerta) */
+    --maqjeez-header-height: 7rem;
   }
 
   /* ── Deep Space Dark Mode (default) ── */
