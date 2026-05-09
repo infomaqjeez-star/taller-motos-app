@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
@@ -168,6 +169,7 @@ export async function POST(request: NextRequest) {
           // Insertar nuevos items
           for (const item of items) {
             await supabase.from("ventas_items").insert({
+              id: randomUUID(),
               venta_id: ventaId,
               producto: item.producto,
               sku: item.sku,
@@ -192,15 +194,17 @@ export async function POST(request: NextRequest) {
       default: {
         // Crear nueva venta
         const { vendedor, metodoPago, total, status, notas, items, createdAt } = body;
-        
-        // Crear la venta principal
+        const ventaId = randomUUID();
+
+        // Crear la venta principal (id explícito: la tabla no tiene DEFAULT en producción)
         const { data: ventaData, error: ventaError } = await supabase
           .from("ventas_repuestos")
           .insert({
+            id: ventaId,
             vendedor,
             metodo_pago: metodoPago,
             total,
-            status: status || "completada",
+            status: status || "activa",
             notas,
             created_at: createdAt || new Date().toISOString(),
           })
@@ -212,6 +216,7 @@ export async function POST(request: NextRequest) {
         // Crear los items de la venta
         if (items && Array.isArray(items) && ventaData) {
           const itemsToInsert = items.map((item: any) => ({
+            id: randomUUID(),
             venta_id: ventaData.id,
             producto: item.producto,
             sku: item.sku || "",
