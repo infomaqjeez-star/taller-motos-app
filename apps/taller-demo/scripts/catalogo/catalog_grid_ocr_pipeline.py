@@ -10,8 +10,8 @@ Requisitos:
 Windows:
   set TESSERACT_CMD=C:\\Program Files\\Tesseract-OCR\\tesseract.exe
 
-Ejemplo (cwd = apps/taller-demo):
-  python scripts/catalogo/catalog_grid_ocr_pipeline.py --pdf data/catalogo-konecta-source/catalogo-konecta.pdf --out data/catalogo-ocr-export --pages 0 --dry-run
+Ejemplo (cwd = apps/taller-demo, PDF en scripts/catalogo-konecta.pdf):
+  python scripts/catalogo/catalog_grid_ocr_pipeline.py --out data/catalogo-ocr-export --pages 0 --dry-run
 """
 from __future__ import annotations
 
@@ -20,6 +20,11 @@ import os
 import re
 import sys
 from pathlib import Path
+
+_SCRIPT_DIR = Path(__file__).resolve().parent
+if str(_SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(_SCRIPT_DIR))
+import pdf_catalog_helpers as _cat  # noqa: E402
 
 MULT_DEFAULT = 4
 
@@ -70,7 +75,7 @@ def format_precio_ar(n: int) -> str:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="PDF catálogo rejilla + OCR precio ×4")
-    ap.add_argument("--pdf", default="data/catalogo-konecta-source/catalogo-konecta.pdf")
+    ap.add_argument("--pdf", default=_cat.DEFAULT_CATALOG_PDF_REL)
     ap.add_argument("--out", default="data/catalogo-ocr-export")
     ap.add_argument("--pages", default="all", help='all | 0 | "0-10" | "0,1,2"')
     ap.add_argument("--zoom", type=float, default=2.0)

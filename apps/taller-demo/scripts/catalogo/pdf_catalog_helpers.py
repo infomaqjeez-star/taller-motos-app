@@ -2,6 +2,11 @@
 from __future__ import annotations
 
 import re
+
+# PDF por defecto (cwd = apps/taller-demo): colocar el archivo en scripts/ con este nombre
+# o pasar --pdf "scripts/Catalogo Abril 2026 Konecta Repuestos.pdf"
+DEFAULT_CATALOG_PDF_REL = "scripts/catalogo-konecta.pdf"
+
 # Carpeta raíz (bajo public/catalogo/) para ~1300 artículos
 CATALOG_PARENT_DIR = "Catalogo-Abril-2026-Maqjeez-Repuestos"
 PRODUCTOS_SUBDIR = "productos"
