@@ -4,7 +4,8 @@ import { NextResponse, type NextRequest } from "next/server";
 /** Rutas accesibles sin sesión (catálogo público, login, legales, callback OAuth). */
 function isPublicPath(pathname: string): boolean {
   if (pathname.startsWith("/catalogo")) return true;
-  if (pathname === "/api/catalogo/data") return true;
+  /* Toda la API pública del catálogo (sin sesión) */
+  if (pathname.startsWith("/api/catalogo")) return true;
   if (pathname.startsWith("/login")) return true;
   if (pathname.startsWith("/register")) return true;
   if (pathname.startsWith("/auth")) return true;

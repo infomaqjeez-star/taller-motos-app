@@ -9,6 +9,14 @@ import {
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
+/**
+ * Solo Google en pantalla de login (catálogo sigue público).
+ * Desactivar email/contraseña: por defecto SÍ (salvo NEXT_PUBLIC_GOOGLE_ONLY_LOGIN=false o 0).
+ */
+const GOOGLE_ONLY =
+  process.env.NEXT_PUBLIC_GOOGLE_ONLY_LOGIN !== "false" &&
+  process.env.NEXT_PUBLIC_GOOGLE_ONLY_LOGIN !== "0";
+
 export default function LoginPage() {
   const router = useRouter();
   const [loginType, setLoginType] = useState<"email" | "username">("email");
@@ -178,6 +186,67 @@ export default function LoginPage() {
     );
   }
 
+  if (GOOGLE_ONLY && !showRecovery && !showForgotUsername) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#0a0a0a] p-4">
+        <div className="w-full max-w-md">
+          <div className="mb-8 text-center">
+            <Link href="/landing" className="mb-6 inline-flex items-center gap-2">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#FFE600]">
+                <span className="font-black text-[#003087]">MJ</span>
+              </div>
+              <span className="text-xl font-bold text-white">MaqJeez</span>
+            </Link>
+            <h1 className="mb-2 text-2xl font-bold text-white">Acceso al taller</h1>
+            <p className="text-sm text-gray-400">
+              Ingresá con tu cuenta de Google. El catálogo de precios es público y no requiere cuenta.
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-8">
+            <button
+              type="button"
+              onClick={handleGoogleLogin}
+              disabled={loading}
+              className="flex w-full items-center justify-center gap-3 rounded-xl bg-white px-4 py-3 font-semibold text-gray-900 transition hover:bg-gray-100 disabled:opacity-50"
+            >
+              {loading ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <>
+                  <Chrome className="h-5 w-5 text-blue-500" />
+                  Continuar con Google
+                </>
+              )}
+            </button>
+
+            <p className="mt-6 text-center text-xs leading-relaxed text-gray-500">
+              Al continuar con Google aceptás los{" "}
+              <Link href="/terminos" className="text-[#FFE600] underline underline-offset-2 hover:text-white">
+                términos de uso
+              </Link>{" "}
+              y la{" "}
+              <Link href="/privacidad" className="text-[#FFE600] underline underline-offset-2 hover:text-white">
+                política de privacidad
+              </Link>
+              .
+            </p>
+
+            <div className="mt-6 flex flex-col gap-3 border-t border-white/10 pt-6 text-center text-sm">
+              <Link href="/catalogo" className="font-semibold text-[#FDB71A] hover:underline">
+                Ver catálogo público (sin iniciar sesión)
+              </Link>
+              <Link href="/landing" className="inline-flex items-center justify-center gap-2 text-gray-400 hover:text-white">
+                <ArrowLeft className="h-4 w-4" />
+                Volver a la página principal
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (showForgotUsername) {
     return (
       <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-4">
@@ -267,10 +336,25 @@ export default function LoginPage() {
             )}
           </button>
 
-          <div className="flex items-center gap-4 my-6">
-            <div className="flex-1 h-px bg-white/10" />
+          <p className="mb-4 mt-4 text-center text-[11px] leading-relaxed text-gray-500">
+            Al iniciar sesión aceptás los{" "}
+            <Link href="/terminos" className="text-[#FFE600] underline underline-offset-2 hover:text-white">
+              términos
+            </Link>{" "}
+            y la{" "}
+            <Link href="/privacidad" className="text-[#FFE600] underline underline-offset-2 hover:text-white">
+              privacidad
+            </Link>
+            .{" "}
+            <Link href="/catalogo" className="text-gray-400 hover:text-[#FDB71A]">
+              Catálogo público (sin cuenta)
+            </Link>
+          </p>
+
+          <div className="my-6 flex items-center gap-4">
+            <div className="h-px flex-1 bg-white/10" />
             <span className="text-sm text-gray-500">o</span>
-            <div className="flex-1 h-px bg-white/10" />
+            <div className="h-px flex-1 bg-white/10" />
           </div>
 
           {/* Login/Register Toggle */}
@@ -409,11 +493,11 @@ export default function LoginPage() {
         </div>
 
         {/* Back Link */}
-        <Link 
-          href="/" 
-          className="inline-flex items-center gap-2 mt-8 text-gray-400 hover:text-white transition mx-auto"
+        <Link
+          href="/landing"
+          className="mx-auto mt-8 inline-flex items-center gap-2 text-gray-400 transition hover:text-white"
         >
-          <ArrowLeft className="w-4 h-4" />
+          <ArrowLeft className="h-4 w-4" />
           Volver al inicio
         </Link>
       </div>
