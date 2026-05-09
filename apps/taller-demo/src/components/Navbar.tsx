@@ -191,16 +191,6 @@ export default function Navbar({
             <div className="flex shrink-0 items-center">
               <ThemeToggle />
             </div>
-
-            <button
-              type="button"
-              onClick={() => setShowBugReport(true)}
-              className="relative flex shrink-0 items-center gap-1.5 rounded-xl px-2 py-2 text-xs font-semibold text-red-700 transition-colors hover:bg-red-100/40 sm:px-3 sm:text-sm"
-              title="Reportar un error o bug"
-            >
-              <Bug className="h-4 w-4 shrink-0" />
-              <span className="hidden xl:inline">Reportar Error</span>
-            </button>
           </nav>
 
           <div className="flex shrink-0 items-center gap-2 sm:hidden">
@@ -216,14 +206,6 @@ export default function Navbar({
                 </span>
               </button>
             )}
-            <button
-              type="button"
-              onClick={() => setShowBugReport(true)}
-              className="rounded-xl bg-red-100/40 p-2 text-red-700"
-              title="Reportar error"
-            >
-              <Bug className="h-5 w-5" />
-            </button>
             <ThemeToggle />
           </div>
         </div>
@@ -287,6 +269,16 @@ export default function Navbar({
           >
             <Settings className="h-4 w-4 text-[#1E3A8A]" />
           </Link>
+
+          <button
+            type="button"
+            onClick={() => setShowBugReport(true)}
+            className="flex shrink-0 items-center gap-1.5 rounded-lg border border-red-600/40 bg-red-50/90 px-2.5 py-1.5 text-xs font-bold text-red-800 shadow-sm transition-colors hover:bg-red-100 sm:px-3 sm:text-sm"
+            title="Reportar un error o bug"
+          >
+            <Bug className="h-4 w-4 shrink-0" />
+            <span>Reportar error</span>
+          </button>
         </div>
       </div>
 
