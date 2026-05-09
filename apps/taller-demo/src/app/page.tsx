@@ -201,7 +201,7 @@ export default function DashboardPage() {
             <div className="min-w-0">
               <p className="font-black text-white">Catálogo de precios Maqjeez</p>
               <p className="text-sm text-gray-400">
-                Lista por categoría y SKU, con fotos 480×480 en{" "}
+                Catálogo público (sin datos del taller). Fotos 480×480 en{" "}
                 <span className="font-mono text-gray-500">public/catalogo/</span>
               </p>
             </div>

@@ -1,16 +1,58 @@
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import { createServerClient } from "@supabase/ssr";
+import { NextResponse, type NextRequest } from "next/server";
 
-export function middleware(request: NextRequest) {
-  // Log para debugging
-  console.log('[Middleware]', request.nextUrl.pathname);
-  
-  // Permitir todas las rutas
-  return NextResponse.next();
+/** Rutas accesibles sin sesión (catálogo público, login, legales, callback OAuth). */
+function isPublicPath(pathname: string): boolean {
+  if (pathname.startsWith("/catalogo")) return true;
+  if (pathname === "/api/catalogo/data") return true;
+  if (pathname.startsWith("/login")) return true;
+  if (pathname.startsWith("/register")) return true;
+  if (pathname.startsWith("/auth")) return true;
+  if (pathname.startsWith("/landing")) return true;
+  const legal = ["/terminos", "/privacidad", "/cookies", "/cancelacion"];
+  if (legal.some((p) => pathname === p || pathname.startsWith(`${p}/`))) return true;
+  return false;
+}
+
+export async function middleware(request: NextRequest) {
+  const pathname = request.nextUrl.pathname;
+
+  const response = NextResponse.next({ request: { headers: request.headers } });
+
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !anon || url.includes("placeholder") || anon.includes("placeholder")) {
+    return response;
+  }
+
+  const supabase = createServerClient(url, anon, {
+    cookies: {
+      getAll() {
+        return request.cookies.getAll();
+      },
+      setAll(cookiesToSet: { name: string; value: string; options?: object }[]) {
+        cookiesToSet.forEach(({ name, value, options }) => {
+          response.cookies.set(name, value, options as never);
+        });
+      },
+    },
+  });
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user && !isPublicPath(pathname)) {
+    const login = new URL("/login", request.url);
+    login.searchParams.set("next", pathname + request.nextUrl.search);
+    return NextResponse.redirect(login);
+  }
+
+  return response;
 }
 
 export const config = {
   matcher: [
-    '/((?!api|_next/static|_next/image|favicon.ico).*)',
+    "/((?!_next/static|_next/image|favicon.ico|manifest.json|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
   ],
 };
