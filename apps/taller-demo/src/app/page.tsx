@@ -150,7 +150,7 @@ export default function DashboardPage() {
         onOpenNotifications={() => setShowNotifications(true)}
       />
 
-      <main className="max-w-5xl mx-auto px-4 py-6 pb-24 sm:pb-6 space-y-6">
+      <main className="app-main space-y-6">
 
         {/* ── Tarjetas de estado neón ── */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

@@ -482,10 +482,10 @@ export default function TareasPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black pb-20 sm:pb-0">
+    <div className="min-h-dvh bg-gradient-to-br from-gray-900 via-gray-800 to-black">
       <Navbar />
 
-      <div className="max-w-4xl mx-auto px-4 py-6">
+      <div className="app-main !max-w-4xl">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -581,6 +581,8 @@ export default function TareasPage() {
           onCrear={handleCrear}
         />
       )}
+
+      <BottomNav />
     </div>
   );
 }

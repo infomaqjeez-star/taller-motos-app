@@ -76,19 +76,18 @@ export default function Navbar({
   ];
 
   return (
-    <header className="bg-[#FDB71A] border-b border-[#E09A00] sticky top-0 z-50 shadow-lg">
-      <div className="max-w-3xl mx-auto px-4">
-        <div className="flex items-center justify-between h-14">
+    <header className="sticky top-0 z-50 border-b border-[#E09A00] bg-[#FDB71A] shadow-md shadow-black/10">
+      <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4 sm:px-5 lg:px-6">
 
           {/* Logo — clic lleva a la landing page */}
-          <Link href="/landing" className="flex items-center h-full py-1">
-            <div className="w-10 h-10 bg-gradient-to-br from-[#FDB71A] to-[#E09A00] rounded-lg flex items-center justify-center font-bold text-black text-lg">
+          <Link href="/landing" className="flex h-full shrink-0 items-center py-1" aria-label="Inicio Maqjeez">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#FDB71A] to-[#E09A00] text-lg font-black text-black shadow-sm ring-1 ring-black/10">
               M
             </div>
           </Link>
 
           {/* Desktop nav */}
-          <nav className="hidden sm:flex items-center gap-1">
+          <nav className="hidden min-w-0 flex-1 items-center justify-end gap-0.5 sm:flex sm:ml-3 lg:gap-1">
             {links.map(({ href, label, icon: Icon, badge, badgeColor }) => {
               const active = pathname === href;
               return (
@@ -264,15 +263,13 @@ export default function Navbar({
             </button>
             <ThemeToggle />
           </div>
-        </div>
       </div>
 
-      {/* Alerta equipos vencidos */}
       {showBugReport && <BugReportModal onClose={() => setShowBugReport(false)} />}
 
       {overdueCount > 0 && (
-        <div className="bg-red-700/20 border-t border-red-500/40 px-4 py-2">
-          <div className="max-w-5xl mx-auto flex items-center gap-2 text-red-800 text-sm font-semibold">
+        <div className="border-t border-red-500/40 bg-red-700/20 px-4 py-2 sm:px-5 lg:px-6">
+          <div className="mx-auto flex max-w-5xl items-center gap-2 text-sm font-semibold text-red-900">
             <AlertTriangle className="w-4 h-4 flex-shrink-0" />
             <span>
               {overdueCount} equipo{overdueCount > 1 ? "s" : ""} con más de 90 días esperando retiro
