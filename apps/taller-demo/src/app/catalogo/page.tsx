@@ -14,15 +14,17 @@ import CatalogoProductImage from "@/components/catalogo/CatalogoProductImage";
 import {
   fetchCatalogoJson,
   ordenarCategorias,
+  precioMostrarCatalogo,
   type CatalogoDocumento,
   type CatalogoProducto,
 } from "@/lib/catalogoMaqjeez";
 import { useInventory } from "@/hooks/useInventory";
 import { useOrders } from "@/hooks/useOrders";
 
-function fmtPrecio(n: number) {
-  if (n <= 0) return "Consultar";
-  return "$" + n.toLocaleString("es-AR", { maximumFractionDigits: 0 });
+function fmtPrecioVenta(precioLista: number) {
+  const v = precioMostrarCatalogo(precioLista);
+  if (v <= 0) return "Consultar";
+  return "$" + v.toLocaleString("es-AR", { maximumFractionDigits: 0 });
 }
 
 export default function CatalogoMaqjeezPage() {
@@ -99,6 +101,9 @@ export default function CatalogoMaqjeezPage() {
                 {doc?.subtitulo ??
                   "Lista de precios con imágenes por SKU (480×480 recomendado)."}
               </p>
+              <p className="mt-1 text-xs text-gray-500">
+                Precio en pantalla = lista referencia del JSON × 4 (Maqjeez).
+              </p>
             </div>
           </div>
         </div>
@@ -157,12 +162,13 @@ export default function CatalogoMaqjeezPage() {
             <Tag className="h-10 w-10 text-[#FDB71A]" />
             <p className="font-bold text-white">Catálogo sin artículos todavía</p>
             <p className="max-w-lg text-sm text-gray-400">
-              Copiá del PDF las <strong className="text-gray-300">categorías</strong> y cada{" "}
+              Cargá <strong className="text-gray-300">categorías</strong> y cada{" "}
               <strong className="text-gray-300">SKU</strong>, <strong className="text-gray-300">nombre</strong> y{" "}
-              <strong className="text-gray-300">precio</strong> en{" "}
-              <span className="font-mono text-[#39FF14]">public/catalogo/catalogo.json</span>. Reemplazá textos
-              Konecta por Maqjeez. Las fotos recortadas a 480×480 guardalas en la misma carpeta con el mismo código
-              de SKU como nombre de archivo (por ejemplo <span className="font-mono text-gray-300">ABC-12.webp</span> o .jpg).
+              <strong className="text-gray-300">precio lista</strong> en{" "}
+              <span className="font-mono text-[#39FF14]">public/catalogo/catalogo.json</span>. La app muestra el precio × 4
+              y normaliza textos a marca Maqjeez. Imágenes 480×480:{" "}
+              <span className="font-mono text-gray-300">public/catalogo/[SKU].webp</span> (el mismo valor que el campo{" "}
+              <span className="font-mono">sku</span> en el JSON).
             </p>
           </div>
         )}
@@ -199,7 +205,7 @@ export default function CatalogoMaqjeezPage() {
                           <h3 className="text-sm font-bold leading-snug text-gray-100">
                             {p.nombre}
                           </h3>
-                          <p className="text-lg font-black text-[#39FF14]">{fmtPrecio(p.precio)}</p>
+                          <p className="text-lg font-black text-[#39FF14]">{fmtPrecioVenta(p.precio)}</p>
                         </div>
                       </article>
                     ))}
@@ -227,7 +233,7 @@ export default function CatalogoMaqjeezPage() {
                       SKU {p.sku}
                     </p>
                     <h3 className="text-sm font-bold leading-snug text-gray-100">{p.nombre}</h3>
-                    <p className="text-lg font-black text-[#39FF14]">{fmtPrecio(p.precio)}</p>
+                    <p className="text-lg font-black text-[#39FF14]">{fmtPrecioVenta(p.precio)}</p>
                   </div>
                 </article>
               ))}

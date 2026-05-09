@@ -1,8 +1,26 @@
 /**
- * Catálogo de precios Maqjeez (reemplaza branding Konecta).
- * Datos: public/catalogo/catalogo.json
- * Imágenes: public/catalogo/{sku}.webp|jpg|png (recomendado 480×480; el SKU define el archivo).
+ * Catálogo de precios Maqjeez.
+ * Datos: public/catalogo/catalogo.json — campo `precio` = precio lista referencia (ej. transferencia Konecta).
+ * En pantalla se muestra precio × PRECIO_LISTA_MULTIPLICADOR (×4).
+ * Imágenes: public/catalogo/{sku}.webp|jpg|png (480×480 recomendado).
  */
+
+/** Multiplicador aplicado al precio del JSON en la vista del catálogo */
+export const PRECIO_LISTA_MULTIPLICADOR = 4;
+
+export function precioMostrarCatalogo(precioLista: number): number {
+  if (!Number.isFinite(precioLista) || precioLista <= 0) return 0;
+  return Math.round(precioLista * PRECIO_LISTA_MULTIPLICADOR);
+}
+
+/** Reemplaza marcas del proveedor por Maqjeez en textos */
+export function textoMaqjeez(s: string): string {
+  return s
+    .replace(/\bKONECTA\s+DIGITAL\b/gi, "Maqjeez")
+    .replace(/\bKONECTA\b/gi, "Maqjeez")
+    .replace(/\bKonecta\s+Digital\b/gi, "Maqjeez")
+    .replace(/\bKonecta\b/gi, "Maqjeez");
+}
 
 export interface CatalogoCategoria {
   id: string;
@@ -50,16 +68,21 @@ export function ordenarCategorias(cats: CatalogoCategoria[]): CatalogoCategoria[
 
 export function normalizarDocumento(raw: unknown): CatalogoDocumento {
   const o = raw as Record<string, unknown>;
-  const titulo = typeof o.titulo === "string" ? o.titulo : "Catálogo de precios";
-  const subtitulo =
+  const titulo = textoMaqjeez(typeof o.titulo === "string" ? o.titulo : "Catálogo de precios");
+  const subtitulo = textoMaqjeez(
     typeof o.subtitulo === "string"
       ? o.subtitulo
-      : "Maqjeez Repuestos — lista consultiva para el taller";
+      : "Maqjeez Repuestos — lista consultiva para el taller"
+  );
   const categorias = Array.isArray(o.categorias)
-    ? (o.categorias as CatalogoCategoria[]).filter((c) => c?.id && c?.nombre)
+    ? (o.categorias as CatalogoCategoria[])
+        .filter((c) => c?.id && c?.nombre)
+        .map((c) => ({ ...c, nombre: textoMaqjeez(c.nombre) }))
     : [];
   const productos = Array.isArray(o.productos)
-    ? (o.productos as CatalogoProducto[]).filter((p) => p?.sku && p?.nombre && p?.categoriaId)
+    ? (o.productos as CatalogoProducto[])
+        .filter((p) => p?.sku && p?.nombre && p?.categoriaId)
+        .map((p) => ({ ...p, nombre: textoMaqjeez(p.nombre) }))
     : [];
   return { titulo, subtitulo, categorias, productos };
 }
