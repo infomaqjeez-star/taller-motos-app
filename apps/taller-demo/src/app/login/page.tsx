@@ -10,12 +10,12 @@ import {
 import { supabase } from "@/lib/supabase";
 
 /**
- * Solo Google en pantalla de login (catálogo sigue público).
- * Desactivar email/contraseña: por defecto SÍ (salvo NEXT_PUBLIC_GOOGLE_ONLY_LOGIN=false o 0).
+ * Modo opcional: solo Google (sin email/contraseña en pantalla).
+ * Por defecto: mail + Google. Activar con NEXT_PUBLIC_GOOGLE_ONLY_LOGIN=true en el build.
  */
 const GOOGLE_ONLY =
-  process.env.NEXT_PUBLIC_GOOGLE_ONLY_LOGIN !== "false" &&
-  process.env.NEXT_PUBLIC_GOOGLE_ONLY_LOGIN !== "0";
+  process.env.NEXT_PUBLIC_GOOGLE_ONLY_LOGIN === "true" ||
+  process.env.NEXT_PUBLIC_GOOGLE_ONLY_LOGIN === "1";
 
 export default function LoginPage() {
   const router = useRouter();
