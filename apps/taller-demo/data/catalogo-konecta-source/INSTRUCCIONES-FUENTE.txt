@@ -22,3 +22,18 @@
    git push origin main
 
 PDF muy grande: Git LFS (git lfs track "*.pdf") antes del primer add del PDF.
+
+--- Carpetas por artículo (Maqjeez, ~1300) ---
+
+Directorio en disco (desde apps/taller-demo):
+  public/catalogo/Catalogo-Abril-2026-Maqjeez-Repuestos/productos/<nombre-saneado>__<SKU>/
+Cada carpeta: imagen.webp (450x450 centrada en el SKU) + meta.json (precioLista, precioVenta=lista×4).
+
+Test solo el primer SKU de la página 0:
+  python scripts/catalogo/build_product_folders.py --pages 0 --limit 1
+
+Todo el PDF + actualizar imagen en catalogo-public.json:
+  python scripts/catalogo/extract_catalogo_pdf.py --pages all --format webp
+  python scripts/catalogo/build_product_folders.py --pages all --update-json
+
+Ajustar zoom del recorte si la miniatura queda chica o grande: --half-side-mult 14 (default)
