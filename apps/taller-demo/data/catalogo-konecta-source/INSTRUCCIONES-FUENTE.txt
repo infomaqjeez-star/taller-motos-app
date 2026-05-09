@@ -1,15 +1,24 @@
-Fuente del catálogo Konecta (PDF u otros archivos que no van a producción tal cual).
-
-1) Copiá el PDF de Konecta en esta carpeta con nombre sugerido:
+1) Colocá el PDF aquí como:
    catalogo-konecta.pdf
 
-2) Desde la raíz del repo:
+2) Subilo al remoto (desde la raíz del repo, carpeta taller-motos-app):
    git add apps/taller-demo/data/catalogo-konecta-source/
    git commit -m "chore(catalogo): agregar PDF fuente Konecta"
-   git push
+   git push origin main
 
-3) Extraer imágenes/JSON (ejemplo, desde apps/taller-demo):
+3) Generar JSON + imágenes (en consola, cwd = apps/taller-demo):
    pip install -r scripts/catalogo/requirements.txt
-   python scripts/catalogo/extract_catalogo_pdf.py --pdf data/catalogo-konecta-source/catalogo-konecta.pdf --page 0
+   python scripts/catalogo/extract_catalogo_pdf.py --pdf data/catalogo-konecta-source/catalogo-konecta.pdf --pages all --format webp
 
-Si el PDF supera ~50–80 MB, usá Git LFS (git lfs install && git lfs track "*.pdf") antes del add, o comprimilo/partilo según políticas del remoto.
+   Prueba rápida (solo página 1):
+   python scripts/catalogo/extract_catalogo_pdf.py --pages 0 --format webp
+
+   Si el recorte no coincide con el PDF, calibrá:
+   --side-mult 6 --above-mult 28 --below-mult 8
+
+4) Commit de salida (JSON + public/catalogo/*.webp):
+   git add data/catalogo-public.json public/catalogo/
+   git commit -m "feat(catalogo): datos e imágenes desde PDF Konecta"
+   git push origin main
+
+PDF muy grande: Git LFS (git lfs track "*.pdf") antes del primer add del PDF.
