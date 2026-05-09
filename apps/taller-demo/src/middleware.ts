@@ -43,6 +43,10 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   if (!user && !isPublicPath(pathname)) {
+    /* Raíz: mandar a landing (evita bucle / ↔ /login cuando aún no hay sesión) */
+    if (pathname === "/") {
+      return NextResponse.redirect(new URL("/landing", request.url));
+    }
     const login = new URL("/login", request.url);
     login.searchParams.set("next", pathname + request.nextUrl.search);
     return NextResponse.redirect(login);
