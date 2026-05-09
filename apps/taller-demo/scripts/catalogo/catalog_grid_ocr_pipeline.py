@@ -10,7 +10,7 @@ Requisitos:
 Windows:
   set TESSERACT_CMD=C:\\Program Files\\Tesseract-OCR\\tesseract.exe
 
-Ejemplo (cwd = apps/taller-demo, PDF en scripts/catalogo-konecta.pdf):
+Ejemplo (cwd = apps/taller-demo, PDF por defecto en scripts/):
   python scripts/catalogo/catalog_grid_ocr_pipeline.py --out data/catalogo-ocr-export --pages 0 --dry-run
 """
 from __future__ import annotations

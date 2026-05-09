@@ -3,7 +3,7 @@
 Crea carpetas por artículo bajo public/catalogo/Catalogo-Abril-2026-Maqjeez-Repuestos/productos/
 con imagen.webp (vista previa centrada en el SKU) y meta.json (precio lista + precioVenta = ×4).
 
-Requisitos: PDF en scripts/catalogo-konecta.pdf por defecto (cwd apps/taller-demo), o --pdf.
+Requisitos: PDF en scripts/Catalogo Abril 2026 Konecta Repuestos.pdf por defecto (cwd apps/taller-demo), o --pdf.
 Opcional: data/catalogo-public.json para nombres/precios ya curados.
 
 Test solo el primer SKU de la página 0:
@@ -136,7 +136,10 @@ def main() -> int:
     pdf_path = Path(args.pdf).expanduser().resolve()
     if not pdf_path.is_file():
         print(f"No existe el PDF: {pdf_path}", file=sys.stderr)
-        print("Esperado en apps/taller-demo/scripts/ (p. ej. catalogo-konecta.pdf) o indicá --pdf.", file=sys.stderr)
+        print(
+            "Esperado en apps/taller-demo/scripts/ (Catalogo Abril 2026 Konecta Repuestos.pdf) o indicá --pdf.",
+            file=sys.stderr,
+        )
         return 1
 
     try:

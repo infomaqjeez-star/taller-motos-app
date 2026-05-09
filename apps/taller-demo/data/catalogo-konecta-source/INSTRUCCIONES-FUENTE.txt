@@ -1,12 +1,11 @@
 PDF del catálogo (Konecta / desmalezadoras)
 ==========================================
 
-Ubicación recomendada (cwd = apps/taller-demo, ruta típica en Windows):
+Ubicación por defecto (cwd = apps/taller-demo, Windows):
 
-  apps\taller-demo\scripts\catalogo-konecta.pdf
+  apps\taller-demo\scripts\Catalogo Abril 2026 Konecta Repuestos.pdf
 
-Renombrá tu archivo a "catalogo-konecta.pdf" en esa carpeta (junto a scripts\catalogo\*.py),
-o dejá el nombre largo y pasá siempre --pdf "scripts\Catalogo Abril 2026 Konecta Repuestos.pdf"
+Si el archivo tiene otro nombre, usá siempre --pdf "scripts\tu-archivo.pdf"
 
 Opcional (para versionar aparte): también podés copiar una copia en
   data/catalogo-konecta-source/
@@ -17,11 +16,19 @@ y subirla con git (ojo tamaño; Git LFS si hace falta).
 
    pip install -r scripts/catalogo/requirements.txt
 
-2) JSON + imágenes planas por SKU (480²):
+2) Testeo extracción (tabla SKU / precio lista / ×4 / nombre; NO escribe JSON):
+
+   python scripts/catalogo/extract_catalogo_pdf.py --pages 0 --max-skus 25 --report
+
+   Con imágenes de prueba en public/catalogo/ (sin tocar JSON):
+
+   python scripts/catalogo/extract_catalogo_pdf.py --pages 0 --max-skus 8 --report --report-save-images
+
+2b) JSON + imágenes planas por SKU (480²), todo el PDF:
 
    python scripts/catalogo/extract_catalogo_pdf.py --pages all --format webp
 
-   Prueba página 0:
+   Solo página 0 escribiendo archivos:
    python scripts/catalogo/extract_catalogo_pdf.py --pages 0 --format webp
 
    Calibración recorte: --side-mult 6 --above-mult 28 --below-mult 8
