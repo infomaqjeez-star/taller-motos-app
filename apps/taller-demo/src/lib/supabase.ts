@@ -30,6 +30,11 @@ export const supabase: SupabaseClient = createClient(
   url || "https://placeholder.supabase.co",
   key || "placeholder-key",
   {
+    auth: {
+      flowType: "pkce",
+      detectSessionInUrl: true,
+      persistSession: true,
+    },
     realtime: {
       params: {
         eventsPerSecond: 10,
