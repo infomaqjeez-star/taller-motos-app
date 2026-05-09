@@ -19,12 +19,13 @@ export default function CatalogoProductImage({
   if (index >= candidates.length) {
     return (
       <div
-        className={`flex aspect-square w-full max-w-[480px] flex-col items-center justify-center rounded-xl border border-dashed border-white/15 bg-black/35 p-4 text-center ${className}`}
+        className={`flex aspect-square w-full max-w-[450px] flex-col items-center justify-center rounded-xl border border-dashed border-white/15 bg-black/35 p-4 text-center ${className}`}
       >
         <Package className="mb-2 h-12 w-12 text-gray-600" aria-hidden />
         <span className="break-all font-mono text-xs text-gray-500">{producto.sku}</span>
         <span className="mt-1 text-[10px] text-gray-600">
-          Colocá la imagen en <span className="font-mono text-gray-400">public/catalogo/</span> con el mismo SKU (480×480).
+          Imagen en <span className="font-mono text-gray-400">public/catalogo/</span> (SKU plano o carpeta bajo{" "}
+          <span className="font-mono text-gray-500">Catalogo-Abril-2026-Maqjeez-Repuestos/productos/</span>).
         </span>
       </div>
     );
@@ -32,13 +33,13 @@ export default function CatalogoProductImage({
 
   return (
     <div
-      className={`relative mx-auto aspect-square w-full max-w-[480px] overflow-hidden rounded-xl border border-white/10 bg-black/25 ${className}`}
+      className={`relative mx-auto aspect-square w-full max-w-[450px] overflow-hidden rounded-xl border border-white/10 bg-black/25 ${className}`}
     >
       <Image
         src={candidates[index]}
         alt={producto.nombre}
-        width={480}
-        height={480}
+        width={450}
+        height={450}
         className="h-full w-full object-contain"
         sizes="(max-width: 768px) 100vw, 33vw"
         onError={() => setIndex((n) => n + 1)}

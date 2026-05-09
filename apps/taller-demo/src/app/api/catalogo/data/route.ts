@@ -21,8 +21,9 @@ function sanitizePublic(doc: CatalogoDocumento) {
         categoriaId: String(p.categoriaId).slice(0, 80),
       };
       if (p.imagen && typeof p.imagen === "string") {
-        const img = p.imagen.trim().slice(0, 200);
-        if (/^[\w.\-]+$/.test(img)) row.imagen = img;
+        const img = p.imagen.trim().slice(0, 320);
+        /* Ruta relativa bajo /catalogo (puede incluir subcarpetas; sin .. ni caracteres raros) */
+        if (/^[A-Za-z0-9_/.\-]+$/.test(img) && !img.includes("..")) row.imagen = img;
       }
       return row;
     }),

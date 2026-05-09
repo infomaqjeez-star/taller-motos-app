@@ -2,7 +2,7 @@
  * Catálogo de precios Maqjeez.
  * Datos: `data/catalogo-public.json` (servidos por GET /api/catalogo/data). Campo `precio` = lista referencia.
  * En pantalla: precio × PRECIO_LISTA_MULTIPLICADOR (×4).
- * Imágenes: `public/catalogo/{sku}.webp|jpg|png` (480×480). Generación: scripts/catalogo/extract_catalogo_pdf.py.
+ * Imágenes: `public/catalogo/...` (planos o `Catalogo-Abril-2026-Maqjeez-Repuestos/productos/...`; 450×450 en carpetas). Scripts: extract_catalogo_pdf.py, build_product_folders.py.
  */
 
 /** Multiplicador aplicado al precio del JSON en la vista del catálogo */
@@ -56,7 +56,11 @@ export function rutasImagenProducto(p: CatalogoProducto): string[] {
   const base = "/catalogo";
   if (p.imagen?.trim()) {
     const n = p.imagen.trim().replace(/^\.+/, "");
-    return [`${base}/${encodeURIComponent(n)}`];
+    const path = n
+      .split("/")
+      .map((seg) => encodeURIComponent(seg))
+      .join("/");
+    return [`${base}/${path}`];
   }
   const slug = skuToFilenameBase(p.sku);
   return EXTENSIONES.map((ext) => `${base}/${encodeURIComponent(slug + ext)}`);
