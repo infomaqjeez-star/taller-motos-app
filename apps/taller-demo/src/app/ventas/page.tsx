@@ -583,7 +583,10 @@ export default function VentasPage() {
       <Navbar />
 
       {/* ── Tabs ── */}
-      <div className="sticky top-14 z-30 border-b border-white/10 bg-[rgba(18,18,18,0.92)] backdrop-blur-md [html.light_&]:border-gray-200 [html.light_&]:bg-[rgba(255,255,255,0.92)]">
+      <div
+        className="sticky z-30 border-b border-white/10 bg-[rgba(18,18,18,0.92)] backdrop-blur-md [html.light_&]:border-gray-200 [html.light_&]:bg-[rgba(255,255,255,0.92)]"
+        style={{ top: "var(--maqjeez-header-height, 7rem)" }}
+      >
         <div className="mx-auto flex max-w-5xl px-4 sm:px-5 lg:px-6">
           {([
             { id: "nueva",         label: "Nueva Venta",   icon: ShoppingCart },
