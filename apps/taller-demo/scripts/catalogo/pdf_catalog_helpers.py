@@ -11,7 +11,9 @@ CATALOG_PARENT_DIR = "Catalogo-Abril-2026-Maqjeez-Repuestos"
 PRODUCTOS_SUBDIR = "productos"
 
 PRECIO_VENTA_MULT = 4
-PREVIEW_SIZE_DEFAULT = 450
+# Tarjeta catálogo (vertical, imagen arriba + texto/precio abajo — similar al PDF Konecta)
+PREVIEW_CARD_WIDTH_PX = 360
+PREVIEW_CARD_HEIGHT_PX = 480
 
 # Catálogo Konecta: SKUs típicos 5–6 dígitos (evita confundir precios tipo 8000 como SKU)
 SKU_RE = re.compile(r"^\d{5,6}$")

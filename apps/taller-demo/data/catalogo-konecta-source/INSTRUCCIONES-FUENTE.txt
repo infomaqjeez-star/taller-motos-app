@@ -33,10 +33,13 @@ y subirla con git (ojo tamaño; Git LFS si hace falta).
 
    Calibración recorte: --side-mult 6 --above-mult 28 --below-mult 8
 
-3) Carpetas Maqjeez por artículo (450² centrada en SKU + meta.json precio×4):
+3) Carpetas Maqjeez por artículo (imagen tarjeta vertical 360×480 tipo catálogo + meta.json precio×4):
 
    Primeras 10 carpetas bajo /catalogo/productos/ (layout plano):
    python scripts/catalogo/build_product_folders.py --pages all --limit 10 --flat --force
+
+   Ajustar recorte PDF si la tarjeta queda cortada: --half-width-mult 8 --half-height-mult 26
+   Tamaño salida: --card-w 360 --card-h 480
 
    Una carpeta de prueba (página 0):
    python scripts/catalogo/build_product_folders.py --pages 0 --limit 1

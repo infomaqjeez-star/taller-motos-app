@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Crea carpetas por artículo con imagen.webp (450² centrada en el SKU) y meta.json (precio lista + precioVenta ×4).
+Crea carpetas por artículo con imagen.webp (tarjeta vertical 360×480, estilo catálogo Konecta) y meta.json (precio lista + precioVenta ×4).
 
 Layout por defecto:
   public/catalogo/Catalogo-Abril-2026-Maqjeez-Repuestos/productos/<carpeta>/
@@ -55,35 +55,42 @@ def collect_skus_first_occurrence(
     return occ
 
 
-def render_preview_centered_sku(
+def render_tarjeta_catalogo(
     page,
     x0: float,
     y0: float,
     x1: float,
     y1: float,
     *,
-    out_px: int,
-    half_side_mult: float,
+    width_px: int,
+    height_px: int,
+    half_width_mult: float,
+    half_height_mult: float,
     dpi: int,
 ):
-    """Cuadrado en coords PDF centrado en el centro del bbox del SKU → imagen out_px × out_px."""
+    """
+    Recorte vertical en el PDF (más alto que ancho), centrado en el SKU,
+    y salida fija width_px × height_px como la tarjeta del catálogo (foto + código + texto + precio).
+    """
     import fitz
-    from PIL import Image
+    from PIL import Image, ImageOps
 
     cx = (x0 + x1) / 2
     cy = (y0 + y1) / 2
     sh = max(y1 - y0, 1.0)
     sw = max(x1 - x0, 1.0)
-    half = max(sh, sw) * half_side_mult
-    r = fitz.Rect(cx - half, cy - half, cx + half, cy + half) & page.rect
+    hw = sw * half_width_mult
+    hh = sh * half_height_mult
+    r = fitz.Rect(cx - hw, cy - hh, cx + hw, cy + hh) & page.rect
     pix = page.get_pixmap(clip=r, dpi=dpi, alpha=False)
     img = Image.open(io.BytesIO(pix.tobytes("png"))).convert("RGB")
-    w, h = img.size
-    side = min(w, h)
-    left = (w - side) // 2
-    top = (h - side) // 2
-    img = img.crop((left, top, left + side, top + side))
-    return img.resize((out_px, out_px), Image.Resampling.LANCZOS)
+    # Recorte proporcional al tamaño tarjeta; centrado un poco arriba para priorizar la foto del artículo
+    return ImageOps.fit(
+        img,
+        (width_px, height_px),
+        method=Image.Resampling.LANCZOS,
+        centering=(0.5, 0.36),
+    )
 
 
 def load_json_products(path: Path) -> dict[str, dict]:
@@ -111,7 +118,7 @@ def imagen_rel_url(folder_name: str, *, flat: bool) -> str:
 
 def main() -> int:
     ap = argparse.ArgumentParser(
-        description="Carpetas por artículo + vista previa 450² centrada en SKU (Maqjeez)"
+        description="Carpetas por artículo + imagen tarjeta catálogo (vertical, tipo Konecta)"
     )
     ap.add_argument("--pdf", default=H.DEFAULT_CATALOG_PDF_REL)
     ap.add_argument(
@@ -131,9 +138,31 @@ def main() -> int:
     )
     ap.add_argument("--pages", default="all", help='all | 0 | "0-5"')
     ap.add_argument("--limit", type=int, default=0, help="Solo los primeros N SKUs (0 = sin límite). Ej. test: --limit 1 --pages 0")
-    ap.add_argument("--size", type=int, default=H.PREVIEW_SIZE_DEFAULT, help="Lado de la vista previa (px), default 450")
+    ap.add_argument(
+        "--card-w",
+        type=int,
+        default=H.PREVIEW_CARD_WIDTH_PX,
+        help="Ancho salida tarjeta (px), default 360",
+    )
+    ap.add_argument(
+        "--card-h",
+        type=int,
+        default=H.PREVIEW_CARD_HEIGHT_PX,
+        help="Alto salida tarjeta (px), default 480",
+    )
     ap.add_argument("--dpi", type=int, default=200)
-    ap.add_argument("--half-side-mult", type=float, default=14.0, help="Mitad del lado del cuadrado en PDF = max(sh,sw)*este valor")
+    ap.add_argument(
+        "--half-width-mult",
+        type=float,
+        default=8.0,
+        help="Mitad ancho del recorte en PDF = ancho_SKU * este valor",
+    )
+    ap.add_argument(
+        "--half-height-mult",
+        type=float,
+        default=26.0,
+        help="Mitad alto del recorte en PDF = alto_SKU * este valor (mayor que half-width → tarjeta vertical)",
+    )
     ap.add_argument("--side-mult", type=float, default=6.0, help="Para guess_nombre_precio si no hay JSON")
     ap.add_argument("--above-mult", type=float, default=28.0)
     ap.add_argument("--force", action="store_true")
@@ -244,14 +273,16 @@ def main() -> int:
         if not args.dry_run:
             dest_dir.mkdir(parents=True, exist_ok=True)
             if args.force or not img_path.is_file():
-                img = render_preview_centered_sku(
+                img = render_tarjeta_catalogo(
                     page,
                     x0,
                     y0,
                     x1,
                     y1,
-                    out_px=args.size,
-                    half_side_mult=args.half_side_mult,
+                    width_px=args.card_w,
+                    height_px=args.card_h,
+                    half_width_mult=args.half_width_mult,
+                    half_height_mult=args.half_height_mult,
                     dpi=args.dpi,
                 )
                 img.save(img_path, format="WEBP", quality=86, method=4)

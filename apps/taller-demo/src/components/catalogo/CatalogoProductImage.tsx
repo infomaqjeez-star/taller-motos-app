@@ -19,7 +19,7 @@ export default function CatalogoProductImage({
   if (index >= candidates.length) {
     return (
       <div
-        className={`flex aspect-square w-full max-w-[450px] flex-col items-center justify-center rounded-xl border border-dashed border-white/15 bg-black/35 p-4 text-center ${className}`}
+        className={`flex aspect-[3/4] w-full max-w-[360px] flex-col items-center justify-center rounded-xl border border-dashed border-white/15 bg-black/35 p-4 text-center ${className}`}
       >
         <Package className="mb-2 h-12 w-12 text-gray-600" aria-hidden />
         <span className="break-all font-mono text-xs text-gray-500">{producto.sku}</span>
@@ -33,13 +33,13 @@ export default function CatalogoProductImage({
 
   return (
     <div
-      className={`relative mx-auto aspect-square w-full max-w-[450px] overflow-hidden rounded-xl border border-white/10 bg-black/25 ${className}`}
+      className={`relative mx-auto aspect-[3/4] w-full max-w-[360px] overflow-hidden rounded-xl border border-white/10 bg-white/[0.06] ${className}`}
     >
       <Image
         src={candidates[index]}
         alt={producto.nombre}
-        width={450}
-        height={450}
+        width={360}
+        height={480}
         className="h-full w-full object-contain"
         sizes="(max-width: 768px) 100vw, 33vw"
         onError={() => setIndex((n) => n + 1)}
