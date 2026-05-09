@@ -1,0 +1,15 @@
+Fuente del catálogo Konecta (PDF u otros archivos que no van a producción tal cual).
+
+1) Copiá el PDF de Konecta en esta carpeta con nombre sugerido:
+   catalogo-konecta.pdf
+
+2) Desde la raíz del repo:
+   git add apps/taller-demo/data/catalogo-konecta-source/
+   git commit -m "chore(catalogo): agregar PDF fuente Konecta"
+   git push
+
+3) Extraer imágenes/JSON (ejemplo, desde apps/taller-demo):
+   pip install -r scripts/catalogo/requirements.txt
+   python scripts/catalogo/extract_catalogo_pdf.py --pdf data/catalogo-konecta-source/catalogo-konecta.pdf --page 0
+
+Si el PDF supera ~50–80 MB, usá Git LFS (git lfs install && git lfs track "*.pdf") antes del add, o comprimilo/partilo según políticas del remoto.
