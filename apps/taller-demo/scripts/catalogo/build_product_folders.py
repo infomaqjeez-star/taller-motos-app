@@ -3,7 +3,7 @@
 Crea carpetas por artículo bajo public/catalogo/Catalogo-Abril-2026-Maqjeez-Repuestos/productos/
 con imagen.webp (vista previa centrada en el SKU) y meta.json (precio lista + precioVenta = ×4).
 
-Requisitos: PDF en data/catalogo-konecta-source/catalogo-konecta.pdf (o --pdf).
+Requisitos: PDF en scripts/catalogo-konecta.pdf por defecto (cwd apps/taller-demo), o --pdf.
 Opcional: data/catalogo-public.json para nombres/precios ya curados.
 
 Test solo el primer SKU de la página 0:
@@ -110,7 +110,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(
         description="Carpetas por artículo + vista previa 450² centrada en SKU (Maqjeez)"
     )
-    ap.add_argument("--pdf", default="data/catalogo-konecta-source/catalogo-konecta.pdf")
+    ap.add_argument("--pdf", default=H.DEFAULT_CATALOG_PDF_REL)
     ap.add_argument(
         "--json",
         default="data/catalogo-public.json",
@@ -136,6 +136,7 @@ def main() -> int:
     pdf_path = Path(args.pdf).expanduser().resolve()
     if not pdf_path.is_file():
         print(f"No existe el PDF: {pdf_path}", file=sys.stderr)
+        print("Esperado en apps/taller-demo/scripts/ (p. ej. catalogo-konecta.pdf) o indicá --pdf.", file=sys.stderr)
         return 1
 
     try:

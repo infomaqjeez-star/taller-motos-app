@@ -6,7 +6,7 @@ compatible con data/catalogo-public.json (precio lista; la app muestra ×4).
 Ejecutar con cwd = apps/taller-demo:
   pip install -r scripts/catalogo/requirements.txt
   python scripts/catalogo/extract_catalogo_pdf.py \\
-    --pdf data/catalogo-konecta-source/catalogo-konecta.pdf \\
+    --pdf scripts/catalogo-konecta.pdf \\
     --pages all \\
     --format webp
 
@@ -38,7 +38,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(description="PDF catálogo → imágenes 480² + catalogo-public.json")
     ap.add_argument(
         "--pdf",
-        default="data/catalogo-konecta-source/catalogo-konecta.pdf",
+        default=H.DEFAULT_CATALOG_PDF_REL,
         help="Ruta al PDF (relativo al cwd, típicamente apps/taller-demo)",
     )
     ap.add_argument("--out-json", default="data/catalogo-public.json")
@@ -56,7 +56,7 @@ def main() -> int:
     pdf = Path(args.pdf).expanduser().resolve()
     if not pdf.is_file():
         print(f"No existe el PDF: {pdf}", file=sys.stderr)
-        print("Copiá el archivo a data/catalogo-konecta-source/ y/o pasá --pdf ruta\\completa.pdf", file=sys.stderr)
+        print("Colocá el PDF en apps/taller-demo/scripts/ (p. ej. catalogo-konecta.pdf) o pasá --pdf", file=sys.stderr)
         return 1
 
     try:

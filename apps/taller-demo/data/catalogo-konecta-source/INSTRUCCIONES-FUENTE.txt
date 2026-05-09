@@ -1,57 +1,55 @@
-1) Colocá el PDF aquí como:
-   catalogo-konecta.pdf
+PDF del catálogo (Konecta / desmalezadoras)
+==========================================
 
-2) Subilo al remoto (desde la raíz del repo, carpeta taller-motos-app):
-   git add apps/taller-demo/data/catalogo-konecta-source/
-   git commit -m "chore(catalogo): agregar PDF fuente Konecta"
-   git push origin main
+Ubicación recomendada (cwd = apps/taller-demo, ruta típica en Windows):
 
-3) Generar JSON + imágenes (en consola, cwd = apps/taller-demo):
+  apps\taller-demo\scripts\catalogo-konecta.pdf
+
+Renombrá tu archivo a "catalogo-konecta.pdf" en esa carpeta (junto a scripts\catalogo\*.py),
+o dejá el nombre largo y pasá siempre --pdf "scripts\Catalogo Abril 2026 Konecta Repuestos.pdf"
+
+Opcional (para versionar aparte): también podés copiar una copia en
+  data/catalogo-konecta-source/
+y subirla con git (ojo tamaño; Git LFS si hace falta).
+
+---
+1) Dependencias base (extracción por SKU / carpetas):
+
    pip install -r scripts/catalogo/requirements.txt
-   python scripts/catalogo/extract_catalogo_pdf.py --pdf data/catalogo-konecta-source/catalogo-konecta.pdf --pages all --format webp
 
-   Prueba rápida (solo página 1):
+2) JSON + imágenes planas por SKU (480²):
+
+   python scripts/catalogo/extract_catalogo_pdf.py --pages all --format webp
+
+   Prueba página 0:
    python scripts/catalogo/extract_catalogo_pdf.py --pages 0 --format webp
 
-   Si el recorte no coincide con el PDF, calibrá:
-   --side-mult 6 --above-mult 28 --below-mult 8
+   Calibración recorte: --side-mult 6 --above-mult 28 --below-mult 8
 
-4) Commit de salida (JSON + public/catalogo/*.webp):
-   git add data/catalogo-public.json public/catalogo/
-   git commit -m "feat(catalogo): datos e imágenes desde PDF Konecta"
+3) Carpetas Maqjeez por artículo (450² centrada en SKU + meta.json precio×4):
+
+   python scripts/catalogo/build_product_folders.py --pages 0 --limit 1
+   python scripts/catalogo/build_product_folders.py --pages all --update-json
+
+   Salida:
+   public/catalogo/Catalogo-Abril-2026-Maqjeez-Repuestos/productos/<nombre>__<SKU>/
+
+4) Pipeline OCR (rejilla 4×5, tapar precio viejo y escribir lista×4 en la imagen):
+
+   pip install -r scripts/catalogo/requirements-catalog-ocr.txt
+   + Tesseract instalado (Windows: set TESSERACT_CMD=C:\Program Files\Tesseract-OCR\tesseract.exe)
+
+   Dry-run página 0:
+   python scripts/catalogo/catalog_grid_ocr_pipeline.py --out data/catalogo-ocr-export --pages 0 --dry-run
+
+   Todas las páginas:
+   python scripts/catalogo/catalog_grid_ocr_pipeline.py --out data/catalogo-ocr-export --pages all
+
+   Ajustar grilla: --cols --rows --margin-x --margin-y
+   Modo contornos: --mode contour
+
+5) Commit (ajustá rutas según qué archivos generaste):
+
+   git add data/catalogo-public.json public/catalogo/ data/catalogo-ocr-export/
+   git commit -m "feat(catalogo): datos desde PDF"
    git push origin main
-
-PDF muy grande: Git LFS (git lfs track "*.pdf") antes del primer add del PDF.
-
---- Carpetas por artículo (Maqjeez, ~1300) ---
-
-Directorio en disco (desde apps/taller-demo):
-  public/catalogo/Catalogo-Abril-2026-Maqjeez-Repuestos/productos/<nombre-saneado>__<SKU>/
-Cada carpeta: imagen.webp (450x450 centrada en el SKU) + meta.json (precioLista, precioVenta=lista×4).
-
-Test solo el primer SKU de la página 0:
-  python scripts/catalogo/build_product_folders.py --pages 0 --limit 1
-
-Todo el PDF + actualizar imagen en catalogo-public.json:
-  python scripts/catalogo/extract_catalogo_pdf.py --pages all --format webp
-  python scripts/catalogo/build_product_folders.py --pages all --update-json
-
-Ajustar zoom del recorte si la miniatura queda chica o grande: --half-side-mult 14 (default)
-
---- Pipeline OCR (rejilla 4x5, precio tapado y x4 en la imagen) ---
-
-Dependencias extra:
-  pip install -r scripts/catalogo/requirements-catalog-ocr.txt
-  + instalar Tesseract OCR en el sistema.
-
-Windows:
-  set TESSERACT_CMD=C:\Program Files\Tesseract-OCR\tesseract.exe
-
-Probar OCR en la pagina 0 sin escribir archivos:
-  python scripts/catalogo/catalog_grid_ocr_pipeline.py --pdf data/catalogo-konecta-source/catalogo-konecta.pdf --out data/catalogo-ocr-export --pages 0 --dry-run
-
-Salida PNG por celda (ajustar --margin-x/--margin-y/--cols/--rows si la grilla no calza):
-  python scripts/catalogo/catalog_grid_ocr_pipeline.py --pdf ... --out data/catalogo-ocr-export
-
-Modo contornos (experimental, si no hay grilla fija):
-  python scripts/catalogo/catalog_grid_ocr_pipeline.py --pdf ... --out ... --mode contour
