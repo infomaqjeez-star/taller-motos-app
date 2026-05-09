@@ -1,20 +1,108 @@
 {
   "titulo": "Catálogo de precios — Maqjeez Repuestos",
-  "subtitulo": "Lista pública de repuestos. Precios en pantalla = lista referencia × 4. Imágenes: script scripts/catalogo/extract_catalogo_pdf.py + archivo data/catalogo-public.json.",
+  "subtitulo": "Lista pública: precio ×4. Imágenes en /catalogo/productos/… (regenerar con build_product_folders.py y el PDF real en scripts/).",
   "categorias": [
-    { "id": "aceleracion-mandos", "nombre": "Aceleración y mandos", "orden": 1 },
-    { "id": "motor-2t", "nombre": "Motor 2 tiempos", "orden": 2 },
-    { "id": "carburacion", "nombre": "Carburación", "orden": 3 },
-    { "id": "encendido", "nombre": "Encendido", "orden": 4 },
-    { "id": "corte", "nombre": "Corte y transmisión", "orden": 5 },
-    { "id": "varios", "nombre": "Repuestos varios", "orden": 6 }
+    {
+      "id": "aceleracion-mandos",
+      "nombre": "Aceleración y mandos",
+      "orden": 1
+    },
+    {
+      "id": "motor-2t",
+      "nombre": "Motor 2 tiempos",
+      "orden": 2
+    },
+    {
+      "id": "carburacion",
+      "nombre": "Carburación",
+      "orden": 3
+    },
+    {
+      "id": "encendido",
+      "nombre": "Encendido",
+      "orden": 4
+    },
+    {
+      "id": "corte",
+      "nombre": "Corte y transmisión",
+      "orden": 5
+    },
+    {
+      "id": "varios",
+      "nombre": "Repuestos varios",
+      "orden": 6
+    }
   ],
   "productos": [
     {
       "sku": "17002",
       "nombre": "Acelerador | DC\n26/33/43/52 | Ø19mm",
       "precio": 9429,
-      "categoriaId": "aceleracion-mandos"
+      "categoriaId": "aceleracion-mandos",
+      "imagen": "productos/Acelerador_-_DC_26-33-43-52_-_O19mm__17002/imagen.webp"
+    },
+    {
+      "sku": "17003",
+      "nombre": "Repuesto demo desmalezadora linea",
+      "precio": 9000,
+      "categoriaId": "catalogo-pdf",
+      "imagen": "productos/Repuesto_demo_desmalezadora_linea__17003/imagen.webp"
+    },
+    {
+      "sku": "17004",
+      "nombre": "Repuesto demo desmalezadora linea Repuesto demo desmalezadora linea",
+      "precio": 9111,
+      "categoriaId": "catalogo-pdf",
+      "imagen": "productos/Repuesto_demo_desmalezadora_linea_Repuesto_demo_de__17004/imagen.webp"
+    },
+    {
+      "sku": "17005",
+      "nombre": "Repuesto demo desmalezadora linea Repuesto demo desmalezadora linea Repuesto demo desmalezadora linea",
+      "precio": 9222,
+      "categoriaId": "catalogo-pdf",
+      "imagen": "productos/Repuesto_demo_desmalezadora_linea_Repuesto_demo_de__17005/imagen.webp"
+    },
+    {
+      "sku": "17006",
+      "nombre": "Repuesto demo desmalezadora linea Repuesto demo desmalezadora linea Repuesto demo desmalezadora linea Repuesto demo desmalezadora linea",
+      "precio": 9333,
+      "categoriaId": "catalogo-pdf",
+      "imagen": "productos/Repuesto_demo_desmalezadora_linea_Repuesto_demo_de__17006/imagen.webp"
+    },
+    {
+      "sku": "17007",
+      "nombre": "Repuesto demo desmalezadora linea Repuesto demo desmalezadora linea Repuesto demo desmalezadora linea Repuesto demo desmalezadora linea Repuesto demo desmalezadora linea",
+      "precio": 9444,
+      "categoriaId": "catalogo-pdf",
+      "imagen": "productos/Repuesto_demo_desmalezadora_linea_Repuesto_demo_de__17007/imagen.webp"
+    },
+    {
+      "sku": "17008",
+      "nombre": "Repuesto demo desmalezadora linea Repuesto demo desmalezadora linea Repuesto demo desmalezadora linea Repuesto demo desmalezadora linea Repuesto demo desmalezadora linea Repuesto demo desmalezadora linea",
+      "precio": 9555,
+      "categoriaId": "catalogo-pdf",
+      "imagen": "productos/Repuesto_demo_desmalezadora_linea_Repuesto_demo_de__17008/imagen.webp"
+    },
+    {
+      "sku": "17009",
+      "nombre": "Repuesto demo desmalezadora linea Repuesto demo desmalezadora linea Repuesto demo desmalezadora linea Repuesto demo desmalezadora linea Repuesto demo desmalezadora linea Repuesto demo desmalezadora linea Repuesto demo desmalezadora linea",
+      "precio": 9666,
+      "categoriaId": "catalogo-pdf",
+      "imagen": "productos/Repuesto_demo_desmalezadora_linea_Repuesto_demo_de__17009/imagen.webp"
+    },
+    {
+      "sku": "17010",
+      "nombre": "Repuesto demo desmalezadora linea Repuesto demo desmalezadora linea Repuesto demo desmalezadora linea Repuesto demo desmalezadora linea Repuesto demo desmalezadora linea Repuesto demo desmalezadora linea Repuesto demo desmalezadora linea Repuesto demo desmalezadora linea",
+      "precio": 9777,
+      "categoriaId": "catalogo-pdf",
+      "imagen": "productos/Repuesto_demo_desmalezadora_linea_Repuesto_demo_de__17010/imagen.webp"
+    },
+    {
+      "sku": "17011",
+      "nombre": "Repuesto demo desmalezadora linea Repuesto demo desmalezadora linea Repuesto demo desmalezadora linea Repuesto demo desmalezadora linea Repuesto demo desmalezadora linea Repuesto demo desmalezadora linea Repuesto demo desmalezadora linea Repuesto demo desmalezadora linea",
+      "precio": 9888,
+      "categoriaId": "catalogo-pdf",
+      "imagen": "productos/Repuesto_demo_desmalezadora_linea_Repuesto_demo_de__17011/imagen.webp"
     }
   ]
 }

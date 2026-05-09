@@ -35,11 +35,20 @@ y subirla con git (ojo tamaño; Git LFS si hace falta).
 
 3) Carpetas Maqjeez por artículo (450² centrada en SKU + meta.json precio×4):
 
+   Primeras 10 carpetas bajo /catalogo/productos/ (layout plano):
+   python scripts/catalogo/build_product_folders.py --pages all --limit 10 --flat --force
+
+   Una carpeta de prueba (página 0):
    python scripts/catalogo/build_product_folders.py --pages 0 --limit 1
+
+   Todo el catálogo + JSON con rutas imagen:
    python scripts/catalogo/build_product_folders.py --pages all --update-json
 
-   Salida:
+   Salida con layout largo (default):
    public/catalogo/Catalogo-Abril-2026-Maqjeez-Repuestos/productos/<nombre>__<SKU>/
+
+   Salida plana (--flat), útil para “solo carpeta catálogo”:
+   public/catalogo/productos/<nombre>__<SKU>/
 
 4) Pipeline OCR (rejilla 4×5, tapar precio viejo y escribir lista×4 en la imagen):
 
