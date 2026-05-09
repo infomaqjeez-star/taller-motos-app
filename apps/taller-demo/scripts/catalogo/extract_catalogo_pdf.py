@@ -8,12 +8,14 @@ Calibrá rect_rel_* o implementá detección por color (get_pixmap + numpy) seg�
 Dependencias:
   pip install -r scripts/catalogo/requirements.txt
 
-Ejemplo (una página, ajustar rutas desde apps/taller-demo):
+Ejemplo (una página; ejecutar con cwd = apps/taller-demo):
   python scripts/catalogo/extract_catalogo_pdf.py \\
-    --pdf ../Catalogo.pdf \\
+    --pdf data/catalogo-konecta-source/catalogo-konecta.pdf \\
     --out-json data/catalogo-public.json \\
     --out-img public/catalogo \\
     --page 0
+
+Colocá el PDF original en data/catalogo-konecta-source/ (ver INSTRUCCIONES-FUENTE.txt ahí).
 """
 from __future__ import annotations
 
