@@ -3,19 +3,46 @@
 @tailwind utilities;
 
 @layer base {
-  html { font-size: 16px; -webkit-tap-highlight-color: transparent; }
+  html {
+    font-size: 16px;
+    -webkit-tap-highlight-color: transparent;
+    scroll-behavior: smooth;
+  }
 
   /* ── Deep Space Dark Mode (default) ── */
   body {
     background-color: #121212;
     color: #F3F4F6;
-    @apply antialiased;
   }
 
   /* ── Light mode (opt-in via class) ── */
   html.light body {
-    background-color: #F9FAFB;
+    background-color: #F3F4F6;
     color: #111827;
+  }
+}
+
+/* Contenido principal: márgenes y espacio para la barra inferior en móvil (max-width por página) */
+@layer utilities {
+  .app-main {
+    @apply mx-auto w-full max-w-5xl px-4 py-6 sm:px-5 lg:px-6;
+    padding-bottom: calc(6.5rem + env(safe-area-inset-bottom, 0px));
+  }
+  @media (min-width: 640px) {
+    .app-main {
+      padding-bottom: 1.5rem;
+    }
+  }
+  html.light .shadow-dock {
+    box-shadow: 0 -4px 24px rgba(15, 23, 42, 0.08);
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
   }
 }
 
