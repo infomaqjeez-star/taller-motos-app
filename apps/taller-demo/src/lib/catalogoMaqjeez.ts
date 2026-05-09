@@ -2,7 +2,7 @@
  * Catálogo de precios Maqjeez.
  * Datos: `data/catalogo-public.json` (servidos por GET /api/catalogo/data). Campo `precio` = lista referencia.
  * En pantalla: precio × PRECIO_LISTA_MULTIPLICADOR (×4).
- * Imágenes: `public/catalogo/...` (planos o `Catalogo-Abril-2026-Maqjeez-Repuestos/productos/...`; 450×450 en carpetas). Scripts: extract_catalogo_pdf.py, build_product_folders.py.
+ * Imágenes: `public/catalogo/...` (tarjeta vertical 360×480 en `productos/...`). Scripts: extract_catalogo_pdf.py, build_product_folders.py.
  */
 
 /** Multiplicador aplicado al precio del JSON en la vista del catálogo */

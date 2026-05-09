@@ -144,8 +144,8 @@ export default function CatalogoMaqjeezPage() {
             Volcá el PDF con{" "}
             <span className="font-mono text-[#39FF14]">scripts/catalogo/extract_catalogo_pdf.py</span> o editá{" "}
             <span className="font-mono text-gray-300">apps/taller-demo/data/catalogo-public.json</span> (solo campos
-            públicos). Imágenes recortadas 480×480:{" "}
-            <span className="font-mono text-gray-300">public/catalogo/[SKU].webp</span>.
+            públicos). Imágenes tarjeta 360×480:{" "}
+            <span className="font-mono text-gray-300">public/catalogo/productos/…/imagen.webp</span>.
           </p>
         </div>
       )}
