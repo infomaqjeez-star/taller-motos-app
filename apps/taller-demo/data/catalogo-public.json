@@ -1,0 +1,20 @@
+{
+  "titulo": "Catálogo de precios — Maqjeez Repuestos",
+  "subtitulo": "Lista pública de repuestos. Precios en pantalla = lista referencia × 4. Imágenes: script scripts/catalogo/extract_catalogo_pdf.py + archivo data/catalogo-public.json.",
+  "categorias": [
+    { "id": "aceleracion-mandos", "nombre": "Aceleración y mandos", "orden": 1 },
+    { "id": "motor-2t", "nombre": "Motor 2 tiempos", "orden": 2 },
+    { "id": "carburacion", "nombre": "Carburación", "orden": 3 },
+    { "id": "encendido", "nombre": "Encendido", "orden": 4 },
+    { "id": "corte", "nombre": "Corte y transmisión", "orden": 5 },
+    { "id": "varios", "nombre": "Repuestos varios", "orden": 6 }
+  ],
+  "productos": [
+    {
+      "sku": "17002",
+      "nombre": "Acelerador | DC\n26/33/43/52 | Ø19mm",
+      "precio": 9429,
+      "categoriaId": "aceleracion-mandos"
+    }
+  ]
+}

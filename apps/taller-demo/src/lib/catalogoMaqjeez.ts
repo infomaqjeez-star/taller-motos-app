@@ -88,11 +88,11 @@ export function normalizarDocumento(raw: unknown): CatalogoDocumento {
 }
 
 export async function fetchCatalogoJson(): Promise<CatalogoDocumento> {
-  const res = await fetch("/catalogo/catalogo.json", { cache: "no-store" });
+  const res = await fetch("/api/catalogo/data", { cache: "no-store" });
   if (!res.ok) {
     return {
       titulo: "Catálogo Maqjeez",
-      subtitulo: "Creá public/catalogo/catalogo.json con categorías y productos.",
+      subtitulo: "No se pudo cargar el catálogo.",
       categorias: [],
       productos: [],
     };
