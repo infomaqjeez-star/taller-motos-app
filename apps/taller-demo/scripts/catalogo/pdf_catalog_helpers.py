@@ -13,7 +13,8 @@ PRODUCTOS_SUBDIR = "productos"
 PRECIO_VENTA_MULT = 4
 PREVIEW_SIZE_DEFAULT = 450
 
-SKU_RE = re.compile(r"^\d{4,6}$")
+# Catálogo Konecta: SKUs típicos 5–6 dígitos (evita confundir precios tipo 8000 como SKU)
+SKU_RE = re.compile(r"^\d{5,6}$")
 _WIN_BAD = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
 
 
@@ -116,7 +117,7 @@ def guess_nombre_precio(
 
     precios: list[int] = []
     nombre_bits: list[str] = []
-    sku_like = re.compile(r"^\d{4,6}$")
+    sku_like = re.compile(r"^\d{5,6}$")
     for _x0, _y0, _x1, _y1, text in band:
         if sku_like.match(text):
             continue
@@ -136,8 +137,9 @@ def guess_nombre_precio(
 def sanitize_folder_slug(nombre: str, max_slug: int = 50) -> str:
     """Segmento de carpeta seguro en Windows (sin espacios finales ni caracteres prohibidos)."""
     n = texto_maqjeez(nombre.replace("\r", " ").replace("\n", " "))
+    n = n.replace("Ø", "O").replace("ø", "o").replace("°", "")
     n = _WIN_BAD.sub("-", n)
-    n = re.sub(r"\s+", " ", n).strip(" .-")
+    n = re.sub(r"\s+", "_", n).strip("._-")
     if len(n) > max_slug:
         n = n[:max_slug].rstrip(" .-")
     return n or "articulo"

@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
 """
-Crea carpetas por artículo bajo public/catalogo/Catalogo-Abril-2026-Maqjeez-Repuestos/productos/
-con imagen.webp (vista previa centrada en el SKU) y meta.json (precio lista + precioVenta = ×4).
+Crea carpetas por artículo con imagen.webp (450² centrada en el SKU) y meta.json (precio lista + precioVenta ×4).
 
-Requisitos: PDF en scripts/Catalogo Abril 2026 Konecta Repuestos.pdf por defecto (cwd apps/taller-demo), o --pdf.
-Opcional: data/catalogo-public.json para nombres/precios ya curados.
+Layout por defecto:
+  public/catalogo/Catalogo-Abril-2026-Maqjeez-Repuestos/productos/<carpeta>/
 
-Test solo el primer SKU de la página 0:
-  python scripts/catalogo/build_product_folders.py --pages 0 --limit 1
+Layout --flat (solo bajo “catálogo”):
+  public/catalogo/productos/<carpeta>/
 
-Todo el catálogo (~1300):
-  python scripts/catalogo/build_product_folders.py --pages all --update-json
+Requisitos: PDF en scripts/Catalogo Abril 2026 Konecta Repuestos.pdf (cwd apps/taller-demo), o --pdf.
+
+Primeras 10 + JSON:
+  python scripts/catalogo/build_product_folders.py --pages all --limit 10 --flat --force --update-json
 """
 from __future__ import annotations
 
@@ -102,7 +103,9 @@ def load_json_products(path: Path) -> dict[str, dict]:
     return out
 
 
-def imagen_rel_url(folder_name: str) -> str:
+def imagen_rel_url(folder_name: str, *, flat: bool) -> str:
+    if flat:
+        return f"{H.PRODUCTOS_SUBDIR}/{folder_name}/imagen.webp"
     return f"{H.CATALOG_PARENT_DIR}/{H.PRODUCTOS_SUBDIR}/{folder_name}/imagen.webp"
 
 
@@ -119,7 +122,12 @@ def main() -> int:
     ap.add_argument(
         "--out-root",
         default="public/catalogo",
-        help="Raíz; las carpetas quedan en out-root/Catalogo-Abril-2026-Maqjeez-Repuestos/productos/",
+        help="Raíz (sitio: /catalogo/...). Con --flat: out-root/productos/<carpeta>/",
+    )
+    ap.add_argument(
+        "--flat",
+        action="store_true",
+        help="Carpetas directamente en out-root/productos/ (sin subcarpeta Catalogo-Abril-2026-...)",
     )
     ap.add_argument("--pages", default="all", help='all | 0 | "0-5"')
     ap.add_argument("--limit", type=int, default=0, help="Solo los primeros N SKUs (0 = sin límite). Ej. test: --limit 1 --pages 0")
@@ -152,7 +160,7 @@ def main() -> int:
     by_json = load_json_products(json_path)
 
     out_root = Path(args.out_root).expanduser().resolve()
-    product_root = out_root / H.CATALOG_PARENT_DIR / H.PRODUCTOS_SUBDIR
+    product_root = (out_root / H.PRODUCTOS_SUBDIR) if args.flat else (out_root / H.CATALOG_PARENT_DIR / H.PRODUCTOS_SUBDIR)
     if not args.dry_run:
         product_root.mkdir(parents=True, exist_ok=True)
 
@@ -169,9 +177,14 @@ def main() -> int:
     if args.limit and args.limit > 0:
         skus = skus[: args.limit]
 
+    web_hint = (
+        f"/catalogo/{H.PRODUCTOS_SUBDIR}/<carpeta>/imagen.webp"
+        if args.flat
+        else f"/catalogo/{H.CATALOG_PARENT_DIR}/{H.PRODUCTOS_SUBDIR}/<carpeta>/imagen.webp"
+    )
     print(
         f"Directorio base de artículos:\n  {product_root}\n"
-        f"(URL web: /catalogo/{H.CATALOG_PARENT_DIR}/{H.PRODUCTOS_SUBDIR}/<carpeta>/imagen.webp)\n"
+        f"(URL web: {web_hint})\n"
         f"SKUs a procesar: {len(skus)} (total únicos en páginas elegidas: {len(occ)})",
         flush=True,
     )
@@ -244,7 +257,7 @@ def main() -> int:
                 img.save(img_path, format="WEBP", quality=86, method=4)
             meta_path.write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
 
-        rel = imagen_rel_url(folder)
+        rel = imagen_rel_url(folder, flat=args.flat)
         updated_rows[sku] = {**row, "imagen": rel}
         print(f"OK {sku} → {folder}/", flush=True)
 
