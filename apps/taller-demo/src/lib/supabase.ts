@@ -1,4 +1,5 @@
-import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import { createBrowserClient } from "@supabase/ssr";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
@@ -12,7 +13,7 @@ if (typeof window !== "undefined") {
   if (!key || key.trim() === "" || key.includes("placeholder")) {
     console.error("❌ [Supabase Config] NEXT_PUBLIC_SUPABASE_ANON_KEY no está configurada");
   }
-  if ((!url || !key) || url.includes("placeholder") || key.includes("placeholder")) {
+  if (!url || !key || url.includes("placeholder") || key.includes("placeholder")) {
     console.error("📋 Para corregir:");
     console.error("   1. Crea/edita el archivo .env.local en la raíz del proyecto");
     console.error("   2. Agrega: NEXT_PUBLIC_SUPABASE_URL=https://tu-proyecto.supabase.co");
@@ -26,21 +27,21 @@ console.log("[Supabase Init]", {
   key: key && !key.includes("placeholder") ? "✓ Key configured" : "✗ Key missing",
 });
 
-export const supabase: SupabaseClient = createClient(
+/**
+ * Cliente browser con cookies (compatible con middleware @supabase/ssr).
+ * No usar createClient de supabase-js solo: persiste en localStorage y el
+ * middleware no ve la sesión → redirecciones erróneas (p. ej. / → /landing).
+ */
+export const supabase: SupabaseClient = createBrowserClient(
   url || "https://placeholder.supabase.co",
   key || "placeholder-key",
   {
-    auth: {
-      flowType: "pkce",
-      detectSessionInUrl: true,
-      persistSession: true,
-    },
     realtime: {
       params: {
         eventsPerSecond: 10,
       },
     },
-  }
+  },
 );
 
 // 🔌 Nota: Realtime usa polling en producción (fallback automático)
@@ -52,7 +53,10 @@ if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
 
 // Helper para obtener usuario actual
 export async function getCurrentUser() {
-  const { data: { user }, error } = await supabase.auth.getUser();
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
   if (error) throw error;
   return user;
 }

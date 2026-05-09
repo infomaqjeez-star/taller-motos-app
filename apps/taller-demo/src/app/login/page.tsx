@@ -17,6 +17,11 @@ const GOOGLE_ONLY =
   process.env.NEXT_PUBLIC_GOOGLE_ONLY_LOGIN === "true" ||
   process.env.NEXT_PUBLIC_GOOGLE_ONLY_LOGIN === "1";
 
+function safeNextPath(raw: string | null): string {
+  if (!raw || !raw.startsWith("/") || raw.startsWith("//")) return "/taller";
+  return raw;
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const [loginType, setLoginType] = useState<"email" | "username">("email");
@@ -37,7 +42,7 @@ export default function LoginPage() {
 
   const handleGoogleLogin = async () => {
     setLoading(true);
-    const next = new URLSearchParams(window.location.search).get("next") || "/taller";
+    const next = safeNextPath(new URLSearchParams(window.location.search).get("next"));
     await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
@@ -116,7 +121,9 @@ export default function LoginPage() {
         setError(error.message);
         return;
       }
-      router.push("/");
+      const next = safeNextPath(new URLSearchParams(window.location.search).get("next"));
+      router.push(next);
+      router.refresh();
     } finally {
       setLoading(false);
     }
