@@ -32,6 +32,8 @@ export default function LoginPage() {
   const [recoveryEmail, setRecoveryEmail] = useState("");
   const [recoverySent, setRecoverySent] = useState(false);
   const [showForgotUsername, setShowForgotUsername] = useState(false);
+  /** Tras signUp sin sesión (Supabase pide confirmar email antes de entrar). */
+  const [registerEmailSent, setRegisterEmailSent] = useState(false);
 
   const handleGoogleLogin = async () => {
     setLoading(true);
@@ -48,23 +50,49 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     setError("");
+    setRegisterEmailSent(false);
 
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          name: name || username,
-        },
-      },
-    });
-
-    if (error) {
-      setError(error.message);
+    if (password.length < 6) {
+      setError("La contraseña debe tener al menos 6 caracteres");
       setLoading(false);
-    } else {
-      // Registro exitoso, intentar hacer login automático
-      router.push("/taller");
+      return;
+    }
+
+    const mail = email.trim();
+    if (!mail) {
+      setError("Ingresá un email válido");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: mail,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          data: {
+            name: name || username,
+          },
+        },
+      });
+
+      if (error) {
+        setError(error.message);
+        return;
+      }
+
+      if (data.session) {
+        router.push("/taller");
+        return;
+      }
+
+      /* Confirmación por email: no hay sesión aún — no redirigir al taller (middleware bloquearía). */
+      setRegisterEmailSent(true);
+      setIsLogin(true);
+      setEmail(mail);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -73,24 +101,24 @@ export default function LoginPage() {
     setLoading(true);
     setError("");
 
-    // Si es login por username, necesitamos buscar el email asociado
     let loginEmail = email;
     if (loginType === "username" && username) {
-      // Aquí deberías hacer una consulta a tu API para obtener el email del username
-      // Por ahora, asumimos que el username es el email para Supabase
       loginEmail = username;
     }
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email: loginEmail,
-      password,
-    });
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: loginEmail.trim(),
+        password,
+      });
 
-    if (error) {
-      setError(error.message);
-      setLoading(false);
-    } else {
+      if (error) {
+        setError(error.message);
+        return;
+      }
       router.push("/");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -361,7 +389,10 @@ export default function LoginPage() {
           <div className="flex gap-2 mb-6">
             <button
               type="button"
-              onClick={() => { setIsLogin(true); setError(""); }}
+              onClick={() => {
+                setIsLogin(true);
+                setError("");
+              }}
               className={`flex-1 py-2 rounded-lg text-sm font-medium transition ${
                 isLogin 
                   ? "bg-[#FFE600] text-[#003087]" 
@@ -372,7 +403,11 @@ export default function LoginPage() {
             </button>
             <button
               type="button"
-              onClick={() => { setIsLogin(false); setError(""); }}
+              onClick={() => {
+                setIsLogin(false);
+                setError("");
+                setRegisterEmailSent(false);
+              }}
               className={`flex-1 py-2 rounded-lg text-sm font-medium transition ${
                 !isLogin 
                   ? "bg-[#FFE600] text-[#003087]" 
@@ -385,6 +420,12 @@ export default function LoginPage() {
 
           {/* Login/Register Form */}
           <form onSubmit={isLogin ? handleLogin : handleRegister} className="space-y-4">
+            {registerEmailSent && (
+              <div className="rounded-xl border border-green-500/30 bg-green-500/10 p-3 text-center text-sm text-green-200">
+                Te enviamos un correo a <span className="font-semibold text-white">{email}</span> para confirmar la
+                cuenta. Abrí el enlace y después podés iniciar sesión aquí.
+              </div>
+            )}
             {!isLogin && (
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">Nombre completo</label>
