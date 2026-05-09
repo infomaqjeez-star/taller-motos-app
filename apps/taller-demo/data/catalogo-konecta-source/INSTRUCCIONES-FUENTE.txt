@@ -37,3 +37,21 @@ Todo el PDF + actualizar imagen en catalogo-public.json:
   python scripts/catalogo/build_product_folders.py --pages all --update-json
 
 Ajustar zoom del recorte si la miniatura queda chica o grande: --half-side-mult 14 (default)
+
+--- Pipeline OCR (rejilla 4x5, precio tapado y x4 en la imagen) ---
+
+Dependencias extra:
+  pip install -r scripts/catalogo/requirements-catalog-ocr.txt
+  + instalar Tesseract OCR en el sistema.
+
+Windows:
+  set TESSERACT_CMD=C:\Program Files\Tesseract-OCR\tesseract.exe
+
+Probar OCR en la pagina 0 sin escribir archivos:
+  python scripts/catalogo/catalog_grid_ocr_pipeline.py --pdf data/catalogo-konecta-source/catalogo-konecta.pdf --out data/catalogo-ocr-export --pages 0 --dry-run
+
+Salida PNG por celda (ajustar --margin-x/--margin-y/--cols/--rows si la grilla no calza):
+  python scripts/catalogo/catalog_grid_ocr_pipeline.py --pdf ... --out data/catalogo-ocr-export
+
+Modo contornos (experimental, si no hay grilla fija):
+  python scripts/catalogo/catalog_grid_ocr_pipeline.py --pdf ... --out ... --mode contour

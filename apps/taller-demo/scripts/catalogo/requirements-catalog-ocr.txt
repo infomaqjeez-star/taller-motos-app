@@ -1,0 +1,7 @@
+# Pipeline: PDF → rejilla 4×5 → OCR precio ×4 (OpenCV + Tesseract)
+# Instalar también Tesseract en el SO: https://github.com/tesseract-ocr/tesseract
+pymupdf>=1.24.0
+Pillow>=10.0.0
+numpy>=1.26.0
+opencv-python-headless>=4.8.0
+pytesseract>=0.3.10
