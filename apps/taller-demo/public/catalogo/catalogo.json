@@ -1,0 +1,15 @@
+{
+  "titulo": "Catálogo de precios — Maqjeez Repuestos",
+  "subtitulo": "Reemplazá las categorías y productos con los mismos datos y SKU que tu PDF Konecta (renombrado a Maqjeez). Las imágenes van en esta carpeta con el nombre del SKU.",
+  "categorias": [
+    { "id": "tratamiento-agua", "nombre": "Tratamiento de agua", "orden": 1 },
+    { "id": "agua-caliente", "nombre": "Agua caliente / Gas", "orden": 2 },
+    { "id": "bombas-piscinas", "nombre": "Bombas de piscina y accesorios", "orden": 3 },
+    { "id": "cocina-griferia", "nombre": "Cocina y grifería", "orden": 4 },
+    { "id": "herramientas-insumos", "nombre": "Herramientas e insumos", "orden": 5 },
+    { "id": "motor-implementos", "nombre": "Motor / desmalezadora / motosierra", "orden": 6 },
+    { "id": "electrico", "nombre": "Eléctrico y encendido", "orden": 7 },
+    { "id": "varios", "nombre": "Repuestos varios", "orden": 8 }
+  ],
+  "productos": []
+}

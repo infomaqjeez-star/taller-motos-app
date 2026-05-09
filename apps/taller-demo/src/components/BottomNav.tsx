@@ -10,6 +10,7 @@ import {
   Truck,
   ShoppingCart,
   CheckCircle,
+  BookOpen,
 } from "lucide-react";
 
 interface Props {
@@ -26,6 +27,7 @@ export default function BottomNav(_props: Props) {
   const tabs = [
     { href: "/taller", label: "Taller", icon: LayoutDashboard },
     { href: "/inventario", label: "Stock", icon: Package },
+    { href: "/catalogo", label: "Catálogo", icon: BookOpen },
     { href: "/ventas", label: "Vender", icon: ShoppingCart },
     { href: "/tareas", label: "Tareas", icon: CheckCircle },
     { href: "/flex", label: "Flex", icon: Truck },
