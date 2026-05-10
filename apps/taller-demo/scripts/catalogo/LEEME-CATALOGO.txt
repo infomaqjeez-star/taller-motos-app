@@ -30,3 +30,8 @@ CATÁLOGO — carpetas locales sin usar npm
    (reset --hard borra cambios locales no guardados en esa carpeta.)
 
 5) Los mismos .bat también están en apps\taller-demo\ (un nivel arriba de scripts).
+
+6) Si la imagen.webp sale mal (marca de agua o recorte feo): regenerá con solo recorte raster:
+     set CATALOGO_IMAGE_MODE=raster
+     (luego doble clic en GenerarCatalogo10.bat o el comando python que uses)
+   Valores: auto (defecto), raster, photo.

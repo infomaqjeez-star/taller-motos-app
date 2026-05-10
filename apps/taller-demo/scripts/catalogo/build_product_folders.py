@@ -93,6 +93,59 @@ def render_tarjeta_catalogo(
     )
 
 
+def render_product_card_image(
+    page,
+    x0: float,
+    y0: float,
+    x1: float,
+    y1: float,
+    *,
+    image_mode: str,
+    width_px: int,
+    height_px: int,
+    half_width_mult: float,
+    half_height_mult: float,
+    dpi: int,
+):
+    """
+    Salida tarjeta: modo auto intenta recorte de la imagen embebida encima del SKU (foto nítida);
+    si no hay, usa raster del PDF como antes. Modo raster fuerza lo viejo; photo solo embebido
+    (si falla, cae a raster).
+    """
+    import fitz
+    from PIL import Image, ImageOps
+
+    mode = (image_mode or "auto").strip().lower()
+    try_embed = mode in ("auto", "photo")
+
+    if try_embed:
+        t = H.embedded_product_image_rect(page, x0, y0, x1, y1)
+        if t is not None:
+            rx0, ry0, rx1, ry1 = t
+            clip = (fitz.Rect(rx0, ry0, rx1, ry1) + (-2, -2, 2, 2)) & page.rect
+            pix = page.get_pixmap(clip=clip, dpi=max(int(dpi), 240), alpha=False)
+            img = Image.open(io.BytesIO(pix.tobytes("png"))).convert("RGB")
+            return ImageOps.fit(
+                img,
+                (width_px, height_px),
+                method=Image.Resampling.LANCZOS,
+                centering=(0.5, 0.48),
+            )
+
+    return render_tarjeta_catalogo(
+        page,
+        x0,
+        y0,
+        x1,
+        y1,
+        width_px=width_px,
+        height_px=height_px,
+        half_width_mult=half_width_mult,
+        half_height_mult=half_height_mult,
+        dpi=dpi,
+    )
+
+
 def load_json_products(path: Path) -> dict[str, dict]:
     if not path.is_file():
         return {}
@@ -153,6 +206,13 @@ def main() -> int:
         help="Alto salida tarjeta (px), default 480",
     )
     ap.add_argument("--dpi", type=int, default=200)
+    ap.add_argument(
+        "--image-mode",
+        choices=("auto", "raster", "photo"),
+        default="auto",
+        help="auto: foto embebida encima del SKU si existe, si no recorte raster; "
+        "raster: solo recorte como antes; photo: solo embebido (si no hay, raster).",
+    )
     ap.add_argument(
         "--half-width-mult",
         type=float,
@@ -277,12 +337,13 @@ def main() -> int:
         if not args.dry_run:
             dest_dir.mkdir(parents=True, exist_ok=True)
             if args.force or not img_path.is_file():
-                img = render_tarjeta_catalogo(
+                img = render_product_card_image(
                     page,
                     x0,
                     y0,
                     x1,
                     y1,
+                    image_mode=args.image_mode,
                     width_px=args.card_w,
                     height_px=args.card_h,
                     half_width_mult=args.half_width_mult,

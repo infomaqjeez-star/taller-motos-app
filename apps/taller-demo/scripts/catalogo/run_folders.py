@@ -6,6 +6,7 @@ Se usa desde npm, desde .bat (doble clic) o: python scripts/catalogo/run_folders
 Variables de entorno opcionales:
   CATALOGO_PRODUCTOS_ROOT — ruta absoluta; si está vacío → public/catalogo + --update-json
   CATALOGO_PDF — ruta al PDF si no usás el nombre por defecto
+  CATALOGO_IMAGE_MODE — auto | raster | photo (ver build_product_folders --image-mode)
 """
 from __future__ import annotations
 
@@ -41,6 +42,9 @@ def main() -> int:
     pdf = (os.environ.get("CATALOGO_PDF") or "").strip()
     if pdf:
         argv.extend(["--pdf", pdf])
+    img_mode = (os.environ.get("CATALOGO_IMAGE_MODE") or "").strip().lower()
+    if img_mode in ("auto", "raster", "photo"):
+        argv.extend(["--image-mode", img_mode])
 
     if local_only:
         prod = Path(out_root) / "productos"

@@ -189,3 +189,75 @@ def product_folder_name(nombre: str, sku: str, max_slug: int = 50) -> str:
     """Nombre único de carpeta: slug del nombre + SKU (evita colisiones y rutas largas)."""
     slug = sanitize_folder_slug(nombre, max_slug=max_slug)
     return f"{slug}__{sku}"
+
+
+def embedded_product_image_rect(
+    page: object, sx0: float, sy0: float, sx1: float, sy1: float
+) -> tuple[float, float, float, float] | None:
+    """
+    Rectángulo (x0,y0,x1,y1) en coords PDF de la foto embebida encima del código SKU,
+    típico en catálogos Konecta (foto raster + texto vector). Si no hay candidato, None.
+    """
+    import fitz
+
+    if not hasattr(page, "get_image_rects"):
+        return None
+    page_rect = page.rect
+    page_area = float(page_rect.get_area())
+    if page_area < 1.0:
+        return None
+
+    sw = max(float(sx1) - float(sx0), 1.0)
+    sku_top = float(sy0)
+    x_pad = sw * 6.0
+
+    best: fitz.Rect | None = None
+    best_area = 0.0
+    seen: set[tuple[float, float, float, float]] = set()
+
+    try:
+        imgs = page.get_images(full=True) or []
+    except Exception:
+        return None
+
+    for info in imgs:
+        xref = int(info[0])
+        try:
+            rects = page.get_image_rects(xref)
+        except Exception:
+            continue
+        for raw in rects:
+            r = fitz.Rect(raw)
+            if r.is_empty:
+                continue
+            key = (round(r.x0, 1), round(r.y0, 1), round(r.x1, 1), round(r.y1, 1))
+            if key in seen:
+                continue
+            seen.add(key)
+
+            if r.y1 > sku_top + 6.0:
+                continue
+
+            x_overlap = min(r.x1, sx1 + x_pad) - max(r.x0, sx0 - x_pad)
+            if x_overlap < sw * 0.22:
+                continue
+
+            area = float(r.get_area())
+            if area < 500.0:
+                continue
+            if area > page_area * 0.48:
+                continue
+
+            rw, rh = float(r.width), float(r.height)
+            if rw > 1 and rh > 1:
+                ar = rw / rh
+                if ar > 5.0 or ar < 0.2:
+                    continue
+
+            if area > best_area:
+                best_area = area
+                best = r
+
+    if best is None:
+        return None
+    return (best.x0, best.y0, best.x1, best.y1)
