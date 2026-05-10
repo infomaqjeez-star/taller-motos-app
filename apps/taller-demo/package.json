@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "catalogo:folders:10": "node scripts/catalogo/run-folders.cjs 10",
-    "catalogo:folders:all": "node scripts/catalogo/run-folders.cjs all"
+    "catalogo:folders:all": "node scripts/catalogo/run-folders.cjs all",
+    "catalogo:generate:all": "node scripts/catalogo/run-full-catalogo.cjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.5.2",

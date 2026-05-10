@@ -18,6 +18,12 @@ Opcional (para versionar aparte): también podés copiar una copia en
 y subirla con git (ojo tamaño; Git LFS si hace falta).
 
 ---
+0) Todo en un solo paso (desde apps/taller-demo, con el PDF en scripts/ o public/catalogo/):
+
+   npm run catalogo:generate:all
+
+   Equivale a: pip + extract_catalogo_pdf (todas las páginas) + build_product_folders (--flat --force --update-json).
+
 1) Dependencias base (extracción por SKU / carpetas):
 
    pip install -r scripts/catalogo/requirements.txt
