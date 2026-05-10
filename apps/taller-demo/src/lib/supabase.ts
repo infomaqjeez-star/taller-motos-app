@@ -36,6 +36,9 @@ export const supabase: SupabaseClient = createBrowserClient(
   url || "https://placeholder.supabase.co",
   key || "placeholder-key",
   {
+    auth: {
+      flowType: "implicit",
+    },
     realtime: {
       params: {
         eventsPerSecond: 10,
