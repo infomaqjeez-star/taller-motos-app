@@ -46,11 +46,7 @@ export default function LoginPage() {
     await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-<<<<<<< HEAD
-        redirectTo: `https://appjeezpro.store/auth/callback?next=/taller`,
-=======
-        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
->>>>>>> origin/main
+        redirectTo: `https://appjeezpro.store/auth/callback?next=${encodeURIComponent(next)}`,
       },
     });
   };

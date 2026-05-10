@@ -5,13 +5,8 @@ import { usePathname } from "next/navigation";
 import { useState, useEffect, useRef, useLayoutEffect } from "react";
 import {
   Package, LayoutDashboard, AlertTriangle,
-<<<<<<< HEAD
-  MessageCircle, BarChart2, Users, Truck, ShoppingCart,
-  Clock, Timer, Settings, CheckCircle, Bug, Store,
-=======
   MessageCircle, BarChart2, Users, ShoppingCart,
   Clock, Timer, Settings, CheckCircle, Bug, BookOpen,
->>>>>>> origin/main
 } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
 import { useAlarms } from "../hooks/useAlarms";
@@ -92,14 +87,10 @@ export default function Navbar({
   const links = [
     { href: "/taller",       label: "Taller",       icon: LayoutDashboard, badge: overdueCount,  badgeColor: "bg-red-500" },
     { href: "/ventas",       label: "Vender",       icon: ShoppingCart,    badge: 0,             badgeColor: "" },
-<<<<<<< HEAD
-    { href: "/catalogo",     label: "Catálogo",     icon: Store,           badge: 0,             badgeColor: "" },
-=======
     { href: "/catalogo",   label: "Catálogo",     icon: BookOpen,        badge: 0,             badgeColor: "" },
->>>>>>> origin/main
     { href: "/estadisticas", label: "Estadísticas", icon: BarChart2,       badge: 0,             badgeColor: "" },
     { href: "/agenda",       label: "Agenda",       icon: Users,           badge: 0,             badgeColor: "" },
-    { href: "/inventario",   label: "Pedidos",      icon: Package,         badge: lowStockCount, badgeColor: "bg-yellow-500" },
+    { href: "/inventario",   label: "Pedidos",     icon: Package,         badge: lowStockCount, badgeColor: "bg-yellow-500" },
   ];
 
   const flexUrgent = flexAlarm && flexAlarm.diff < 1800000;

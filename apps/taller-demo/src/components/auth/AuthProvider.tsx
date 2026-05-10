@@ -43,11 +43,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-<<<<<<< HEAD
         redirectTo: `https://appjeezpro.store/auth/callback?next=/taller`,
-=======
-        redirectTo: `${window.location.origin}/auth/callback?next=/taller`,
->>>>>>> origin/main
       },
     });
   };
@@ -65,7 +61,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       email,
       password,
       options: {
-        emailRedirectTo: `https://appjeezpro.store/auth/callback?next=/taller`,
+        emailRedirectTo: `${window.location.origin}/`,
       },
     });
     return { error };
