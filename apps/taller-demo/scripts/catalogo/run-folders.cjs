@@ -10,16 +10,22 @@ const root = path.join(__dirname, "..", "..");
 const script = path.join(__dirname, "build_product_folders.py");
 const mode = process.argv[2] || "10";
 
-const args = [
-  script,
-  "--out-root",
-  "public/catalogo",
-  "--flat",
-  "--force",
-  "--update-json",
-];
+const outRoot = process.env.CATALOGO_PRODUCTOS_ROOT || "public/catalogo";
+const args = [script, "--out-root", outRoot, "--flat", "--force"];
+if (!process.env.CATALOGO_PRODUCTOS_ROOT) {
+  args.push("--update-json");
+}
 if (process.env.CATALOGO_PDF) {
   args.push("--pdf", process.env.CATALOGO_PDF);
+}
+if (process.env.CATALOGO_PRODUCTOS_ROOT) {
+  console.error(
+    "[catalogo] CATALOGO_PRODUCTOS_ROOT=" +
+      outRoot +
+      " → carpetas en " +
+      path.join(outRoot, "productos") +
+      " (sin --update-json; la app web no usa esa ruta)."
+  );
 }
 if (mode === "all") {
   args.push("--pages", "all");

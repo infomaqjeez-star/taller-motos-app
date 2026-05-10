@@ -129,7 +129,9 @@ def main() -> int:
     ap.add_argument(
         "--out-root",
         default="public/catalogo",
-        help="Raíz (sitio: /catalogo/...). Con --flat: out-root/productos/<carpeta>/",
+        help="Raíz de salida. Con --flat: out-root/productos/<carpeta>/. "
+        "Para carpetas solo en tu disco (fuera del repo), usá ruta absoluta; "
+        "en npm podés setear CATALOGO_PRODUCTOS_ROOT.",
     )
     ap.add_argument(
         "--flat",

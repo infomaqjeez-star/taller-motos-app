@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
 """
 Un solo comando (cwd = apps/taller-demo): instala dependencias, regenera
-data/catalogo-public.json desde el PDF y crea public/catalogo/productos/…
-con imagen.webp (tarjeta) + meta.json (precioVenta = lista × 4).
+data/catalogo-public.json desde el PDF y crea carpetas por artículo
+(imagen.webp + meta.json, precioVenta = lista × 4).
+
+Por defecto salen bajo public/catalogo/productos/. Para solo disco local
+definí CATALOGO_PRODUCTOS_ROOT (ruta absoluta); entonces las carpetas van a
+ESA_RUTA/productos/ y no se pasa --update-json (la app no sirve archivos desde ahí).
 
 Uso:
   python scripts/catalogo/run_full_catalogo.py
@@ -15,6 +19,7 @@ npm (desde apps/taller-demo):
 from __future__ import annotations
 
 import argparse
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -52,6 +57,11 @@ def main() -> int:
     if args.pdf.strip():
         pdf_args = ["--pdf", args.pdf.strip()]
 
+    out_root = (os.environ.get("CATALOGO_PRODUCTOS_ROOT") or "").strip()
+    if not out_root:
+        out_root = "public/catalogo"
+    local_only = bool((os.environ.get("CATALOGO_PRODUCTOS_ROOT") or "").strip())
+
     try:
         _run(
             [
@@ -76,27 +86,30 @@ def main() -> int:
                 ]
                 + pdf_args
             )
-        _run(
-            [
-                sys.executable,
-                "scripts/catalogo/build_product_folders.py",
-                "--out-root",
-                "public/catalogo",
-                "--pages",
-                "all",
-                "--flat",
-                "--force",
-                "--update-json",
-            ]
-            + pdf_args
-        )
+        build_argv = [
+            sys.executable,
+            "scripts/catalogo/build_product_folders.py",
+            "--out-root",
+            out_root,
+            "--pages",
+            "all",
+            "--flat",
+            "--force",
+        ]
+        if not local_only:
+            build_argv.append("--update-json")
+        _run(build_argv + pdf_args)
     except subprocess.CalledProcessError as e:
         return int(e.returncode or 1)
     except FileNotFoundError:
         print("No se encontró Python/pip.", file=sys.stderr)
         return 1
 
-    print("\nListo: JSON actualizado y carpetas bajo public/catalogo/productos/", flush=True)
+    prod_dir = str(Path(out_root) / "productos")
+    if local_only:
+        print(f"\nListo: carpetas solo en disco local → {prod_dir}", flush=True)
+    else:
+        print(f"\nListo: JSON actualizado y carpetas en {prod_dir}", flush=True)
     return 0
 
 

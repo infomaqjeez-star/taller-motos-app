@@ -14,6 +14,21 @@ Con npm podés forzar la ruta del PDF:
   set CATALOGO_PDF=public\catalogo\catalogo.pdf
   npm run catalogo:folders:all
 
+--- Carpetas solo en disco local (fuera de public/ del repo) ---
+
+Definí una ruta absoluta en tu PC. Las fichas se crean SIEMPRE en:
+
+  %CATALOGO_PRODUCTOS_ROOT%\productos\<carpeta_por_articulo>\
+
+Ejemplo en CMD (reemplazá la primera línea por la carpeta que quieras):
+
+  set CATALOGO_PRODUCTOS_ROOT=D:\Taller\CatalogoKonectaArticulos
+  cd c:\Users\noejo\dev\taller-motos-app\apps\taller-demo
+  npm run catalogo:folders:10
+
+Resultado: D:\Taller\CatalogoKonectaArticulos\productos\ (imagen.webp + meta.json en cada subcarpeta).
+En este modo no se ejecuta --update-json (la app web no lee rutas fuera de public/).
+
 Opcional (para versionar aparte): también podés copiar una copia en
   data/catalogo-konecta-source/
 y subirla con git (ojo tamaño; Git LFS si hace falta).
