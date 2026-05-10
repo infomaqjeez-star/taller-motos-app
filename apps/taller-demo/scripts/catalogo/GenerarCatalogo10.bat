@@ -15,6 +15,8 @@ if not defined PYTHON_EXE (
 )
 
 echo Usando: %PYTHON_EXE%
+"%PYTHON_EXE%" -m pip install -q -r scripts\catalogo\requirements.txt
+if errorlevel 1 pause & exit /b 1
 "%PYTHON_EXE%" scripts\catalogo\run_folders.py 10
 if errorlevel 1 pause & exit /b 1
 

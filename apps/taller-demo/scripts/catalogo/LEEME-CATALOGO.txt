@@ -11,7 +11,11 @@ CATÁLOGO — carpetas locales sin usar npm
 3) Las carpetas salen en:
    %USERPROFILE%\Documents\CatalogoKonectaArticulos\productos\
 
-3b) Si el .bat dice que no encuentra Python:
+3b) Si usás "npm run catalogo:folders:10" y falla: hacé "git pull", o definí la variable
+    de entorno de Windows PYTHON_EXE con la ruta completa a python.exe
+    (ej. C:\Users\...\AppData\Local\Programs\Python\Python312\python.exe).
+
+3c) Si el .bat dice que no encuentra Python:
    - Instalá Python 3 desde https://www.python.org/downloads/ y marcá "Add python.exe to PATH".
    - En Windows: Configuración → Aplicaciones → Configuración avanzada de aplicaciones
      → Alias de ejecución de aplicaciones → DESACTIVAR "python.exe" y "python3.exe"

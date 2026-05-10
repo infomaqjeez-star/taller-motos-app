@@ -11,6 +11,13 @@ call "%~dp0scripts\catalogo\_buscar_python.bat"
 if not defined PYTHON_EXE goto sinpy
 
 echo Usando: %PYTHON_EXE%
+echo Instalando dependencias del catalogo si hace falta...
+"%PYTHON_EXE%" -m pip install -q -r "%~dp0scripts\catalogo\requirements.txt"
+if errorlevel 1 (
+  echo Fallo pip.
+  pause
+  exit /b 1
+)
 echo Puede tardar ^(todo el PDF^)...
 "%PYTHON_EXE%" scripts\catalogo\run_folders.py all
 if errorlevel 1 pause & exit /b 1

@@ -1,5 +1,7 @@
 @echo off
 REM Deja PYTHON_EXE apuntando al python.exe real (no el stub de Microsoft Store).
+REM Si ya definiste PYTHON_EXE (variables de entorno de Windows), se respeta.
+if not "%PYTHON_EXE%"=="" if exist "%PYTHON_EXE%" goto :eof
 set "PYTHON_EXE="
 
 REM 1) Launcher oficial "py" (recomendado en Windows)
