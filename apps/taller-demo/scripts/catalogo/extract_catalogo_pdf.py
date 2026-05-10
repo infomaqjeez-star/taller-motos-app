@@ -3,6 +3,10 @@
 Extrae del PDF de catálogo (Konecta u otro layout tipo grilla) imágenes 480×480 y un JSON
 compatible con data/catalogo-public.json (precio lista; la app muestra ×4).
 
+Carpetas por artículo sin programar: en esta carpeta (scripts/catalogo) doble clic en
+GenerarCatalogo10.bat o GenerarCatalogoCompleto.bat (también en apps/taller-demo/).
+Ver LEEME-CATALOGO.txt. Si no aparecen, hacé git fetch && git checkout main && git reset --hard origin/main
+
 Ejecutar con cwd = apps/taller-demo:
   pip install -r scripts/catalogo/requirements.txt
 
