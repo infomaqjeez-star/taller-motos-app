@@ -447,16 +447,20 @@ function ProductCard({ producto, addItem }: { producto: Producto; addItem: Retur
 
   return (
     <article className="flex h-full flex-col overflow-hidden rounded-xl border border-white/10 bg-white/[0.03]">
-      {/* Imagen - se adapta al contenedor sin recortar */}
+      {/* Imagen - recorta parte inferior para ocultar precio de costo */}
       <div className="relative flex aspect-square items-center justify-center bg-white/[0.04] overflow-hidden p-1 sm:p-2">
         {producto.image_url ? (
-          <img
-            src={producto.image_url}
-            alt={producto.name}
-            className="h-full w-full object-contain"
-            loading="lazy"
-            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-          />
+          <>
+            <img
+              src={producto.image_url}
+              alt={producto.name}
+              className="h-full w-full object-cover object-top"
+              loading="lazy"
+              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+            />
+            {/* Overlay blanco para tapar precio de costo residual */}
+            <div className="absolute bottom-0 left-0 right-0 h-[15%] bg-gradient-to-t from-[#1a1a1a] to-transparent" />
+          </>
         ) : (
           <div className="flex flex-col items-center gap-1 text-gray-600">
             <Tag className="h-5 w-5" />
