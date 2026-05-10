@@ -15,6 +15,9 @@ Primeras 10 + JSON:
 
 Variantes de imagen para comparar (misma carpeta, varios webp):
   python scripts/catalogo/build_product_folders.py --pages all --limit 10 --flat --force --emit-variants
+
+Con cabecera estimada (mejor foto en rejilla Konecta):
+  python scripts/catalogo/build_product_folders.py --pages all --limit 10 --flat --force --grid-auto-header --image-mode auto
 """
 from __future__ import annotations
 
@@ -142,6 +145,59 @@ def _pil_grid_cell_tarjeta(
         (width_px, height_px),
         method=Image.Resampling.LANCZOS,
         centering=(0.5, 0.5),
+    )
+
+
+def _pil_grid_cell_top_band(
+    page,
+    x0: float,
+    y0: float,
+    x1: float,
+    y1: float,
+    *,
+    width_px: int,
+    height_px: int,
+    dpi: int,
+    grid_cols: int,
+    grid_rows: int,
+    grid_mx: float,
+    grid_mt: float,
+    grid_mb: float,
+    top_frac: float = 0.72,
+):
+    """Solo la fracción superior de la celda (típicamente la foto del artículo)."""
+    import fitz
+    from PIL import Image, ImageOps
+
+    scx = (x0 + x1) / 2
+    scy = (y0 + y1) / 2
+    cell = H.catalog_grid_cell_containing_point(
+        page,
+        scx,
+        scy,
+        cols=grid_cols,
+        rows=grid_rows,
+        margin_x_frac=grid_mx,
+        margin_top_frac=grid_mt,
+        margin_bottom_frac=grid_mb,
+    )
+    if cell is None or cell.is_empty:
+        return None
+    tf = max(0.35, min(0.92, float(top_frac)))
+    clip = fitz.Rect(
+        cell.x0,
+        cell.y0,
+        cell.x1,
+        cell.y0 + cell.height * tf,
+    )
+    clip = (clip + (-1, -1, 1, 1)) & page.rect
+    pix = page.get_pixmap(clip=clip, dpi=max(int(dpi), 220), alpha=False)
+    img = Image.open(io.BytesIO(pix.tobytes("png"))).convert("RGB")
+    return ImageOps.fit(
+        img,
+        (width_px, height_px),
+        method=Image.Resampling.LANCZOS,
+        centering=(0.5, 0.45),
     )
 
 
@@ -307,11 +363,76 @@ def iter_preview_variant_images(
     grid_mx: float = 0.02,
     grid_mt: float = 0.12,
     grid_mb: float = 0.03,
+    auto_header_mt: float | None = None,
 ) -> list[tuple[str, Any]]:
     """Lista (slug, PIL.Image) para comparar métodos en disco (imagen_variant_*.webp)."""
     from PIL import Image
 
     out: list[tuple[str, Image.Image]] = []
+
+    grid_presets: list[tuple[str, int, int, float]] = [
+        ("grid_5x3_mt010", 5, 3, 0.10),
+        ("grid_5x3_mt012", 5, 3, 0.12),
+        ("grid_5x3_mt015", 5, 3, 0.15),
+        ("grid_4x5_mt012", 4, 5, 0.12),
+        ("grid_5x4_mt012", 5, 4, 0.12),
+        ("grid_6x3_mt012", 6, 3, 0.12),
+    ]
+    for slug, gc, gr, gmt in grid_presets:
+        im = _pil_grid_cell_tarjeta(
+            page,
+            x0,
+            y0,
+            x1,
+            y1,
+            width_px=card_w,
+            height_px=card_h,
+            dpi=dpi,
+            grid_cols=gc,
+            grid_rows=gr,
+            grid_mx=grid_mx,
+            grid_mt=gmt,
+            grid_mb=grid_mb,
+        )
+        if im is not None:
+            out.append((slug, im))
+
+    if auto_header_mt is not None:
+        im = _pil_grid_cell_tarjeta(
+            page,
+            x0,
+            y0,
+            x1,
+            y1,
+            width_px=card_w,
+            height_px=card_h,
+            dpi=dpi,
+            grid_cols=grid_cols,
+            grid_rows=grid_rows,
+            grid_mx=grid_mx,
+            grid_mt=auto_header_mt,
+            grid_mb=grid_mb,
+        )
+        if im is not None:
+            out.append(("grid_autoheader", im))
+        im_top = _pil_grid_cell_top_band(
+            page,
+            x0,
+            y0,
+            x1,
+            y1,
+            width_px=card_w,
+            height_px=card_h,
+            dpi=dpi,
+            grid_cols=grid_cols,
+            grid_rows=grid_rows,
+            grid_mx=grid_mx,
+            grid_mt=auto_header_mt,
+            grid_mb=grid_mb,
+            top_frac=0.72,
+        )
+        if im_top is not None:
+            out.append(("grid_autoheader_top72", im_top))
 
     gcell = _pil_grid_cell_tarjeta(
         page,
@@ -330,6 +451,25 @@ def iter_preview_variant_images(
     )
     if gcell is not None:
         out.append(("raster_grid", gcell))
+
+    im_top_cur = _pil_grid_cell_top_band(
+        page,
+        x0,
+        y0,
+        x1,
+        y1,
+        width_px=card_w,
+        height_px=card_h,
+        dpi=dpi,
+        grid_cols=grid_cols,
+        grid_rows=grid_rows,
+        grid_mx=grid_mx,
+        grid_mt=grid_mt,
+        grid_mb=grid_mb,
+        top_frac=0.72,
+    )
+    if im_top_cur is not None:
+        out.append(("raster_grid_cell_top72", im_top_cur))
 
     emb = _pil_embed_only(
         page,
@@ -490,6 +630,11 @@ def main() -> int:
         help="Margen inferior rejilla, fracción alto página",
     )
     ap.add_argument(
+        "--grid-auto-header",
+        action="store_true",
+        help="Estimar margen superior desde texto en la banda de cabecera (mejor alineación foto+código)",
+    )
+    ap.add_argument(
         "--half-width-mult",
         type=float,
         default=8.0,
@@ -569,6 +714,17 @@ def main() -> int:
             flush=True,
         )
 
+    header_mt_cache: dict[int, float | None] = {}
+    if args.grid_auto_header:
+        pages_for_skus = {occ[s][0] for s in skus}
+        for pi in pages_for_skus:
+            header_mt_cache[pi] = H.estimate_grid_margin_top_frac(doc[pi])
+        print(
+            "grid-auto-header: márgenes estimados por página "
+            + ", ".join(f"p{i + 1}={header_mt_cache.get(i)!r}" for i in sorted(header_mt_cache)),
+            flush=True,
+        )
+
     updated_rows: dict[str, dict] = {}
     missing_json: list[str] = []
 
@@ -612,6 +768,12 @@ def main() -> int:
             if precio > 0
             else 0
         )
+        effective_mt = args.grid_mt
+        if args.grid_auto_header:
+            est = header_mt_cache.get(pi)
+            if est is not None:
+                effective_mt = est
+
         meta = {
             "sku": sku,
             "nombre": nombre,
@@ -620,6 +782,8 @@ def main() -> int:
             "categoriaId": cat,
             "carpeta": folder,
         }
+        if args.grid_auto_header and header_mt_cache.get(pi) is not None:
+            meta["gridMarginTopFrac"] = round(float(header_mt_cache[pi]), 4)
 
         if not args.dry_run:
             dest_dir.mkdir(parents=True, exist_ok=True)
@@ -639,11 +803,12 @@ def main() -> int:
                     grid_cols=args.grid_cols,
                     grid_rows=args.grid_rows,
                     grid_mx=args.grid_mx,
-                    grid_mt=args.grid_mt,
+                    grid_mt=effective_mt,
                     grid_mb=args.grid_mb,
                 )
                 img.save(img_path, format="WEBP", quality=86, method=4)
             if args.emit_variants:
+                auto_mt_var = header_mt_cache.get(pi) if args.grid_auto_header else None
                 for vslug, vim in iter_preview_variant_images(
                     page,
                     x0,
@@ -658,8 +823,9 @@ def main() -> int:
                     grid_cols=args.grid_cols,
                     grid_rows=args.grid_rows,
                     grid_mx=args.grid_mx,
-                    grid_mt=args.grid_mt,
+                    grid_mt=effective_mt,
                     grid_mb=args.grid_mb,
+                    auto_header_mt=auto_mt_var,
                 ):
                     vpath = dest_dir / f"imagen_variant_{vslug}.webp"
                     vim.save(vpath, format="WEBP", quality=86, method=4)

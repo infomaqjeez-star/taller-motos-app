@@ -298,6 +298,45 @@ def catalog_grid_cell_rect(
     )
 
 
+def estimate_grid_margin_top_frac(
+    page: object,
+    *,
+    band_lo: float = 0.06,
+    band_hi: float = 0.34,
+    padding_frac: float = 0.018,
+    min_frac: float = 0.07,
+    max_frac: float = 0.40,
+) -> float | None:
+    """
+    Estima margin_top_frac para la rejilla a partir del texto en la banda superior
+    (cabecera / título de página). Si no hay señal, devuelve None (usar default manual).
+    """
+    R = page.rect
+    H = max(float(R.height), 1.0)
+    y0p = float(R.y0)
+    words = page.get_text("words") or []
+    best_bottom = -1.0
+    in_band = 0
+    for w in words:
+        t = (w[4] or "").strip()
+        if not t:
+            continue
+        wy0 = float(w[1])
+        wy1 = float(w[3])
+        rel0 = (wy0 - y0p) / H
+        if rel0 < band_lo or rel0 > band_hi:
+            continue
+        in_band += 1
+        if wy1 > best_bottom:
+            best_bottom = wy1
+    if in_band < 3 or best_bottom < y0p + H * 0.02:
+        return None
+    raw = (best_bottom - y0p) / H + padding_frac
+    if raw > 0.28:
+        return None
+    return max(min_frac, min(max_frac, raw))
+
+
 def catalog_grid_cell_containing_point(
     page: object,
     px: float,
