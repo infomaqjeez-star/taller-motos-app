@@ -122,51 +122,66 @@ async function main() {
   console.log(`   Activos (PDF): ${activos.length}`);
   console.log(`   Inactivos (ocultar): ${inactivos.length}\n`);
 
-  // Actualizar en batches via API
-  const API_URL = `${SUPABASE_URL.replace(/\/+$/, "")}/api/catalogo/actualizar-precios`;
-  const AUTH = "Bearer maqjeez-prices-2026";
-
-  // Actualizar activos en batches de 50
+  // Actualizar directamente en Supabase (sin API local)
   const BATCH = 50;
   let totalUpdated = 0;
   let totalErrors = 0;
 
-  console.log("🚀 Enviando actualizaciones...\n");
+  console.log("🚀 Actualizando productos en Supabase...\n");
 
+  // 1) Activos: actualizar precio + stock + active=true
   for (let i = 0; i < activos.length; i += BATCH) {
     const batch = activos.slice(i, i + BATCH);
     try {
-      const res = await fetch(API_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: AUTH },
-        body: JSON.stringify({ activos: batch }),
-      });
-      const result = await res.json();
-      totalUpdated += result.updated || 0;
-      totalErrors += result.errors || 0;
-      console.log(`   Batch activos ${Math.floor(i / BATCH) + 1}/${Math.ceil(activos.length / BATCH)}: ${result.updated || 0} OK, ${result.errors || 0} err`);
+      // Hacer update individual para cada producto
+      for (const p of batch) {
+        const { error } = await supabase
+          .from("catalog_products")
+          .update({
+            catalog_price: p.catalog_price,
+            stock: p.stock,
+            active: true,
+          })
+          .eq("sku", p.sku);
+
+        if (error) {
+          console.error(`   ❌ ${p.sku}:`, error.message);
+          totalErrors++;
+        } else {
+          totalUpdated++;
+        }
+      }
+      console.log(`   ✅ Activos batch ${Math.floor(i / BATCH) + 1}/${Math.ceil(activos.length / BATCH)} (${batch.length} items)`);
     } catch (e) {
       console.error(`   ❌ Error batch activos ${i}:`, e.message);
       totalErrors += batch.length;
     }
   }
 
-  // Actualizar inactivos en batches de 50
-  for (let i = 0; i < inactivos.length; i += BATCH) {
-    const batch = inactivos.slice(i, i + BATCH);
-    try {
-      const res = await fetch(API_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: AUTH },
-        body: JSON.stringify({ inactivos: batch }),
-      });
-      const result = await res.json();
-      totalUpdated += result.updated || 0;
-      totalErrors += result.errors || 0;
-      console.log(`   Batch inactivos ${Math.floor(i / BATCH) + 1}/${Math.ceil(inactivos.length / BATCH)}: ${result.updated || 0} OK, ${result.errors || 0} err`);
-    } catch (e) {
-      console.error(`   ❌ Error batch inactivos ${i}:`, e.message);
-      totalErrors += batch.length;
+  // 2) Inactivos: ocultar productos que no están en el PDF
+  if (inactivos.length > 0) {
+    console.log(`\n   🔒 Ocultando ${inactivos.length} productos no listados...`);
+    for (let i = 0; i < inactivos.length; i += BATCH) {
+      const batch = inactivos.slice(i, i + BATCH);
+      try {
+        for (const p of batch) {
+          const { error } = await supabase
+            .from("catalog_products")
+            .update({ active: false })
+            .eq("sku", p.sku);
+
+          if (error) {
+            console.error(`   ❌ ${p.sku}:`, error.message);
+            totalErrors++;
+          } else {
+            totalUpdated++;
+          }
+        }
+        console.log(`   ✅ Inactivos batch ${Math.floor(i / BATCH) + 1}/${Math.ceil(inactivos.length / BATCH)} (${batch.length} items)`);
+      } catch (e) {
+        console.error(`   ❌ Error batch inactivos ${i}:`, e.message);
+        totalErrors += batch.length;
+      }
     }
   }
 

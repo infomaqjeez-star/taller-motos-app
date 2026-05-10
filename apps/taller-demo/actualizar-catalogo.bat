@@ -1,0 +1,7 @@
+@echo off
+chcp 65001 >nul
+cd /d "C:\Users\Mi Pc\CascadeProjects\taller-motos-app\apps\taller-demo"
+set NEXT_PUBLIC_SUPABASE_URL=https://ajhmajac1imccrkehssy.supabase.co
+set SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFqaG1hY2FcaW1jY3JrZWhzc3kiLCJyb2xlIjoic2VydmljZV9yb2xlIiwiaWF0IjoxNzQ5NDI2MDc0LCJleHAiOjIwNjQ4MDIwNzR9.cJ9V9IrJ3Fal8KRxv7ZD-UmMXCr7GnGr95QjAw7Vqp_AoT
+node scripts/actualizar-precios-pdf.mjs
+pause

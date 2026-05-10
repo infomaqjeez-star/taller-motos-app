@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { BookOpen, Search, Tag, Plus, Minus, Users, X, Package, AlertCircle, Lightbulb, PlusCircle } from "lucide-react";
+import { BookOpen, Search, Tag, Plus, Minus, Users, X, Package, AlertCircle, Lightbulb, PlusCircle, ChevronDown } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import CartDrawer from "@/components/catalogo/CartDrawer";
 import CartButton from "@/components/catalogo/CartButton";
@@ -17,6 +17,60 @@ interface Producto {
   catalog_price: number;
   image_url: string | null;
   category: string;
+}
+
+function DropdownCategorias({
+  catId,
+  onChange,
+  productos,
+  categorias,
+}: {
+  catId: string;
+  onChange: (id: string) => void;
+  productos: Producto[];
+  categorias: { id: string; nombre: string; count: number }[];
+}) {
+  const [open, setOpen] = useState(false);
+  const selected = catId === "todas"
+    ? `Todas las categorías (${productos.length})`
+    : categorias.find((c) => c.id === catId)?.nombre || "Seleccionar";
+
+  return (
+    <div className="relative flex-1 min-w-0">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="flex w-full items-center justify-between rounded-lg border border-white/10 bg-white/5 py-2 pl-3 pr-2 text-xs font-bold text-gray-200 hover:border-white/20"
+      >
+        <span className="truncate">{selected}</span>
+        <ChevronDown className={`h-3.5 w-3.5 text-gray-400 shrink-0 transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+          <div className="absolute z-20 mt-1 w-full max-h-64 overflow-y-auto rounded-lg border border-white/10 bg-[#1a1a1a] py-1 shadow-xl">
+            <button
+              type="button"
+              onClick={() => { onChange("todas"); setOpen(false); }}
+              className={`w-full px-3 py-2 text-left text-xs ${catId === "todas" ? "bg-[#FF5722]/20 text-[#FF5722] font-bold" : "text-gray-300 hover:bg-white/5"}`}
+            >
+              Todas las categorías ({productos.length})
+            </button>
+            {categorias.map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => { onChange(c.id); setOpen(false); }}
+                className={`w-full px-3 py-2 text-left text-xs ${catId === c.id ? "bg-[#FF5722]/20 text-[#FF5722] font-bold" : "text-gray-300 hover:bg-white/5"}`}
+              >
+                {c.nombre} ({c.count})
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
 }
 
 function fmtPrecio(precio: number) {
@@ -270,22 +324,15 @@ function CatalogoContent() {
             onChange={(e) => setQ(e.target.value)}
           />
         </div>
-        {/* Categorías — dropdown compacto */}
+        {/* Categorías — dropdown custom con estilos dark */}
         <div className="flex items-center gap-2">
           <span className="text-xs text-gray-500 shrink-0">Categoría:</span>
-          <select
-            value={catId}
-            onChange={(e) => setCatId(e.target.value)}
-            className="flex-1 min-w-0 rounded-lg border border-white/10 bg-white/5 py-2 pl-3 pr-8 text-xs font-bold text-gray-200 focus:border-[#FF5722] focus:outline-none appearance-none truncate"
-            style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23999999' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 8px center', backgroundSize: '14px' }}
-          >
-            <option value="todas">Todas las categorías ({productos.length})</option>
-            {categorias.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.nombre} ({c.count})
-              </option>
-            ))}
-          </select>
+          <DropdownCategorias
+            catId={catId}
+            onChange={setCatId}
+            productos={productos}
+            categorias={categorias}
+          />
         </div>
       </div>
 
