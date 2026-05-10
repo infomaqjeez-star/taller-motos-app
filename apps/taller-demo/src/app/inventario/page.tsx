@@ -17,6 +17,7 @@ import { generateId, formatDate } from "@/lib/utils";
 import { useInventory } from "@/hooks/useInventory";
 import { useOrders } from "@/hooks/useOrders";
 import Navbar from "@/components/Navbar";
+import BottomNav from "@/components/BottomNav";
 import StockForm from "@/components/inventory/StockForm";
 import PartOrderForm from "@/components/inventory/PartOrderForm";
 
@@ -79,7 +80,7 @@ export default function InventarioPage() {
     <>
       <Navbar overdueCount={overdueCount} lowStockCount={lowStockCount} />
 
-      <main className="max-w-5xl mx-auto px-4 py-6 space-y-5">
+      <main className="app-main space-y-5">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-black text-white">Inventario</h1>
         </div>
@@ -274,8 +275,8 @@ export default function InventarioPage() {
             setShowPartForm(true);
           }
         }}
-        className="fixed bottom-6 right-6 btn-primary rounded-2xl shadow-2xl shadow-orange-500/40
-                   h-16 w-16 sm:w-auto sm:px-6 z-40"
+        className="fixed bottom-[5.5rem] right-4 z-40 h-16 w-16 rounded-2xl shadow-2xl shadow-orange-500/40
+                   btn-primary sm:bottom-6 sm:right-6 sm:h-auto sm:w-auto sm:px-6"
         aria-label="Agregar"
       >
         <Plus className="w-7 h-7 flex-shrink-0" />
@@ -299,6 +300,8 @@ export default function InventarioPage() {
           onClose={() => { setShowPartForm(false); setEditingPart(null); }}
         />
       )}
+
+      <BottomNav />
     </>
   );
 }

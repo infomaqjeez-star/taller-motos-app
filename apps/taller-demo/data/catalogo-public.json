@@ -1,0 +1,108 @@
+{
+  "titulo": "Catálogo de precios — Maqjeez Repuestos",
+  "subtitulo": "Lista pública: precio ×4. Imágenes tarjeta 360×480 en /catalogo/productos/.",
+  "categorias": [
+    {
+      "id": "aceleracion-mandos",
+      "nombre": "Aceleración y mandos",
+      "orden": 1
+    },
+    {
+      "id": "motor-2t",
+      "nombre": "Motor 2 tiempos",
+      "orden": 2
+    },
+    {
+      "id": "carburacion",
+      "nombre": "Carburación",
+      "orden": 3
+    },
+    {
+      "id": "encendido",
+      "nombre": "Encendido",
+      "orden": 4
+    },
+    {
+      "id": "corte",
+      "nombre": "Corte y transmisión",
+      "orden": 5
+    },
+    {
+      "id": "varios",
+      "nombre": "Repuestos varios",
+      "orden": 6
+    }
+  ],
+  "productos": [
+    {
+      "sku": "17002",
+      "nombre": "Acelerador | DC\n26/33/43/52 | Ø19mm",
+      "precio": 9429,
+      "categoriaId": "aceleracion-mandos",
+      "imagen": "productos/Acelerador_-_DC_26-33-43-52_-_O19mm__17002/imagen.webp"
+    },
+    {
+      "sku": "17003",
+      "nombre": "Filtro de aire | Espuma | 43-52cc",
+      "precio": 3210,
+      "categoriaId": "motor-2t",
+      "imagen": "productos/Filtro_de_aire_-_Espuma_-_43-52cc__17003/imagen.webp"
+    },
+    {
+      "sku": "17004",
+      "nombre": "Bujía NGK | BR8HS | Rosca corta",
+      "precio": 1890,
+      "categoriaId": "encendido",
+      "imagen": "productos/Bujía_NGK_-_BR8HS_-_Rosca_corta__17004/imagen.webp"
+    },
+    {
+      "sku": "17005",
+      "nombre": "Carburador | Walbro | WT-813",
+      "precio": 15450,
+      "categoriaId": "carburacion",
+      "imagen": "productos/Carburador_-_Walbro_-_WT-813__17005/imagen.webp"
+    },
+    {
+      "sku": "17006",
+      "nombre": "Embrague centrífugo | 97mm | 2T",
+      "precio": 12800,
+      "categoriaId": "corte",
+      "imagen": "productos/Embrague_centrífugo_-_97mm_-_2T__17006/imagen.webp"
+    },
+    {
+      "sku": "17007",
+      "nombre": "Cable acelerador | 2.5m | Universal",
+      "precio": 2750,
+      "categoriaId": "aceleracion-mandos",
+      "imagen": "productos/Cable_acelerador_-_2.5m_-_Universal__17007/imagen.webp"
+    },
+    {
+      "sku": "17008",
+      "nombre": "Tapa tanque | Plástico | Rosca bayoneta",
+      "precio": 4100,
+      "categoriaId": "varios",
+      "imagen": "productos/Tapa_tanque_-_Plástico_-_Rosca_bayoneta__17008/imagen.webp"
+    },
+    {
+      "sku": "17009",
+      "nombre": "Manguera combustible | 5x8mm | 1m",
+      "precio": 980,
+      "categoriaId": "varios",
+      "imagen": "productos/Manguera_combustible_-_5x8mm_-_1m__17009/imagen.webp"
+    },
+    {
+      "sku": "17010",
+      "nombre": "Guardapolvo horquilla | 32mm | Par",
+      "precio": 3650,
+      "categoriaId": "varios",
+      "imagen": "productos/Guardapolvo_horquilla_-_32mm_-_Par__17010/imagen.webp"
+    },
+    {
+      "sku": "17011",
+      "nombre": "Piñón salida | 7 dientes | Paso 3/8",
+      "precio": 5120,
+      "categoriaId": "corte",
+      "imagen": "productos/Piñón_salida_-_7_dientes_-_Paso_3-8__17011/imagen.webp"
+    }
+  ]
+}

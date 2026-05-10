@@ -1,0 +1,68 @@
+CATÁLOGO — carpetas locales sin usar npm
+========================================
+
+1) En esta misma carpeta hay GenerarCatalogo10.bat (10 productos) y
+   GenerarCatalogoCompleto.bat (todo el PDF). Doble clic en uno.
+
+   Si solo ves TEXTO sin fotos del repuesto: usá GenerarCatalogo10Rejilla.bat
+   (nombre exacto: Rejilla con doble L) o el alias GenerarCatalogo10Grid.bat
+   o desde esta carpeta GRID.bat — rejilla + variantes + margen superior automático
+   (CATALOGO_GRID_AUTO_HEADER=1).
+
+   Línea de comandos equivalente:
+     python scripts\catalogo\build_product_folders.py --flat --force --emit-variants --grid-auto-header --image-mode auto --pages all --limit 10
+
+2) Hace falta catalogo.pdf en:
+   apps\taller-demo\scripts\catalogo.pdf
+   o en apps\taller-demo\public\catalogo\catalogo.pdf
+
+3) Las carpetas salen en:
+   %USERPROFILE%\Documents\CatalogoKonectaArticulos\productos\
+
+3b) Si usás "npm run catalogo:folders:10" y falla: hacé "git pull", o definí la variable
+    de entorno de Windows PYTHON_EXE con la ruta completa a python.exe
+    (ej. C:\Users\...\AppData\Local\Programs\Python\Python312\python.exe).
+
+3c) Si el .bat dice que no encuentra Python:
+   - Instalá Python 3 desde https://www.python.org/downloads/ y marcá "Add python.exe to PATH".
+   - En Windows: Configuración → Aplicaciones → Configuración avanzada de aplicaciones
+     → Alias de ejecución de aplicaciones → DESACTIVAR "python.exe" y "python3.exe"
+     (son atajos a la Microsoft Store y suelen romper el comando "python").
+
+4) Si NO ves estos archivos en el Explorador de Windows, tu clon está viejo.
+   En la raíz del repo (donde está la carpeta .git):
+     git fetch origin
+     git checkout main
+     git reset --hard origin/main
+
+   (reset --hard borra cambios locales no guardados en esa carpeta.)
+
+5) Los mismos .bat también están en apps\taller-demo\ (un nivel arriba de scripts).
+
+   Scripts .py con doble clic (.bat en apps\taller-demo):
+   - ExtractorCatalogo.bat  -> scripts\catalogo\extractor.py (OpenCV+OCR, salida en Documentos\CatalogoExtraccionOcr)
+   - GenerarCatalogoTodoPip.bat -> run_full_catalogo.py (pip + JSON + carpetas)
+   - ExtraerCatalogoPdfJson.bat -> extract_catalogo_pdf.py (webp + catalogo-public.json)
+   - CatalogoOcrRejilla.bat -> catalog_grid_ocr_pipeline.py (salida data\catalogo-ocr-export)
+
+6) Para PROBAR varios recortes a la vez: doble clic en GenerarCatalogo10Variantes.bat
+   (o set CATALOGO_EMIT_VARIANTS=1 y el .bat normal). Incluye:
+   - Rejillas fijas: imagen_variant_grid_5x3_mt010.webp, grid_5x3_mt012, grid_5x3_mt015,
+     grid_4x5_mt012, grid_5x4_mt012, grid_6x3_mt012
+   - Con --grid-auto-header (o Rejilla/Grid .bat): imagen_variant_grid_autoheader.webp,
+     imagen_variant_grid_autoheader_top72.webp (solo banda superior de la celda = más foto)
+   - raster_grid (rejilla con los márgenes que uses), raster_grid_cell_top72, embed, raster_*, auto_grid_embed_raster
+
+7) Si la imagen.webp sale mal (marca de agua o recorte feo): regenerá con solo recorte raster:
+     set CATALOGO_IMAGE_MODE=raster
+     (luego doble clic en GenerarCatalogo10.bat o el comando python que uses)
+   Valores: auto (defecto), raster, photo, grid.
+
+8) PDF escaneo sin celdas claras: probá el pipeline aparte (OpenCV + Tesseract):
+   scripts\catalogo\catalog_grid_ocr_pipeline.py --mode contour (ver su cabecera).
+
+9) Recorte REAL de tarjetas (foto + diseño del PDF) + OCR + precio tapado y ×4:
+   pip install -r scripts\catalogo\requirements-catalog-ocr.txt
+   (Tesseract instalado; en Windows: set TESSERACT_CMD=...)
+   python scripts\catalogo\extractor.py --pdf scripts\catalogo.pdf --out productos_extraidos --pages 0
+   Ajustá --area-min / --area-max si no detecta tarjetas (depende del zoom y del PDF).

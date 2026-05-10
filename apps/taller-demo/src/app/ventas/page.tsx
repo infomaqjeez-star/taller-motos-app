@@ -62,63 +62,133 @@ function ItemRow({
   onRemove: (id: string) => void;
 }) {
   return (
-    <div className="grid grid-cols-12 gap-2 items-center">
-      <div className="col-span-4">
+    <>
+      {/* Móvil: tarjeta apilada */}
+      <div className="space-y-2 rounded-xl border border-white/10 bg-white/[0.04] p-3 [html.light_&]:border-gray-200 [html.light_&]:bg-gray-100 sm:hidden">
+        <div className="flex items-start justify-between gap-2">
+          <span className="text-[10px] font-bold uppercase tracking-wide text-gray-500">Producto</span>
+          <button
+            type="button"
+            onClick={() => onRemove(item.id)}
+            className="rounded-lg p-1.5 text-red-400 transition-colors hover:bg-red-500/15"
+            aria-label="Quitar ítem"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        </div>
         <input
           className="input input-sm"
-          placeholder="Producto / descripción"
+          placeholder="Nombre o descripción"
           value={item.producto}
           onChange={e => onChange(item.id, "producto", e.target.value)}
         />
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <span className="mb-1 block text-[10px] font-bold uppercase text-gray-500">SKU</span>
+            <input
+              className="input input-sm"
+              placeholder="Opcional"
+              value={item.sku}
+              onChange={e => onChange(item.id, "sku", e.target.value)}
+            />
+          </div>
+          <div>
+            <span className="mb-1 block text-[10px] font-bold uppercase text-gray-500">Cantidad</span>
+            <input
+              type="number"
+              min={1}
+              className="input input-sm"
+              value={item.cantidad}
+              onChange={e => onChange(item.id, "cantidad", Math.max(1, parseInt(e.target.value) || 1))}
+            />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <span className="mb-1 block text-[10px] font-bold uppercase text-gray-500">Precio unit.</span>
+            <input
+              type="number"
+              min={0}
+              className="input input-sm"
+              placeholder="$"
+              value={item.precioUnit || ""}
+              onChange={e => onChange(item.id, "precioUnit", parseFloat(e.target.value) || 0)}
+            />
+          </div>
+          <div>
+            <span className="mb-1 block text-[10px] font-bold uppercase text-gray-500">Garantía (días)</span>
+            <input
+              type="number"
+              min={0}
+              className="input input-sm"
+              value={item.warrantyDays || ""}
+              onChange={e => onChange(item.id, "warrantyDays", Math.max(0, parseInt(e.target.value) || 0))}
+            />
+          </div>
+        </div>
       </div>
-      <div className="col-span-2">
-        <input
-          className="input input-sm"
-          placeholder="SKU"
-          value={item.sku}
-          onChange={e => onChange(item.id, "sku", e.target.value)}
-        />
+
+      {/* Escritorio: fila compacta */}
+      <div className="hidden grid-cols-12 items-center gap-2 sm:grid">
+        <div className="col-span-4">
+          <input
+            className="input input-sm"
+            placeholder="Producto / descripción"
+            value={item.producto}
+            onChange={e => onChange(item.id, "producto", e.target.value)}
+          />
+        </div>
+        <div className="col-span-2">
+          <input
+            className="input input-sm"
+            placeholder="SKU"
+            value={item.sku}
+            onChange={e => onChange(item.id, "sku", e.target.value)}
+          />
+        </div>
+        <div className="col-span-2">
+          <input
+            type="number"
+            min={1}
+            className="input input-sm"
+            placeholder="Cant."
+            value={item.cantidad}
+            onChange={e => onChange(item.id, "cantidad", Math.max(1, parseInt(e.target.value) || 1))}
+          />
+        </div>
+        <div className="col-span-2">
+          <input
+            type="number"
+            min={0}
+            className="input input-sm"
+            placeholder="$Precio"
+            value={item.precioUnit || ""}
+            onChange={e => onChange(item.id, "precioUnit", parseFloat(e.target.value) || 0)}
+          />
+        </div>
+        <div className="col-span-1">
+          <input
+            type="number"
+            min={0}
+            className="input input-sm text-xs"
+            placeholder="Días"
+            title="Días de garantía"
+            value={item.warrantyDays || ""}
+            onChange={e => onChange(item.id, "warrantyDays", Math.max(0, parseInt(e.target.value) || 0))}
+          />
+        </div>
+        <div className="col-span-1 flex justify-end">
+          <button
+            type="button"
+            onClick={() => onRemove(item.id)}
+            className="rounded-lg p-2 text-red-400 transition-colors hover:bg-red-500/15"
+            aria-label="Quitar ítem"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        </div>
       </div>
-      <div className="col-span-2">
-        <input
-          type="number"
-          min={1}
-          className="input input-sm"
-          placeholder="Cant."
-          value={item.cantidad}
-          onChange={e => onChange(item.id, "cantidad", Math.max(1, parseInt(e.target.value) || 1))}
-        />
-      </div>
-      <div className="col-span-2">
-        <input
-          type="number"
-          min={0}
-          className="input input-sm"
-          placeholder="$Precio"
-          value={item.precioUnit || ""}
-          onChange={e => onChange(item.id, "precioUnit", parseFloat(e.target.value) || 0)}
-        />
-      </div>
-      <div className="col-span-1">
-        <input
-          type="number"
-          min={0}
-          className="input input-sm text-xs"
-          placeholder="Garantía (días)"
-          title="Días de garantía"
-          value={item.warrantyDays || ""}
-          onChange={e => onChange(item.id, "warrantyDays", Math.max(0, parseInt(e.target.value) || 0))}
-        />
-      </div>
-      <div className="col-span-1 flex justify-end">
-        <button
-          onClick={() => onRemove(item.id)}
-          className="p-2 rounded-lg text-red-400 hover:bg-red-500/15 transition-colors"
-        >
-          <Trash2 className="w-4 h-4" />
-        </button>
-      </div>
-    </div>
+    </>
   );
 }
 
@@ -513,9 +583,11 @@ export default function VentasPage() {
       <Navbar />
 
       {/* ── Tabs ── */}
-      <div className="sticky top-14 z-30 border-b border-white/10"
-        style={{ background: "rgba(18,18,18,0.95)", backdropFilter: "blur(12px)" }}>
-        <div className="max-w-3xl mx-auto px-4 flex">
+      <div
+        className="sticky z-30 border-b border-white/10 bg-[rgba(18,18,18,0.92)] backdrop-blur-md [html.light_&]:border-gray-200 [html.light_&]:bg-[rgba(255,255,255,0.92)]"
+        style={{ top: "var(--maqjeez-header-height, 7rem)" }}
+      >
+        <div className="mx-auto flex max-w-5xl px-4 sm:px-5 lg:px-6">
           {([
             { id: "nueva",         label: "Nueva Venta",   icon: ShoppingCart },
             { id: "movimientos",   label: "Movimientos",   icon: List },
@@ -536,7 +608,7 @@ export default function VentasPage() {
         </div>
       </div>
 
-      <main className="max-w-3xl mx-auto px-4 py-6 pb-24 sm:pb-6 space-y-6">
+      <main className="app-main space-y-6">
 
         {/* ══════════════════ NUEVA VENTA ══════════════════ */}
         {tab === "nueva" && (
@@ -553,13 +625,13 @@ export default function VentasPage() {
                 Detalle de productos
               </h2>
 
-              {/* Header de columnas */}
-              <div className="grid grid-cols-12 gap-2 mb-2 px-1">
-                <p className="col-span-4 text-xs text-gray-600 font-semibold">PRODUCTO</p>
-                <p className="col-span-2 text-xs text-gray-600 font-semibold">SKU</p>
-                <p className="col-span-2 text-xs text-gray-600 font-semibold">CANT.</p>
-                <p className="col-span-2 text-xs text-gray-600 font-semibold">PRECIO</p>
-                <p className="col-span-1 text-xs text-gray-600 font-semibold">GARANTÍA</p>
+              {/* Header de columnas (solo escritorio) */}
+              <div className="mb-2 hidden grid-cols-12 gap-2 px-1 sm:grid">
+                <p className="col-span-4 text-xs font-semibold text-gray-600">PRODUCTO</p>
+                <p className="col-span-2 text-xs font-semibold text-gray-600">SKU</p>
+                <p className="col-span-2 text-xs font-semibold text-gray-600">CANT.</p>
+                <p className="col-span-2 text-xs font-semibold text-gray-600">PRECIO</p>
+                <p className="col-span-1 text-xs font-semibold text-gray-600">GARANT.</p>
                 <p className="col-span-1" />
               </div>
 

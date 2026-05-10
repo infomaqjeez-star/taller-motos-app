@@ -1,0 +1,119 @@
+PDF del catálogo (Konecta / desmalezadoras)
+==========================================
+
+--- Sin programar ni CMD (solo Windows) ---
+
+  1) Poné catalogo.pdf en apps\taller-demo\scripts\ (o public\catalogo\).
+  2) Doble clic en apps\taller-demo\GenerarCatalogo10.bat (10 artículos de prueba)
+     o GenerarCatalogoCompleto.bat (todo el PDF).
+
+Las carpetas se crean solas en:
+  %USERPROFILE%\Documents\CatalogoKonectaArticulos\productos\
+
+Para usar D:\ u otra ruta, abrí el .bat con el Bloc de notas y descomentá la línea
+REM set "CATALOGO_PRODUCTOS_ROOT=D:\..."
+
+Ubicación por defecto (cwd = apps/taller-demo, Windows). El script prueba en este orden:
+
+  apps\taller-demo\scripts\catalogo.pdf
+  apps\taller-demo\public\catalogo\catalogo.pdf
+  (y si no existen, el nombre largo antiguo Catalogo Abril 2026 Konecta Repuestos.pdf en esas mismas carpetas)
+
+Si el archivo tiene otro nombre, usá siempre --pdf "ruta\completa\o\relativa.pdf"
+
+Con npm podés forzar la ruta del PDF:
+
+  set CATALOGO_PDF=public\catalogo\catalogo.pdf
+  npm run catalogo:folders:all
+
+--- Carpetas solo en disco local (fuera de public/ del repo) ---
+
+Definí una ruta absoluta en tu PC. Las fichas se crean SIEMPRE en:
+
+  %CATALOGO_PRODUCTOS_ROOT%\productos\<carpeta_por_articulo>\
+
+Ejemplo en CMD (reemplazá la primera línea por la carpeta que quieras):
+
+  set CATALOGO_PRODUCTOS_ROOT=D:\Taller\CatalogoKonectaArticulos
+  cd c:\Users\noejo\dev\taller-motos-app\apps\taller-demo
+  npm run catalogo:folders:10
+
+Resultado: D:\Taller\CatalogoKonectaArticulos\productos\ (imagen.webp + meta.json en cada subcarpeta).
+En este modo no se ejecuta --update-json (la app web no lee rutas fuera de public/).
+
+Opcional (para versionar aparte): también podés copiar una copia en
+  data/catalogo-konecta-source/
+y subirla con git (ojo tamaño; Git LFS si hace falta).
+
+---
+0) Todo en un solo paso (desde apps/taller-demo, con el PDF en scripts/ o public/catalogo/):
+
+   npm run catalogo:generate:all
+
+   Equivale a: pip + extract_catalogo_pdf (todas las páginas) + build_product_folders (--flat --force --update-json).
+
+1) Dependencias base (extracción por SKU / carpetas):
+
+   pip install -r scripts/catalogo/requirements.txt
+
+2) Testeo extracción (tabla SKU / precio lista / ×4 / nombre; NO escribe JSON):
+
+   python scripts/catalogo/extract_catalogo_pdf.py --pages 0 --max-skus 25 --report
+
+   Con imágenes de prueba en public/catalogo/ (sin tocar JSON):
+
+   python scripts/catalogo/extract_catalogo_pdf.py --pages 0 --max-skus 8 --report --report-save-images
+
+2b) JSON + imágenes planas por SKU (480²), todo el PDF:
+
+   python scripts/catalogo/extract_catalogo_pdf.py --pages all --format webp
+
+   Solo página 0 escribiendo archivos:
+   python scripts/catalogo/extract_catalogo_pdf.py --pages 0 --format webp
+
+   Calibración recorte: --side-mult 6 --above-mult 28 --below-mult 8
+
+3) Carpetas Maqjeez por artículo (imagen tarjeta vertical 360×480 tipo catálogo + meta.json precio×4).
+   Salida local siempre bajo la carpeta del sitio: apps/taller-demo/public/catalogo/ (URL /catalogo/…).
+
+   Desde apps/taller-demo (con PDF en scripts/; hace falta Node + Python con "py" en Windows o "python3" en Linux/Mac):
+   npm run catalogo:folders:10
+   npm run catalogo:folders:all
+
+   Equivalente manual (primeras 10):
+   python scripts/catalogo/build_product_folders.py --out-root public/catalogo --pages all --limit 10 --flat --force --update-json
+
+   Ajustar recorte PDF si la tarjeta queda cortada: --half-width-mult 8 --half-height-mult 26
+   Tamaño salida: --card-w 360 --card-h 480
+
+   Una carpeta de prueba (página 0):
+   python scripts/catalogo/build_product_folders.py --out-root public/catalogo --pages 0 --limit 1 --flat --force
+
+   Todo el catálogo + JSON con rutas imagen (misma carpeta public/catalogo):
+   python scripts/catalogo/build_product_folders.py --out-root public/catalogo --pages all --flat --force --update-json
+
+   Salida con layout largo (default):
+   public/catalogo/Catalogo-Abril-2026-Maqjeez-Repuestos/productos/<nombre>__<SKU>/
+
+   Salida plana (--flat), útil para “solo carpeta catálogo”:
+   public/catalogo/productos/<nombre>__<SKU>/
+
+4) Pipeline OCR (rejilla 4×5, tapar precio viejo y escribir lista×4 en la imagen):
+
+   pip install -r scripts/catalogo/requirements-catalog-ocr.txt
+   + Tesseract instalado (Windows: set TESSERACT_CMD=C:\Program Files\Tesseract-OCR\tesseract.exe)
+
+   Dry-run página 0:
+   python scripts/catalogo/catalog_grid_ocr_pipeline.py --out data/catalogo-ocr-export --pages 0 --dry-run
+
+   Todas las páginas:
+   python scripts/catalogo/catalog_grid_ocr_pipeline.py --out data/catalogo-ocr-export --pages all
+
+   Ajustar grilla: --cols --rows --margin-x --margin-y
+   Modo contornos: --mode contour
+
+5) Commit (ajustá rutas según qué archivos generaste):
+
+   git add data/catalogo-public.json public/catalogo/ data/catalogo-ocr-export/
+   git commit -m "feat(catalogo): datos desde PDF"
+   git push origin main

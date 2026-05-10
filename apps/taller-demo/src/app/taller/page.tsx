@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import {
   Plus, Wrench, AlertTriangle, Package, CheckSquare, Clock,
   FileSpreadsheet, FileText, CheckCircle, MessageCircle, Trophy, Medal,
+  BookOpen, ChevronRight,
 } from "lucide-react";
 import { WorkOrder, MOTOR_TYPE_LABELS } from "@/lib/types";
 import { useOrders } from "@/hooks/useOrders";
@@ -150,7 +152,7 @@ export default function DashboardPage() {
         onOpenNotifications={() => setShowNotifications(true)}
       />
 
-      <main className="max-w-5xl mx-auto px-4 py-6 pb-24 sm:pb-6 space-y-6">
+      <main className="app-main space-y-6">
 
         {/* ── Tarjetas de estado neón ── */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -187,6 +189,25 @@ export default function DashboardPage() {
             valueColor="text-gold"
           />
         </div>
+
+        <Link
+          href="/catalogo"
+          className="card group flex items-center justify-between gap-3 border border-[#FDB71A]/35 bg-[#FDB71A]/5 p-4 transition-colors hover:border-[#FDB71A]/60 hover:bg-[#FDB71A]/10"
+        >
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#FDB71A]/20 text-[#FDB71A] ring-1 ring-[#FDB71A]/40">
+              <BookOpen className="h-6 w-6" />
+            </div>
+            <div className="min-w-0">
+              <p className="font-black text-white">Catálogo de precios Maqjeez</p>
+              <p className="text-sm text-gray-400">
+                Catálogo público (sin datos del taller). Fotos 480×480 en{" "}
+                <span className="font-mono text-gray-500">public/catalogo/</span>
+              </p>
+            </div>
+          </div>
+          <ChevronRight className="h-5 w-5 shrink-0 text-[#FDB71A] transition-transform group-hover:translate-x-0.5" />
+        </Link>
 
         {/* ── Alerta 90 días ── */}
         {overdueCount > 0 && (

@@ -9,6 +9,19 @@ import {
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
+/**
+ * Modo opcional: solo Google (sin email/contraseña en pantalla).
+ * Por defecto: mail + Google. Activar con NEXT_PUBLIC_GOOGLE_ONLY_LOGIN=true en el build.
+ */
+const GOOGLE_ONLY =
+  process.env.NEXT_PUBLIC_GOOGLE_ONLY_LOGIN === "true" ||
+  process.env.NEXT_PUBLIC_GOOGLE_ONLY_LOGIN === "1";
+
+function safeNextPath(raw: string | null): string {
+  if (!raw || !raw.startsWith("/") || raw.startsWith("//")) return "/taller";
+  return raw;
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const [loginType, setLoginType] = useState<"email" | "username">("email");
@@ -24,13 +37,20 @@ export default function LoginPage() {
   const [recoveryEmail, setRecoveryEmail] = useState("");
   const [recoverySent, setRecoverySent] = useState(false);
   const [showForgotUsername, setShowForgotUsername] = useState(false);
+  /** Tras signUp sin sesión (Supabase pide confirmar email antes de entrar). */
+  const [registerEmailSent, setRegisterEmailSent] = useState(false);
 
   const handleGoogleLogin = async () => {
     setLoading(true);
+    const next = safeNextPath(new URLSearchParams(window.location.search).get("next"));
     await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
+<<<<<<< HEAD
         redirectTo: `https://appjeezpro.store/auth/callback?next=/taller`,
+=======
+        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
+>>>>>>> origin/main
       },
     });
   };
@@ -39,23 +59,49 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     setError("");
+    setRegisterEmailSent(false);
 
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          name: name || username,
-        },
-      },
-    });
-
-    if (error) {
-      setError(error.message);
+    if (password.length < 6) {
+      setError("La contraseña debe tener al menos 6 caracteres");
       setLoading(false);
-    } else {
-      // Registro exitoso, intentar hacer login automático
-      router.push("/taller");
+      return;
+    }
+
+    const mail = email.trim();
+    if (!mail) {
+      setError("Ingresá un email válido");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: mail,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          data: {
+            name: name || username,
+          },
+        },
+      });
+
+      if (error) {
+        setError(error.message);
+        return;
+      }
+
+      if (data.session) {
+        router.push("/taller");
+        return;
+      }
+
+      /* Confirmación por email: no hay sesión aún — no redirigir al taller (middleware bloquearía). */
+      setRegisterEmailSent(true);
+      setIsLogin(true);
+      setEmail(mail);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -64,24 +110,26 @@ export default function LoginPage() {
     setLoading(true);
     setError("");
 
-    // Si es login por username, necesitamos buscar el email asociado
     let loginEmail = email;
     if (loginType === "username" && username) {
-      // Aquí deberías hacer una consulta a tu API para obtener el email del username
-      // Por ahora, asumimos que el username es el email para Supabase
       loginEmail = username;
     }
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email: loginEmail,
-      password,
-    });
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: loginEmail.trim(),
+        password,
+      });
 
-    if (error) {
-      setError(error.message);
+      if (error) {
+        setError(error.message);
+        return;
+      }
+      const next = safeNextPath(new URLSearchParams(window.location.search).get("next"));
+      router.push(next);
+      router.refresh();
+    } finally {
       setLoading(false);
-    } else {
-      router.push("/");
     }
   };
 
@@ -177,6 +225,67 @@ export default function LoginPage() {
     );
   }
 
+  if (GOOGLE_ONLY && !showRecovery && !showForgotUsername) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#0a0a0a] p-4">
+        <div className="w-full max-w-md">
+          <div className="mb-8 text-center">
+            <Link href="/landing" className="mb-6 inline-flex items-center gap-2">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#FFE600]">
+                <span className="font-black text-[#003087]">MJ</span>
+              </div>
+              <span className="text-xl font-bold text-white">MaqJeez</span>
+            </Link>
+            <h1 className="mb-2 text-2xl font-bold text-white">Acceso al taller</h1>
+            <p className="text-sm text-gray-400">
+              Ingresá con tu cuenta de Google. El catálogo de precios es público y no requiere cuenta.
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-8">
+            <button
+              type="button"
+              onClick={handleGoogleLogin}
+              disabled={loading}
+              className="flex w-full items-center justify-center gap-3 rounded-xl bg-white px-4 py-3 font-semibold text-gray-900 transition hover:bg-gray-100 disabled:opacity-50"
+            >
+              {loading ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <>
+                  <Chrome className="h-5 w-5 text-blue-500" />
+                  Continuar con Google
+                </>
+              )}
+            </button>
+
+            <p className="mt-6 text-center text-xs leading-relaxed text-gray-500">
+              Al continuar con Google aceptás los{" "}
+              <Link href="/terminos" className="text-[#FFE600] underline underline-offset-2 hover:text-white">
+                términos de uso
+              </Link>{" "}
+              y la{" "}
+              <Link href="/privacidad" className="text-[#FFE600] underline underline-offset-2 hover:text-white">
+                política de privacidad
+              </Link>
+              .
+            </p>
+
+            <div className="mt-6 flex flex-col gap-3 border-t border-white/10 pt-6 text-center text-sm">
+              <Link href="/catalogo" className="font-semibold text-[#FDB71A] hover:underline">
+                Ver catálogo público (sin iniciar sesión)
+              </Link>
+              <Link href="/landing" className="inline-flex items-center justify-center gap-2 text-gray-400 hover:text-white">
+                <ArrowLeft className="h-4 w-4" />
+                Volver a la página principal
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (showForgotUsername) {
     return (
       <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-4">
@@ -266,17 +375,35 @@ export default function LoginPage() {
             )}
           </button>
 
-          <div className="flex items-center gap-4 my-6">
-            <div className="flex-1 h-px bg-white/10" />
+          <p className="mb-4 mt-4 text-center text-[11px] leading-relaxed text-gray-500">
+            Al iniciar sesión aceptás los{" "}
+            <Link href="/terminos" className="text-[#FFE600] underline underline-offset-2 hover:text-white">
+              términos
+            </Link>{" "}
+            y la{" "}
+            <Link href="/privacidad" className="text-[#FFE600] underline underline-offset-2 hover:text-white">
+              privacidad
+            </Link>
+            .{" "}
+            <Link href="/catalogo" className="text-gray-400 hover:text-[#FDB71A]">
+              Catálogo público (sin cuenta)
+            </Link>
+          </p>
+
+          <div className="my-6 flex items-center gap-4">
+            <div className="h-px flex-1 bg-white/10" />
             <span className="text-sm text-gray-500">o</span>
-            <div className="flex-1 h-px bg-white/10" />
+            <div className="h-px flex-1 bg-white/10" />
           </div>
 
           {/* Login/Register Toggle */}
           <div className="flex gap-2 mb-6">
             <button
               type="button"
-              onClick={() => { setIsLogin(true); setError(""); }}
+              onClick={() => {
+                setIsLogin(true);
+                setError("");
+              }}
               className={`flex-1 py-2 rounded-lg text-sm font-medium transition ${
                 isLogin 
                   ? "bg-[#FFE600] text-[#003087]" 
@@ -287,7 +414,11 @@ export default function LoginPage() {
             </button>
             <button
               type="button"
-              onClick={() => { setIsLogin(false); setError(""); }}
+              onClick={() => {
+                setIsLogin(false);
+                setError("");
+                setRegisterEmailSent(false);
+              }}
               className={`flex-1 py-2 rounded-lg text-sm font-medium transition ${
                 !isLogin 
                   ? "bg-[#FFE600] text-[#003087]" 
@@ -300,6 +431,12 @@ export default function LoginPage() {
 
           {/* Login/Register Form */}
           <form onSubmit={isLogin ? handleLogin : handleRegister} className="space-y-4">
+            {registerEmailSent && (
+              <div className="rounded-xl border border-green-500/30 bg-green-500/10 p-3 text-center text-sm text-green-200">
+                Te enviamos un correo a <span className="font-semibold text-white">{email}</span> para confirmar la
+                cuenta. Abrí el enlace y después podés iniciar sesión aquí.
+              </div>
+            )}
             {!isLogin && (
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">Nombre completo</label>
@@ -408,11 +545,11 @@ export default function LoginPage() {
         </div>
 
         {/* Back Link */}
-        <Link 
-          href="/" 
-          className="inline-flex items-center gap-2 mt-8 text-gray-400 hover:text-white transition mx-auto"
+        <Link
+          href="/landing"
+          className="mx-auto mt-8 inline-flex items-center gap-2 text-gray-400 transition hover:text-white"
         >
-          <ArrowLeft className="w-4 h-4" />
+          <ArrowLeft className="h-4 w-4" />
           Volver al inicio
         </Link>
       </div>
