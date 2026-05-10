@@ -2,8 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { BookOpen, Search, Tag } from "lucide-react";
+import { BookOpen, Search, Tag, Plus } from "lucide-react";
 import CatalogoProductImage from "@/components/catalogo/CatalogoProductImage";
+import CartDrawer from "@/components/catalogo/CartDrawer";
+import CartButton from "@/components/catalogo/CartButton";
+import { useCart } from "@/components/catalogo/CartContext";
 import {
   fetchCatalogoJson,
   ordenarCategorias,
@@ -18,10 +21,16 @@ function fmtPrecioVenta(precioLista: number) {
   return "$" + v.toLocaleString("es-AR", { maximumFractionDigits: 0 });
 }
 
+function imagenUrl(p: CatalogoProducto): string {
+  if (p.imagen) return `/catalogo/${p.imagen}`;
+  return "";
+}
+
 export default function CatalogoMaqjeezPage() {
   const [doc, setDoc] = useState<CatalogoDocumento | null>(null);
   const [q, setQ] = useState("");
   const [catId, setCatId] = useState<string | "todas">("todas");
+  const { addItem } = useCart();
 
   useEffect(() => {
     let ok = true;
@@ -175,7 +184,7 @@ export default function CatalogoMaqjeezPage() {
                       className="card flex flex-col overflow-hidden border border-white/10 bg-white/[0.03]"
                     >
                       <CatalogoProductImage producto={p} />
-                      <div className="mt-3 space-y-1 px-2">
+                      <div className="mt-3 space-y-1 px-2 pb-3">
                         <p className="text-center font-mono text-sm font-black tracking-wide text-blue-400">
                           {p.sku}
                         </p>
@@ -185,6 +194,20 @@ export default function CatalogoMaqjeezPage() {
                         <p className="text-center text-lg font-black text-[#39FF14]">
                           {fmtPrecioVenta(p.precio)}
                         </p>
+                        <button
+                          onClick={() =>
+                            addItem({
+                              sku: p.sku,
+                              nombre: p.nombre,
+                              precio: precioMostrarCatalogo(p.precio),
+                              imagen: imagenUrl(p),
+                            })
+                          }
+                          className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg bg-[#FF5722] py-2 text-sm font-bold text-white hover:bg-[#E64A19] transition-colors"
+                        >
+                          <Plus className="h-4 w-4" />
+                          Agregar
+                        </button>
                       </div>
                     </article>
                   ))}
@@ -207,7 +230,7 @@ export default function CatalogoMaqjeezPage() {
                 className="card flex flex-col overflow-hidden border border-white/10 bg-white/[0.03]"
               >
                 <CatalogoProductImage producto={p} />
-                <div className="mt-3 space-y-1 px-2">
+                <div className="mt-3 space-y-1 px-2 pb-3">
                   <p className="text-center font-mono text-sm font-black tracking-wide text-blue-400">
                     {p.sku}
                   </p>
@@ -215,6 +238,20 @@ export default function CatalogoMaqjeezPage() {
                     {p.nombre}
                   </h3>
                   <p className="text-center text-lg font-black text-[#39FF14]">{fmtPrecioVenta(p.precio)}</p>
+                  <button
+                    onClick={() =>
+                      addItem({
+                        sku: p.sku,
+                        nombre: p.nombre,
+                        precio: precioMostrarCatalogo(p.precio),
+                        imagen: imagenUrl(p),
+                      })
+                    }
+                    className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg bg-[#FF5722] py-2 text-sm font-bold text-white hover:bg-[#E64A19] transition-colors"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Agregar
+                  </button>
                 </div>
               </article>
             ))}
@@ -228,6 +265,9 @@ export default function CatalogoMaqjeezPage() {
           Ingresá con Google
         </Link>
       </p>
+
+      <CartDrawer />
+      <CartButton />
     </main>
   );
 }
