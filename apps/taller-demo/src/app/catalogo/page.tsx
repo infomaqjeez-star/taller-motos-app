@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { BookOpen, Search, Tag, Plus, Users, X } from "lucide-react";
+import { BookOpen, Search, Tag, Plus, Minus, Users, X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import CartDrawer from "@/components/catalogo/CartDrawer";
 import CartButton from "@/components/catalogo/CartButton";
@@ -287,6 +287,22 @@ function CatalogoContent() {
 }
 
 function ProductCard({ producto, addItem }: { producto: Producto; addItem: ReturnType<typeof useCart>["addItem"] }) {
+  const [qty, setQty] = useState(1);
+
+  const increase = () => setQty((q) => q + 1);
+  const decrease = () => setQty((q) => Math.max(1, q - 1));
+
+  const handleAdd = () => {
+    addItem({
+      sku: producto.sku,
+      nombre: producto.name,
+      precio: producto.catalog_price || 0,
+      imagen: producto.image_url || "",
+      cantidad: qty,
+    });
+    setQty(1); // reset para próxima selección
+  };
+
   return (
     <article className="card flex flex-col overflow-hidden border border-white/10 bg-white/[0.03]">
       <div className="flex aspect-[4/5] items-center justify-center bg-white/[0.04] overflow-hidden">
@@ -315,19 +331,30 @@ function ProductCard({ producto, addItem }: { producto: Producto; addItem: Retur
         <p className="text-center text-lg font-black text-[#39FF14]">
           {fmtPrecio(producto.catalog_price)}
         </p>
+
+        {/* Selector de cantidad */}
+        <div className="mt-2 flex items-center justify-center gap-2">
+          <button
+            onClick={decrease}
+            className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 text-white hover:bg-white/20"
+          >
+            <Minus className="h-3.5 w-3.5" />
+          </button>
+          <span className="w-6 text-center text-sm font-bold text-white">{qty}</span>
+          <button
+            onClick={increase}
+            className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 text-white hover:bg-white/20"
+          >
+            <Plus className="h-3.5 w-3.5" />
+          </button>
+        </div>
+
         <button
-          onClick={() =>
-            addItem({
-              sku: producto.sku,
-              nombre: producto.name,
-              precio: producto.catalog_price || 0,
-              imagen: producto.image_url || "",
-            })
-          }
+          onClick={handleAdd}
           className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg bg-[#FF5722] py-2 text-sm font-bold text-white hover:bg-[#E64A19] transition-colors"
         >
           <Plus className="h-4 w-4" />
-          Agregar
+          Agregar {qty > 1 ? `(${qty})` : ""}
         </button>
       </div>
     </article>
