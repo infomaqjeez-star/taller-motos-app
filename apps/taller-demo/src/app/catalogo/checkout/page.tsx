@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/components/catalogo/CartContext";
 import { generarMensajeWhatsApp, abrirWhatsApp } from "@/lib/pedidoWhatsApp";
@@ -36,9 +36,17 @@ export default function CheckoutPage() {
     telefono: "",
     formaPago: "Efectivo",
     notas: "",
+    comprobante: "" as string,
   });
 
+  const [numeroCliente, setNumeroCliente] = useState<string | null>(null);
   const [enviado, setEnviado] = useState(false);
+
+  // Obtener número de cliente del localStorage al cargar
+  useEffect(() => {
+    const stored = localStorage.getItem("cliente_numero");
+    if (stored) setNumeroCliente(stored);
+  }, []);
 
   if (items.length === 0 && !enviado) {
     return (
@@ -110,6 +118,8 @@ export default function CheckoutPage() {
             telefono: form.telefono,
             formaPago: form.formaPago,
             notas: form.notas,
+            comprobante: form.comprobante,
+            numeroCliente: numeroCliente,
           },
           subtotal: totals.subtotal,
           descuento_pct: totals.descuentoVolumenPct,
@@ -305,6 +315,18 @@ export default function CheckoutPage() {
           </div>
         </section>
 
+        {/* Número de cliente */}
+        {numeroCliente && (
+          <section className="rounded-xl border border-[#39FF14]/20 bg-[#39FF14]/5 p-4">
+            <div className="flex items-center gap-2">
+              <User className="h-4 w-4 text-[#39FF14]" />
+              <p className="text-sm text-[#39FF14]">
+                Cliente registrado N° <span className="font-bold">{numeroCliente}</span>
+              </p>
+            </div>
+          </section>
+        )}
+
         {/* Pago */}
         <section className="rounded-xl border border-white/10 bg-white/[0.03] p-4 space-y-3">
           <h2 className="flex items-center gap-2 text-sm font-bold text-gray-300">
@@ -312,7 +334,7 @@ export default function CheckoutPage() {
             Forma de pago
           </h2>
           <div className="flex flex-wrap gap-2">
-            {["Efectivo", "Transferencia", "Mercado Pago", "Tarjeta de crédito", "Tarjeta de débito"].map(
+            {["Efectivo", "Transferencia", "Mercado Pago", "Tarjeta de crédito", "Tarjeta de débito", "Retiro en local"].map(
               (opcion) => (
                 <button
                   key={opcion}
@@ -329,6 +351,41 @@ export default function CheckoutPage() {
               )
             )}
           </div>
+
+          {/* Campo para comprobante de transferencia */}
+          {form.formaPago === "Transferencia" && (
+            <div className="mt-3 rounded-lg border border-[#FDB71A]/20 bg-[#FDB71A]/5 p-3 space-y-2">
+              <p className="text-xs text-[#FDB71A] font-medium">
+                Adjuntá el comprobante de transferencia
+              </p>
+              <input
+                type="file"
+                accept="image/*,.pdf"
+                className="block w-full text-xs text-gray-400 file:mr-2 file:rounded-lg file:border-0 file:bg-[#FF5722] file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-white hover:file:bg-[#E64A19]"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    // Guardar nombre del archivo como referencia
+                    update("comprobante", file.name);
+                  }
+                }}
+              />
+              {form.comprobante && (
+                <p className="text-xs text-[#39FF14]">
+                  Archivo seleccionado: {form.comprobante}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Info para retiro en local */}
+          {form.formaPago === "Retiro en local" && (
+            <div className="mt-3 rounded-lg border border-[#39FF14]/20 bg-[#39FF14]/5 p-3">
+              <p className="text-xs text-[#39FF14]">
+                Retirás el pedido en nuestro local. Te avisaremos cuando esté listo.
+              </p>
+            </div>
+          )}
         </section>
 
         {/* Notas */}
