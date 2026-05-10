@@ -7,6 +7,7 @@ Variables de entorno opcionales:
   CATALOGO_PRODUCTOS_ROOT — ruta absoluta; si está vacío → public/catalogo + --update-json
   CATALOGO_PDF — ruta al PDF si no usás el nombre por defecto
   CATALOGO_IMAGE_MODE — auto | raster | photo (ver build_product_folders --image-mode)
+  CATALOGO_EMIT_VARIANTS=1 — genera imagen_variant_*.webp para comparar métodos
 """
 from __future__ import annotations
 
@@ -45,6 +46,9 @@ def main() -> int:
     img_mode = (os.environ.get("CATALOGO_IMAGE_MODE") or "").strip().lower()
     if img_mode in ("auto", "raster", "photo"):
         argv.extend(["--image-mode", img_mode])
+    ev = (os.environ.get("CATALOGO_EMIT_VARIANTS") or "").strip().lower()
+    if ev in ("1", "true", "yes", "on", "si", "sí"):
+        argv.append("--emit-variants")
 
     if local_only:
         prod = Path(out_root) / "productos"

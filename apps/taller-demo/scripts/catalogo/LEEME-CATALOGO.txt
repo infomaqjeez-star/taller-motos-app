@@ -31,7 +31,12 @@ CATÁLOGO — carpetas locales sin usar npm
 
 5) Los mismos .bat también están en apps\taller-demo\ (un nivel arriba de scripts).
 
-6) Si la imagen.webp sale mal (marca de agua o recorte feo): regenerá con solo recorte raster:
+6) Para PROBAR varios recortes a la vez: doble clic en GenerarCatalogo10Variantes.bat
+   (o set CATALOGO_EMIT_VARIANTS=1 y el .bat normal). En cada carpeta aparecen archivos
+   imagen_variant_raster_default.webp, imagen_variant_raster_top.webp, imagen_variant_embed.webp
+   (si hay foto embebida), etc. Elegí el que se vea bien y avisá cual slug usar de default.
+
+7) Si la imagen.webp sale mal (marca de agua o recorte feo): regenerá con solo recorte raster:
      set CATALOGO_IMAGE_MODE=raster
      (luego doble clic en GenerarCatalogo10.bat o el comando python que uses)
    Valores: auto (defecto), raster, photo.

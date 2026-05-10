@@ -12,6 +12,9 @@ Requisitos: PDF catalogo.pdf en scripts/ o public/catalogo/ (cwd apps/taller-dem
 
 Primeras 10 + JSON:
   python scripts/catalogo/build_product_folders.py --pages all --limit 10 --flat --force --update-json
+
+Variantes de imagen para comparar (misma carpeta, varios webp):
+  python scripts/catalogo/build_product_folders.py --pages all --limit 10 --flat --force --emit-variants
 """
 from __future__ import annotations
 
@@ -19,6 +22,7 @@ import argparse
 import io
 import json
 import sys
+from typing import Any
 from collections import OrderedDict
 from pathlib import Path
 
@@ -67,10 +71,13 @@ def render_tarjeta_catalogo(
     half_width_mult: float,
     half_height_mult: float,
     dpi: int,
+    centering: tuple[float, float] = (0.5, 0.36),
+    cy_shift_mult: float = 0.0,
 ):
     """
     Recorte vertical en el PDF (más alto que ancho), centrado en el SKU,
     y salida fija width_px × height_px como la tarjeta del catálogo (foto + código + texto + precio).
+    cy_shift_mult mueve el centro del recorte en unidades de alto_SKU (negativo = subir).
     """
     import fitz
     from PIL import Image, ImageOps
@@ -79,17 +86,17 @@ def render_tarjeta_catalogo(
     cy = (y0 + y1) / 2
     sh = max(y1 - y0, 1.0)
     sw = max(x1 - x0, 1.0)
+    cy = cy + cy_shift_mult * sh
     hw = sw * half_width_mult
     hh = sh * half_height_mult
     r = fitz.Rect(cx - hw, cy - hh, cx + hw, cy + hh) & page.rect
     pix = page.get_pixmap(clip=r, dpi=dpi, alpha=False)
     img = Image.open(io.BytesIO(pix.tobytes("png"))).convert("RGB")
-    # Recorte proporcional al tamaño tarjeta; centrado un poco arriba para priorizar la foto del artículo
     return ImageOps.fit(
         img,
         (width_px, height_px),
         method=Image.Resampling.LANCZOS,
-        centering=(0.5, 0.36),
+        centering=centering,
     )
 
 
@@ -144,6 +151,120 @@ def render_product_card_image(
         half_height_mult=half_height_mult,
         dpi=dpi,
     )
+
+
+def _pil_embed_only(
+    page,
+    x0: float,
+    y0: float,
+    x1: float,
+    y1: float,
+    *,
+    width_px: int,
+    height_px: int,
+    dpi: int,
+    centering: tuple[float, float],
+):
+    import fitz
+    from PIL import Image, ImageOps
+
+    t = H.embedded_product_image_rect(page, x0, y0, x1, y1)
+    if t is None:
+        return None
+    rx0, ry0, rx1, ry1 = t
+    clip = (fitz.Rect(rx0, ry0, rx1, ry1) + (-2, -2, 2, 2)) & page.rect
+    pix = page.get_pixmap(clip=clip, dpi=max(int(dpi), 240), alpha=False)
+    img = Image.open(io.BytesIO(pix.tobytes("png"))).convert("RGB")
+    return ImageOps.fit(
+        img,
+        (width_px, height_px),
+        method=Image.Resampling.LANCZOS,
+        centering=centering,
+    )
+
+
+def iter_preview_variant_images(
+    page,
+    x0: float,
+    y0: float,
+    x1: float,
+    y1: float,
+    *,
+    card_w: int,
+    card_h: int,
+    dpi: int,
+    half_w: float,
+    half_h: float,
+) -> list[tuple[str, Any]]:
+    """Lista (slug, PIL.Image) para comparar métodos en disco (imagen_variant_*.webp)."""
+    from PIL import Image
+
+    out: list[tuple[str, Image.Image]] = []
+
+    emb = _pil_embed_only(
+        page,
+        x0,
+        y0,
+        x1,
+        y1,
+        width_px=card_w,
+        height_px=card_h,
+        dpi=dpi,
+        centering=(0.5, 0.5),
+    )
+    if emb is not None:
+        out.append(("embed", emb))
+
+    raster_specs: list[tuple[str, float, float, int, tuple[float, float], float]] = [
+        ("raster_default", half_w, half_h, dpi, (0.5, 0.36), 0.0),
+        ("raster_top", half_w, half_h, dpi, (0.5, 0.22), 0.0),
+        ("raster_bottom", half_w, half_h, dpi, (0.5, 0.55), 0.0),
+        ("raster_shift_up_clip", half_w, half_h, dpi, (0.5, 0.36), -0.35),
+        ("raster_hi300", half_w, half_h, max(dpi, 300), (0.5, 0.34), 0.0),
+        ("raster_tight", 6.0, 22.0, dpi, (0.5, 0.30), 0.0),
+        ("raster_loose", 11.0, 30.0, dpi, (0.5, 0.38), 0.0),
+        ("raster_wide_short", 12.0, 20.0, dpi, (0.5, 0.28), 0.0),
+    ]
+    for slug, hw, hh, d, cent, cysh in raster_specs:
+        out.append(
+            (
+                slug,
+                render_tarjeta_catalogo(
+                    page,
+                    x0,
+                    y0,
+                    x1,
+                    y1,
+                    width_px=card_w,
+                    height_px=card_h,
+                    half_width_mult=hw,
+                    half_height_mult=hh,
+                    dpi=d,
+                    centering=cent,
+                    cy_shift_mult=cysh,
+                ),
+            )
+        )
+
+    out.append(
+        (
+            "auto_embed_fallback",
+            render_product_card_image(
+                page,
+                x0,
+                y0,
+                x1,
+                y1,
+                image_mode="auto",
+                width_px=card_w,
+                height_px=card_h,
+                half_width_mult=half_w,
+                half_height_mult=half_h,
+                dpi=dpi,
+            ),
+        )
+    )
+    return out
 
 
 def load_json_products(path: Path) -> dict[str, dict]:
@@ -229,6 +350,11 @@ def main() -> int:
     ap.add_argument("--above-mult", type=float, default=28.0)
     ap.add_argument("--force", action="store_true")
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument(
+        "--emit-variants",
+        action="store_true",
+        help="Guarda imagen_variant_<nombre>.webp con varios recortes/embed para elegir cuál se ve bien",
+    )
     ap.add_argument("--update-json", action="store_true", help="Actualiza campo imagen en catalogo-public.json")
     args = ap.parse_args()
 
@@ -281,6 +407,12 @@ def main() -> int:
         f"SKUs a procesar: {len(skus)} (total únicos en páginas elegidas: {len(occ)})",
         flush=True,
     )
+    if args.emit_variants:
+        print(
+            "Modo variantes: cada carpeta tendrá imagen_variant_<metodo>.webp "
+            "(compará en el Explorador cuál queda bien).",
+            flush=True,
+        )
 
     updated_rows: dict[str, dict] = {}
     missing_json: list[str] = []
@@ -351,6 +483,21 @@ def main() -> int:
                     dpi=args.dpi,
                 )
                 img.save(img_path, format="WEBP", quality=86, method=4)
+            if args.emit_variants:
+                for vslug, vim in iter_preview_variant_images(
+                    page,
+                    x0,
+                    y0,
+                    x1,
+                    y1,
+                    card_w=args.card_w,
+                    card_h=args.card_h,
+                    dpi=args.dpi,
+                    half_w=args.half_width_mult,
+                    half_h=args.half_height_mult,
+                ):
+                    vpath = dest_dir / f"imagen_variant_{vslug}.webp"
+                    vim.save(vpath, format="WEBP", quality=86, method=4)
             meta_path.write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
 
         rel = imagen_rel_url(folder, flat=args.flat)
