@@ -334,7 +334,7 @@ function CatalogoContent() {
                 <h2 className="border-b border-[#FDB71A]/40 pb-2 text-lg font-black text-[#FDB71A]">
                   {c.nombre}
                 </h2>
-                <div className="grid auto-rows-fr grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 xl:grid-cols-3">
+                <div className="grid auto-rows-fr grid-cols-3 gap-2 sm:gap-4 xl:gap-6">
                   {lista.map((p) => (
                     <ProductCard key={p.sku} producto={p} addItem={addItem} />
                   ))}
@@ -350,7 +350,7 @@ function CatalogoContent() {
           <h2 className="border-b border-[#FDB71A]/40 pb-2 text-lg font-black text-[#FDB71A]">
             {catId}
           </h2>
-          <div className="grid auto-rows-fr grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 xl:grid-cols-3">
+          <div className="grid auto-rows-fr grid-cols-3 gap-2 sm:gap-4 xl:gap-6">
             {filtrados.map((p) => (
               <ProductCard key={p.sku} producto={p} addItem={addItem} />
             ))}
@@ -410,60 +410,60 @@ function ProductCard({ producto, addItem }: { producto: Producto; addItem: Retur
 
   return (
     <article className="flex h-full flex-col overflow-hidden rounded-xl border border-white/10 bg-white/[0.03]">
-      {/* Imagen - altura fija proporcional */}
-      <div className="relative flex aspect-[4/5] items-center justify-center bg-white/[0.04] overflow-hidden">
+      {/* Imagen - se adapta al contenedor sin recortar */}
+      <div className="relative flex aspect-square items-center justify-center bg-white/[0.04] overflow-hidden p-1 sm:p-2">
         {producto.image_url ? (
           <img
             src={producto.image_url}
             alt={producto.name}
-            className="h-full w-full object-cover"
+            className="h-full w-full object-contain"
             loading="lazy"
             onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
           />
         ) : (
-          <div className="flex flex-col items-center gap-2 text-gray-600">
-            <Tag className="h-6 w-6 sm:h-8 sm:w-8" />
-            <span className="text-[10px] sm:text-xs">Sin imagen</span>
+          <div className="flex flex-col items-center gap-1 text-gray-600">
+            <Tag className="h-5 w-5" />
+            <span className="text-[9px]">Sin imagen</span>
           </div>
         )}
       </div>
 
-      {/* Contenido - flex-grow empuja botón hacia abajo */}
-      <div className="flex flex-1 flex-col px-2 pt-2 pb-3">
-        <p className="text-center font-mono text-[10px] sm:text-xs font-black tracking-wide text-blue-400">
+      {/* Contenido - compacto para 3 columnas en móvil */}
+      <div className="flex flex-1 flex-col px-1.5 pt-1.5 pb-2 sm:px-2 sm:pb-3">
+        <p className="text-center font-mono text-[9px] sm:text-xs font-black tracking-wide text-blue-400">
           {producto.sku}
         </p>
-        <h3 className="mt-1 line-clamp-3 text-center text-xs sm:text-sm font-semibold leading-snug text-gray-200">
+        <h3 className="mt-0.5 line-clamp-2 text-center text-[10px] sm:text-sm font-semibold leading-tight text-gray-200">
           {producto.name}
         </h3>
-        <p className="mt-1 text-center text-sm sm:text-lg font-black text-[#39FF14]">
+        <p className="mt-0.5 text-center text-[11px] sm:text-base font-black text-[#39FF14]">
           {fmtPrecio(producto.catalog_price)}
         </p>
 
         {/* Selector de cantidad */}
-        <div className="mt-2 flex items-center justify-center gap-2">
+        <div className="mt-1 flex items-center justify-center gap-1 sm:gap-2">
           <button
             onClick={decrease}
-            className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg bg-white/10 text-white hover:bg-white/20 active:scale-95"
+            className="flex h-6 w-6 sm:h-8 sm:w-8 items-center justify-center rounded-md sm:rounded-lg bg-white/10 text-white hover:bg-white/20 active:scale-95"
           >
-            <Minus className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+            <Minus className="h-3 w-3" />
           </button>
-          <span className="w-5 sm:w-6 text-center text-xs sm:text-sm font-bold text-white">{qty}</span>
+          <span className="w-4 sm:w-6 text-center text-[10px] sm:text-sm font-bold text-white">{qty}</span>
           <button
             onClick={increase}
-            className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg bg-white/10 text-white hover:bg-white/20 active:scale-95"
+            className="flex h-6 w-6 sm:h-8 sm:w-8 items-center justify-center rounded-md sm:rounded-lg bg-white/10 text-white hover:bg-white/20 active:scale-95"
           >
-            <Plus className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+            <Plus className="h-3 w-3" />
           </button>
         </div>
 
         {/* Botón Agregar - siempre al final */}
         <button
           onClick={handleAdd}
-          className="mt-auto flex w-full items-center justify-center gap-1 rounded-lg bg-[#FF5722] py-2 text-xs sm:text-sm font-bold text-white hover:bg-[#E64A19] active:scale-[0.98] transition-all"
+          className="mt-auto flex w-full items-center justify-center gap-0.5 rounded-md sm:rounded-lg bg-[#FF5722] py-1.5 sm:py-2 text-[10px] sm:text-sm font-bold text-white hover:bg-[#E64A19] active:scale-[0.98] transition-all"
         >
-          <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-          <span className="truncate">Agregar {qty > 1 ? `(${qty})` : ""}</span>
+          <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
+          <span className="truncate">{qty > 1 ? `${qty}x` : "+"}</span>
         </button>
       </div>
     </article>
