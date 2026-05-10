@@ -6,8 +6,8 @@
     "dev": "next dev --port 3001",
     "build": "next build",
     "start": "next start",
-    "catalogo:folders:10": "python scripts/catalogo/build_product_folders.py --out-root public/catalogo --pages all --limit 10 --flat --force --update-json",
-    "catalogo:folders:all": "python scripts/catalogo/build_product_folders.py --out-root public/catalogo --pages all --flat --force --update-json"
+    "catalogo:folders:10": "node scripts/catalogo/run-folders.cjs 10",
+    "catalogo:folders:all": "node scripts/catalogo/run-folders.cjs all"
   },
   "dependencies": {
     "@supabase/ssr": "^0.5.2",

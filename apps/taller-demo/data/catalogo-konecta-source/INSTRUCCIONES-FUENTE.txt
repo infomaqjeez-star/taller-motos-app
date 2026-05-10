@@ -36,7 +36,7 @@ y subirla con git (ojo tamaño; Git LFS si hace falta).
 3) Carpetas Maqjeez por artículo (imagen tarjeta vertical 360×480 tipo catálogo + meta.json precio×4).
    Salida local siempre bajo la carpeta del sitio: apps/taller-demo/public/catalogo/ (URL /catalogo/…).
 
-   Desde apps/taller-demo (con PDF en scripts/):
+   Desde apps/taller-demo (con PDF en scripts/; hace falta Node + Python con "py" en Windows o "python3" en Linux/Mac):
    npm run catalogo:folders:10
    npm run catalogo:folders:all
 
