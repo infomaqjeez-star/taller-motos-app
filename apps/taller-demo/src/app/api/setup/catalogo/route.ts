@@ -43,7 +43,10 @@ CREATE POLICY catalog_select_public ON catalog_products FOR SELECT USING (active
       }, { status: 400 });
     }
 
-    // 3. Leer JSON de productos
+    // 3. Limpiar tabla existente (eliminar productos antiguos con SKU auto-generados)
+    await supabase.from("catalog_products").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+
+    // 4. Leer JSON de productos
     const jsonPath = path.join(process.cwd(), "data", "catalogo-products.json");
     if (!fs.existsSync(jsonPath)) {
       return NextResponse.json({ error: "No se encontró catalogo-products.json" }, { status: 404 });
