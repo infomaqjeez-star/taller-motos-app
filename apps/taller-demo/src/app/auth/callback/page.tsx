@@ -35,6 +35,17 @@ function AuthCallbackInner() {
           router.replace(next);
           return;
         }
+        // Fallback: si falla por PKCE code_verifier, intentar getSession
+        // (el token puede haber sido procesado por otro mecanismo o el hash)
+        if (error.message?.toLowerCase().includes("code_verifier")) {
+          setMsg("Reintentando con sesión existente…");
+          await new Promise((r) => setTimeout(r, 500));
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session) {
+            router.replace(next);
+            return;
+          }
+        }
         setErrorInfo(
           `exchangeCodeForSession failed:\n` +
           `Message: ${error.message}\n` +
