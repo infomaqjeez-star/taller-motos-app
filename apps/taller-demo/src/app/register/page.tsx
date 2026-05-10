@@ -26,7 +26,7 @@ export default function RegisterPage() {
     await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/auth/callback?next=/taller`,
+        redirectTo: `https://appjeezpro.store/auth/callback?next=/taller`,
       },
     });
   };
