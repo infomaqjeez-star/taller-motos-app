@@ -39,6 +39,12 @@ CATÁLOGO — carpetas locales sin usar npm
 
 5) Los mismos .bat también están en apps\taller-demo\ (un nivel arriba de scripts).
 
+   Scripts .py con doble clic (.bat en apps\taller-demo):
+   - ExtractorCatalogo.bat  -> scripts\catalogo\extractor.py (OpenCV+OCR, salida en Documentos\CatalogoExtraccionOcr)
+   - GenerarCatalogoTodoPip.bat -> run_full_catalogo.py (pip + JSON + carpetas)
+   - ExtraerCatalogoPdfJson.bat -> extract_catalogo_pdf.py (webp + catalogo-public.json)
+   - CatalogoOcrRejilla.bat -> catalog_grid_ocr_pipeline.py (salida data\catalogo-ocr-export)
+
 6) Para PROBAR varios recortes a la vez: doble clic en GenerarCatalogo10Variantes.bat
    (o set CATALOGO_EMIT_VARIANTS=1 y el .bat normal). Incluye:
    - Rejillas fijas: imagen_variant_grid_5x3_mt010.webp, grid_5x3_mt012, grid_5x3_mt015,
