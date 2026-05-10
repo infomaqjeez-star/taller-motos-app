@@ -12,30 +12,68 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
 
-    const { precios }: { precios: Array<{ sku: string; precio_base: number }> } = await req.json();
-    if (!precios || !Array.isArray(precios) || precios.length === 0) {
-      return NextResponse.json({ error: "Precios requeridos" }, { status: 400 });
-    }
+    const body = await req.json();
+
+    // ── Modo 1: Actualizar precios de lista de productos activos ──
+    const activos = body.activos as Array<{
+      sku: string;
+      catalog_price: number;
+      stock?: number;
+    }> | undefined;
+
+    // ── Modo 2: Marcar como inactivos productos no listados ──
+    const inactivos = body.inactivos as Array<{ sku: string }> | undefined;
 
     let updated = 0;
     let errors = 0;
 
-    for (const p of precios) {
-      const catalogPrice = Math.round(p.precio_base * 4);
-      const { error } = await supabase
-        .from("catalog_products")
-        .update({ catalog_price: catalogPrice })
-        .eq("sku", p.sku);
+    // 1) Activos: precio + stock (ilimitado por defecto)
+    if (activos && Array.isArray(activos) && activos.length > 0) {
+      for (const p of activos) {
+        const updateData: Record<string, any> = {
+          catalog_price: Math.round(p.catalog_price),
+          active: true,
+        };
+        // Stock ilimitado = 999999, o el valor que venga
+        if (p.stock !== undefined) {
+          updateData.stock = p.stock;
+        } else {
+          updateData.stock = 999999;
+        }
 
-      if (error) {
-        console.error(`Error updating ${p.sku}:`, error.message);
-        errors++;
-      } else {
-        updated++;
+        const { error } = await supabase
+          .from("catalog_products")
+          .update(updateData)
+          .eq("sku", p.sku);
+
+        if (error) {
+          console.error(`Error activo ${p.sku}:`, error.message);
+          errors++;
+        } else {
+          updated++;
+        }
       }
     }
 
-    return NextResponse.json({ success: true, updated, errors, total: precios.length });
+    // 2) Inactivos: ocultar productos que no están en el catálogo PDF
+    if (inactivos && Array.isArray(inactivos) && inactivos.length > 0) {
+      for (const p of inactivos) {
+        const { error } = await supabase
+          .from("catalog_products")
+          .update({ active: false })
+          .eq("sku", p.sku);
+
+        if (error) {
+          console.error(`Error inactivo ${p.sku}:`, error.message);
+          errors++;
+        } else {
+          updated++;
+        }
+      }
+    }
+
+    const total = (activos?.length || 0) + (inactivos?.length || 0);
+    return NextResponse.json({ success: true, updated, errors, total });
   } catch (err: any) {
     console.error("actualizar-precios error:", err);
     return NextResponse.json({ error: err.message }, { status: 500 });
