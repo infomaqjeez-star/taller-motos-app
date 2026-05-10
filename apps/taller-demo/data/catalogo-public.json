@@ -1,6 +1,6 @@
 {
   "titulo": "Catálogo de precios — Maqjeez Repuestos",
-  "subtitulo": "Lista pública: precio ×4. Imágenes en /catalogo/productos/… (regenerar con build_product_folders.py y el PDF real en scripts/).",
+  "subtitulo": "Lista pública: precio ×4. Imágenes tarjeta 360×480 en /catalogo/productos/.",
   "categorias": [
     {
       "id": "aceleracion-mandos",
@@ -43,66 +43,66 @@
     },
     {
       "sku": "17003",
-      "nombre": "Repuesto demo desmalezadora linea",
-      "precio": 9000,
-      "categoriaId": "catalogo-pdf",
-      "imagen": "productos/Repuesto_demo_desmalezadora_linea__17003/imagen.webp"
+      "nombre": "Filtro de aire | Espuma | 43-52cc",
+      "precio": 3210,
+      "categoriaId": "motor-2t",
+      "imagen": "productos/Filtro_de_aire_-_Espuma_-_43-52cc__17003/imagen.webp"
     },
     {
       "sku": "17004",
-      "nombre": "Repuesto demo desmalezadora linea Repuesto demo desmalezadora linea",
-      "precio": 9111,
-      "categoriaId": "catalogo-pdf",
-      "imagen": "productos/Repuesto_demo_desmalezadora_linea_Repuesto_demo_de__17004/imagen.webp"
+      "nombre": "Bujía NGK | BR8HS | Rosca corta",
+      "precio": 1890,
+      "categoriaId": "encendido",
+      "imagen": "productos/Bujía_NGK_-_BR8HS_-_Rosca_corta__17004/imagen.webp"
     },
     {
       "sku": "17005",
-      "nombre": "Repuesto demo desmalezadora linea Repuesto demo desmalezadora linea Repuesto demo desmalezadora linea",
-      "precio": 9222,
-      "categoriaId": "catalogo-pdf",
-      "imagen": "productos/Repuesto_demo_desmalezadora_linea_Repuesto_demo_de__17005/imagen.webp"
+      "nombre": "Carburador | Walbro | WT-813",
+      "precio": 15450,
+      "categoriaId": "carburacion",
+      "imagen": "productos/Carburador_-_Walbro_-_WT-813__17005/imagen.webp"
     },
     {
       "sku": "17006",
-      "nombre": "Repuesto demo desmalezadora linea Repuesto demo desmalezadora linea Repuesto demo desmalezadora linea Repuesto demo desmalezadora linea",
-      "precio": 9333,
-      "categoriaId": "catalogo-pdf",
-      "imagen": "productos/Repuesto_demo_desmalezadora_linea_Repuesto_demo_de__17006/imagen.webp"
+      "nombre": "Embrague centrífugo | 97mm | 2T",
+      "precio": 12800,
+      "categoriaId": "corte",
+      "imagen": "productos/Embrague_centrífugo_-_97mm_-_2T__17006/imagen.webp"
     },
     {
       "sku": "17007",
-      "nombre": "Repuesto demo desmalezadora linea Repuesto demo desmalezadora linea Repuesto demo desmalezadora linea Repuesto demo desmalezadora linea Repuesto demo desmalezadora linea",
-      "precio": 9444,
-      "categoriaId": "catalogo-pdf",
-      "imagen": "productos/Repuesto_demo_desmalezadora_linea_Repuesto_demo_de__17007/imagen.webp"
+      "nombre": "Cable acelerador | 2.5m | Universal",
+      "precio": 2750,
+      "categoriaId": "aceleracion-mandos",
+      "imagen": "productos/Cable_acelerador_-_2.5m_-_Universal__17007/imagen.webp"
     },
     {
       "sku": "17008",
-      "nombre": "Repuesto demo desmalezadora linea Repuesto demo desmalezadora linea Repuesto demo desmalezadora linea Repuesto demo desmalezadora linea Repuesto demo desmalezadora linea Repuesto demo desmalezadora linea",
-      "precio": 9555,
-      "categoriaId": "catalogo-pdf",
-      "imagen": "productos/Repuesto_demo_desmalezadora_linea_Repuesto_demo_de__17008/imagen.webp"
+      "nombre": "Tapa tanque | Plástico | Rosca bayoneta",
+      "precio": 4100,
+      "categoriaId": "varios",
+      "imagen": "productos/Tapa_tanque_-_Plástico_-_Rosca_bayoneta__17008/imagen.webp"
     },
     {
       "sku": "17009",
-      "nombre": "Repuesto demo desmalezadora linea Repuesto demo desmalezadora linea Repuesto demo desmalezadora linea Repuesto demo desmalezadora linea Repuesto demo desmalezadora linea Repuesto demo desmalezadora linea Repuesto demo desmalezadora linea",
-      "precio": 9666,
-      "categoriaId": "catalogo-pdf",
-      "imagen": "productos/Repuesto_demo_desmalezadora_linea_Repuesto_demo_de__17009/imagen.webp"
+      "nombre": "Manguera combustible | 5x8mm | 1m",
+      "precio": 980,
+      "categoriaId": "varios",
+      "imagen": "productos/Manguera_combustible_-_5x8mm_-_1m__17009/imagen.webp"
     },
     {
       "sku": "17010",
-      "nombre": "Repuesto demo desmalezadora linea Repuesto demo desmalezadora linea Repuesto demo desmalezadora linea Repuesto demo desmalezadora linea Repuesto demo desmalezadora linea Repuesto demo desmalezadora linea Repuesto demo desmalezadora linea Repuesto demo desmalezadora linea",
-      "precio": 9777,
-      "categoriaId": "catalogo-pdf",
-      "imagen": "productos/Repuesto_demo_desmalezadora_linea_Repuesto_demo_de__17010/imagen.webp"
+      "nombre": "Guardapolvo horquilla | 32mm | Par",
+      "precio": 3650,
+      "categoriaId": "varios",
+      "imagen": "productos/Guardapolvo_horquilla_-_32mm_-_Par__17010/imagen.webp"
     },
     {
       "sku": "17011",
-      "nombre": "Repuesto demo desmalezadora linea Repuesto demo desmalezadora linea Repuesto demo desmalezadora linea Repuesto demo desmalezadora linea Repuesto demo desmalezadora linea Repuesto demo desmalezadora linea Repuesto demo desmalezadora linea Repuesto demo desmalezadora linea",
-      "precio": 9888,
-      "categoriaId": "catalogo-pdf",
-      "imagen": "productos/Repuesto_demo_desmalezadora_linea_Repuesto_demo_de__17011/imagen.webp"
+      "nombre": "Piñón salida | 7 dientes | Paso 3/8",
+      "precio": 5120,
+      "categoriaId": "corte",
+      "imagen": "productos/Piñón_salida_-_7_dientes_-_Paso_3-8__17011/imagen.webp"
     }
   ]
 }
