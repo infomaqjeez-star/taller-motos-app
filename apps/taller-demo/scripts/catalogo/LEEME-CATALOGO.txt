@@ -54,3 +54,9 @@ CATÁLOGO — carpetas locales sin usar npm
 
 8) PDF escaneo sin celdas claras: probá el pipeline aparte (OpenCV + Tesseract):
    scripts\catalogo\catalog_grid_ocr_pipeline.py --mode contour (ver su cabecera).
+
+9) Recorte REAL de tarjetas (foto + diseño del PDF) + OCR + precio tapado y ×4:
+   pip install -r scripts\catalogo\requirements-catalog-ocr.txt
+   (Tesseract instalado; en Windows: set TESSERACT_CMD=...)
+   python scripts\catalogo\extractor.py --pdf scripts\catalogo.pdf --out productos_extraidos --pages 0
+   Ajustá --area-min / --area-max si no detecta tarjetas (depende del zoom y del PDF).
