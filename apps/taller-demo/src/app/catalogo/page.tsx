@@ -270,32 +270,22 @@ function CatalogoContent() {
             onChange={(e) => setQ(e.target.value)}
           />
         </div>
-        <div className="no-scrollbar flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => setCatId("todas")}
-            className={`rounded-full border px-3 py-1.5 text-xs font-bold transition-colors ${
-              catId === "todas"
-                ? "border-[#FF5722] bg-[#FF5722]/20 text-[#FF5722]"
-                : "border-white/10 text-gray-400 hover:border-white/20"
-            }`}
+        {/* Categorías — dropdown compacto */}
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-gray-500 shrink-0">Categoría:</span>
+          <select
+            value={catId}
+            onChange={(e) => setCatId(e.target.value)}
+            className="flex-1 min-w-0 rounded-lg border border-white/10 bg-white/5 py-2 pl-3 pr-8 text-xs font-bold text-gray-200 focus:border-[#FF5722] focus:outline-none appearance-none truncate"
+            style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23999999' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 8px center', backgroundSize: '14px' }}
           >
-            Todas ({productos.length})
-          </button>
-          {categorias.map((c) => (
-            <button
-              key={c.id}
-              type="button"
-              onClick={() => setCatId(c.id)}
-              className={`max-w-full truncate rounded-full border px-3 py-1.5 text-xs font-bold transition-colors ${
-                catId === c.id
-                  ? "border-[#FF5722] bg-[#FF5722]/20 text-[#FF5722]"
-                  : "border-white/10 text-gray-400 hover:border-white/20"
-              }`}
-            >
-              {c.nombre} ({c.count})
-            </button>
-          ))}
+            <option value="todas">Todas las categorías ({productos.length})</option>
+            {categorias.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.nombre} ({c.count})
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 
