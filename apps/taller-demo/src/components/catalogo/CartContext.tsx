@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useCallback, useMemo } from "react";
+import React, { createContext, useContext, useState, useCallback, useMemo, useEffect } from "react";
 
 function getDiscountsFromStorage() {
   if (typeof window === "undefined") return { cliente: 0, vendedor: 0 };
@@ -89,9 +89,31 @@ function calcularTotales(
 
 const CartContext = createContext<CartContextValue | null>(null);
 
+const CART_STORAGE_KEY = "catalogo_cart";
+
+function getCartFromStorage(): CartItem[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const stored = localStorage.getItem(CART_STORAGE_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveCartToStorage(items: CartItem[]) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
+}
+
 export function CartProvider({ children }: { children: React.ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>([]);
+  const [items, setItems] = useState<CartItem[]>(getCartFromStorage);
   const [isOpen, setIsOpen] = useState(false);
+
+  // Persistir carrito en localStorage
+  useEffect(() => {
+    saveCartToStorage(items);
+  }, [items]);
 
   const addItem = useCallback((newItem: Omit<CartItem, "cantidad"> & { cantidad?: number }) => {
     const qty = Math.max(1, newItem.cantidad || 1);
