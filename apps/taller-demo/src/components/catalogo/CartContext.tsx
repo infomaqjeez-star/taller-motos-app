@@ -2,6 +2,13 @@
 
 import React, { createContext, useContext, useState, useCallback, useMemo } from "react";
 
+function getDiscountsFromStorage() {
+  if (typeof window === "undefined") return { cliente: 0, vendedor: 0 };
+  const cliente = localStorage.getItem("cliente_token") ? 3 : 0;
+  const vendedor = localStorage.getItem("ref_vendedor_id") ? 3 : 0;
+  return { cliente, vendedor };
+}
+
 export interface CartItem {
   sku: string;
   nombre: string;
@@ -12,8 +19,13 @@ export interface CartItem {
 
 export interface CartTotals {
   subtotal: number;
-  descuentoPorcentaje: number;
-  descuentoMonto: number;
+  descuentoVolumenPct: number;
+  descuentoVolumenMonto: number;
+  descuentoClientePct: number;
+  descuentoClienteMonto: number;
+  descuentoVendedorPct: number;
+  descuentoVendedorMonto: number;
+  descuentoTotalMonto: number;
   envio: number;
   total: number;
 }
@@ -30,26 +42,49 @@ interface CartContextValue {
   itemCount: number;
 }
 
-function calcularTotales(items: CartItem[]): CartTotals {
+function calcularTotales(
+  items: CartItem[],
+  descuentoClientePct: number = 0,
+  descuentoVendedorPct: number = 0
+): CartTotals {
   const subtotal = items.reduce((sum, item) => sum + item.precio * item.cantidad, 0);
 
-  let descuentoPorcentaje = 0;
-  if (subtotal >= 1_000_000) descuentoPorcentaje = 20;
-  else if (subtotal >= 250_000) descuentoPorcentaje = 15;
-  else if (subtotal >= 100_000) descuentoPorcentaje = 10;
+  // Descuento por volumen
+  let descuentoVolumenPct = 0;
+  if (subtotal >= 1_000_000) descuentoVolumenPct = 20;
+  else if (subtotal >= 250_000) descuentoVolumenPct = 15;
+  else if (subtotal >= 100_000) descuentoVolumenPct = 10;
 
-  const descuentoMonto = Math.round((subtotal * descuentoPorcentaje) / 100);
-  const conDescuento = subtotal - descuentoMonto;
+  const descuentoVolumenMonto = Math.round((subtotal * descuentoVolumenPct) / 100);
+
+  // Descuento por cliente logueado (3%)
+  const descuentoClienteMonto = Math.round((subtotal * descuentoClientePct) / 100);
+
+  // Descuento por vendedor referido (3%)
+  const descuentoVendedorMonto = Math.round((subtotal * descuentoVendedorPct) / 100);
+
+  const descuentoTotalMonto = descuentoVolumenMonto + descuentoClienteMonto + descuentoVendedorMonto;
+  const conDescuento = Math.max(0, subtotal - descuentoTotalMonto);
 
   let envio = 0;
   if (conDescuento < 30_000) envio = 10_000;
   else if (conDescuento < 50_000) envio = 8_000;
   else if (conDescuento < 100_000) envio = 5_000;
-  // >= 100k envio gratis
 
   const total = conDescuento + envio;
 
-  return { subtotal, descuentoPorcentaje, descuentoMonto, envio, total };
+  return {
+    subtotal,
+    descuentoVolumenPct,
+    descuentoVolumenMonto,
+    descuentoClientePct,
+    descuentoClienteMonto,
+    descuentoVendedorPct,
+    descuentoVendedorMonto,
+    descuentoTotalMonto,
+    envio,
+    total,
+  };
 }
 
 const CartContext = createContext<CartContextValue | null>(null);
@@ -89,7 +124,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setItems([]);
   }, []);
 
-  const totals = useMemo(() => calcularTotales(items), [items]);
+  const totals = useMemo(() => {
+    const { cliente, vendedor } = getDiscountsFromStorage();
+    return calcularTotales(items, cliente, vendedor);
+  }, [items]);
   const itemCount = useMemo(() => items.reduce((sum, i) => sum + i.cantidad, 0), [items]);
 
   return (

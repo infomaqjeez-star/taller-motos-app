@@ -112,8 +112,10 @@ export default function CheckoutPage() {
             notas: form.notas,
           },
           subtotal: totals.subtotal,
-          descuento_pct: totals.descuentoPorcentaje,
-          descuento_monto: totals.descuentoMonto,
+          descuento_pct: totals.descuentoVolumenPct,
+          descuento_monto: totals.descuentoTotalMonto,
+          descuento_cliente_pct: totals.descuentoClientePct,
+          descuento_vendedor_pct: totals.descuentoVendedorPct,
           envio: totals.envio,
           total: totals.total,
           vendedor_id: vendedorId,
@@ -171,10 +173,22 @@ export default function CheckoutPage() {
             <span>Subtotal</span>
             <span>{fmtMoney(totals.subtotal)}</span>
           </div>
-          {totals.descuentoPorcentaje > 0 && (
+          {totals.descuentoVolumenPct > 0 && (
             <div className="flex justify-between text-sm text-[#39FF14]">
-              <span>Descuento ({totals.descuentoPorcentaje}%)</span>
-              <span>-{fmtMoney(totals.descuentoMonto)}</span>
+              <span>Desc. volumen ({totals.descuentoVolumenPct}%)</span>
+              <span>-{fmtMoney(totals.descuentoVolumenMonto)}</span>
+            </div>
+          )}
+          {totals.descuentoClientePct > 0 && (
+            <div className="flex justify-between text-sm text-blue-400">
+              <span>Desc. cliente ({totals.descuentoClientePct}%)</span>
+              <span>-{fmtMoney(totals.descuentoClienteMonto)}</span>
+            </div>
+          )}
+          {totals.descuentoVendedorPct > 0 && (
+            <div className="flex justify-between text-sm text-purple-400">
+              <span>Desc. vendedor ({totals.descuentoVendedorPct}%)</span>
+              <span>-{fmtMoney(totals.descuentoVendedorMonto)}</span>
             </div>
           )}
           <div className="flex justify-between text-sm text-gray-400">

@@ -8,6 +8,7 @@ import CartDrawer from "@/components/catalogo/CartDrawer";
 import CartButton from "@/components/catalogo/CartButton";
 import { useCart } from "@/components/catalogo/CartContext";
 import { useVendedorAuth } from "@/components/vendedor/VendedorAuthContext";
+import { useClienteAuth } from "@/components/cliente/ClienteAuthContext";
 import ReferralTracker from "@/components/catalogo/ReferralTracker";
 
 interface Producto {
@@ -66,6 +67,7 @@ function CatalogoContent() {
   const [catId, setCatId] = useState<string | "todas">("todas");
   const { addItem } = useCart();
   const { vendedor: vendedorLogueado } = useVendedorAuth();
+  const { cliente: clienteLogueado, logout: logoutCliente } = useClienteAuth();
   const { banner: refBanner, clear: clearRef } = useReferralBanner();
 
   useEffect(() => {
@@ -146,6 +148,28 @@ function CatalogoContent() {
                 {productos.length.toLocaleString("es-AR")} productos
               </span>
             )}
+            {/* Cliente */}
+            {clienteLogueado ? (
+              <div className="flex items-center gap-2">
+                <span className="flex items-center gap-1 rounded-lg border border-blue-500/30 bg-blue-500/10 px-2 py-1 text-[10px] font-bold text-blue-400">
+                  👤 {clienteLogueado.nombre}
+                </span>
+                <button
+                  onClick={logoutCliente}
+                  className="rounded-lg border border-white/10 px-2 py-1 text-[10px] text-gray-400 hover:text-white"
+                >
+                  Salir
+                </button>
+              </div>
+            ) : (
+              <Link
+                href="/catalogo/cliente/login"
+                className="flex items-center gap-1 rounded-lg border border-blue-500/30 bg-blue-500/10 px-2 py-1 text-[10px] font-bold text-blue-400 hover:bg-blue-500/20"
+              >
+                👤 Cliente (-3%)
+              </Link>
+            )}
+            {/* Vendedor */}
             {vendedorLogueado ? (
               <Link
                 href="/catalogo/vendedor/dashboard"
@@ -310,7 +334,7 @@ function CatalogoContent() {
                 <h2 className="border-b border-[#FDB71A]/40 pb-2 text-lg font-black text-[#FDB71A]">
                   {c.nombre}
                 </h2>
-                <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+                <div className="grid auto-rows-fr grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 xl:grid-cols-3">
                   {lista.map((p) => (
                     <ProductCard key={p.sku} producto={p} addItem={addItem} />
                   ))}
@@ -326,7 +350,7 @@ function CatalogoContent() {
           <h2 className="border-b border-[#FDB71A]/40 pb-2 text-lg font-black text-[#FDB71A]">
             {catId}
           </h2>
-          <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="grid auto-rows-fr grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 xl:grid-cols-3">
             {filtrados.map((p) => (
               <ProductCard key={p.sku} producto={p} addItem={addItem} />
             ))}
@@ -381,12 +405,13 @@ function ProductCard({ producto, addItem }: { producto: Producto; addItem: Retur
       imagen: producto.image_url || "",
       cantidad: qty,
     });
-    setQty(1); // reset para próxima selección
+    setQty(1);
   };
 
   return (
-    <article className="card flex flex-col overflow-hidden border border-white/10 bg-white/[0.03]">
-      <div className="flex aspect-[4/5] items-center justify-center bg-white/[0.04] overflow-hidden">
+    <article className="flex h-full flex-col overflow-hidden rounded-xl border border-white/10 bg-white/[0.03]">
+      {/* Imagen - altura fija proporcional */}
+      <div className="relative flex aspect-[4/5] items-center justify-center bg-white/[0.04] overflow-hidden">
         {producto.image_url ? (
           <img
             src={producto.image_url}
@@ -397,19 +422,21 @@ function ProductCard({ producto, addItem }: { producto: Producto; addItem: Retur
           />
         ) : (
           <div className="flex flex-col items-center gap-2 text-gray-600">
-            <Tag className="h-8 w-8" />
-            <span className="text-xs">Sin imagen</span>
+            <Tag className="h-6 w-6 sm:h-8 sm:w-8" />
+            <span className="text-[10px] sm:text-xs">Sin imagen</span>
           </div>
         )}
       </div>
-      <div className="mt-3 space-y-1 px-2 pb-3">
-        <p className="text-center font-mono text-sm font-black tracking-wide text-blue-400">
+
+      {/* Contenido - flex-grow empuja botón hacia abajo */}
+      <div className="flex flex-1 flex-col px-2 pt-2 pb-3">
+        <p className="text-center font-mono text-[10px] sm:text-xs font-black tracking-wide text-blue-400">
           {producto.sku}
         </p>
-        <h3 className="whitespace-pre-line text-center text-sm font-semibold leading-snug text-gray-200">
+        <h3 className="mt-1 line-clamp-3 text-center text-xs sm:text-sm font-semibold leading-snug text-gray-200">
           {producto.name}
         </h3>
-        <p className="text-center text-lg font-black text-[#39FF14]">
+        <p className="mt-1 text-center text-sm sm:text-lg font-black text-[#39FF14]">
           {fmtPrecio(producto.catalog_price)}
         </p>
 
@@ -417,25 +444,26 @@ function ProductCard({ producto, addItem }: { producto: Producto; addItem: Retur
         <div className="mt-2 flex items-center justify-center gap-2">
           <button
             onClick={decrease}
-            className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 text-white hover:bg-white/20"
+            className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg bg-white/10 text-white hover:bg-white/20 active:scale-95"
           >
-            <Minus className="h-3.5 w-3.5" />
+            <Minus className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
           </button>
-          <span className="w-6 text-center text-sm font-bold text-white">{qty}</span>
+          <span className="w-5 sm:w-6 text-center text-xs sm:text-sm font-bold text-white">{qty}</span>
           <button
             onClick={increase}
-            className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 text-white hover:bg-white/20"
+            className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg bg-white/10 text-white hover:bg-white/20 active:scale-95"
           >
-            <Plus className="h-3.5 w-3.5" />
+            <Plus className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
           </button>
         </div>
 
+        {/* Botón Agregar - siempre al final */}
         <button
           onClick={handleAdd}
-          className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg bg-[#FF5722] py-2 text-sm font-bold text-white hover:bg-[#E64A19] transition-colors"
+          className="mt-auto flex w-full items-center justify-center gap-1 rounded-lg bg-[#FF5722] py-2 text-xs sm:text-sm font-bold text-white hover:bg-[#E64A19] active:scale-[0.98] transition-all"
         >
-          <Plus className="h-4 w-4" />
-          Agregar {qty > 1 ? `(${qty})` : ""}
+          <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+          <span className="truncate">Agregar {qty > 1 ? `(${qty})` : ""}</span>
         </button>
       </div>
     </article>

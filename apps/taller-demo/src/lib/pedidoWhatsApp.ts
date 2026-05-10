@@ -46,8 +46,14 @@ export function generarMensajeWhatsApp(
     ...lineas,
     "",
     `Subtotal: ${fmtMoney(totals.subtotal)}`,
-    ...(totals.descuentoPorcentaje > 0
-      ? [`Descuento ${totals.descuentoPorcentaje}%: -${fmtMoney(totals.descuentoMonto)}`]
+    ...(totals.descuentoVolumenPct > 0
+      ? [`Desc. volumen ${totals.descuentoVolumenPct}%: -${fmtMoney(totals.descuentoVolumenMonto)}`]
+      : []),
+    ...(totals.descuentoClientePct > 0
+      ? [`Desc. cliente ${totals.descuentoClientePct}%: -${fmtMoney(totals.descuentoClienteMonto)}`]
+      : []),
+    ...(totals.descuentoVendedorPct > 0
+      ? [`Desc. vendedor ${totals.descuentoVendedorPct}%: -${fmtMoney(totals.descuentoVendedorMonto)}`]
       : []),
     `Envío: ${totals.envio === 0 ? "Gratis" : fmtMoney(totals.envio)}`,
     "",

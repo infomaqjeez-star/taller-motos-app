@@ -113,10 +113,28 @@ export default function CartDrawer() {
                 <span>Subtotal</span>
                 <span>{fmtMoney(totals.subtotal)}</span>
               </div>
-              {totals.descuentoPorcentaje > 0 && (
+              {totals.descuentoVolumenPct > 0 && (
                 <div className="flex justify-between text-sm text-[#39FF14]">
-                  <span>Descuento ({totals.descuentoPorcentaje}%)</span>
-                  <span>-{fmtMoney(totals.descuentoMonto)}</span>
+                  <span>Desc. por volumen ({totals.descuentoVolumenPct}%)</span>
+                  <span>-{fmtMoney(totals.descuentoVolumenMonto)}</span>
+                </div>
+              )}
+              {totals.descuentoClientePct > 0 && (
+                <div className="flex justify-between text-sm text-blue-400">
+                  <span>Desc. cliente ({totals.descuentoClientePct}%)</span>
+                  <span>-{fmtMoney(totals.descuentoClienteMonto)}</span>
+                </div>
+              )}
+              {totals.descuentoVendedorPct > 0 && (
+                <div className="flex justify-between text-sm text-purple-400">
+                  <span>Desc. vendedor ({totals.descuentoVendedorPct}%)</span>
+                  <span>-{fmtMoney(totals.descuentoVendedorMonto)}</span>
+                </div>
+              )}
+              {totals.descuentoTotalMonto > 0 && (
+                <div className="flex justify-between border-t border-white/10 pt-1 text-sm font-bold text-[#39FF14]">
+                  <span>Total descuentos</span>
+                  <span>-{fmtMoney(totals.descuentoTotalMonto)}</span>
                 </div>
               )}
               <div className="flex justify-between text-sm text-gray-400">
@@ -130,17 +148,17 @@ export default function CartDrawer() {
 
               {/* Discount milestones */}
               <div className="rounded-lg bg-white/5 p-2 text-xs text-gray-400">
-                {totals.descuentoPorcentaje === 0 && (
+                {totals.descuentoVolumenPct === 0 && (
                   <p>Sumá ${(100_000 - totals.subtotal).toLocaleString("es-AR")} más para 10% OFF</p>
                 )}
-                {totals.descuentoPorcentaje === 10 && (
+                {totals.descuentoVolumenPct === 10 && (
                   <p>Sumá ${(250_000 - totals.subtotal).toLocaleString("es-AR")} más para 15% OFF</p>
                 )}
-                {totals.descuentoPorcentaje === 15 && (
+                {totals.descuentoVolumenPct === 15 && (
                   <p>Sumá ${(1_000_000 - totals.subtotal).toLocaleString("es-AR")} más para 20% OFF</p>
                 )}
-                {totals.descuentoPorcentaje === 20 && (
-                  <p className="text-[#39FF14]">¡Tenés el máximo descuento!</p>
+                {totals.descuentoVolumenPct === 20 && (
+                  <p className="text-[#39FF14]">¡Tenés el máximo descuento por volumen!</p>
                 )}
               </div>
 
