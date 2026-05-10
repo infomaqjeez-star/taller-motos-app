@@ -80,11 +80,12 @@ def main() -> int:
     )
     args = ap.parse_args()
 
-    pdf = Path(args.pdf).expanduser().resolve()
+    pdf = H.resolve_catalog_pdf(args.pdf, Path.cwd())
     if not pdf.is_file():
         print(f"No existe el PDF: {pdf}", file=sys.stderr)
         print(
-            f"Colocá el PDF en scripts/ con nombre: {H.DEFAULT_CATALOG_PDF_REL.split('/')[-1]} o pasá --pdf",
+            "Colocá el PDF en scripts/ o public/catalogo/ (nombre: "
+            f"{Path(H.DEFAULT_CATALOG_PDF_REL).name}) o pasá --pdf",
             file=sys.stderr,
         )
         return 1

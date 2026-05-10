@@ -8,7 +8,7 @@ Layout por defecto:
 Layout --flat (solo bajo “catálogo”):
   public/catalogo/productos/<carpeta>/
 
-Requisitos: PDF en scripts/Catalogo Abril 2026 Konecta Repuestos.pdf (cwd apps/taller-demo), o --pdf.
+Requisitos: PDF en scripts/ o public/catalogo/ (mismo nombre Konecta), cwd apps/taller-demo, o --pdf / CATALOGO_PDF.
 
 Primeras 10 + JSON:
   python scripts/catalogo/build_product_folders.py --pages all --limit 10 --flat --force --update-json
@@ -170,11 +170,13 @@ def main() -> int:
     ap.add_argument("--update-json", action="store_true", help="Actualiza campo imagen en catalogo-public.json")
     args = ap.parse_args()
 
-    pdf_path = Path(args.pdf).expanduser().resolve()
+    pdf_path = H.resolve_catalog_pdf(args.pdf, Path.cwd())
     if not pdf_path.is_file():
         print(f"No existe el PDF: {pdf_path}", file=sys.stderr)
         print(
-            "Esperado en apps/taller-demo/scripts/ (Catalogo Abril 2026 Konecta Repuestos.pdf) o indicá --pdf.",
+            "Colocá el archivo en una de:\n"
+            + "\n".join(f"  - {c}" for c in H.CATALOG_PDF_CANDIDATES)
+            + "\n  …o pasá la ruta con --pdf (cwd: apps/taller-demo).",
             file=sys.stderr,
         )
         return 1

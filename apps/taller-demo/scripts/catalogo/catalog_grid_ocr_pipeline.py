@@ -112,7 +112,7 @@ def main() -> int:
     elif os.environ.get("TESSERACT_CMD"):
         pytesseract.pytesseract.tesseract_cmd = os.environ["TESSERACT_CMD"]
 
-    pdf = Path(args.pdf).expanduser().resolve()
+    pdf = _cat.resolve_catalog_pdf(args.pdf, Path.cwd())
     if not pdf.is_file():
         print(f"No existe PDF: {pdf}", file=sys.stderr)
         return 1

@@ -2,9 +2,14 @@
 from __future__ import annotations
 
 import re
+from pathlib import Path
 
-# PDF por defecto (cwd = apps/taller-demo): archivo en apps/taller-demo/scripts/
-DEFAULT_CATALOG_PDF_REL = "scripts/Catalogo Abril 2026 Konecta Repuestos.pdf"
+# PDF por defecto (cwd = apps/taller-demo): probá scripts/ y public/catalogo/
+CATALOG_PDF_CANDIDATES = (
+    "scripts/Catalogo Abril 2026 Konecta Repuestos.pdf",
+    "public/catalogo/Catalogo Abril 2026 Konecta Repuestos.pdf",
+)
+DEFAULT_CATALOG_PDF_REL = CATALOG_PDF_CANDIDATES[0]
 
 # Carpeta raíz (bajo public/catalogo/) para ~1300 artículos
 CATALOG_PARENT_DIR = "Catalogo-Abril-2026-Maqjeez-Repuestos"
@@ -15,9 +20,41 @@ PRECIO_VENTA_MULT = 4
 PREVIEW_CARD_WIDTH_PX = 360
 PREVIEW_CARD_HEIGHT_PX = 480
 
-# Catálogo Konecta: SKUs típicos 5–6 dígitos (evita confundir precios tipo 8000 como SKU)
-SKU_RE = re.compile(r"^\d{5,6}$")
+# Catálogo Konecta: 17002, KR17001, 14019-2, etc. (no años de 4 dígitos ni tokens cortos sueltos)
+SKU_RE = re.compile(
+    r"^(?:"
+    r"[A-Za-z]{2,4}\d{3,9}|"  # KR17001
+    r"\d{4,7}-\d{1,4}|"  # 14019-2
+    r"\d{5,6}"  # 17002
+    r")$"
+)
 _WIN_BAD = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
+
+
+def _norm_rel_path(s: str) -> str:
+    return Path(s).as_posix().replace("\\", "/")
+
+
+def resolve_catalog_pdf(explicit: str, cwd: Path | None = None) -> Path:
+    """
+    Resuelve ruta al PDF: primero `explicit` respecto a cwd; si no existe y
+    explicit es una de las rutas estándar, prueba el resto de candidatos.
+    """
+    base = cwd or Path.cwd()
+    exp = Path(explicit)
+    if exp.is_absolute():
+        p = exp.resolve()
+        return p
+    p = (base / exp).resolve()
+    if p.is_file():
+        return p
+    known = {_norm_rel_path(c) for c in CATALOG_PDF_CANDIDATES}
+    if _norm_rel_path(explicit) in known:
+        for rel in CATALOG_PDF_CANDIDATES:
+            q = (base / rel).resolve()
+            if q.is_file():
+                return q
+    return p
 
 
 def texto_maqjeez(s: str) -> str:
@@ -119,9 +156,8 @@ def guess_nombre_precio(
 
     precios: list[int] = []
     nombre_bits: list[str] = []
-    sku_like = re.compile(r"^\d{5,6}$")
     for _x0, _y0, _x1, _y1, text in band:
-        if sku_like.match(text):
+        if SKU_RE.match(text.strip()):
             continue
         p = parse_precio_token(text)
         if p is not None and 500 <= p <= 50_000_000:

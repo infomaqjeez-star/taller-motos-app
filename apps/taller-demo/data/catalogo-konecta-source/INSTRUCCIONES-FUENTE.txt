@@ -1,11 +1,17 @@
 PDF del catálogo (Konecta / desmalezadoras)
 ==========================================
 
-Ubicación por defecto (cwd = apps/taller-demo, Windows):
+Ubicación por defecto (cwd = apps/taller-demo, Windows). El script prueba en este orden:
 
   apps\taller-demo\scripts\Catalogo Abril 2026 Konecta Repuestos.pdf
+  apps\taller-demo\public\catalogo\Catalogo Abril 2026 Konecta Repuestos.pdf
 
-Si el archivo tiene otro nombre, usá siempre --pdf "scripts\tu-archivo.pdf"
+Si el archivo tiene otro nombre, usá siempre --pdf "ruta\completa\o\relativa.pdf"
+
+Con npm podés forzar la ruta del PDF (útil si está solo en public/catalogo):
+
+  set CATALOGO_PDF=public\catalogo\Catalogo Abril 2026 Konecta Repuestos.pdf
+  npm run catalogo:folders:all
 
 Opcional (para versionar aparte): también podés copiar una copia en
   data/catalogo-konecta-source/

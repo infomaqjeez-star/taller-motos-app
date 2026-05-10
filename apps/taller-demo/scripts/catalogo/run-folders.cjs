@@ -18,6 +18,9 @@ const args = [
   "--force",
   "--update-json",
 ];
+if (process.env.CATALOGO_PDF) {
+  args.push("--pdf", process.env.CATALOGO_PDF);
+}
 if (mode === "all") {
   args.push("--pages", "all");
 } else {
