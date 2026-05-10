@@ -79,10 +79,53 @@ export default function CheckoutPage() {
     );
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Obtener vendedor referido del localStorage
+    const vendedorId = localStorage.getItem("ref_vendedor_id");
+    let comisionMonto = 0;
+
+    // Si hay vendedor, calcular comisión (10% default si no podemos obtener el % real)
+    if (vendedorId) {
+      const comisionPct = 10; // default, podría fetchearse del vendedor
+      comisionMonto = Math.round((totals.subtotal * comisionPct) / 100);
+    }
+
+    // Guardar pedido en DB
+    try {
+      await fetch("/api/pedidos/catalogo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          items: items.map((i) => ({ sku: i.sku, nombre: i.nombre, precio: i.precio, cantidad: i.cantidad })),
+          datos_cliente: {
+            nombre: form.nombre,
+            dni: form.dni,
+            direccion: form.direccion,
+            entreCalles: form.entreCalles,
+            localidad: form.localidad,
+            provincia: form.provincia,
+            codigoPostal: form.codigoPostal,
+            telefono: form.telefono,
+            formaPago: form.formaPago,
+            notas: form.notas,
+          },
+          subtotal: totals.subtotal,
+          descuento_pct: totals.descuentoPorcentaje,
+          descuento_monto: totals.descuentoMonto,
+          envio: totals.envio,
+          total: totals.total,
+          vendedor_id: vendedorId,
+          comision_monto: comisionMonto,
+        }),
+      });
+    } catch (err) {
+      console.error("Error guardando pedido:", err);
+      // Continuar igual y enviar por WhatsApp
+    }
+
     const mensaje = generarMensajeWhatsApp(items, totals, form);
-    // Primero intentar con 1121816064, fallback a 1159000486
     abrirWhatsApp(mensaje, "5491121816064");
     clearCart();
     setEnviado(true);
