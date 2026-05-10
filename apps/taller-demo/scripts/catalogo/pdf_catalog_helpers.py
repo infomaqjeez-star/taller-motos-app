@@ -4,8 +4,10 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-# PDF por defecto (cwd = apps/taller-demo): probá scripts/ y public/catalogo/
+# PDF por defecto (cwd = apps/taller-demo): catalogo.pdf primero; nombre largo legado al final
 CATALOG_PDF_CANDIDATES = (
+    "scripts/catalogo.pdf",
+    "public/catalogo/catalogo.pdf",
     "scripts/Catalogo Abril 2026 Konecta Repuestos.pdf",
     "public/catalogo/Catalogo Abril 2026 Konecta Repuestos.pdf",
 )

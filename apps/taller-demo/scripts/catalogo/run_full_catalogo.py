@@ -6,7 +6,7 @@ con imagen.webp (tarjeta) + meta.json (precioVenta = lista × 4).
 
 Uso:
   python scripts/catalogo/run_full_catalogo.py
-  python scripts/catalogo/run_full_catalogo.py --pdf "C:\\ruta\\Catalogo Abril 2026 Konecta Repuestos.pdf"
+  python scripts/catalogo/run_full_catalogo.py --pdf "C:\\ruta\\catalogo.pdf"
   python scripts/catalogo/run_full_catalogo.py --skip-extract   # solo carpetas / JSON rutas imagen
 
 npm (desde apps/taller-demo):

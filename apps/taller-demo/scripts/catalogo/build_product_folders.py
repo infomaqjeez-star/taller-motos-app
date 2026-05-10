@@ -8,7 +8,7 @@ Layout por defecto:
 Layout --flat (solo bajo “catálogo”):
   public/catalogo/productos/<carpeta>/
 
-Requisitos: PDF en scripts/ o public/catalogo/ (mismo nombre Konecta), cwd apps/taller-demo, o --pdf / CATALOGO_PDF.
+Requisitos: PDF catalogo.pdf en scripts/ o public/catalogo/ (cwd apps/taller-demo), o --pdf / CATALOGO_PDF.
 
 Primeras 10 + JSON:
   python scripts/catalogo/build_product_folders.py --pages all --limit 10 --flat --force --update-json
