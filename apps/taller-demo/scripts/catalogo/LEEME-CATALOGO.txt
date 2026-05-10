@@ -4,6 +4,9 @@ CATÁLOGO — carpetas locales sin usar npm
 1) En esta misma carpeta hay GenerarCatalogo10.bat (10 productos) y
    GenerarCatalogoCompleto.bat (todo el PDF). Doble clic en uno.
 
+   Si solo ves TEXTO sin fotos del repuesto: usá GenerarCatalogo10Rejilla.bat
+   (recorte por rejilla 5×3 de la hoja, típico catálogo Konecta).
+
 2) Hace falta catalogo.pdf en:
    apps\taller-demo\scripts\catalogo.pdf
    o en apps\taller-demo\public\catalogo\catalogo.pdf

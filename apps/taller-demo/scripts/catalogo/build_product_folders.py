@@ -100,6 +100,51 @@ def render_tarjeta_catalogo(
     )
 
 
+def _pil_grid_cell_tarjeta(
+    page,
+    x0: float,
+    y0: float,
+    x1: float,
+    y1: float,
+    *,
+    width_px: int,
+    height_px: int,
+    dpi: int,
+    grid_cols: int,
+    grid_rows: int,
+    grid_mx: float,
+    grid_mt: float,
+    grid_mb: float,
+):
+    """Raster de la celda de rejilla que contiene el SKU (foto + texto del bloque)."""
+    import fitz
+    from PIL import Image, ImageOps
+
+    scx = (x0 + x1) / 2
+    scy = (y0 + y1) / 2
+    cell = H.catalog_grid_cell_containing_point(
+        page,
+        scx,
+        scy,
+        cols=grid_cols,
+        rows=grid_rows,
+        margin_x_frac=grid_mx,
+        margin_top_frac=grid_mt,
+        margin_bottom_frac=grid_mb,
+    )
+    if cell is None or cell.is_empty:
+        return None
+    clip = (fitz.Rect(cell) + (-1, -1, 1, 1)) & page.rect
+    pix = page.get_pixmap(clip=clip, dpi=max(int(dpi), 220), alpha=False)
+    img = Image.open(io.BytesIO(pix.tobytes("png"))).convert("RGB")
+    return ImageOps.fit(
+        img,
+        (width_px, height_px),
+        method=Image.Resampling.LANCZOS,
+        centering=(0.5, 0.5),
+    )
+
+
 def render_product_card_image(
     page,
     x0: float,
@@ -113,19 +158,59 @@ def render_product_card_image(
     half_width_mult: float,
     half_height_mult: float,
     dpi: int,
+    grid_cols: int = 5,
+    grid_rows: int = 3,
+    grid_mx: float = 0.02,
+    grid_mt: float = 0.12,
+    grid_mb: float = 0.03,
 ):
     """
-    Salida tarjeta: modo auto intenta recorte de la imagen embebida encima del SKU (foto nítida);
-    si no hay, usa raster del PDF como antes. Modo raster fuerza lo viejo; photo solo embebido
-    (si falla, cae a raster).
+    Salida tarjeta:
+    - grid: raster de la celda 5×3 (u otra rejilla) que contiene el código — incluye la foto.
+    - auto: rejilla → embebido → raster centrado en SKU (Konecta suele necesitar rejilla).
+    - raster / photo: como antes.
     """
     import fitz
     from PIL import Image, ImageOps
 
     mode = (image_mode or "auto").strip().lower()
-    try_embed = mode in ("auto", "photo")
 
-    if try_embed:
+    def _raster_sku():
+        return render_tarjeta_catalogo(
+            page,
+            x0,
+            y0,
+            x1,
+            y1,
+            width_px=width_px,
+            height_px=height_px,
+            half_width_mult=half_width_mult,
+            half_height_mult=half_height_mult,
+            dpi=dpi,
+        )
+
+    if mode == "grid":
+        pil = _pil_grid_cell_tarjeta(
+            page,
+            x0,
+            y0,
+            x1,
+            y1,
+            width_px=width_px,
+            height_px=height_px,
+            dpi=dpi,
+            grid_cols=grid_cols,
+            grid_rows=grid_rows,
+            grid_mx=grid_mx,
+            grid_mt=grid_mt,
+            grid_mb=grid_mb,
+        )
+        return pil if pil is not None else _raster_sku()
+
+    if mode == "raster":
+        return _raster_sku()
+
+    if mode == "photo":
         t = H.embedded_product_image_rect(page, x0, y0, x1, y1)
         if t is not None:
             rx0, ry0, rx1, ry1 = t
@@ -138,8 +223,10 @@ def render_product_card_image(
                 method=Image.Resampling.LANCZOS,
                 centering=(0.5, 0.48),
             )
+        return _raster_sku()
 
-    return render_tarjeta_catalogo(
+    # auto
+    pil = _pil_grid_cell_tarjeta(
         page,
         x0,
         y0,
@@ -147,10 +234,30 @@ def render_product_card_image(
         y1,
         width_px=width_px,
         height_px=height_px,
-        half_width_mult=half_width_mult,
-        half_height_mult=half_height_mult,
         dpi=dpi,
+        grid_cols=grid_cols,
+        grid_rows=grid_rows,
+        grid_mx=grid_mx,
+        grid_mt=grid_mt,
+        grid_mb=grid_mb,
     )
+    if pil is not None:
+        return pil
+
+    t = H.embedded_product_image_rect(page, x0, y0, x1, y1)
+    if t is not None:
+        rx0, ry0, rx1, ry1 = t
+        clip = (fitz.Rect(rx0, ry0, rx1, ry1) + (-2, -2, 2, 2)) & page.rect
+        pix = page.get_pixmap(clip=clip, dpi=max(int(dpi), 240), alpha=False)
+        img = Image.open(io.BytesIO(pix.tobytes("png"))).convert("RGB")
+        return ImageOps.fit(
+            img,
+            (width_px, height_px),
+            method=Image.Resampling.LANCZOS,
+            centering=(0.5, 0.48),
+        )
+
+    return _raster_sku()
 
 
 def _pil_embed_only(
@@ -195,11 +302,34 @@ def iter_preview_variant_images(
     dpi: int,
     half_w: float,
     half_h: float,
+    grid_cols: int = 5,
+    grid_rows: int = 3,
+    grid_mx: float = 0.02,
+    grid_mt: float = 0.12,
+    grid_mb: float = 0.03,
 ) -> list[tuple[str, Any]]:
     """Lista (slug, PIL.Image) para comparar métodos en disco (imagen_variant_*.webp)."""
     from PIL import Image
 
     out: list[tuple[str, Image.Image]] = []
+
+    gcell = _pil_grid_cell_tarjeta(
+        page,
+        x0,
+        y0,
+        x1,
+        y1,
+        width_px=card_w,
+        height_px=card_h,
+        dpi=dpi,
+        grid_cols=grid_cols,
+        grid_rows=grid_rows,
+        grid_mx=grid_mx,
+        grid_mt=grid_mt,
+        grid_mb=grid_mb,
+    )
+    if gcell is not None:
+        out.append(("raster_grid", gcell))
 
     emb = _pil_embed_only(
         page,
@@ -248,7 +378,7 @@ def iter_preview_variant_images(
 
     out.append(
         (
-            "auto_embed_fallback",
+            "auto_grid_embed_raster",
             render_product_card_image(
                 page,
                 x0,
@@ -261,6 +391,11 @@ def iter_preview_variant_images(
                 half_width_mult=half_w,
                 half_height_mult=half_h,
                 dpi=dpi,
+                grid_cols=grid_cols,
+                grid_rows=grid_rows,
+                grid_mx=grid_mx,
+                grid_mt=grid_mt,
+                grid_mb=grid_mb,
             ),
         )
     )
@@ -329,10 +464,30 @@ def main() -> int:
     ap.add_argument("--dpi", type=int, default=200)
     ap.add_argument(
         "--image-mode",
-        choices=("auto", "raster", "photo"),
+        choices=("auto", "raster", "photo", "grid"),
         default="auto",
-        help="auto: foto embebida encima del SKU si existe, si no recorte raster; "
-        "raster: solo recorte como antes; photo: solo embebido (si no hay, raster).",
+        help="auto: rejilla 5×3 → embebido → raster SKU; grid: solo rejilla (fallback raster); "
+        "raster / photo: como antes.",
+    )
+    ap.add_argument("--grid-cols", type=int, default=5, help="Columnas rejilla catálogo (Konecta típico 5)")
+    ap.add_argument("--grid-rows", type=int, default=3, help="Filas rejilla por página (típico 3)")
+    ap.add_argument(
+        "--grid-mx",
+        type=float,
+        default=0.02,
+        help="Margen lateral rejilla, fracción del ancho de página (0..0.45)",
+    )
+    ap.add_argument(
+        "--grid-mt",
+        type=float,
+        default=0.12,
+        help="Margen superior (banda título + hueco), fracción alto página",
+    )
+    ap.add_argument(
+        "--grid-mb",
+        type=float,
+        default=0.03,
+        help="Margen inferior rejilla, fracción alto página",
     )
     ap.add_argument(
         "--half-width-mult",
@@ -481,6 +636,11 @@ def main() -> int:
                     half_width_mult=args.half_width_mult,
                     half_height_mult=args.half_height_mult,
                     dpi=args.dpi,
+                    grid_cols=args.grid_cols,
+                    grid_rows=args.grid_rows,
+                    grid_mx=args.grid_mx,
+                    grid_mt=args.grid_mt,
+                    grid_mb=args.grid_mb,
                 )
                 img.save(img_path, format="WEBP", quality=86, method=4)
             if args.emit_variants:
@@ -495,6 +655,11 @@ def main() -> int:
                     dpi=args.dpi,
                     half_w=args.half_width_mult,
                     half_h=args.half_height_mult,
+                    grid_cols=args.grid_cols,
+                    grid_rows=args.grid_rows,
+                    grid_mx=args.grid_mx,
+                    grid_mt=args.grid_mt,
+                    grid_mb=args.grid_mb,
                 ):
                     vpath = dest_dir / f"imagen_variant_{vslug}.webp"
                     vim.save(vpath, format="WEBP", quality=86, method=4)

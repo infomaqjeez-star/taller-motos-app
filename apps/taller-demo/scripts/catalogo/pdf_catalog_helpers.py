@@ -261,3 +261,70 @@ def embedded_product_image_rect(
     if best is None:
         return None
     return (best.x0, best.y0, best.x1, best.y1)
+
+
+def catalog_grid_cell_rect(
+    page: object,
+    col: int,
+    row: int,
+    *,
+    cols: int,
+    rows: int,
+    margin_x_frac: float,
+    margin_top_frac: float,
+    margin_bottom_frac: float,
+) -> object:
+    """Rectángulo PDF de la celda (col,row) en una rejilla tipo catálogo Konecta (5×3, etc.)."""
+    import fitz
+
+    R = page.rect
+    w, h = float(R.width), float(R.height)
+    mx = max(0.0, min(0.45, float(margin_x_frac)))
+    mt = max(0.0, min(0.45, float(margin_top_frac)))
+    mb = max(0.0, min(0.45, float(margin_bottom_frac)))
+    if mt + mb >= 0.95:
+        mb = 0.05
+    x0 = R.x0 + w * mx
+    y0 = R.y0 + h * mt
+    inner_w = w * (1.0 - 2.0 * mx)
+    inner_h = h * (1.0 - mt - mb)
+    cw = inner_w / max(1, int(cols))
+    ch = inner_h / max(1, int(rows))
+    return fitz.Rect(
+        x0 + col * cw,
+        y0 + row * ch,
+        x0 + (col + 1) * cw,
+        y0 + (row + 1) * ch,
+    )
+
+
+def catalog_grid_cell_containing_point(
+    page: object,
+    px: float,
+    py: float,
+    *,
+    cols: int,
+    rows: int,
+    margin_x_frac: float,
+    margin_top_frac: float,
+    margin_bottom_frac: float,
+) -> object | None:
+    """Celda de la rejilla que contiene el punto (p. ej. centro del código SKU)."""
+    import fitz
+
+    pt = fitz.Point(float(px), float(py))
+    for c in range(max(1, int(cols))):
+        for r in range(max(1, int(rows))):
+            cell = catalog_grid_cell_rect(
+                page,
+                c,
+                r,
+                cols=cols,
+                rows=rows,
+                margin_x_frac=margin_x_frac,
+                margin_top_frac=margin_top_frac,
+                margin_bottom_frac=margin_bottom_frac,
+            )
+            if not cell.is_empty and cell.contains(pt):
+                return cell
+    return None
