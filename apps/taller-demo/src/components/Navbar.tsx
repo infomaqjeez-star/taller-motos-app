@@ -6,7 +6,7 @@ import { useState, useEffect } from "react";
 import {
   Package, LayoutDashboard, AlertTriangle,
   MessageCircle, BarChart2, Users, Truck, ShoppingCart,
-  Clock, Timer, Settings, CheckCircle, Bug,
+  Clock, Timer, Settings, CheckCircle, Bug, Store,
 } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
 import { useAlarms } from "../hooks/useAlarms";
@@ -70,9 +70,10 @@ export default function Navbar({
   const links = [
     { href: "/taller",       label: "Taller",       icon: LayoutDashboard, badge: overdueCount,  badgeColor: "bg-red-500" },
     { href: "/ventas",       label: "Vender",       icon: ShoppingCart,    badge: 0,             badgeColor: "" },
+    { href: "/catalogo",     label: "Catálogo",     icon: Store,           badge: 0,             badgeColor: "" },
     { href: "/estadisticas", label: "Estadísticas", icon: BarChart2,       badge: 0,             badgeColor: "" },
     { href: "/agenda",       label: "Agenda",       icon: Users,           badge: 0,             badgeColor: "" },
-    { href: "/inventario",   label: "Pedidos",     icon: Package,         badge: lowStockCount, badgeColor: "bg-yellow-500" },
+    { href: "/inventario",   label: "Pedidos",      icon: Package,         badge: lowStockCount, badgeColor: "bg-yellow-500" },
   ];
 
   return (
