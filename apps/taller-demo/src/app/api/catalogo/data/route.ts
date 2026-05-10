@@ -22,8 +22,8 @@ function sanitizePublic(doc: CatalogoDocumento) {
       };
       if (p.imagen && typeof p.imagen === "string") {
         const img = p.imagen.trim().slice(0, 320);
-        /* Ruta relativa bajo /catalogo (subcarpetas, letras Unicode en nombres; sin .. ni barras invertidas) */
-        if (/^[\p{L}\p{N}_\-./ ]+$/u.test(img) && !img.includes("..") && !img.includes("\\")) {
+        /* Ruta bajo /catalogo: letras/números, espacio, _ - . / (Latin extendido sin \\p por target es5) */
+        if (/^[A-Za-z0-9_\-./ \u00C0-\u024F]+$/.test(img) && !img.includes("..") && !img.includes("\\")) {
           row.imagen = img;
         }
       }
