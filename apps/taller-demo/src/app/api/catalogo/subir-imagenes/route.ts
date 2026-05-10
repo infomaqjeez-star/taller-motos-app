@@ -18,6 +18,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
 
+    // Crear bucket automáticamente si no existe
+    const { data: buckets } = await supabase.storage.listBuckets();
+    const bucketExists = buckets?.some((b) => b.name === "catalog-images");
+    if (!bucketExists) {
+      await supabase.storage.createBucket("catalog-images", { public: true });
+    }
+
     const { items }: { items: ImageBatchItem[] } = await req.json();
     if (!items || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json({ error: "Items requeridos" }, { status: 400 });
