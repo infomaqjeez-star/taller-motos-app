@@ -61,6 +61,7 @@ def main() -> int:
     if not out_root:
         out_root = "public/catalogo"
     local_only = bool((os.environ.get("CATALOGO_PRODUCTOS_ROOT") or "").strip())
+    runner = APP_ROOT / "scripts/catalogo/run_folders.py"
 
     try:
         _run(
@@ -86,19 +87,15 @@ def main() -> int:
                 ]
                 + pdf_args
             )
-        build_argv = [
-            sys.executable,
-            "scripts/catalogo/build_product_folders.py",
-            "--out-root",
-            out_root,
-            "--pages",
-            "all",
-            "--flat",
-            "--force",
-        ]
-        if not local_only:
-            build_argv.append("--update-json")
-        _run(build_argv + pdf_args)
+        env = os.environ.copy()
+        if args.pdf.strip():
+            env["CATALOGO_PDF"] = args.pdf.strip()
+        print(f"+ {sys.executable} {runner} all", flush=True)
+        subprocess.check_call(
+            [sys.executable, str(runner), "all"],
+            cwd=APP_ROOT,
+            env=env,
+        )
     except subprocess.CalledProcessError as e:
         return int(e.returncode or 1)
     except FileNotFoundError:

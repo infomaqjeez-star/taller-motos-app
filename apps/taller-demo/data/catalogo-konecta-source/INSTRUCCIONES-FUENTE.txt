@@ -1,6 +1,18 @@
 PDF del catálogo (Konecta / desmalezadoras)
 ==========================================
 
+--- Sin programar ni CMD (solo Windows) ---
+
+  1) Poné catalogo.pdf en apps\taller-demo\scripts\ (o public\catalogo\).
+  2) Doble clic en apps\taller-demo\GenerarCatalogo10.bat (10 artículos de prueba)
+     o GenerarCatalogoCompleto.bat (todo el PDF).
+
+Las carpetas se crean solas en:
+  %USERPROFILE%\Documents\CatalogoKonectaArticulos\productos\
+
+Para usar D:\ u otra ruta, abrí el .bat con el Bloc de notas y descomentá la línea
+REM set "CATALOGO_PRODUCTOS_ROOT=D:\..."
+
 Ubicación por defecto (cwd = apps/taller-demo, Windows). El script prueba en este orden:
 
   apps\taller-demo\scripts\catalogo.pdf

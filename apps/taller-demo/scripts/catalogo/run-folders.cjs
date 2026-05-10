@@ -1,52 +1,35 @@
 /**
- * Ejecuta build_product_folders.py con Python en Windows (py / py -3) o Linux/Mac (python3).
+ * Ejecuta run_folders.py (build_product_folders). Cwd = apps/taller-demo.
  * Uso: node scripts/catalogo/run-folders.cjs [10|all]
- * Cwd debe ser apps/taller-demo (como cuando npm run invoca este archivo).
+ * npm run catalogo:folders:10  |  npm run catalogo:folders:all
+ *
+ * En Windows sin npm: doble clic en GenerarCatalogo10.bat o GenerarCatalogoCompleto.bat
  */
 const { spawnSync } = require("child_process");
 const path = require("path");
 
 const root = path.join(__dirname, "..", "..");
-const script = path.join(__dirname, "build_product_folders.py");
+const runner = path.join(__dirname, "run_folders.py");
 const mode = process.argv[2] || "10";
-
-const outRoot = process.env.CATALOGO_PRODUCTOS_ROOT || "public/catalogo";
-const args = [script, "--out-root", outRoot, "--flat", "--force"];
-if (!process.env.CATALOGO_PRODUCTOS_ROOT) {
-  args.push("--update-json");
-}
-if (process.env.CATALOGO_PDF) {
-  args.push("--pdf", process.env.CATALOGO_PDF);
-}
-if (process.env.CATALOGO_PRODUCTOS_ROOT) {
-  console.error(
-    "[catalogo] CATALOGO_PRODUCTOS_ROOT=" +
-      outRoot +
-      " → carpetas en " +
-      path.join(outRoot, "productos") +
-      " (sin --update-json; la app web no usa esa ruta)."
-  );
-}
-if (mode === "all") {
-  args.push("--pages", "all");
-} else {
-  args.push("--pages", "all", "--limit", "10");
-}
 
 const win = process.platform === "win32";
 const attempts = win
   ? [
-      ["py", ["-3", ...args]],
-      ["py", args],
-      ["python", args],
+      ["py", ["-3", runner, mode]],
+      ["py", [runner, mode]],
+      ["python", [runner, mode]],
     ]
   : [
-      ["python3", args],
-      ["python", args],
+      ["python3", [runner, mode]],
+      ["python", [runner, mode]],
     ];
 
 for (const [exe, argv] of attempts) {
-  const r = spawnSync(exe, argv, { cwd: root, stdio: "inherit" });
+  const r = spawnSync(exe, argv, {
+    cwd: root,
+    stdio: "inherit",
+    env: process.env,
+  });
   if (r.error && r.error.code === "ENOENT") {
     continue;
   }
