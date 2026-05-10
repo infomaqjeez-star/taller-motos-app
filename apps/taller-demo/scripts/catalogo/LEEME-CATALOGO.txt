@@ -11,6 +11,12 @@ CATÁLOGO — carpetas locales sin usar npm
 3) Las carpetas salen en:
    %USERPROFILE%\Documents\CatalogoKonectaArticulos\productos\
 
+3b) Si el .bat dice que no encuentra Python:
+   - Instalá Python 3 desde https://www.python.org/downloads/ y marcá "Add python.exe to PATH".
+   - En Windows: Configuración → Aplicaciones → Configuración avanzada de aplicaciones
+     → Alias de ejecución de aplicaciones → DESACTIVAR "python.exe" y "python3.exe"
+     (son atajos a la Microsoft Store y suelen romper el comando "python").
+
 4) Si NO ves estos archivos en el Explorador de Windows, tu clon está viejo.
    En la raíz del repo (donde está la carpeta .git):
      git fetch origin
