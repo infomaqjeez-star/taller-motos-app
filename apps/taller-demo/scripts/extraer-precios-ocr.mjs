@@ -20,25 +20,32 @@ const JSON_PATH = path.join(__dirname, "..", "data", "catalogo-products.json");
 const API_URL = "https://appjeezpro.store/api/catalogo/actualizar-precios";
 const AUTH = "Bearer maqjeez-prices-2026";
 
-function extractPriceFromText(text) {
-  // Buscar patrones de precio: $12.345, 12345, 12.345, etc.
+function extractPriceFromText(text, sku) {
+  const cleanText = text.toLowerCase().replace(/\s+/g, " ");
+  const skuNum = sku.replace(/\D/g, "");
+
+  // Patrones específicos de precio en imágenes de ML
   const patterns = [
-    /\$\s*(\d{1,3}(?:[.,]\d{3})*(?:,\d{2})?)/g,  // $12.345,67
-    /\$\s*(\d{1,3}(?:\.\d{3})*(?:,\d{2})?)/g,  // $12,345.67
-    /precio\s*[:\-]?\s*\$?\s*(\d[\d.,]*)/gi,  // "precio: 12345"
-    /(\d{1,3}(?:[.,]\d{3})+)\s*(?:pesos|ars|\$)/gi,  // "12.345 pesos"
-    /\b(\d{4,6})\b/g,  // Número de 4-6 dígitos (probable precio)
+    // "$ 12.345" o "$12.345"
+    /\$\s*(\d{1,3}(?:[.]\d{3})+)/g,
+    // "12.345" seguido de pesos/ARS
+    /(\d{1,3}(?:[.]\d{3})+)\s*(?:pesos|ars)/g,
+    // "Precio: 12345"
+    /precio[^\d]*(\d[\d.]*)/g,
+    // "$$ 12345" (doble $ que a veces aparece)
+    /\$\$\s*(\d[\d.]*)/g,
   ];
 
   let bestPrice = 0;
 
   for (const pattern of patterns) {
-    const matches = [...text.matchAll(pattern)];
+    const matches = [...cleanText.matchAll(pattern)];
     for (const match of matches) {
-      let num = match[1].replace(/[.,]/g, "");
-      const val = parseInt(num, 10);
-      if (val > 1000 && val < 500000 && val > bestPrice) {
-        bestPrice = val;
+      let raw = match[1].replace(/\./g, "").replace(",", ".");
+      const val = parseInt(raw, 10);
+      // Filtrar: debe ser > 1000, < 1M, y NO debe ser el SKU
+      if (val > 1000 && val < 1_000_000 && val !== parseInt(skuNum, 10)) {
+        if (val > bestPrice) bestPrice = val;
       }
     }
   }
@@ -46,12 +53,12 @@ function extractPriceFromText(text) {
   return bestPrice;
 }
 
-async function processImage(imagePath) {
+async function processImage(imagePath, sku) {
   try {
     const { data: { text } } = await Tesseract.recognize(imagePath, "spa", {
       logger: () => {}, // silencioso
     });
-    const price = extractPriceFromText(text);
+    const price = extractPriceFromText(text, sku);
     return price;
   } catch (err) {
     console.log(`  ⚠️ OCR error en ${path.basename(imagePath)}: ${err.message}`);
@@ -78,7 +85,7 @@ async function main() {
       continue;
     }
 
-    const price = await processImage(p.imagePath);
+    const price = await processImage(p.imagePath, p.sku);
     if (price > 0) {
       precios.push({ sku: p.sku, precio_base: price });
       console.log(`✅ ${p.sku}: $${price.toLocaleString("es-AR")} → catálogo $${(price * 4).toLocaleString("es-AR")}`);
