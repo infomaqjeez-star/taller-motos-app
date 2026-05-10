@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { BookOpen, Search, Tag, Plus, Minus, Users, X } from "lucide-react";
+import { BookOpen, Search, Tag, Plus, Minus, Users, X, Package, AlertCircle, Lightbulb, PlusCircle } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import CartDrawer from "@/components/catalogo/CartDrawer";
 import CartButton from "@/components/catalogo/CartButton";
@@ -122,38 +122,99 @@ function CatalogoContent() {
 
   return (
     <main className="mx-auto max-w-6xl space-y-5 px-4 py-6 pb-12 sm:px-5 lg:px-8">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex min-w-0 items-start gap-3">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 text-[#FDB71A]">
-              <BookOpen className="h-6 w-6 shrink-0" />
-              <h1 className="truncate text-xl font-black text-white sm:text-2xl">
-                Catálogo Maqjeez
-              </h1>
+      {/* Header del catálogo */}
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="flex min-w-0 items-start gap-3">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 text-[#FDB71A]">
+                <BookOpen className="h-6 w-6 shrink-0" />
+                <h1 className="truncate text-xl font-black text-white sm:text-2xl">
+                  Catálogo Maqjeez
+                </h1>
+              </div>
+              <p className="mt-1 text-sm text-gray-400">
+                Lista pública de repuestos. Precios de referencia.
+              </p>
             </div>
-            <p className="mt-1 text-sm text-gray-400">
-              Lista pública de repuestos. Precios de referencia.
-            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            {/* Contador de productos */}
+            {!loading && (
+              <span className="flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.05] px-2.5 py-1 text-xs font-medium text-gray-400">
+                <Package className="h-3.5 w-3.5 text-[#FDB71A]" />
+                {productos.length.toLocaleString("es-AR")} productos
+              </span>
+            )}
+            {vendedorLogueado ? (
+              <Link
+                href="/catalogo/vendedor/dashboard"
+                className="flex items-center gap-1.5 rounded-lg border border-[#FF5722]/30 bg-[#FF5722]/10 px-3 py-1.5 text-xs font-bold text-[#FF5722] hover:bg-[#FF5722]/20"
+              >
+                <Users className="h-3.5 w-3.5" />
+                Mi cuenta
+              </Link>
+            ) : (
+              <Link
+                href="/catalogo/vendedor/login"
+                className="flex items-center gap-1.5 rounded-lg border border-white/10 px-3 py-1.5 text-xs font-medium text-gray-400 hover:border-white/20 hover:text-white"
+              >
+                <Users className="h-3.5 w-3.5" />
+                Soy vendedor
+              </Link>
+            )}
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          {vendedorLogueado ? (
-            <Link
-              href="/catalogo/vendedor/dashboard"
-              className="flex items-center gap-1.5 rounded-lg border border-[#FF5722]/30 bg-[#FF5722]/10 px-3 py-1.5 text-xs font-bold text-[#FF5722] hover:bg-[#FF5722]/20"
-            >
-              <Users className="h-3.5 w-3.5" />
-              Mi cuenta
-            </Link>
-          ) : (
-            <Link
-              href="/catalogo/vendedor/login"
-              className="flex items-center gap-1.5 rounded-lg border border-white/10 px-3 py-1.5 text-xs font-medium text-gray-400 hover:border-white/20 hover:text-white"
-            >
-              <Users className="h-3.5 w-3.5" />
-              Soy vendedor
-            </Link>
-          )}
+
+        {/* Botones de acción */}
+        <div className="flex flex-wrap gap-2">
+          <ActionButton
+            icon={<AlertCircle className="h-3.5 w-3.5" />}
+            label="Reportar error"
+            onClick={() =>
+              window.open(
+                "https://wa.me/5491121816064?text=" +
+                  encodeURIComponent(
+                    "Hola, quiero reportar un error en el catálogo Maqjeez:\n\n" +
+                      "- Producto/SKU: \n" +
+                      "- Descripción del error: \n" +
+                      "- Captura (opcional): "
+                  ),
+                "_blank"
+              )
+            }
+          />
+          <ActionButton
+            icon={<Lightbulb className="h-3.5 w-3.5" />}
+            label="Sugerencia"
+            onClick={() =>
+              window.open(
+                "https://wa.me/5491121816064?text=" +
+                  encodeURIComponent(
+                    "Hola, tengo una sugerencia para el catálogo Maqjeez:\n\n" +
+                      "- Tipo de sugerencia: \n" +
+                      "- Detalle: "
+                  ),
+                "_blank"
+              )
+            }
+          />
+          <ActionButton
+            icon={<PlusCircle className="h-3.5 w-3.5" />}
+            label="Solicitar producto"
+            onClick={() =>
+              window.open(
+                "https://wa.me/5491121816064?text=" +
+                  encodeURIComponent(
+                    "Hola, quiero solicitar un nuevo producto en el catálogo Maqjeez:\n\n" +
+                      "- Nombre del producto: \n" +
+                      "- SKU (si lo conoce): \n" +
+                      "- Descripción: "
+                  ),
+                "_blank"
+              )
+            }
+          />
         </div>
       </div>
 
@@ -283,6 +344,26 @@ function CatalogoContent() {
       <CartDrawer />
       <CartButton />
     </main>
+  );
+}
+
+function ActionButton({
+  icon,
+  label,
+  onClick,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs font-medium text-gray-400 hover:border-white/20 hover:bg-white/[0.05] hover:text-white transition-colors"
+    >
+      {icon}
+      {label}
+    </button>
   );
 }
 
