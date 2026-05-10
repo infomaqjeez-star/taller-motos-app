@@ -450,10 +450,9 @@ function ProductCard({ producto, addItem }: { producto: Producto; addItem: Retur
         {/* Botón Agregar - siempre al final */}
         <button
           onClick={handleAdd}
-          className="mt-auto flex w-full items-center justify-center gap-0.5 rounded-md sm:rounded-lg bg-[#FF5722] py-1.5 sm:py-2 text-[10px] sm:text-sm font-bold text-white hover:bg-[#E64A19] active:scale-[0.98] transition-all"
+          className="mt-auto flex w-full items-center justify-center rounded-md sm:rounded-lg bg-[#FF5722] py-1.5 sm:py-2 text-[10px] sm:text-sm font-bold text-white hover:bg-[#E64A19] active:scale-[0.98] transition-all"
         >
-          <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
-          <span className="truncate">{qty > 1 ? `${qty}x` : "+"}</span>
+          {qty > 1 ? `${qty}x` : "Agregar"}
         </button>
       </div>
     </article>
