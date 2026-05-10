@@ -15,6 +15,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
 
+    // Limpiar tabla existente
+    await supabase.from("catalog_products").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+
     // Leer el JSON de productos
     const jsonPath = path.join(process.cwd(), "data", "catalogo-products.json");
     if (!fs.existsSync(jsonPath)) {
