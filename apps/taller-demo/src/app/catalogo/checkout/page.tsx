@@ -15,6 +15,10 @@ import {
   ArrowLeft,
   Send,
   Package,
+  ChevronDown,
+  Clock,
+  AlertTriangle,
+  Info,
 } from "lucide-react";
 
 function fmtMoney(n: number) {
@@ -41,6 +45,10 @@ export default function CheckoutPage() {
 
   const [numeroCliente, setNumeroCliente] = useState<string | null>(null);
   const [enviado, setEnviado] = useState(false);
+  const [demorasOpen, setDemorasOpen] = useState(false);
+
+  // Estado de entregas: 'normal' | 'demora'
+  const estadoEntregas = "normal"; // Cambiar a "demora" cuando haya alta demanda
 
   // Obtener número de cliente del localStorage al cargar
   useEffect(() => {
@@ -179,6 +187,67 @@ export default function CheckoutPage() {
             </div>
           ))}
         </div>
+        {/* Tiempo de entrega */}
+        <div className="mt-3 rounded-lg border border-[#39FF14]/20 bg-[#39FF14]/5 p-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Clock className="h-4 w-4 text-[#39FF14]" />
+              <span className="text-sm font-bold text-[#39FF14]">
+                Entrega: 2 a 5 días hábiles
+              </span>
+            </div>
+            <div className="flex items-center gap-1">
+              {estadoEntregas === "normal" ? (
+                <span className="flex h-2.5 w-2.5 rounded-full bg-[#39FF14] animate-pulse" />
+              ) : (
+                <span className="flex h-2.5 w-2.5 rounded-full bg-yellow-400 animate-pulse" />
+              )}
+              <span className={`text-[10px] font-bold ${estadoEntregas === "normal" ? "text-[#39FF14]" : "text-yellow-400"}`}>
+                {estadoEntregas === "normal" ? "NORMAL" : "DEMORA"}
+              </span>
+            </div>
+          </div>
+
+          {/* Desplegable de demoras */}
+          <button
+            type="button"
+            onClick={() => setDemorasOpen(!demorasOpen)}
+            className="mt-2 flex w-full items-center justify-between rounded bg-white/5 px-2 py-1 text-xs text-gray-400 hover:bg-white/10"
+          >
+            <span className="flex items-center gap-1">
+              <Info className="h-3 w-3" />
+              {estadoEntregas === "normal" 
+                ? "Ver información sobre demoras" 
+                : "Ver detalle de demoras actuales"}
+            </span>
+            <ChevronDown className={`h-3 w-3 transition-transform ${demorasOpen ? "rotate-180" : ""}`} />
+          </button>
+
+          {demorasOpen && (
+            <div className="mt-2 rounded bg-white/5 p-2 text-xs text-gray-400 space-y-1">
+              {estadoEntregas === "normal" ? (
+                <>
+                  <p className="text-[#39FF14]">✓ Los pedidos se despachan en 24-48hs</p>
+                  <p>✓ Tiempo de entrega: 2 a 5 días hábiles</p>
+                  <p>✓ Días hábiles: Lunes a Viernes (no incluye feriados)</p>
+                  <p className="text-gray-500 mt-1">En días de alta demanda podrían extenderse los plazos. Serás informado por WhatsApp.</p>
+                </>
+              ) : (
+                <>
+                  <div className="flex items-center gap-1 text-yellow-400">
+                    <AlertTriangle className="h-3 w-3" />
+                    <span className="font-bold">ALTA DEMANDA - Demoras esperadas</span>
+                  </div>
+                  <p>• Tiempo actual de entrega: 5 a 10 días hábiles</p>
+                  <p>• Los pedidos se despachan en 48-72hs</p>
+                  <p>• Te contactaremos por WhatsApp con actualizaciones</p>
+                  <p className="text-gray-500 mt-1">Disculpá las molestias. Estamos trabajando para normalizar los tiempos.</p>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+
         <div className="border-t border-white/10 pt-2 space-y-1">
           <div className="flex justify-between text-sm text-gray-400">
             <span>Subtotal</span>

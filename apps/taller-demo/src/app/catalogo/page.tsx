@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { BookOpen, Search, Tag, Plus, Minus, Users, X, Package, AlertCircle, Lightbulb, PlusCircle, ChevronDown } from "lucide-react";
+import { BookOpen, Search, Tag, Plus, Minus, Users, X, Package, AlertCircle, Lightbulb, PlusCircle, ChevronDown, Clock, AlertTriangle } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import CartDrawer from "@/components/catalogo/CartDrawer";
 import CartButton from "@/components/catalogo/CartButton";
@@ -76,6 +76,65 @@ function DropdownCategorias({
 function fmtPrecio(precio: number) {
   if (!precio || precio <= 0) return "Consultar";
   return "$" + precio.toLocaleString("es-AR", { maximumFractionDigits: 0 });
+}
+
+function EntregasStatus() {
+  const [open, setOpen] = useState(false);
+  // Cambiar a "demora" cuando haya alta demanda
+  const estado = "normal";
+
+  if (estado === "normal") {
+    return (
+      <div className="rounded-xl border border-[#39FF14]/20 bg-[#39FF14]/5 px-4 py-2.5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="flex h-2.5 w-2.5 rounded-full bg-[#39FF14] animate-pulse" />
+            <span className="text-xs font-bold text-[#39FF14]">NORMAL</span>
+            <span className="text-xs text-gray-400">— Entrega: 2 a 5 días hábiles</span>
+          </div>
+          <button
+            onClick={() => setOpen(!open)}
+            className="text-gray-500 hover:text-white"
+          >
+            <ChevronDown className={`h-4 w-4 transition-transform ${open ? "rotate-180" : ""}`} />
+          </button>
+        </div>
+        {open && (
+          <div className="mt-2 space-y-1 text-xs text-gray-400">
+            <p className="text-[#39FF14]">✓ Despacho en 24-48hs</p>
+            <p>✓ Días hábiles: Lunes a Viernes</p>
+            <p className="text-gray-500">En alta demanda podrían extenderse los plazos.</p>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-xl border border-yellow-500/20 bg-yellow-500/5 px-4 py-2.5">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <AlertTriangle className="h-4 w-4 text-yellow-400" />
+          <span className="text-xs font-bold text-yellow-400">DEMORA</span>
+          <span className="text-xs text-gray-400">— Entrega: 5 a 10 días hábiles</span>
+        </div>
+        <button
+          onClick={() => setOpen(!open)}
+          className="text-gray-500 hover:text-white"
+        >
+          <ChevronDown className={`h-4 w-4 transition-transform ${open ? "rotate-180" : ""}`} />
+        </button>
+      </div>
+      {open && (
+        <div className="mt-2 space-y-1 text-xs text-gray-400">
+          <p className="text-yellow-400 font-bold">⚠ ALTA DEMANDA</p>
+          <p>• Despacho en 48-72hs</p>
+          <p>• Te contactaremos por WhatsApp</p>
+          <p className="text-gray-500">Disculpá las molestias. Estamos normalizando.</p>
+        </div>
+      )}
+    </div>
+  );
 }
 
 function useReferralBanner() {
@@ -309,6 +368,9 @@ function CatalogoContent() {
           />
         </div>
       </div>
+
+      {/* Estado de entregas */}
+      <EntregasStatus />
 
       {refBanner && (
         <div className="flex items-center justify-between rounded-xl border border-[#39FF14]/30 bg-[#39FF14]/5 px-4 py-3">
