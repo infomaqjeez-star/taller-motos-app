@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useVendedorAuth } from "@/components/vendedor/VendedorAuthContext";
 import {
-  Store, LogOut, Copy, Check, DollarSign, ShoppingBag, TrendingUp, Clock, Users, ArrowLeft, Award, Timer, Calendar, ChevronDown, Star, Target
+  Store, LogOut, Copy, Check, DollarSign, ShoppingBag, TrendingUp, Clock, Users, ArrowLeft, Award, Timer, Calendar, ChevronDown, Star, Target, Activity, TrendingDown, Shield, AlertTriangle
 } from "lucide-react";
 
 interface Pedido {
@@ -176,6 +177,14 @@ export default function VendedorDashboardPage() {
         <NivelesVendedor
           vendedor={vendedor}
           ventasTotales={resumen?.total_ventas || 0}
+        />
+      )}
+
+      {/* MANTENIMIENTO DE NIVEL */}
+      {vendedor && (
+        <MantenimientoNivel
+          pedidos={pedidos}
+          nivel={vendedor.nivel_vendedor || "nuevo"}
         />
       )}
 
@@ -387,6 +396,148 @@ function NivelesVendedor({ vendedor, ventasTotales }: { vendedor: { nivel_vended
           })}
         </div>
       )}
+    </div>
+  );
+}
+
+function MantenimientoNivel({ pedidos, nivel }: { pedidos: Pedido[]; nivel: string }) {
+  // Calcular días desde última venta
+  const ultimaVenta = pedidos.length > 0
+    ? Math.max(...pedidos.map((p) => new Date(p.created_at).getTime()))
+    : null;
+  const diasDesdeUltimaVenta = ultimaVenta
+    ? Math.floor((new Date().getTime() - ultimaVenta) / (1000 * 60 * 60 * 24))
+    : 999;
+
+  // Para mantener el nivel: al menos 1 venta cada 15 días
+  const DIAS_REQUERIDOS = 15;
+  const estaActivo = diasDesdeUltimaVenta <= DIAS_REQUERIDOS;
+
+  // Progreso de actividad (0-15 días)
+  const progresoActividad = Math.min(100, Math.max(0, Math.round(((DIAS_REQUERIDOS - diasDesdeUltimaVenta) / DIAS_REQUERIDOS) * 100)));
+
+  // Meses consecutivos sin cumplir (simulado basado en historial de pedidos)
+  // En producción esto vendría del backend
+  const mesesSinCumplir = !estaActivo && diasDesdeUltimaVenta > 45 ? 1 : 0;
+  const enRiesgoDeBajar = mesesSinCumplir >= 2;
+
+  // Color según estado
+  let estadoColor = "text-[#39FF14]";
+  let estadoBg = "bg-[#39FF14]/10";
+  let estadoBorder = "border-[#39FF14]/30";
+  let estadoTexto = "ACTIVO";
+  let estadoIcono = <Shield className="h-4 w-4 text-[#39FF14]" />;
+
+  if (enRiesgoDeBajar) {
+    estadoColor = "text-red-400";
+    estadoBg = "bg-red-500/10";
+    estadoBorder = "border-red-500/30";
+    estadoTexto = "RIESGO DE BAJAR";
+    estadoIcono = <TrendingDown className="h-4 w-4 text-red-400" />;
+  } else if (!estaActivo) {
+    estadoColor = "text-yellow-400";
+    estadoBg = "bg-yellow-500/10";
+    estadoBorder = "border-yellow-500/30";
+    estadoTexto = "EN RIESGO";
+    estadoIcono = <AlertTriangle className="h-4 w-4 text-yellow-400" />;
+  }
+
+  return (
+    <div className={`mt-5 rounded-xl border ${estadoBorder} ${estadoBg} p-4 space-y-4`}>
+      {/* Header */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <Activity className={`h-5 w-5 ${estadoColor}`} />
+          <div>
+            <h2 className="text-lg font-black text-white">Mantenimiento de Nivel</h2>
+            <p className="text-xs text-gray-400">
+              {nivel === "master" ? "Master — Mínimo: 1 venta cada 15 días" : `${nivel.replace('_', ' ')} — Mínimo: 1 venta cada 15 días`}
+            </p>
+          </div>
+        </div>
+        <span className={`rounded-full border px-3 py-1 text-xs font-bold ${estadoBorder} ${estadoBg} ${estadoColor}`}>
+          {estadoIcono} {estadoTexto}
+        </span>
+      </div>
+
+      {/* Barra de actividad (estilo Mercado Libre) */}
+      <div>
+        <div className="flex justify-between text-xs text-gray-500 mb-1">
+          <span>Actividad requerida: 1 venta cada 15 días</span>
+          <span>
+            {ultimaVenta
+              ? `Última venta: hace ${diasDesdeUltimaVenta} día${diasDesdeUltimaVenta !== 1 ? 's' : ''}`
+              : "Sin ventas registradas"}
+          </span>
+        </div>
+        <div className="h-4 w-full rounded-full bg-white/10 overflow-hidden relative">
+          <div
+            className={`h-full rounded-full transition-all ${
+              estaActivo
+                ? "bg-gradient-to-r from-[#39FF14] to-green-500"
+                : enRiesgoDeBajar
+                ? "bg-gradient-to-r from-red-600 to-red-400"
+                : "bg-gradient-to-r from-yellow-600 to-yellow-400"
+            }`}
+            style={{ width: `${progresoActividad}%` }}
+          />
+          {/* Marcadores de días */}
+          <div className="absolute inset-0 flex justify-between px-1">
+            {[0, 5, 10, 15].map((dia) => (
+              <div key={dia} className="flex flex-col items-center">
+                <div className="h-full w-px bg-white/20" />
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="flex justify-between text-[10px] text-gray-500 mt-1">
+          <span>Hoy</span>
+          <span>5 días</span>
+          <span>10 días</span>
+          <span>15 días</span>
+        </div>
+      </div>
+
+      {/* Información de riesgo */}
+      {!estaActivo && (
+        <div className="rounded-lg bg-white/5 p-3 space-y-2">
+          <p className="text-sm font-bold text-yellow-400">⚠ Atención</p>
+          <p className="text-xs text-gray-400">
+            No registrás ventas hace <span className="font-bold text-white">{diasDesdeUltimaVenta} días</span>.
+            Para mantener tu nivel de {nivel.replace('_', ' ')}, necesitás al menos una venta cada 15 días.
+          </p>
+          {mesesSinCumplir > 0 && (
+            <p className="text-xs text-yellow-400">
+              Meses sin cumplir: {mesesSinCumplir}. Si llegás a 2 meses seguidos, vas a bajar de nivel.
+            </p>
+          )}
+          <div className="flex items-center gap-2 mt-2">
+            <Link href="/catalogo/promo" className="rounded-lg bg-[#FF5722] px-3 py-1.5 text-xs font-bold text-white hover:bg-[#E64A19]">
+              Promocionar mi link
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {estaActivo && (
+        <div className="rounded-lg bg-white/5 p-3 space-y-1">
+          <p className="text-xs text-[#39FF14]">✓ Estás activo. Tu última venta fue hace {diasDesdeUltimaVenta} días.</p>
+          <p className="text-xs text-gray-500">
+            Para mantener tu nivel actual, asegurate de tener al menos una venta cada 15 días.
+          </p>
+        </div>
+      )}
+
+      {/* Reglas de bajada de nivel */}
+      <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3 space-y-1">
+        <p className="text-xs font-bold text-gray-300">Reglas de mantenimiento</p>
+        <ul className="space-y-1 text-[11px] text-gray-400">
+          <li>• Mínimo 1 venta cada 15 días para mantener el nivel</li>
+          <li>• Se revisa cada 6 meses automáticamente</li>
+          <li>• Bajás de nivel solo si no cumplís por 2 meses seguidos</li>
+          <li>• Si sos Master y cumplís, te mantenés como Master</li>
+        </ul>
+      </div>
     </div>
   );
 }
