@@ -18,50 +18,33 @@ export async function GET() {
 
     const supabase = createClient(url, key);
 
-    // Probar conexion basica
+    // Listar TODOS los admins
     const { data: allAdmins, error: listError } = await supabase
       .from("admins_catalogo")
-      .select("id, nombre, email, estado, totp_enabled");
+      .select("id, nombre, email, estado, totp_enabled, password_hash");
 
     if (listError) {
       return NextResponse.json({
         env_ok: true,
         connection_error: listError.message,
+        all_admins: null,
       });
     }
 
-    // Buscar admin especifico
-    const { data: admin, error: findError } = await supabase
-      .from("admins_catalogo")
-      .select("id, nombre, email, password_hash, estado, totp_enabled, totp_secret")
-      .eq("email", "vianferreterias@gmail.com")
-      .maybeSingle();
-
-    if (findError) {
-      return NextResponse.json({
-        env_ok: true,
-        all_admins_count: allAdmins?.length,
-        find_error: findError.message,
-      });
-    }
-
-    // Verificar hash
-    let hashValid = false;
-    if (admin?.password_hash) {
-      hashValid = await bcrypt.compare("Eze12ar43215g", admin.password_hash);
+    // Probar bcrypt con cada admin
+    const testPassword = "Eze12ar43215g";
+    const bcryptTests: any[] = [];
+    for (const admin of allAdmins || []) {
+      const valid = await bcrypt.compare(testPassword, (admin as any).password_hash || "");
+      bcryptTests.push({ email: admin.email, estado: admin.estado, totp_enabled: admin.totp_enabled, bcrypt_valid: valid });
     }
 
     return NextResponse.json({
       env_ok: true,
-      all_admins_count: allAdmins?.length,
-      all_admins_emails: allAdmins?.map((a: any) => a.email),
-      admin_found: !!admin,
-      admin_email: admin?.email,
-      admin_estado: admin?.estado,
-      admin_totp_enabled: admin?.totp_enabled,
-      has_password_hash: !!admin?.password_hash,
-      hash_length: admin?.password_hash?.length,
-      hash_valid: hashValid,
+      supabase_url: url,
+      all_admins_count: allAdmins?.length || 0,
+      all_admins: allAdmins?.map((a: any) => ({ id: a.id, nombre: a.nombre, email: a.email, estado: a.estado, totp_enabled: a.totp_enabled })),
+      bcrypt_tests: bcryptTests,
     });
   } catch (err: any) {
     return NextResponse.json({
