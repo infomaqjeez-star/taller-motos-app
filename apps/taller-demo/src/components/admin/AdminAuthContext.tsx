@@ -37,17 +37,30 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
       if (stored) {
         try {
           const parsed: AdminSession = JSON.parse(stored);
-          if (parsed?.token) {
-            const res = await fetch("/api/admin/me", {
+          if (parsed?.token && parsed?.admin) {
+            // Restaurar sesión inmediatamente desde localStorage sin esperar la red
+            setAdmin(parsed.admin);
+            setToken(parsed.token);
+            // Verificar en background — solo desloguear si el servidor dice 401 explícito
+            fetch("/api/admin/me", {
               headers: { Authorization: `Bearer ${parsed.token}` },
-            });
-            if (res.ok) {
-              const data = await res.json();
-              setAdmin({ id: data.id, nombre: data.nombre, email: data.email });
-              setToken(parsed.token);
-            } else {
-              localStorage.removeItem(STORAGE_KEY);
-            }
+            })
+              .then((res) => {
+                if (res.status === 401) {
+                  // Token inválido/revocado — desloguear
+                  localStorage.removeItem(STORAGE_KEY);
+                  setAdmin(null);
+                  setToken(null);
+                } else if (res.ok) {
+                  res.json().then((data) => {
+                    setAdmin({ id: data.id, nombre: data.nombre, email: data.email });
+                  });
+                }
+                // En cualquier otro error (500, red, etc.) mantener la sesión local
+              })
+              .catch(() => {
+                // Error de red — mantener sesión, no desloguear
+              });
           }
         } catch {
           localStorage.removeItem(STORAGE_KEY);

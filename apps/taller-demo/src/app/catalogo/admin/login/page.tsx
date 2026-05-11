@@ -7,7 +7,7 @@ import { Shield, ArrowLeft, Eye, EyeOff, Lock } from "lucide-react";
 
 export default function AdminLoginPage() {
   const router = useRouter();
-  const { login, verify2FA } = useAdminAuth();
+  const { login, verify2FA, admin, loading: authLoading } = useAdminAuth();
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -15,6 +15,12 @@ export default function AdminLoginPage() {
   const [tempToken, setTempToken] = useState("");
   const [form, setForm] = useState({ email: "", password: "" });
   const [code, setCode] = useState("");
+
+  // Si ya está logueado, redirigir directo al panel
+  if (!authLoading && admin) {
+    router.replace("/catalogo/admin/pedidos");
+    return null;
+  }
 
   const handleStep1 = async (e: React.FormEvent) => {
     e.preventDefault();
