@@ -8,6 +8,9 @@ import {
   Copy,
   Check,
   Camera,
+  Share2,
+  MessageCircle,
+  Send,
 } from "lucide-react";
 
 export default function PromoBannersPage() {
@@ -28,11 +31,31 @@ export default function PromoBannersPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const textoCompartir = `🛒 ¡Catálogo MAQJEEZ 2026!\n\nRepuestos para desmalezadoras, motosierras, grupos electrógenos y más.\n\n💰 Hasta 20% OFF por volumen\n🚚 Envío gratis en compras +$100.000\n${vendedor ? `🎁 3% extra con mi código: ${codigo}\n` : ''}\n${linkReferido}`;
+
   const copyTexto = () => {
-    const texto = `🛒 ¡Catálogo MAQJEEZ 2026!\n\nRepuestos para desmalezadoras, motosierras, grupos electrógenos y más.\n\n💰 Hasta 20% OFF por volumen\n🚚 Envío gratis en compras +$100.000\n${vendedor ? `🎁 3% extra con mi código: ${codigo}\n` : ''}\n${linkReferido}`;
-    navigator.clipboard.writeText(texto);
+    navigator.clipboard.writeText(textoCompartir);
     setCopiedTexto(true);
     setTimeout(() => setCopiedTexto(false), 2000);
+  };
+
+  const compartirWhatsApp = () => {
+    const url = `https://wa.me/?text=${encodeURIComponent(textoCompartir)}`;
+    window.open(url, "_blank");
+  };
+
+  const compartirNativo = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: "Catálogo MaqJeez 2026",
+          text: textoCompartir,
+          url: linkReferido,
+        });
+      } catch (_) {}
+    } else {
+      compartirWhatsApp();
+    }
   };
 
   // Banner Oscuro - Industrial Premium
@@ -591,26 +614,65 @@ export default function PromoBannersPage() {
         </div>
       </div>
 
-      {/* Texto sugerido */}
-      <div className="mt-6 rounded-xl border border-white/10 bg-white/[0.03] p-4 space-y-3">
-        <h3 className="text-sm font-bold text-[#39FF14]">Texto sugerido para publicar</h3>
-        <div className="rounded-lg bg-black/30 p-3 text-sm text-gray-300 space-y-1">
-          <p>🛒 ¡Catálogo MAQJEEZ 2026!</p>
-          <p>Repuestos para desmalezadoras, motosierras, grupos electrógenos y más.</p>
-          <p>💰 Hasta 20% OFF por volumen</p>
-          <p>🚚 Envío gratis en compras +$100.000</p>
-          {vendedor && (
-            <p>🎁 3% extra usando mi código: {codigo}</p>
-          )}
-          <p className="text-[#39FF14] font-mono mt-2">{linkReferido}</p>
+      {/* Compartir */}
+      <div className="mt-6 rounded-xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.08)" }}>
+        <div className="px-4 pt-4 pb-3" style={{ background: "rgba(255,255,255,0.03)" }}>
+          <h3 className="text-sm font-bold text-emerald-400 flex items-center gap-2">
+            <Share2 className="h-4 w-4" /> Compartir este banner
+          </h3>
+          <p className="text-xs text-gray-500 mt-0.5">Enviá el mensaje con tu link directamente desde acá</p>
         </div>
-        <button
-          onClick={copyTexto}
-          className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#FF5722] py-2 text-xs font-bold text-white hover:bg-[#E64A19]"
-        >
-          {copiedTexto ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-          {copiedTexto ? "¡Copiado!" : "Copiar texto para publicar"}
-        </button>
+
+        {/* Texto preview */}
+        <div className="px-4 pb-3 pt-1" style={{ background: "rgba(0,0,0,0.2)" }}>
+          <div className="rounded-lg p-3 text-xs text-gray-300 space-y-0.5" style={{ background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.05)" }}>
+            <p>🛒 ¡Catálogo MAQJEEZ 2026!</p>
+            <p className="text-gray-400">Repuestos para desmalezadoras, motosierras y más.</p>
+            <p>💰 Hasta 20% OFF por volumen</p>
+            <p>🚚 Envío gratis en compras +$100.000</p>
+            {vendedor && <p>🎁 3% extra con mi código: <span className="text-orange-400 font-bold">{codigo}</span></p>}
+            <p className="text-emerald-400 font-mono mt-1 break-all">{linkReferido}</p>
+          </div>
+        </div>
+
+        {/* Botones de acción */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 px-4 pb-4" style={{ background: "rgba(255,255,255,0.02)" }}>
+          {/* WhatsApp directo */}
+          <button
+            onClick={compartirWhatsApp}
+            className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold text-sm transition-all"
+            style={{ background: "#25d366", color: "#fff", boxShadow: "0 4px 14px rgba(37,211,102,0.3)" }}
+            onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "#1ebe5d")}
+            onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "#25d366")}
+          >
+            <MessageCircle className="h-4 w-4" /> WhatsApp
+          </button>
+
+          {/* Compartir nativo (móvil) / fallback WA */}
+          <button
+            onClick={compartirNativo}
+            className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold text-sm transition-all"
+            style={{ background: "#f97316", color: "#fff", boxShadow: "0 4px 14px rgba(249,115,22,0.3)" }}
+            onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "#ea6c0a")}
+            onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "#f97316")}
+          >
+            <Send className="h-4 w-4" /> Compartir
+          </button>
+
+          {/* Copiar texto */}
+          <button
+            onClick={copyTexto}
+            className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold text-sm transition-all"
+            style={{
+              background: copiedTexto ? "rgba(74,222,128,0.15)" : "rgba(255,255,255,0.06)",
+              color: copiedTexto ? "#4ade80" : "#cbd5e1",
+              border: `1px solid ${copiedTexto ? "rgba(74,222,128,0.4)" : "rgba(255,255,255,0.1)"}`,
+            }}
+          >
+            {copiedTexto ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+            {copiedTexto ? "¡Copiado!" : "Copiar texto"}
+          </button>
+        </div>
       </div>
     </main>
   );
