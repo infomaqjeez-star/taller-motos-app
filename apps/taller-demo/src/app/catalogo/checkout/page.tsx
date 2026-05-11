@@ -172,7 +172,8 @@ export default function CheckoutPage() {
           {items.map((item) => (
             <div key={item.sku} className="flex justify-between text-gray-400">
               <span className="truncate pr-2">
-                {item.cantidad}x {item.nombre}
+                {item.cantidad}x {item.nombre}{" "}
+                <span className="text-[10px] font-mono text-blue-400">({item.sku})</span>
               </span>
               <span className="shrink-0 text-gray-300">{fmtMoney(item.precio * item.cantidad)}</span>
             </div>
