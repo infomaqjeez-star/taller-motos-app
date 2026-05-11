@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useAdminAuth } from "@/components/admin/AdminAuthContext";
 import {
@@ -20,6 +20,12 @@ import {
   Calendar,
   Timer,
   Award,
+  Users,
+  ShoppingCart,
+  TrendingUp,
+  Download,
+  BarChart3,
+  Store,
 } from "lucide-react";
 
 interface Pedido {
@@ -67,21 +73,62 @@ function fmtMoney(n: number) {
   return "$" + (n || 0).toLocaleString("es-AR", { maximumFractionDigits: 0 });
 }
 
+interface DashboardStats {
+  totalVendedores: number;
+  totalClientes: number;
+  totalProductos: number;
+  totalPedidos: number;
+  ventasTotales: number;
+  ventasMes: number;
+  ventasSemana: number;
+  comisionesPendientes: number;
+  comisionesPagadas: number;
+  totalCarritosAbandonados: number;
+  totalItemsCarrito: number;
+}
+
+interface VendedorData {
+  id: string;
+  nombre: string;
+  email: string;
+  codigo_referido: string;
+  nivel_vendedor: string;
+  total_vendido: number;
+  comision_pct: number;
+  estado: string;
+  created_at: string;
+}
+
+interface ClienteData {
+  id: string;
+  nombre: string;
+  email: string;
+  telefono: string;
+  dni: string;
+  created_at: string;
+}
+
 export default function AdminPedidosPage() {
   const router = useRouter();
-  const { admin, logout } = useAdminAuth();
+  const { admin, logout, loading: authLoading } = useAdminAuth();
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Pedido | null>(null);
   const [filtro, setFiltro] = useState("todas");
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [vendedores, setVendedores] = useState<VendedorData[]>([]);
+  const [clientes, setClientes] = useState<ClienteData[]>([]);
+  const [vistaActiva, setVistaActiva] = useState<"pedidos" | "vendedores" | "clientes" | "dashboard">("dashboard");
 
   useEffect(() => {
+    if (authLoading) return;
     if (!admin) {
       router.push("/catalogo/admin/login");
       return;
     }
     cargarPedidos();
-  }, [admin, router]);
+    cargarDashboard();
+  }, [admin, authLoading, router]);
 
   const cargarPedidos = async () => {
     try {
@@ -93,6 +140,52 @@ export default function AdminPedidosPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const cargarDashboard = async () => {
+    try {
+      const res = await fetch("/api/admin/dashboard");
+      const data = await res.json();
+      if (data.resumen) {
+        setStats(data.resumen);
+        setVendedores(data.topVendedores || []);
+        setClientes(data.clientesRecientes || []);
+      }
+    } catch (e) {
+      console.error("Error cargando dashboard:", e);
+    }
+  };
+
+  const exportarCSV = (nombre: string, filas: string[][]) => {
+    const csv = filas.map(f => f.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = nombre + "_" + new Date().toISOString().slice(0, 10) + ".csv";
+    link.click();
+  };
+
+  const exportarVendedores = () => {
+    const filas = [
+      ["Nombre", "Email", "Codigo Referido", "Nivel", "Total Vendido", "Comision %", "Estado", "Fecha Registro"],
+      ...vendedores.map(v => [
+        v.nombre, v.email, v.codigo_referido, v.nivel_vendedor || "nuevo",
+        fmtMoney(v.total_vendido), String(v.comision_pct) + "%", v.estado || "activo",
+        new Date(v.created_at).toLocaleDateString("es-AR")
+      ])
+    ];
+    exportarCSV("vendedores", filas);
+  };
+
+  const exportarClientes = () => {
+    const filas = [
+      ["Nombre", "Email", "Telefono", "DNI", "Fecha Registro"],
+      ...clientes.map(c => [
+        c.nombre || "-", c.email || "-", c.telefono || "-", c.dni || "-",
+        new Date(c.created_at).toLocaleDateString("es-AR")
+      ])
+    ];
+    exportarCSV("clientes", filas);
   };
 
   const actualizarEstado = async (id: string, estado: string) => {
@@ -198,83 +291,287 @@ export default function AdminPedidosPage() {
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="mt-6 grid gap-3 sm:grid-cols-4">
-        <StatCard label="Total pedidos" value={String(pedidos.length)} />
-        <StatCard label="Pendientes" value={String(pedidos.filter((p) => p.estado === "pendiente").length)} color="yellow" />
-        <StatCard label="Ventas totales" value={fmtMoney(pedidos.reduce((s, p) => s + (p.estado !== "cancelado" ? p.total : 0), 0))} color="green" />
-        <StatCard label="Comisiones pendientes" value={fmtMoney(pedidos.reduce((s, p) => s + (p.comision_estado === "pendiente" ? p.comision_monto : 0), 0))} color="orange" />
-      </div>
-
-      {/* Filtros */}
-      <div className="mt-6 flex flex-wrap gap-2">
-        {estados.map((e) => (
+      {/* Navegación por pestañas */}
+      <div className="mt-4 flex flex-wrap gap-2 border-b border-white/10 pb-3">
+        {[
+          { id: "dashboard", label: "Dashboard", icon: BarChart3 },
+          { id: "pedidos", label: "Pedidos", icon: Package },
+          { id: "vendedores", label: "Vendedores", icon: Store },
+          { id: "clientes", label: "Clientes", icon: Users },
+        ].map((tab) => (
           <button
-            key={e}
-            onClick={() => setFiltro(e)}
-            className={`rounded-lg border px-3 py-1.5 text-xs font-medium capitalize ${
-              filtro === e
-                ? "border-[#FF5722] bg-[#FF5722]/20 text-[#FF5722]"
-                : "border-white/10 text-gray-400 hover:border-white/20"
+            key={tab.id}
+            onClick={() => setVistaActiva(tab.id as any)}
+            className={`flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium ${
+              vistaActiva === tab.id
+                ? "bg-[#FF5722]/20 text-[#FF5722] border border-[#FF5722]/30"
+                : "text-gray-400 hover:text-white hover:bg-white/5 border border-transparent"
             }`}
           >
-            {e} ({e === "todas" ? pedidos.length : pedidos.filter((p) => p.estado === e).length})
+            <tab.icon className="h-4 w-4" />
+            {tab.label}
           </button>
         ))}
       </div>
 
-      {/* Lista de pedidos */}
-      {loading ? (
-        <div className="mt-8 text-center text-gray-400">Cargando pedidos…</div>
-      ) : pedidosFiltrados.length === 0 ? (
-        <div className="mt-8 rounded-xl border border-white/10 bg-white/[0.03] p-8 text-center">
-          <Package className="mx-auto h-10 w-10 text-gray-600" />
-          <p className="mt-3 text-gray-400">No hay pedidos en esta categoría.</p>
-        </div>
-      ) : (
-        <div className="mt-6 space-y-3">
-          {pedidosFiltrados.map((p) => (
-            <div
-              key={p.id}
-              onClick={() => setSelected(p)}
-              className="cursor-pointer rounded-xl border border-white/10 bg-white/[0.03] p-4 hover:border-white/20"
-            >
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-xs text-blue-400">#{p.id.slice(0, 8)}</span>
-                    <EstadoBadge estado={p.estado} />
-                    {p.vendedor && (
-                      <>
-                        <span className={`rounded-full border px-2 py-0.5 text-[10px] capitalize ${getColorNivel(p.vendedor.nivel_vendedor)}`}>
-                          <Award className="inline h-3 w-3 mr-0.5" />
-                          {p.vendedor.nivel_vendedor?.replace('_', ' ') || 'nuevo'}
-                        </span>
-                        <span className="rounded-full border border-purple-500/30 bg-purple-500/10 px-2 py-0.5 text-[10px] text-purple-400">
-                          {p.vendedor.nombre}
-                        </span>
-                      </>
-                    )}
+      {/* === DASHBOARD === */}
+      {vistaActiva === "dashboard" && stats && (
+        <div className="mt-4 space-y-4">
+          {/* Stats principales */}
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <StatCard label="Total Vendedores" value={String(stats.totalVendedores)} icon={<Store className="h-5 w-5 text-blue-400" />} color="blue" />
+            <StatCard label="Total Clientes" value={String(stats.totalClientes)} icon={<Users className="h-5 w-5 text-purple-400" />} color="purple" />
+            <StatCard label="Total Pedidos" value={String(stats.totalPedidos)} icon={<Package className="h-5 w-5 text-white" />} />
+            <StatCard label="Productos Activos" value={String(stats.totalProductos)} icon={<ShoppingCart className="h-5 w-5 text-emerald-400" />} color="emerald" />
+          </div>
+
+          {/* Ventas y comisiones */}
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <StatCard label="Ventas Totales" value={fmtMoney(stats.ventasTotales)} icon={<TrendingUp className="h-5 w-5 text-[#39FF14]" />} color="green" />
+            <StatCard label="Ventas Mes" value={fmtMoney(stats.ventasMes)} icon={<Calendar className="h-5 w-5 text-cyan-400" />} color="cyan" />
+            <StatCard label="Ventas Semana" value={fmtMoney(stats.ventasSemana)} icon={<Clock className="h-5 w-5 text-yellow-400" />} color="yellow" />
+            <StatCard label="Carritos Abandonados" value={String(stats.totalCarritosAbandonados)} icon={<ShoppingCart className="h-5 w-5 text-orange-400" />} color="orange" />
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <StatCard label="Comisiones Pendientes" value={fmtMoney(stats.comisionesPendientes)} icon={<DollarSign className="h-5 w-5 text-[#FF5722]" />} color="orange" />
+            <StatCard label="Comisiones Pagadas" value={fmtMoney(stats.comisionesPagadas)} icon={<Check className="h-5 w-5 text-[#39FF14]" />} color="green" />
+          </div>
+
+          {/* Top Vendedores */}
+          {vendedores.length > 0 && (
+            <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                  <Award className="h-4 w-4 text-[#FF5722]" />
+                  Top Vendedores
+                </h3>
+                <button onClick={exportarVendedores} className="flex items-center gap-1 text-xs text-gray-400 hover:text-white">
+                  <Download className="h-3.5 w-3.5" /> Exportar CSV
+                </button>
+              </div>
+              <div className="space-y-2">
+                {vendedores.slice(0, 5).map((v) => (
+                  <div key={v.id} className="flex items-center justify-between rounded-lg bg-white/5 p-2 text-sm">
+                    <div className="flex items-center gap-2">
+                      <span className={`rounded-full border px-2 py-0.5 text-[10px] capitalize ${getColorNivel(v.nivel_vendedor)}`}>
+                        {v.nivel_vendedor?.replace("_", " ") || "nuevo"}
+                      </span>
+                      <span className="text-white">{v.nombre}</span>
+                    </div>
+                    <span className="font-bold text-[#39FF14]">{fmtMoney(v.total_vendido)}</span>
                   </div>
-                  <p className="mt-1 text-sm font-semibold text-white">
-                    {p.datos_cliente?.nombre || "Sin nombre"}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    {new Date(p.created_at).toLocaleString("es-AR")} · {p.items.length} productos
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-lg font-black text-white">{fmtMoney(p.total)}</p>
-                  {p.comision_monto > 0 && p.comision_estado === 'pendiente' && p.fecha_limite_pago && (
-                    <p className={`text-xs ${calcularDiasRestantes(p.fecha_limite_pago) <= 3 ? 'text-red-400' : 'text-yellow-400'}`}>
-                      <Timer className="inline h-3 w-3 mr-0.5" />
-                      Comisión: {fmtMoney(p.comision_monto)} · {calcularDiasRestantes(p.fecha_limite_pago)} días restantes
-                    </p>
-                  )}
-                </div>
+                ))}
               </div>
             </div>
-          ))}
+          )}
+
+          {/* Clientes Recientes */}
+          {clientes.length > 0 && (
+            <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                  <User className="h-4 w-4 text-[#FF5722]" />
+                  Clientes Recientes
+                </h3>
+                <button onClick={exportarClientes} className="flex items-center gap-1 text-xs text-gray-400 hover:text-white">
+                  <Download className="h-3.5 w-3.5" /> Exportar CSV
+                </button>
+              </div>
+              <div className="space-y-2">
+                {clientes.slice(0, 5).map((c) => (
+                  <div key={c.id} className="flex items-center justify-between rounded-lg bg-white/5 p-2 text-sm">
+                    <span className="text-white">{c.nombre || "-"}</span>
+                    <div className="flex items-center gap-3 text-xs text-gray-400">
+                      <span>{c.email || "-"}</span>
+                      <span>{c.telefono || "-"}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* === PEDIDOS === */}
+      {vistaActiva === "pedidos" && (
+        <>
+          {/* Stats pedidos */}
+          <div className="mt-4 grid gap-3 sm:grid-cols-4">
+            <StatCard label="Total pedidos" value={String(pedidos.length)} />
+            <StatCard label="Pendientes" value={String(pedidos.filter((p) => p.estado === "pendiente").length)} color="yellow" />
+            <StatCard label="Ventas totales" value={fmtMoney(pedidos.reduce((s, p) => s + (p.estado !== "cancelado" ? p.total : 0), 0))} color="green" />
+            <StatCard label="Comisiones pendientes" value={fmtMoney(pedidos.reduce((s, p) => s + (p.comision_estado === "pendiente" ? p.comision_monto : 0), 0))} color="orange" />
+          </div>
+
+          {/* Filtros */}
+          <div className="mt-4 flex flex-wrap gap-2">
+            {estados.map((e) => (
+              <button
+                key={e}
+                onClick={() => setFiltro(e)}
+                className={`rounded-lg border px-3 py-1.5 text-xs font-medium capitalize ${
+                  filtro === e
+                    ? "border-[#FF5722] bg-[#FF5722]/20 text-[#FF5722]"
+                    : "border-white/10 text-gray-400 hover:border-white/20"
+                }`}
+              >
+                {e} ({e === "todas" ? pedidos.length : pedidos.filter((p) => p.estado === e).length})
+              </button>
+            ))}
+          </div>
+
+          {/* Lista de pedidos */}
+          {loading ? (
+            <div className="mt-8 text-center text-gray-400">Cargando pedidos…</div>
+          ) : pedidosFiltrados.length === 0 ? (
+            <div className="mt-8 rounded-xl border border-white/10 bg-white/[0.03] p-8 text-center">
+              <Package className="mx-auto h-10 w-10 text-gray-600" />
+              <p className="mt-3 text-gray-400">No hay pedidos en esta categoría.</p>
+            </div>
+          ) : (
+            <div className="mt-4 space-y-3">
+              {pedidosFiltrados.map((p) => (
+                <div
+                  key={p.id}
+                  onClick={() => setSelected(p)}
+                  className="cursor-pointer rounded-xl border border-white/10 bg-white/[0.03] p-4 hover:border-white/20"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-xs text-blue-400">#{p.id.slice(0, 8)}</span>
+                        <EstadoBadge estado={p.estado} />
+                        {p.vendedor && (
+                          <>
+                            <span className={`rounded-full border px-2 py-0.5 text-[10px] capitalize ${getColorNivel(p.vendedor.nivel_vendedor)}`}>
+                              <Award className="inline h-3 w-3 mr-0.5" />
+                              {p.vendedor.nivel_vendedor?.replace('_', ' ') || 'nuevo'}
+                            </span>
+                            <span className="rounded-full border border-purple-500/30 bg-purple-500/10 px-2 py-0.5 text-[10px] text-purple-400">
+                              {p.vendedor.nombre}
+                            </span>
+                          </>
+                        )}
+                      </div>
+                      <p className="mt-1 text-sm font-semibold text-white">
+                        {p.datos_cliente?.nombre || "Sin nombre"}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {p.datos_cliente?.telefono || "-"} · {p.datos_cliente?.localidad || "-"}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-bold text-[#FF5722]">{fmtMoney(p.total)}</p>
+                      <p className="text-[10px] text-gray-500">
+                        {p.estado === "pendiente" ? (
+                          <span className="flex items-center gap-1 text-yellow-400"><Clock className="h-3 w-3" />Pendiente</span>
+                        ) : p.estado === "confirmado" ? (
+                          <span className="flex items-center gap-1 text-blue-400"><Check className="h-3 w-3" />Confirmado</span>
+                        ) : p.estado === "pagado" ? (
+                          <span className="flex items-center gap-1 text-[#39FF14]"><DollarSign className="h-3 w-3" />Pagado</span>
+                        ) : p.estado === "enviado" ? (
+                          <span className="flex items-center gap-1 text-purple-400"><Truck className="h-3 w-3" />Enviado</span>
+                        ) : p.estado === "entregado" ? (
+                          <span className="flex items-center gap-1 text-[#39FF14]"><Check className="h-3 w-3" />Entregado</span>
+                        ) : (
+                          <span className="flex items-center gap-1 text-red-400"><X className="h-3 w-3" />Cancelado</span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-1 text-[10px] text-gray-500">
+                    {p.items.slice(0, 3).map((item, i) => (
+                      <span key={i} className="rounded bg-white/5 px-1.5 py-0.5">
+                        {item.cantidad}x {item.nombre}
+                      </span>
+                    ))}
+                    {p.items.length > 3 && (
+                      <span className="rounded bg-white/5 px-1.5 py-0.5">+{p.items.length - 3} más</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* === VENDEDORES === */}
+      {vistaActiva === "vendedores" && (
+        <div className="mt-4 space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+              <Store className="h-5 w-5 text-[#FF5722]" />
+              Vendedores ({vendedores.length})
+            </h2>
+            <button onClick={exportarVendedores} className="flex items-center gap-1 rounded-lg border border-white/10 px-3 py-1.5 text-xs text-gray-400 hover:text-white hover:bg-white/5">
+              <Download className="h-3.5 w-3.5" /> Exportar CSV
+            </button>
+          </div>
+          {vendedores.length === 0 ? (
+            <div className="rounded-xl border border-white/10 bg-white/[0.03] p-8 text-center text-gray-400">
+              No hay vendedores registrados.
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {vendedores.map((v) => (
+                <div key={v.id} className="rounded-xl border border-white/10 bg-white/[0.03] p-3 text-sm">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className={`rounded-full border px-2 py-0.5 text-[10px] capitalize ${getColorNivel(v.nivel_vendedor)}`}>
+                        {v.nivel_vendedor?.replace("_", " ") || "nuevo"}
+                      </span>
+                      <span className="text-white font-semibold">{v.nombre}</span>
+                    </div>
+                    <span className="font-bold text-[#39FF14]">{fmtMoney(v.total_vendido)}</span>
+                  </div>
+                  <div className="mt-1 flex items-center gap-3 text-xs text-gray-400">
+                    <span>{v.email}</span>
+                    <span>Ref: {v.codigo_referido}</span>
+                    <span>Comisión: {v.comision_pct}%</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* === CLIENTES === */}
+      {vistaActiva === "clientes" && (
+        <div className="mt-4 space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+              <Users className="h-5 w-5 text-[#FF5722]" />
+              Clientes ({clientes.length})
+            </h2>
+            <button onClick={exportarClientes} className="flex items-center gap-1 rounded-lg border border-white/10 px-3 py-1.5 text-xs text-gray-400 hover:text-white hover:bg-white/5">
+              <Download className="h-3.5 w-3.5" /> Exportar CSV
+            </button>
+          </div>
+          {clientes.length === 0 ? (
+            <div className="rounded-xl border border-white/10 bg-white/[0.03] p-8 text-center text-gray-400">
+              No hay clientes registrados.
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {clientes.map((c) => (
+                <div key={c.id} className="rounded-xl border border-white/10 bg-white/[0.03] p-3 text-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="text-white font-semibold">{c.nombre || "-"}</span>
+                    <span className="text-xs text-gray-400">{new Date(c.created_at).toLocaleDateString("es-AR")}</span>
+                  </div>
+                  <div className="mt-1 flex items-center gap-3 text-xs text-gray-400">
+                    <span>{c.email || "-"}</span>
+                    <span>{c.telefono || "-"}</span>
+                    <span>DNI: {c.dni || "-"}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -481,16 +778,23 @@ export default function AdminPedidosPage() {
   );
 }
 
-function StatCard({ label, value, color = "white" }: { label: string; value: string; color?: string }) {
+function StatCard({ label, value, color = "white", icon }: { label: string; value: string; color?: string; icon?: ReactNode }) {
   const colorMap: Record<string, string> = {
     white: "border-white/10 bg-white/[0.03] text-white",
     yellow: "border-yellow-500/30 bg-yellow-500/5 text-yellow-400",
     green: "border-[#39FF14]/30 bg-[#39FF14]/5 text-[#39FF14]",
     orange: "border-[#FF5722]/30 bg-[#FF5722]/5 text-[#FF5722]",
+    blue: "border-blue-500/30 bg-blue-500/5 text-blue-400",
+    purple: "border-purple-500/30 bg-purple-500/5 text-purple-400",
+    cyan: "border-cyan-500/30 bg-cyan-500/5 text-cyan-400",
+    emerald: "border-emerald-500/30 bg-emerald-500/5 text-emerald-400",
   };
   return (
     <div className={`rounded-xl border p-3 ${colorMap[color] || colorMap.white}`}>
-      <p className="text-xs text-gray-400">{label}</p>
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-gray-400">{label}</p>
+        {icon ? <span>{icon}</span> : null}
+      </div>
       <p className="mt-1 text-lg font-black">{value}</p>
     </div>
   );

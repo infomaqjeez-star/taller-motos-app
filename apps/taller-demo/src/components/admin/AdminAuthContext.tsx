@@ -32,19 +32,30 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      try {
-        const parsed: AdminSession = JSON.parse(stored);
-        if (parsed?.admin?.email) {
-          setAdmin(parsed.admin);
-          setToken(parsed.token);
+    const restore = async () => {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        try {
+          const parsed: AdminSession = JSON.parse(stored);
+          if (parsed?.token) {
+            const res = await fetch("/api/admin/me", {
+              headers: { Authorization: `Bearer ${parsed.token}` },
+            });
+            if (res.ok) {
+              const data = await res.json();
+              setAdmin({ id: data.id, nombre: data.nombre, email: data.email });
+              setToken(parsed.token);
+            } else {
+              localStorage.removeItem(STORAGE_KEY);
+            }
+          }
+        } catch {
+          localStorage.removeItem(STORAGE_KEY);
         }
-      } catch {
-        localStorage.removeItem(STORAGE_KEY);
       }
-    }
-    setLoading(false);
+      setLoading(false);
+    };
+    restore();
   }, []);
 
   const saveSession = useCallback((adminData: Admin, adminToken: string) => {
