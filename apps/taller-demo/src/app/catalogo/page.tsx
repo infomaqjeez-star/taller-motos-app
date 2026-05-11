@@ -21,6 +21,7 @@ interface Producto {
   catalog_price: number;
   image_url: string | null;
   category: string;
+  ventas_count: number;
 }
 
 function fmtPrecio(precio: number) {
@@ -179,26 +180,31 @@ function CatalogoContent() {
 
   useEffect(() => {
     let ok = true;
-    supabase
-      .from("catalog_products")
-      .select("sku, name, catalog_price, image_url, category")
-      .eq("active", true)
-      .order("sku", { ascending: true })
-      .then(({ data, error }) => {
+    fetch("/api/catalogo/productos")
+      .then((res) => res.json())
+      .then(({ productos, error }) => {
         if (!ok) return;
         if (error) console.error(error);
-        setProductos(data || []);
+        setProductos(productos || []);
+        setLoading(false);
+      })
+      .catch((err) => {
+        if (!ok) return;
+        console.error(err);
         setLoading(false);
       });
     return () => { ok = false; };
   }, []);
 
-  // Ordenar productos por categoria (Motosierras primero) y luego por SKU
+  // Ordenar productos por categoria (Motosierras primero), luego por más vendidos, luego por SKU
   const productosOrdenados = useMemo(() => {
     return [...productos].sort((a, b) => {
       const pa = pesoCategoria(a.category);
       const pb = pesoCategoria(b.category);
       if (pa !== pb) return pa - pb;
+      if ((b.ventas_count || 0) !== (a.ventas_count || 0)) {
+        return (b.ventas_count || 0) - (a.ventas_count || 0);
+      }
       return (a.sku || "").localeCompare(b.sku || "", undefined, { numeric: true, sensitivity: "base" });
     });
   }, [productos]);
