@@ -149,6 +149,19 @@ export default function CatalogoMaqjeezPage() {
   );
 }
 
+const ORDEN_CATEGORIA: Record<string, number> = {
+  "Motosierras": 0,
+  "Desmalezadoras": 1,
+  "Grupos Electrógenos": 2,
+};
+function pesoCategoria(cat?: string): number {
+  if (!cat) return 9998;
+  const exact = ORDEN_CATEGORIA[cat];
+  if (exact !== undefined) return exact;
+  if (cat === "Repuestos Varios") return 9999;
+  return 100;
+}
+
 function CatalogoContent() {
   const [productos, setProductos] = useState<Producto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -175,41 +188,49 @@ function CatalogoContent() {
     return () => { ok = false; };
   }, []);
 
-  const categorias = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const p of productos) map.set(p.category, (map.get(p.category) || 0) + 1);
-    const cats = Array.from(map.entries()).map(([id, count]) => ({ id, nombre: id, count }));
-    const ORDEN_FIJO: Record<string, number> = {
-      "Motosierras": 0,
-      "Desmalezadoras": 1,
-      "Grupos Electrógenos": 2,
-    };
-    return cats.sort((a, b) => {
-      const oa = ORDEN_FIJO[a.id] ?? (a.id === "Repuestos Varios" ? 9999 : 100);
-      const ob = ORDEN_FIJO[b.id] ?? (b.id === "Repuestos Varios" ? 9999 : 100);
-      if (oa !== ob) return oa - ob;
-      return a.nombre.localeCompare(b.nombre);
+  // Ordenar productos por categoria (Motosierras primero) y luego por SKU
+  const productosOrdenados = useMemo(() => {
+    return [...productos].sort((a, b) => {
+      const pa = pesoCategoria(a.category);
+      const pb = pesoCategoria(b.category);
+      if (pa !== pb) return pa - pb;
+      return (a.sku || "").localeCompare(b.sku || "", undefined, { numeric: true, sensitivity: "base" });
     });
   }, [productos]);
 
+  const categorias = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const p of productosOrdenados) map.set(p.category, (map.get(p.category) || 0) + 1);
+    const cats = Array.from(map.entries()).map(([id, count]) => ({ id, nombre: id, count }));
+    return cats.sort((a, b) => {
+      const oa = pesoCategoria(a.id);
+      const ob = pesoCategoria(b.id);
+      if (oa !== ob) return oa - ob;
+      return a.nombre.localeCompare(b.nombre, undefined, { numeric: true, sensitivity: "base" });
+    });
+  }, [productosOrdenados]);
+
   const filtrados = useMemo(() => {
     const qq = q.trim().toLowerCase();
-    return productos.filter((p) => {
+    return productosOrdenados.filter((p) => {
       if (catId !== "todas" && p.category !== catId) return false;
       if (!qq) return true;
       return p.sku.toLowerCase().includes(qq) || p.name.toLowerCase().includes(qq);
     });
-  }, [productos, catId, q]);
+  }, [productosOrdenados, catId, q]);
 
   const porCategoria = useMemo(() => {
     const map = new Map<string, Producto[]>();
+    // Insertar en el orden de categorias (ya ordenadas) para preservar orden
+    for (const c of categorias) {
+      map.set(c.id, []);
+    }
     for (const p of filtrados) {
-      const arr = map.get(p.category) ?? [];
-      arr.push(p);
-      map.set(p.category, arr);
+      const arr = map.get(p.category);
+      if (arr) arr.push(p);
     }
     return map;
-  }, [filtrados]);
+  }, [filtrados, categorias]);
 
   return (
     <main className="min-h-screen pb-12">
