@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAdminAuth } from "@/components/admin/AdminAuthContext";
 import {
   Chart as ChartJS,
@@ -138,8 +138,12 @@ interface ClienteData {
   created_at: string;
 }
 
+type Vista = "pedidos" | "vendedores" | "gerentes" | "clientes" | "dashboard" | "precios" | "finanzas";
+const VISTAS_VALIDAS: Vista[] = ["dashboard", "pedidos", "vendedores", "gerentes", "clientes", "precios", "finanzas"];
+
 export default function AdminPedidosPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { admin, logout, loading: authLoading, getToken } = useAdminAuth();
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [loading, setLoading] = useState(true);
@@ -148,7 +152,10 @@ export default function AdminPedidosPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [vendedores, setVendedores] = useState<VendedorData[]>([]);
   const [clientes, setClientes] = useState<ClienteData[]>([]);
-  const [vistaActiva, setVistaActiva] = useState<"pedidos" | "vendedores" | "gerentes" | "clientes" | "dashboard" | "precios" | "finanzas">("dashboard");
+  const tabFromUrl = searchParams.get("tab") as Vista | null;
+  const [vistaActiva, setVistaActiva] = useState<Vista>(
+    tabFromUrl && VISTAS_VALIDAS.includes(tabFromUrl) ? tabFromUrl : "dashboard"
+  );
   const [precioStats, setPrecioStats] = useState<{ total: number; activos: number; precioMin: number; precioMax: number; precioPromedio: number } | null>(null);
   const [porcentajeAjuste, setPorcentajeAjuste] = useState("");
   const [ajustandoPrecios, setAjustandoPrecios] = useState(false);
@@ -391,6 +398,11 @@ export default function AdminPedidosPage() {
 
   const estados = ["todas", "pendiente", "confirmado", "pagado", "enviado", "entregado", "cancelado"];
 
+  const cambiarVista = (v: Vista) => {
+    setVistaActiva(v);
+    router.replace(`/catalogo/admin/pedidos?tab=${v}`, { scroll: false });
+  };
+
   if (!admin) return null;
 
   const tabs = [
@@ -442,7 +454,7 @@ export default function AdminPedidosPage() {
             {tabs.map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setVistaActiva(tab.id as any)}
+                onClick={() => cambiarVista(tab.id as Vista)}
                 className={`flex items-center gap-2 px-4 py-2 rounded-t-md font-medium text-sm transition-colors ${
                   vistaActiva === tab.id
                     ? "bg-orange-600/10 text-orange-500 border border-orange-600/30 border-b-0"
@@ -888,7 +900,7 @@ export default function AdminPedidosPage() {
               <p className="text-gray-400 font-medium mb-1">No hay gerentes asignados</p>
               <p className="text-xs text-gray-600 mb-4">Podés promover vendedores desde la pestaña Vendedores</p>
               <button
-                onClick={() => setVistaActiva("vendedores" as any)}
+                onClick={() => cambiarVista("vendedores")}
                 className="px-4 py-2 rounded-md border border-gray-700 text-sm text-gray-300 hover:bg-gray-800 transition-colors"
               >
                 Ir a Vendedores
