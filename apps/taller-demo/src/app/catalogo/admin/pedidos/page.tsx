@@ -179,9 +179,15 @@ export default function AdminPedidosPage() {
         headers: parsed?.token ? { Authorization: `Bearer ${parsed.token}` } : {},
       });
       const data = await res.json();
-      if (data.vendedores) setVendedores(data.vendedores);
+      console.log("[vendedores] status:", res.status, "data:", data);
+      if (Array.isArray(data.vendedores)) {
+        console.log("[vendedores] count:", data.vendedores.length);
+        setVendedores(data.vendedores);
+      } else {
+        console.warn("[vendedores] respuesta inesperada:", data);
+      }
     } catch (e) {
-      console.error("Error cargando vendedores:", e);
+      console.error("[vendedores] Error:", e);
     }
   };
 
@@ -209,8 +215,9 @@ export default function AdminPedidosPage() {
       }
       if (data.resumen) {
         setStats(data.resumen);
-        setVendedores(data.vendedores || data.topVendedores || []);
-        setClientes(data.clientes || data.clientesRecientes || []);
+        // vendedores se carga por cargarVendedores() separado — no pisar aquí
+        if (data.clientes?.length) setClientes(data.clientes);
+        else if (data.clientesRecientes?.length) setClientes(data.clientesRecientes);
         setEvolucion(data.evolucion || null);
         setPedidosPorEstado(data.pedidosPorEstado || {});
       }
