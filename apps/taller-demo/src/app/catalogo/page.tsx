@@ -263,16 +263,23 @@ function CatalogoContent() {
             )}
             {/* Cliente */}
             {clienteLogueado ? (
-              <div className="flex items-center gap-2">
-                <span className="flex items-center gap-1 rounded-lg border border-blue-500/30 bg-blue-500/10 px-2 py-1 text-[10px] font-bold text-blue-400">
-                  👤 {clienteLogueado.nombre}
-                </span>
-                <button
-                  onClick={logoutCliente}
-                  className="rounded-lg border border-white/10 px-2 py-1 text-[10px] text-gray-400 hover:text-white"
-                >
-                  Salir
-                </button>
+              <div className="flex flex-col items-end gap-1">
+                <div className="flex items-center gap-2">
+                  <span className="flex items-center gap-1 rounded-lg border border-blue-500/30 bg-blue-500/10 px-2 py-1 text-[10px] font-bold text-blue-400">
+                    👤 {clienteLogueado.nombre}
+                  </span>
+                  <button
+                    onClick={logoutCliente}
+                    className="rounded-lg border border-white/10 px-2 py-1 text-[10px] text-gray-400 hover:text-white"
+                  >
+                    Salir
+                  </button>
+                </div>
+                {clienteLogueado.vendedor_referente && (
+                  <span className="text-[9px] text-purple-400">
+                    Referido por: {clienteLogueado.vendedor_referente.nombre}
+                  </span>
+                )}
               </div>
             ) : (
               <Link

@@ -8,13 +8,15 @@ interface Cliente {
   email: string;
   codigo_referido: string;
   descuento_cliente_pct: number;
+  vendedor_referente_id?: string | null;
+  vendedor_referente?: { id: string; nombre: string; codigo_referido: string } | null;
 }
 
 interface ClienteAuthContextValue {
   cliente: Cliente | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (data: { nombre: string; email: string; telefono?: string; password: string }) => Promise<void>;
+  register: (data: { nombre: string; email: string; telefono?: string; password: string; vendedor_referente_id?: string }) => Promise<void>;
   logout: () => void;
 }
 

@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useClienteAuth } from "@/components/cliente/ClienteAuthContext";
-import { ArrowLeft, User, Mail, Phone, Lock, Loader2 } from "lucide-react";
+import { ArrowLeft, User, Mail, Phone, Lock, Loader2, Users } from "lucide-react";
 
 export default function ClienteLoginPage() {
   const router = useRouter();
@@ -18,6 +18,18 @@ export default function ClienteLoginPage() {
   const [telefono, setTelefono] = useState("");
   const [password, setPassword] = useState("");
 
+  // Detectar vendedor referente del localStorage
+  const [refInfo, setRefInfo] = useState<{ codigo: string; nombre: string; vendedor_id: string } | null>(null);
+
+  useEffect(() => {
+    const codigo = localStorage.getItem("ref_codigo");
+    const nombre = localStorage.getItem("ref_nombre");
+    const vendedor_id = localStorage.getItem("ref_vendedor_id");
+    if (codigo && nombre && vendedor_id) {
+      setRefInfo({ codigo, nombre, vendedor_id });
+    }
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -27,7 +39,13 @@ export default function ClienteLoginPage() {
       if (tab === "login") {
         await login(email, password);
       } else {
-        await register({ nombre, email, telefono, password });
+        await register({
+          nombre,
+          email,
+          telefono,
+          password,
+          vendedor_referente_id: refInfo?.vendedor_id,
+        });
       }
       router.push("/catalogo");
     } catch (err: any) {
@@ -72,7 +90,24 @@ export default function ClienteLoginPage() {
           </button>
         </div>
 
-        {error && (
+        {/* Banner vendedor referente */}
+      {tab === "register" && refInfo && (
+        <div className="mt-4 rounded-xl border border-[#39FF14]/30 bg-[#39FF14]/5 px-4 py-3">
+          <div className="flex items-center gap-2">
+            <Users className="h-4 w-4 text-[#39FF14]" />
+            <p className="text-sm text-gray-300">
+              Te referencia el vendedor{" "}
+              <span className="font-bold text-[#39FF14]">{refInfo.nombre}</span>{" "}
+              ({refInfo.codigo})
+            </p>
+          </div>
+          <p className="mt-1 text-xs text-gray-500">
+            Al registrarte, vas a estar asociado a este vendedor para futuras compras.
+          </p>
+        </div>
+      )}
+
+      {error && (
           <p className="mt-4 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400">
             {error}
           </p>

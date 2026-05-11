@@ -129,9 +129,13 @@ export default function CheckoutPage() {
 
     // Guardar pedido en DB
     try {
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      const clienteToken = localStorage.getItem("cliente_token");
+      if (clienteToken) headers["x-cliente-token"] = clienteToken;
+
       await fetch("/api/pedidos/catalogo", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({
           items: items.map((i) => ({ sku: i.sku, nombre: i.nombre, precio: i.precio, cantidad: i.cantidad })),
           datos_cliente: {

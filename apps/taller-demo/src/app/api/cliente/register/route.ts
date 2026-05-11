@@ -9,7 +9,7 @@ const JWT_SECRET = new TextEncoder().encode(
 
 export async function POST(req: NextRequest) {
   try {
-    const { nombre, email, telefono, password } = await req.json();
+    const { nombre, email, telefono, password, vendedor_referente_id } = await req.json();
     if (!nombre || !email || !password) {
       return NextResponse.json({ error: "Nombre, email y contraseña requeridos" }, { status: 400 });
     }
@@ -29,18 +29,24 @@ export async function POST(req: NextRequest) {
     const password_hash = await bcrypt.hash(password, 10);
     const codigo = "CLI" + Math.floor(1000 + Math.random() * 9000);
 
+    const insertData: any = {
+      nombre: nombre.trim(),
+      email: email.trim().toLowerCase(),
+      telefono: telefono?.trim() || null,
+      password_hash,
+      codigo_referido: codigo,
+      descuento_cliente_pct: 3,
+      estado: "activo",
+    };
+
+    if (vendedor_referente_id) {
+      insertData.vendedor_referente_id = vendedor_referente_id;
+    }
+
     const { data: cliente, error } = await supabase
       .from("clientes_catalogo")
-      .insert({
-        nombre: nombre.trim(),
-        email: email.trim().toLowerCase(),
-        telefono: telefono?.trim() || null,
-        password_hash,
-        codigo_referido: codigo,
-        descuento_cliente_pct: 3,
-        estado: "activo",
-      })
-      .select("id, nombre, email, codigo_referido, descuento_cliente_pct")
+      .insert(insertData)
+      .select("id, nombre, email, codigo_referido, descuento_cliente_pct, vendedor_referente_id")
       .single();
 
     if (error || !cliente) {
