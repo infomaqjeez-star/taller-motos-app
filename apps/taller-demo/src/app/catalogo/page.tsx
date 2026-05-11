@@ -182,6 +182,7 @@ function CatalogoContent() {
     const ORDEN_FIJO: Record<string, number> = {
       "Motosierras": 0,
       "Desmalezadoras": 1,
+      "Grupos Electrógenos": 2,
     };
     return cats.sort((a, b) => {
       const oa = ORDEN_FIJO[a.id] ?? (a.id === "Repuestos Varios" ? 9999 : 100);
