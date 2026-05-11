@@ -4,6 +4,19 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useAdminAuth } from "@/components/admin/AdminAuthContext";
 import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  ArcElement,
+  Filler,
+  Tooltip,
+  Legend,
+} from "chart.js";
+import { Line, Doughnut } from "react-chartjs-2";
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, ArcElement, Filler, Tooltip, Legend);
+import {
   Shield,
   ArrowLeft,
   Package,
@@ -28,6 +41,9 @@ import {
   Store,
   Percent,
   RefreshCcw,
+  Wallet,
+  Star,
+  AlertTriangle,
 } from "lucide-react";
 
 interface Pedido {
@@ -89,6 +105,12 @@ interface DashboardStats {
   totalItemsCarrito: number;
 }
 
+interface EvolucionData {
+  labels: string[];
+  ventas: number[];
+  comisiones: number[];
+}
+
 interface VendedorData {
   id: string;
   nombre: string;
@@ -120,11 +142,13 @@ export default function AdminPedidosPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [vendedores, setVendedores] = useState<VendedorData[]>([]);
   const [clientes, setClientes] = useState<ClienteData[]>([]);
-  const [vistaActiva, setVistaActiva] = useState<"pedidos" | "vendedores" | "clientes" | "dashboard" | "precios">("dashboard");
+  const [vistaActiva, setVistaActiva] = useState<"pedidos" | "vendedores" | "clientes" | "dashboard" | "precios" | "finanzas">("dashboard");
   const [precioStats, setPrecioStats] = useState<{ total: number; activos: number; precioMin: number; precioMax: number; precioPromedio: number } | null>(null);
   const [porcentajeAjuste, setPorcentajeAjuste] = useState("");
   const [ajustandoPrecios, setAjustandoPrecios] = useState(false);
   const [mensajeAjuste, setMensajeAjuste] = useState("");
+  const [evolucion, setEvolucion] = useState<EvolucionData | null>(null);
+  const [pedidosPorEstado, setPedidosPorEstado] = useState<Record<string, number>>({});
 
   useEffect(() => {
     if (authLoading) return;
@@ -156,6 +180,8 @@ export default function AdminPedidosPage() {
         setStats(data.resumen);
         setVendedores(data.topVendedores || []);
         setClientes(data.clientesRecientes || []);
+        setEvolucion(data.evolucion || null);
+        setPedidosPorEstado(data.pedidosPorEstado || {});
       }
     } catch (e) {
       console.error("Error cargando dashboard:", e);
@@ -348,6 +374,7 @@ export default function AdminPedidosPage() {
           { id: "vendedores", label: "Vendedores", icon: Store },
           { id: "clientes", label: "Clientes", icon: Users },
           { id: "precios", label: "Precios", icon: Percent },
+          { id: "finanzas", label: "Finanzas", icon: Wallet },
         ].map((tab) => (
           <button
             key={tab.id}
@@ -367,80 +394,231 @@ export default function AdminPedidosPage() {
       {/* === DASHBOARD === */}
       {vistaActiva === "dashboard" && stats && (
         <div className="mt-4 space-y-4">
-          {/* Stats principales */}
+          {/* KPIs */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div className="rounded-xl p-5 border border-white/10 bg-white/[0.03] shadow-lg">
+              <div className="flex justify-between items-start mb-2">
+                <div>
+                  <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider">Ventas Totales (Mes)</p>
+                  <h3 className="text-2xl font-bold text-white mt-1">{fmtMoney(stats.ventasMes)}</h3>
+                </div>
+                <div className="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center text-green-500"><TrendingUp className="h-5 w-5" /></div>
+              </div>
+              <p className="text-xs text-green-400 flex items-center gap-1"><TrendingUp className="h-3 w-3" /> {stats.ventasSemana > 0 ? "Semana activa" : "Sin movimientos"}</p>
+            </div>
+            <div className="rounded-xl p-5 border border-white/10 bg-white/[0.03] shadow-lg">
+              <div className="flex justify-between items-start mb-2">
+                <div>
+                  <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider">Comisiones MADSJEEZ</p>
+                  <h3 className="text-2xl font-bold text-white mt-1">{fmtMoney(stats.comisionesPendientes + stats.comisionesPagadas)}</h3>
+                </div>
+                <div className="w-10 h-10 rounded-lg bg-[#FF5722]/10 flex items-center justify-center text-[#FF5722]"><DollarSign className="h-5 w-5" /></div>
+              </div>
+              <p className="text-xs text-green-400 flex items-center gap-1"><TrendingUp className="h-3 w-3" /> Pendientes: {fmtMoney(stats.comisionesPendientes)}</p>
+            </div>
+            <div className="rounded-xl p-5 border border-white/10 bg-white/[0.03] shadow-lg">
+              <div className="flex justify-between items-start mb-2">
+                <div>
+                  <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider">Pedidos en Curso</p>
+                  <h3 className="text-2xl font-bold text-white mt-1">{pedidos.filter(p => !["entregado", "cancelado"].includes(p.estado)).length}</h3>
+                </div>
+                <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-500"><Truck className="h-5 w-5" /></div>
+              </div>
+              <p className="text-xs text-gray-500 flex items-center gap-1">{pedidos.filter(p => p.estado === "enviado").length} despachados</p>
+            </div>
+            <div className="rounded-xl p-5 border border-red-500/30 bg-white/[0.03] shadow-[0_0_15px_rgba(220,38,38,0.1)]">
+              <div className="flex justify-between items-start mb-2">
+                <div>
+                  <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider">Cancelados / Reclamos</p>
+                  <h3 className="text-2xl font-bold text-red-400 mt-1">{pedidos.filter(p => p.estado === "cancelado").length}</h3>
+                </div>
+                <div className="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center text-red-400"><X className="h-5 w-5" /></div>
+              </div>
+              <p className="text-xs text-red-400 flex items-center gap-1"><Clock className="h-3 w-3" /> Requieren atención</p>
+            </div>
+          </div>
+
+          {/* Gráficos */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+            <div className="lg:col-span-2 rounded-xl p-5 border border-white/10 bg-white/[0.03] shadow-lg">
+              <h3 className="text-lg font-bold text-white mb-4">Evolución de Ventas y Comisiones</h3>
+              <div className="relative h-64 w-full">
+                {evolucion ? (
+                  <Line
+                    data={{
+                      labels: evolucion.labels,
+                      datasets: [
+                        {
+                          label: "Ventas ($)",
+                          data: evolucion.ventas,
+                          borderColor: "#10b981",
+                          backgroundColor: "rgba(16, 185, 129, 0.1)",
+                          borderWidth: 2,
+                          tension: 0.4,
+                          fill: true,
+                          pointRadius: 3,
+                        },
+                        {
+                          label: "Comisiones ($)",
+                          data: evolucion.comisiones,
+                          borderColor: "#FF5722",
+                          backgroundColor: "rgba(255, 87, 34, 0.1)",
+                          borderWidth: 2,
+                          tension: 0.4,
+                          fill: true,
+                          pointRadius: 3,
+                        },
+                      ],
+                    }}
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: {
+                        legend: { position: "top", labels: { color: "#9ca3af" } },
+                      },
+                      scales: {
+                        y: { beginAtZero: true, grid: { color: "#1f2937" }, ticks: { color: "#9ca3af" } },
+                        x: { grid: { color: "#1f2937" }, ticks: { color: "#9ca3af" } },
+                      },
+                    }}
+                  />
+                ) : (
+                  <div className="flex items-center justify-center h-full text-gray-500 text-sm">Sin datos de evolución</div>
+                )}
+              </div>
+            </div>
+            <div className="rounded-xl p-5 border border-white/10 bg-white/[0.03] shadow-lg">
+              <h3 className="text-lg font-bold text-white mb-4">Estado de Despachos</h3>
+              <div className="relative h-56 w-full flex justify-center">
+                {Object.keys(pedidosPorEstado).length > 0 ? (
+                  <Doughnut
+                    data={{
+                      labels: ["Pendiente", "Confirmado", "Pagado", "Enviado", "Entregado", "Cancelado"],
+                      datasets: [
+                        {
+                          data: [
+                            pedidosPorEstado.pendiente || 0,
+                            pedidosPorEstado.confirmado || 0,
+                            pedidosPorEstado.pagado || 0,
+                            pedidosPorEstado.enviado || 0,
+                            pedidosPorEstado.entregado || 0,
+                            pedidosPorEstado.cancelado || 0,
+                          ],
+                          backgroundColor: ["#eab308", "#3b82f6", "#10b981", "#8b5cf6", "#10b981", "#ef4444"],
+                          borderWidth: 0,
+                          hoverOffset: 4,
+                        },
+                      ],
+                    }}
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      cutout: "70%",
+                      plugins: {
+                        legend: { display: false },
+                      },
+                    }}
+                  />
+                ) : (
+                  <div className="flex items-center justify-center h-full text-gray-500 text-sm">Sin datos</div>
+                )}
+              </div>
+              <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
+                <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-yellow-500" /> Pendiente</div>
+                <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-blue-500" /> Confirmado</div>
+                <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-green-500" /> Pagado</div>
+                <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-purple-500" /> Enviado</div>
+                <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-emerald-500" /> Entregado</div>
+                <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-red-500" /> Cancelado</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Tablas de ranking y alertas */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+            {/* Top Vendedores */}
+            <div className="rounded-xl border border-white/10 bg-white/[0.03] shadow-lg overflow-hidden">
+              <div className="p-4 border-b border-white/10 flex justify-between items-center">
+                <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2"><Award className="h-4 w-4 text-yellow-500" /> Top Vendedores</h3>
+                <button onClick={exportarVendedores} className="text-xs text-[#FF5722] hover:text-white transition">Ver todos</button>
+              </div>
+              <div className="p-0">
+                {vendedores.slice(0, 5).map((v, i) => (
+                  <div key={v.id} className="flex items-center justify-between border-b border-white/5 hover:bg-white/5 px-4 py-3 transition">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center font-bold text-white text-xs">{v.nombre.charAt(0).toUpperCase()}</div>
+                      <div>
+                        <p className="text-white font-medium text-sm">{v.nombre}</p>
+                        <p className="text-xs text-gray-500">{v.total_vendido ? (v.total_vendido / 1000).toFixed(0) + "k" : "0"} ventas · {v.comision_pct}% com.</p>
+                      </div>
+                    </div>
+                    <span className="text-green-400 font-medium text-sm">{fmtMoney(v.total_vendido)}</span>
+                  </div>
+                ))}
+                {vendedores.length === 0 && (
+                  <div className="px-4 py-8 text-center text-gray-400 text-sm">Sin vendedores</div>
+                )}
+              </div>
+            </div>
+
+            {/* Compradores VIP */}
+            <div className="rounded-xl border border-white/10 bg-white/[0.03] shadow-lg overflow-hidden">
+              <div className="p-4 border-b border-white/10 flex justify-between items-center">
+                <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2"><Star className="h-4 w-4 text-blue-400" /> Compradores VIP</h3>
+                <button onClick={exportarClientes} className="text-xs text-[#FF5722] hover:text-white transition">Ver todos</button>
+              </div>
+              <div className="p-0">
+                {clientes.slice(0, 5).map((c, i) => (
+                  <div key={c.id} className="flex items-center justify-between border-b border-white/5 hover:bg-white/5 px-4 py-3 transition">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center font-bold text-white text-xs">{c.nombre ? c.nombre.charAt(0).toUpperCase() : "?"}</div>
+                      <div>
+                        <p className="text-white font-medium text-sm">{c.nombre || "Sin nombre"}</p>
+                        <p className="text-xs text-gray-500">{c.email || "-"}</p>
+                      </div>
+                    </div>
+                    <span className="text-gray-300 text-xs">{new Date(c.created_at).toLocaleDateString("es-AR")}</span>
+                  </div>
+                ))}
+                {clientes.length === 0 && (
+                  <div className="px-4 py-8 text-center text-gray-400 text-sm">Sin clientes</div>
+                )}
+              </div>
+            </div>
+
+            {/* Alertas de Pedidos */}
+            <div className="rounded-xl border border-white/10 bg-white/[0.03] shadow-lg overflow-hidden">
+              <div className="p-4 border-b border-white/10 bg-red-500/5">
+                <h3 className="text-sm font-bold text-red-400 uppercase tracking-wider flex items-center gap-2"><AlertTriangle className="h-4 w-4" /> Alertas de Pedidos</h3>
+              </div>
+              <div className="p-4 space-y-3">
+                {pedidos.filter(p => p.estado === "cancelado").slice(0, 3).map((p) => (
+                  <div key={p.id} className="rounded-lg p-3 border border-white/10 bg-white/5">
+                    <div className="flex justify-between items-start mb-1">
+                      <span className="text-xs font-bold text-red-400">#{p.id.slice(0, 8).toUpperCase()}</span>
+                      <span className="text-[10px] bg-red-500/20 text-red-400 px-2 py-0.5 rounded">Cancelado</span>
+                    </div>
+                    <p className="text-sm text-white mb-1">{p.items?.map(i => i.nombre).slice(0, 2).join(", ") || "Sin items"}{p.items && p.items.length > 2 ? "..." : ""}</p>
+                    <div className="flex justify-between items-center text-xs text-gray-500">
+                      <span>Total: {fmtMoney(p.total)}</span>
+                      <button onClick={() => setSelected(p)} className="text-[#FF5722] hover:text-white">Ver detalle</button>
+                    </div>
+                  </div>
+                ))}
+                {pedidos.filter(p => p.estado === "cancelado").length === 0 && (
+                  <div className="text-center text-gray-400 text-sm py-4">Sin pedidos cancelados</div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Resumen rápido */}
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <StatCard label="Total Vendedores" value={String(stats.totalVendedores)} icon={<Store className="h-5 w-5 text-blue-400" />} color="blue" />
             <StatCard label="Total Clientes" value={String(stats.totalClientes)} icon={<Users className="h-5 w-5 text-purple-400" />} color="purple" />
-            <StatCard label="Total Pedidos" value={String(stats.totalPedidos)} icon={<Package className="h-5 w-5 text-white" />} />
-            <StatCard label="Productos Activos" value={String(stats.totalProductos)} icon={<ShoppingCart className="h-5 w-5 text-emerald-400" />} color="emerald" />
-          </div>
-
-          {/* Ventas y comisiones */}
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <StatCard label="Ventas Totales" value={fmtMoney(stats.ventasTotales)} icon={<TrendingUp className="h-5 w-5 text-[#39FF14]" />} color="green" />
-            <StatCard label="Ventas Mes" value={fmtMoney(stats.ventasMes)} icon={<Calendar className="h-5 w-5 text-cyan-400" />} color="cyan" />
-            <StatCard label="Ventas Semana" value={fmtMoney(stats.ventasSemana)} icon={<Clock className="h-5 w-5 text-yellow-400" />} color="yellow" />
             <StatCard label="Carritos Abandonados" value={String(stats.totalCarritosAbandonados)} icon={<ShoppingCart className="h-5 w-5 text-orange-400" />} color="orange" />
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            <StatCard label="Comisiones Pendientes" value={fmtMoney(stats.comisionesPendientes)} icon={<DollarSign className="h-5 w-5 text-[#FF5722]" />} color="orange" />
             <StatCard label="Comisiones Pagadas" value={fmtMoney(stats.comisionesPagadas)} icon={<Check className="h-5 w-5 text-[#39FF14]" />} color="green" />
           </div>
-
-          {/* Top Vendedores */}
-          {vendedores.length > 0 && (
-            <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                  <Award className="h-4 w-4 text-[#FF5722]" />
-                  Top Vendedores
-                </h3>
-                <button onClick={exportarVendedores} className="flex items-center gap-1 text-xs text-gray-400 hover:text-white">
-                  <Download className="h-3.5 w-3.5" /> Exportar CSV
-                </button>
-              </div>
-              <div className="space-y-2">
-                {vendedores.slice(0, 5).map((v) => (
-                  <div key={v.id} className="flex items-center justify-between rounded-lg bg-white/5 p-2 text-sm">
-                    <div className="flex items-center gap-2">
-                      <span className={`rounded-full border px-2 py-0.5 text-[10px] capitalize ${getColorNivel(v.nivel_vendedor)}`}>
-                        {v.nivel_vendedor?.replace("_", " ") || "nuevo"}
-                      </span>
-                      <span className="text-white">{v.nombre}</span>
-                    </div>
-                    <span className="font-bold text-[#39FF14]">{fmtMoney(v.total_vendido)}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Clientes Recientes */}
-          {clientes.length > 0 && (
-            <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                  <User className="h-4 w-4 text-[#FF5722]" />
-                  Clientes Recientes
-                </h3>
-                <button onClick={exportarClientes} className="flex items-center gap-1 text-xs text-gray-400 hover:text-white">
-                  <Download className="h-3.5 w-3.5" /> Exportar CSV
-                </button>
-              </div>
-              <div className="space-y-2">
-                {clientes.slice(0, 5).map((c) => (
-                  <div key={c.id} className="flex items-center justify-between rounded-lg bg-white/5 p-2 text-sm">
-                    <span className="text-white">{c.nombre || "-"}</span>
-                    <div className="flex items-center gap-3 text-xs text-gray-400">
-                      <span>{c.email || "-"}</span>
-                      <span>{c.telefono || "-"}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       )}
 
@@ -700,6 +878,47 @@ export default function AdminPedidosPage() {
                   {pct > 0 ? "+" : ""}{pct}%
                 </button>
               ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* === FINANZAS === */}
+      {vistaActiva === "finanzas" && stats && (
+        <div className="mt-4 space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <StatCard label="Ventas Totales" value={fmtMoney(stats.ventasTotales)} icon={<TrendingUp className="h-5 w-5 text-green-400" />} color="green" />
+            <StatCard label="Ventas Mes" value={fmtMoney(stats.ventasMes)} icon={<Calendar className="h-5 w-5 text-cyan-400" />} color="cyan" />
+            <StatCard label="Ventas Semana" value={fmtMoney(stats.ventasSemana)} icon={<Clock className="h-5 w-5 text-yellow-400" />} color="yellow" />
+            <StatCard label="Carritos Abandonados" value={String(stats.totalCarritosAbandonados)} icon={<ShoppingCart className="h-5 w-5 text-orange-400" />} color="orange" />
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <StatCard label="Comisiones Pendientes" value={fmtMoney(stats.comisionesPendientes)} icon={<DollarSign className="h-5 w-5 text-[#FF5722]" />} color="orange" />
+            <StatCard label="Comisiones Pagadas" value={fmtMoney(stats.comisionesPagadas)} icon={<Check className="h-5 w-5 text-[#39FF14]" />} color="green" />
+          </div>
+          <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+            <h3 className="text-sm font-bold text-white mb-3">Resumen Financiero</h3>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between border-b border-white/5 py-2">
+                <span className="text-gray-400">Total Vendedores</span>
+                <span className="text-white font-medium">{stats.totalVendedores}</span>
+              </div>
+              <div className="flex justify-between border-b border-white/5 py-2">
+                <span className="text-gray-400">Total Clientes</span>
+                <span className="text-white font-medium">{stats.totalClientes}</span>
+              </div>
+              <div className="flex justify-between border-b border-white/5 py-2">
+                <span className="text-gray-400">Total Pedidos</span>
+                <span className="text-white font-medium">{stats.totalPedidos}</span>
+              </div>
+              <div className="flex justify-between border-b border-white/5 py-2">
+                <span className="text-gray-400">Productos Activos</span>
+                <span className="text-white font-medium">{stats.totalProductos}</span>
+              </div>
+              <div className="flex justify-between border-b border-white/5 py-2">
+                <span className="text-gray-400">Items en Carritos</span>
+                <span className="text-white font-medium">{stats.totalItemsCarrito}</span>
+              </div>
             </div>
           </div>
         </div>

@@ -99,6 +99,29 @@ export async function GET(req: NextRequest) {
     // Items en carritos
     const totalItemsCarrito = carritos?.reduce((s, c) => s + c.cantidad, 0) || 0;
 
+    // Evolución mensual (últimos 6 meses)
+    const meses = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+    const hoyM = new Date();
+    const evolucionVentas = [];
+    const evolucionComisiones = [];
+    const labelsEvolucion = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(hoyM.getFullYear(), hoyM.getMonth() - i, 1);
+      const inicio = new Date(d.getFullYear(), d.getMonth(), 1);
+      const fin = new Date(d.getFullYear(), d.getMonth() + 1, 1);
+      labelsEvolucion.push(meses[d.getMonth()]);
+      const ventasMesI = pedidos?.filter(p => {
+        const dp = new Date(p.created_at);
+        return dp >= inicio && dp < fin && p.estado !== "cancelado";
+      }).reduce((s, p) => s + p.total, 0) || 0;
+      const comMesI = pedidos?.filter(p => {
+        const dp = new Date(p.created_at);
+        return dp >= inicio && dp < fin && p.estado !== "cancelado";
+      }).reduce((s, p) => s + (p.comision_monto || 0), 0) || 0;
+      evolucionVentas.push(ventasMesI);
+      evolucionComisiones.push(comMesI);
+    }
+
     return NextResponse.json({
       resumen: {
         totalVendedores,
@@ -120,6 +143,11 @@ export async function GET(req: NextRequest) {
       carritosAbandonados: carritos?.slice(0, 20) || [],
       vendedores: vendedores || [],
       clientes: clientes || [],
+      evolucion: {
+        labels: labelsEvolucion,
+        ventas: evolucionVentas,
+        comisiones: evolucionComisiones,
+      },
     });
   } catch (err: any) {
     console.error("admin/dashboard error:", err);
