@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
     const supabase = getSupabaseServer();
     const { data: vendedor, error } = await supabase
       .from("vendedores")
-      .select("id, nombre, email, codigo_referido, comision_pct, estado")
+      .select("id, nombre, email, codigo_referido, comision_pct, nivel_vendedor, estado")
       .eq("id", vendedorId)
       .single();
 

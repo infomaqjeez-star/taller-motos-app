@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useVendedorAuth } from "@/components/vendedor/VendedorAuthContext";
 import {
-  Store, LogOut, Copy, Check, DollarSign, ShoppingBag, TrendingUp, Clock, Users, ArrowLeft
+  Store, LogOut, Copy, Check, DollarSign, ShoppingBag, TrendingUp, Clock, Users, ArrowLeft, Award, Timer, Calendar
 } from "lucide-react";
 
 interface Pedido {
@@ -14,6 +14,8 @@ interface Pedido {
   comision_monto: number;
   comision_estado: string;
   created_at: string;
+  fecha_limite_pago?: string | null;
+  fecha_pago_comision?: string | null;
   datos_cliente: { nombre?: string };
 }
 
@@ -70,6 +72,34 @@ export default function VendedorDashboardPage() {
 
   const fmtMoney = (n: number) => "$" + (n || 0).toLocaleString("es-AR", { maximumFractionDigits: 0 });
 
+  const calcularDiasRestantes = (fechaLimite?: string | null): number => {
+    if (!fechaLimite) return 0;
+    const diff = new Date(fechaLimite).getTime() - new Date().getTime();
+    return Math.ceil(diff / (1000 * 60 * 60 * 24));
+  };
+
+  const getColorNivel = (nivel?: string): string => {
+    const colors: Record<string, string> = {
+      nuevo: "text-gray-400 border-gray-500/30 bg-gray-500/10",
+      junior: "text-blue-400 border-blue-500/30 bg-blue-500/10",
+      senior: "text-purple-400 border-purple-500/30 bg-purple-500/10",
+      senior_pro: "text-orange-400 border-orange-500/30 bg-orange-500/10",
+      master: "text-[#FF5722] border-[#FF5722]/30 bg-[#FF5722]/10",
+    };
+    return colors[nivel || "nuevo"] || colors.nuevo;
+  };
+
+  const getDiasMaximosNivel = (nivel?: string): number => {
+    const dias: Record<string, number> = {
+      nuevo: 30,
+      junior: 30,
+      senior: 20,
+      senior_pro: 15,
+      master: 7,
+    };
+    return dias[nivel || "nuevo"] || 30;
+  };
+
   if (authLoading || loading) {
     return (
       <main className="mx-auto max-w-4xl px-4 py-16 text-center">
@@ -96,7 +126,16 @@ export default function VendedorDashboardPage() {
           <Store className="h-6 w-6 text-[#FDB71A]" />
           <div>
             <h1 className="text-xl font-black text-white">Dashboard de vendedor</h1>
-            <p className="text-sm text-gray-400">{vendedor.nombre} — {vendedor.codigo_referido}</p>
+            <div className="flex items-center gap-2 mt-1">
+              <p className="text-sm text-gray-400">{vendedor.nombre} — {vendedor.codigo_referido}</p>
+              <span className={`rounded-full border px-2 py-0.5 text-[10px] capitalize ${getColorNivel(vendedor.comision_pct >= 10 ? 'nuevo' : undefined)}`}>
+                <Award className="inline h-3 w-3 mr-0.5" />
+                {(vendedor as any).nivel_vendedor?.replace('_', ' ') || 'nuevo'}
+              </span>
+            </div>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Comisiones se pagan en máximo {getDiasMaximosNivel((vendedor as any).nivel_vendedor)} días
+            </p>
           </div>
         </div>
         <button
@@ -182,9 +221,25 @@ export default function VendedorDashboardPage() {
                 </div>
                 <div className="text-right">
                   <p className="text-sm font-bold text-white">{fmtMoney(p.total)}</p>
-                  <p className={`text-xs ${p.comision_estado === "pagada" ? "text-[#39FF14]" : "text-yellow-400"}`}>
-                    Comisión: {fmtMoney(p.comision_monto)} — {p.comision_estado}
-                  </p>
+                  {p.comision_estado === "pagada" ? (
+                    <p className="text-xs text-[#39FF14]">
+                      <Check className="inline h-3 w-3 mr-0.5" />
+                      Comisión pagada
+                      {p.fecha_pago_comision && ` - ${new Date(p.fecha_pago_comision).toLocaleDateString('es-AR')}`}
+                    </p>
+                  ) : (
+                    <div className="text-xs">
+                      <p className="text-yellow-400">
+                        Comisión: {fmtMoney(p.comision_monto)}
+                      </p>
+                      {p.fecha_limite_pago && (
+                        <p className={`${calcularDiasRestantes(p.fecha_limite_pago) <= 3 ? 'text-red-400' : 'text-gray-500'}`}>
+                          <Timer className="inline h-3 w-3 mr-0.5" />
+                          {calcularDiasRestantes(p.fecha_limite_pago)} días para cobrar
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             ))}

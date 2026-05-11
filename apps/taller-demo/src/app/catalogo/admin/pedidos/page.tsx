@@ -17,6 +17,9 @@ import {
   MapPin,
   CreditCard,
   FileText,
+  Calendar,
+  Timer,
+  Award,
 } from "lucide-react";
 
 interface Pedido {
@@ -52,7 +55,12 @@ interface Pedido {
     nombre: string;
     codigo_referido: string;
     comision_pct: number;
+    nivel_vendedor?: string;
   } | null;
+  fecha_pago_comision?: string | null;
+  fecha_limite_pago?: string | null;
+  fecha_liquidacion?: string | null;
+  dias_restantes?: number;
 }
 
 function fmtMoney(n: number) {
@@ -98,6 +106,52 @@ export default function AdminPedidosPage() {
     } catch (e) {
       console.error(e);
     }
+  };
+
+  const liquidarComision = async (pedidoId: string) => {
+    if (!confirm("¿Confirmás que querés liquidar esta comisión?")) return;
+    try {
+      await fetch("/api/admin/liquidaciones", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pedido_id: pedidoId }),
+      });
+      cargarPedidos();
+      if (selected) {
+        setSelected({ ...selected, comision_estado: "pagada", fecha_liquidacion: new Date().toISOString() });
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Error al liquidar comisión");
+    }
+  };
+
+  const calcularDiasRestantes = (fechaLimite?: string | null): number => {
+    if (!fechaLimite) return 0;
+    const diff = new Date(fechaLimite).getTime() - new Date().getTime();
+    return Math.ceil(diff / (1000 * 60 * 60 * 24));
+  };
+
+  const getColorNivel = (nivel?: string): string => {
+    const colors: Record<string, string> = {
+      nuevo: "text-gray-400 border-gray-500/30 bg-gray-500/10",
+      junior: "text-blue-400 border-blue-500/30 bg-blue-500/10",
+      senior: "text-purple-400 border-purple-500/30 bg-purple-500/10",
+      senior_pro: "text-orange-400 border-orange-500/30 bg-orange-500/10",
+      master: "text-[#FF5722] border-[#FF5722]/30 bg-[#FF5722]/10",
+    };
+    return colors[nivel || "nuevo"] || colors.nuevo;
+  };
+
+  const getDiasMaximosNivel = (nivel?: string): number => {
+    const dias: Record<string, number> = {
+      nuevo: 30,
+      junior: 30,
+      senior: 20,
+      senior_pro: 15,
+      master: 7,
+    };
+    return dias[nivel || "nuevo"] || 30;
   };
 
   const pedidosFiltrados = pedidos.filter((p) => {
@@ -183,9 +237,15 @@ export default function AdminPedidosPage() {
                     <span className="font-mono text-xs text-blue-400">#{p.id.slice(0, 8)}</span>
                     <EstadoBadge estado={p.estado} />
                     {p.vendedor && (
-                      <span className="rounded-full border border-purple-500/30 bg-purple-500/10 px-2 py-0.5 text-[10px] text-purple-400">
-                        Vendedor: {p.vendedor.nombre}
-                      </span>
+                      <>
+                        <span className={`rounded-full border px-2 py-0.5 text-[10px] capitalize ${getColorNivel(p.vendedor.nivel_vendedor)}`}>
+                          <Award className="inline h-3 w-3 mr-0.5" />
+                          {p.vendedor.nivel_vendedor?.replace('_', ' ') || 'nuevo'}
+                        </span>
+                        <span className="rounded-full border border-purple-500/30 bg-purple-500/10 px-2 py-0.5 text-[10px] text-purple-400">
+                          {p.vendedor.nombre}
+                        </span>
+                      </>
                     )}
                   </div>
                   <p className="mt-1 text-sm font-semibold text-white">
@@ -197,9 +257,10 @@ export default function AdminPedidosPage() {
                 </div>
                 <div className="text-right">
                   <p className="text-lg font-black text-white">{fmtMoney(p.total)}</p>
-                  {p.comision_monto > 0 && (
-                    <p className="text-xs text-purple-400">
-                      Comisión: {fmtMoney(p.comision_monto)} ({p.comision_estado})
+                  {p.comision_monto > 0 && p.comision_estado === 'pendiente' && p.fecha_limite_pago && (
+                    <p className={`text-xs ${calcularDiasRestantes(p.fecha_limite_pago) <= 3 ? 'text-red-400' : 'text-yellow-400'}`}>
+                      <Timer className="inline h-3 w-3 mr-0.5" />
+                      Comisión: {fmtMoney(p.comision_monto)} · {calcularDiasRestantes(p.fecha_limite_pago)} días restantes
                     </p>
                   )}
                 </div>
@@ -344,10 +405,51 @@ export default function AdminPedidosPage() {
                   <DollarSign className="h-4 w-4" />
                   Vendedor referido
                 </h3>
-                <div className="rounded-lg border border-purple-500/20 bg-purple-500/5 p-3 text-sm space-y-1">
-                  <p><span className="text-gray-500">Nombre:</span> {selected.vendedor.nombre}</p>
+                <div className="rounded-lg border border-purple-500/20 bg-purple-500/5 p-3 text-sm space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-500">Nombre:</span>
+                    <span className="text-white">{selected.vendedor.nombre}</span>
+                    <span className={`rounded-full border px-2 py-0.5 text-[10px] capitalize ${getColorNivel(selected.vendedor.nivel_vendedor)}`}>
+                      <Award className="inline h-3 w-3 mr-0.5" />
+                      {selected.vendedor.nivel_vendedor?.replace('_', ' ') || 'nuevo'}
+                    </span>
+                  </div>
                   <p><span className="text-gray-500">Código:</span> {selected.vendedor.codigo_referido}</p>
-                  <p><span className="text-gray-500">Comisión:</span> {fmtMoney(selected.comision_monto)} ({selected.comision_estado})</p>
+                  <p><span className="text-gray-500">Comisión:</span> <span className="font-bold text-white">{fmtMoney(selected.comision_monto)}</span></p>
+                  
+                  {/* Fechas de pago */}
+                  {selected.comision_estado === 'pendiente' && (
+                    <div className="mt-2 rounded-lg bg-white/5 p-2 space-y-1">
+                      <p className="flex items-center gap-1 text-xs text-gray-400">
+                        <Calendar className="h-3 w-3" />
+                        Máximo {getDiasMaximosNivel(selected.vendedor.nivel_vendedor)} días según nivel
+                      </p>
+                      {selected.fecha_limite_pago && (
+                        <p className={`flex items-center gap-1 text-xs ${calcularDiasRestantes(selected.fecha_limite_pago) <= 3 ? 'text-red-400' : 'text-yellow-400'}`}>
+                          <Timer className="h-3 w-3" />
+                          Vence: {new Date(selected.fecha_limite_pago).toLocaleDateString('es-AR')} 
+                          ({calcularDiasRestantes(selected.fecha_limite_pago)} días restantes)
+                        </p>
+                      )}
+                      <button
+                        onClick={() => liquidarComision(selected.id)}
+                        className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg bg-[#39FF14] py-2 text-xs font-bold text-black hover:bg-[#32E612]"
+                      >
+                        <Check className="h-3 w-3" />
+                        Liquidar comisión ahora
+                      </button>
+                    </div>
+                  )}
+                  
+                  {selected.comision_estado === 'pagada' && (
+                    <div className="mt-2 rounded-lg border border-[#39FF14]/20 bg-[#39FF14]/5 p-2">
+                      <p className="flex items-center gap-1 text-xs text-[#39FF14]">
+                        <Check className="h-3 w-3" />
+                        Comisión pagada
+                        {selected.fecha_liquidacion && ` - ${new Date(selected.fecha_liquidacion).toLocaleDateString('es-AR')}`}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </section>
             )}

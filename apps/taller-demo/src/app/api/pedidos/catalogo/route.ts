@@ -12,35 +12,56 @@ export async function POST(req: NextRequest) {
 
     const supabase = getSupabaseServer();
 
-    // Si hay vendedor_id, validar que exista
+    // Si hay vendedor_id, validar que exista y obtener nivel
     let finalVendedorId = vendedor_id || null;
+    let fechaLimitePago = null;
+    
     if (finalVendedorId) {
       const { data: vendedor } = await supabase
         .from("vendedores")
-        .select("id, estado")
+        .select("id, estado, nivel_vendedor")
         .eq("id", finalVendedorId)
         .single();
       if (!vendedor || vendedor.estado !== "activo") {
         finalVendedorId = null;
+      } else {
+        // Calcular fecha límite según nivel
+        const diasMap: Record<string, number> = {
+          nuevo: 30,
+          junior: 30,
+          senior: 20,
+          senior_pro: 15,
+          master: 7,
+        };
+        const dias = diasMap[vendedor.nivel_vendedor || 'nuevo'] || 30;
+        const fecha = new Date();
+        fecha.setDate(fecha.getDate() + dias);
+        fechaLimitePago = fecha.toISOString();
       }
+    }
+
+    const insertData: Record<string, any> = {
+      vendedor_id: finalVendedorId,
+      items,
+      datos_cliente,
+      subtotal,
+      descuento_pct,
+      descuento_monto,
+      envio,
+      total,
+      comision_monto: comision_monto || 0,
+      estado: "pendiente",
+      comision_estado: finalVendedorId ? "pendiente" : null,
+      whatsapp_enviado: true,
+    };
+
+    if (fechaLimitePago) {
+      insertData.fecha_limite_pago = fechaLimitePago;
     }
 
     const { data: pedido, error } = await supabase
       .from("pedidos_catalogo")
-      .insert({
-        vendedor_id: finalVendedorId,
-        items,
-        datos_cliente,
-        subtotal,
-        descuento_pct,
-        descuento_monto,
-        envio,
-        total,
-        comision_monto: comision_monto || 0,
-        estado: "pendiente",
-        comision_estado: finalVendedorId ? "pendiente" : null,
-        whatsapp_enviado: true,
-      })
+      .insert(insertData)
       .select("id")
       .single();
 

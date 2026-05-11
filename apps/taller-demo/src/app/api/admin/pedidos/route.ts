@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
       .from("pedidos_catalogo")
       .select(`
         *,
-        vendedor:vendedores(id, nombre, codigo_referido, comision_pct)
+        vendedor:vendedores(id, nombre, codigo_referido, comision_pct, nivel_vendedor)
       `)
       .order("created_at", { ascending: false });
 

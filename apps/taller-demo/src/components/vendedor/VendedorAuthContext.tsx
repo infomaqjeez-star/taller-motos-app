@@ -8,6 +8,7 @@ export interface Vendedor {
   email: string;
   codigo_referido: string;
   comision_pct: number;
+  nivel_vendedor?: string;
 }
 
 interface VendedorAuthContextValue {
