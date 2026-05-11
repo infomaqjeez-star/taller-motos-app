@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useVendedorAuth } from "@/components/vendedor/VendedorAuthContext";
 import {
   Store, LogOut, Copy, Check, DollarSign, ShoppingBag, TrendingUp,
-  ArrowLeft, Award, Timer, ChevronDown, Star, Target, TrendingDown,
+  ArrowLeft, Award, Timer, Star, Target, TrendingDown,
   AlertTriangle, Megaphone, Info, Package, Globe, Clock
 } from "lucide-react";
 
@@ -294,142 +294,260 @@ export default function VendedorDashboardPage() {
 }
 
 function NivelesVendedor({ vendedor, ventasTotales }: { vendedor: { nivel_vendedor?: string; comision_pct?: number }; ventasTotales: number }) {
-  const [tablaOpen, setTablaOpen] = useState(false);
-
   const niveles = [
-    { id: "nuevo", nombre: "Nuevo", comision: 10, requisito: 0, color: "text-gray-400", accent: "#9ca3af", dias: 30 },
-    { id: "junior", nombre: "Junior", comision: 11, requisito: 10000000, color: "text-blue-400", accent: "#60a5fa", dias: 30 },
-    { id: "senior", nombre: "Senior", comision: 12, requisito: 30000000, color: "text-purple-400", accent: "#c084fc", dias: 20 },
-    { id: "senior_pro", nombre: "Senior Pro", comision: 12, requisito: 50000000, color: "text-orange-400", accent: "#fb923c", dias: 15 },
-    { id: "master", nombre: "Master", comision: 15, requisito: 100000000, color: "text-orange-500", accent: "#f97316", dias: 7 },
+    { id: "nuevo",      nombre: "Nuevo",      comision: 10, requisito: 0,         accent: "#10b981", dias: 30 },
+    { id: "junior",     nombre: "Junior",     comision: 11, requisito: 10000000,  accent: "#3b82f6", dias: 30 },
+    { id: "senior",     nombre: "Senior",     comision: 12, requisito: 30000000,  accent: "#8b5cf6", dias: 20 },
+    { id: "senior_pro", nombre: "Senior Pro", comision: 12, requisito: 50000000,  accent: "#f97316", dias: 15 },
+    { id: "master",     nombre: "Master",     comision: 15, requisito: 100000000, accent: "#eab308", dias: 7  },
   ];
 
   const nivelActual = vendedor.nivel_vendedor || "nuevo";
-  const idxActual = niveles.findIndex((n) => n.id === nivelActual);
-  const infoActual = niveles[idxActual];
-  const siguiente = idxActual < niveles.length - 1 ? niveles[idxActual + 1] : null;
+  const idxActual   = niveles.findIndex((n) => n.id === nivelActual);
+  const infoActual  = niveles[idxActual];
+  const siguiente   = idxActual < niveles.length - 1 ? niveles[idxActual + 1] : null;
 
   let progresoPct = 100;
-  let restante = 0;
+  let restante    = 0;
   if (siguiente) {
     const desde = infoActual.requisito;
     const hasta = siguiente.requisito;
     const avance = Math.max(0, ventasTotales - desde);
-    const rango = hasta - desde;
-    progresoPct = Math.min(100, Math.round((avance / rango) * 100));
+    progresoPct = Math.min(100, Math.round((avance / (hasta - desde)) * 100));
     restante = Math.max(0, hasta - ventasTotales);
   }
 
+  const metaDisplay = siguiente ? siguiente.requisito : infoActual.requisito;
+
   return (
-    <section
-      className="rounded-2xl p-6 lg:col-span-2 flex flex-col justify-between"
-      style={{
-        background: "linear-gradient(145deg, rgba(15,23,42,0.9) 0%, rgba(15,23,42,0.4) 100%)",
-        backdropFilter: "blur(10px)",
-        border: "1px solid rgba(255,255,255,0.05)",
-      }}
-    >
-      <div>
-        <div className="flex justify-between items-start mb-6">
+    <section className="lg:col-span-2 space-y-4">
+
+      {/* ── HEADER DE PROGRESO ── */}
+      <div
+        className="rounded-3xl p-6 md:p-8 relative overflow-hidden"
+        style={{
+          background: "linear-gradient(145deg, rgba(15,23,42,0.9) 0%, rgba(15,23,42,0.5) 100%)",
+          backdropFilter: "blur(16px)",
+          border: "1px solid rgba(255,255,255,0.05)",
+        }}
+      >
+        <div
+          className="absolute -top-24 -right-24 w-64 h-64 rounded-full pointer-events-none"
+          style={{ background: "rgba(16,185,129,0.08)", filter: "blur(80px)" }}
+        />
+
+        {/* Título + porcentaje */}
+        <div className="flex justify-between items-end mb-4 relative z-10">
           <div>
-            <h2 className="text-xl font-bold text-white flex items-center gap-2">
-              <Star className="h-5 w-5" style={{ color: infoActual.accent }} /> Nivel {infoActual.nombre}
-            </h2>
-            <p className="text-slate-400 text-sm mt-1">
-              {siguiente
-                ? `${fmtMoney(restante)} para subir a ${siguiente.nombre}`
-                : "¡Nivel máximo alcanzado!"}
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1 flex items-center gap-2">
+              <Target className="h-3.5 w-3.5 text-emerald-400" /> Progreso de Ventas
             </p>
+            <div className="flex items-baseline gap-2">
+              <span className="text-3xl md:text-4xl font-black text-white">{fmtMoney(ventasTotales)}</span>
+              <span className="text-slate-500 font-medium text-sm">/ Meta: {fmtMoney(metaDisplay)}</span>
+            </div>
           </div>
           <span
-            className="font-bold px-4 py-1.5 rounded-full text-sm border"
-            style={{ background: "rgba(30,41,59,0.8)", borderColor: "#334155", color: "#e2e8f0" }}
+            className="font-bold px-3 py-1 rounded-lg text-sm border"
+            style={{
+              background: "rgba(16,185,129,0.15)",
+              border: "1px solid rgba(16,185,129,0.3)",
+              color: "#4ade80",
+              boxShadow: "0 0 10px rgba(74,222,128,0.15)",
+            }}
           >
-            {infoActual.comision}% comisión
+            {progresoPct}% completado
           </span>
         </div>
 
-        {/* Progress Bar */}
-        {siguiente && (
-          <div className="mb-6">
-            <div className="flex justify-between text-sm font-medium mb-2">
-              <span className="text-slate-300">Ventas: <span className="text-white font-bold">{fmtMoney(ventasTotales)}</span></span>
-              <span className="text-slate-500">Meta: {fmtMoney(siguiente.requisito)}</span>
-            </div>
-            <div className="w-full rounded-full h-3 mb-2 overflow-hidden border" style={{ background: "#1e293b", borderColor: "#334155" }}>
-              <div
-                className="h-3 rounded-full transition-all"
-                style={{ width: `${Math.max(2, progresoPct)}%`, background: "linear-gradient(to right, #10b981, #34d399)" }}
-              />
-            </div>
-            <div className="text-right text-xs font-semibold" style={{ color: "#10b981" }}>{progresoPct}% completado</div>
+        {/* Barra de progreso */}
+        <div
+          className="w-full rounded-full h-4 mb-6 overflow-hidden relative z-10 p-0.5"
+          style={{ background: "#0f172a", border: "1px solid #1e293b" }}
+        >
+          <div
+            className="h-full rounded-full relative transition-all duration-1000"
+            style={{
+              width: `${Math.max(2, progresoPct)}%`,
+              background: "linear-gradient(to right, #10b981, #4ade80)",
+              boxShadow: "0 0 12px rgba(74,222,128,0.4)",
+            }}
+          >
+            <div className="absolute right-0 top-1/2 -translate-y-1/2 w-2 h-2 bg-white rounded-full shadow-[0_0_6px_#fff]" />
           </div>
-        )}
-      </div>
+        </div>
 
-      {/* Benefits */}
-      <div className="rounded-xl p-4 border mb-4" style={{ background: "rgba(15,23,42,0.5)", borderColor: "#1e293b" }}>
-        <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-3">Beneficios de Nivel {infoActual.nombre}</p>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg" style={{ background: "rgba(16,185,129,0.1)", color: "#10b981" }}>
-              <DollarSign className="h-5 w-5" />
+        {/* Beneficios del nivel actual */}
+        <div className="relative z-10">
+          <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">
+            Beneficios de tu nivel (<span style={{ color: infoActual.accent }}>{infoActual.nombre}</span>)
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div
+              className="rounded-xl p-4 flex items-center gap-4 transition-all hover:border-emerald-500/40"
+              style={{ background: "rgba(2,6,23,0.5)", border: "1px solid #1e293b" }}
+            >
+              <div className="p-3 rounded-lg" style={{ background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.2)" }}>
+                <DollarSign className="h-6 w-6" style={{ color: "#4ade80" }} />
+              </div>
+              <div>
+                <p className="text-white font-bold text-xl leading-none mb-1">{infoActual.comision}%</p>
+                <p className="text-slate-400 text-xs font-medium">Comisión por venta</p>
+              </div>
             </div>
-            <p className="text-sm font-medium text-slate-200">{infoActual.comision}% por venta</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg" style={{ background: "rgba(59,130,246,0.1)", color: "#60a5fa" }}>
-              <Clock className="h-5 w-5" />
+            <div
+              className="rounded-xl p-4 flex items-center gap-4 transition-all hover:border-blue-500/40"
+              style={{ background: "rgba(2,6,23,0.5)", border: "1px solid #1e293b" }}
+            >
+              <div className="p-3 rounded-lg" style={{ background: "rgba(59,130,246,0.1)", border: "1px solid rgba(59,130,246,0.2)" }}>
+                <Clock className="h-6 w-6 text-blue-400" />
+              </div>
+              <div>
+                <p className="text-white font-bold text-xl leading-none mb-1">{infoActual.dias} días</p>
+                <p className="text-slate-400 text-xs font-medium">Plazo de pago</p>
+              </div>
             </div>
-            <p className="text-sm font-medium text-slate-200">Pago en {infoActual.dias} días</p>
           </div>
+
+          {siguiente && (
+            <p className="text-xs text-slate-500 mt-4 text-center">
+              Te faltan <strong className="text-white">{fmtMoney(restante)}</strong> en ventas para subir a{" "}
+              <span className="font-bold" style={{ color: siguiente.accent }}>{siguiente.nombre}</span>
+            </p>
+          )}
+          {!siguiente && (
+            <p className="text-xs text-center mt-4 font-bold" style={{ color: "#eab308" }}>
+              ★ ¡Nivel máximo alcanzado!
+            </p>
+          )}
         </div>
       </div>
 
-      <button
-        onClick={() => setTablaOpen(!tablaOpen)}
-        className="w-full text-center text-sm text-slate-400 hover:text-white transition-colors flex items-center justify-center gap-1 py-2"
+      {/* ── PLAN DE CARRERA (TIMELINE) ── */}
+      <div
+        className="rounded-3xl p-6 md:p-8"
+        style={{
+          background: "linear-gradient(145deg, rgba(15,23,42,0.9) 0%, rgba(15,23,42,0.5) 100%)",
+          backdropFilter: "blur(16px)",
+          border: "1px solid rgba(255,255,255,0.05)",
+        }}
       >
-        Ver todos los niveles y requisitos <ChevronDown className={`h-4 w-4 transition-transform ${tablaOpen ? "rotate-180" : ""}`} />
-      </button>
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-lg font-bold text-white flex items-center gap-2">
+            <Award className="h-5 w-5 text-slate-400" /> Plan de Carrera
+          </h3>
+          <span className="text-xs text-slate-500 font-medium">5 niveles disponibles</span>
+        </div>
 
-      {tablaOpen && (
-        <div className="space-y-2 mt-3">
+        <div className="space-y-3 relative">
+          {/* Línea vertical de timeline */}
+          <div
+            className="absolute left-5 top-0 bottom-0 w-0.5 pointer-events-none"
+            style={{ background: "linear-gradient(to bottom, #10b981, #1e293b, #1e293b)" }}
+          />
+
           {niveles.map((n, i) => {
-            const esActual = n.id === nivelActual;
-            const esFuturo = i > idxActual;
+            const esActual  = n.id === nivelActual;
+            const esPasado  = i < idxActual;
+            const esFuturo  = i > idxActual;
+
             return (
-              <div
-                key={n.id}
-                className="flex items-center gap-3 rounded-xl border p-2.5"
-                style={{
-                  background: esActual ? "rgba(30,41,59,0.6)" : esFuturo ? "rgba(15,23,42,0.3)" : "rgba(15,23,42,0.4)",
-                  borderColor: esActual ? "#334155" : "rgba(255,255,255,0.05)",
-                  opacity: esFuturo ? 0.6 : 1,
-                }}
-              >
+              <div key={n.id} className="relative flex items-start gap-4 group">
+
+                {/* Ícono timeline */}
                 <div
-                  className="flex h-8 w-8 items-center justify-center rounded-full"
-                  style={{ background: esActual ? "rgba(30,41,59,0.8)" : "rgba(255,255,255,0.05)" }}
+                  className="relative flex items-center justify-center w-10 h-10 rounded-full shrink-0 z-10 transition-all"
+                  style={{
+                    background:  esActual ? "#0f172a" : "#0f172a",
+                    border:      esActual ? `3px solid ${n.accent}` : esPasado ? `2px solid ${n.accent}` : "2px solid #1e293b",
+                    boxShadow:   esActual ? `0 0 14px ${n.accent}40` : "none",
+                    color:       esActual ? n.accent : esPasado ? n.accent : "#475569",
+                  }}
                 >
-                  <span className="text-xs font-bold" style={{ color: esActual ? n.accent : "#64748b" }}>{i + 1}</span>
+                  {esActual && (
+                    <div
+                      className="absolute inset-0 rounded-full animate-ping opacity-30"
+                      style={{ background: n.accent }}
+                    />
+                  )}
+                  {n.id === "master"
+                    ? <Star className="h-4 w-4 relative z-10" />
+                    : <span className="text-sm font-black relative z-10">{i + 1}</span>}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-bold" style={{ color: esActual ? n.accent : "#cbd5e1" }}>{n.nombre}</span>
+
+                {/* Tarjeta */}
+                <div
+                  className="flex-1 rounded-2xl p-4 relative overflow-hidden transition-all"
+                  style={
+                    esActual
+                      ? { background: "#0f172a", border: `2px solid ${n.accent}`, boxShadow: `0 0 20px ${n.accent}15` }
+                      : {
+                          background: "rgba(15,23,42,0.4)",
+                          border: "1px solid rgba(255,255,255,0.05)",
+                          transform: esFuturo ? undefined : undefined,
+                        }
+                  }
+                  onMouseEnter={(e) => {
+                    if (!esActual) (e.currentTarget as HTMLElement).style.background = "rgba(30,41,59,0.6)";
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!esActual) (e.currentTarget as HTMLElement).style.background = "rgba(15,23,42,0.4)";
+                  }}
+                >
+                  {/* Acento lateral de color */}
+                  <div
+                    className="absolute left-0 top-0 bottom-0 w-1 rounded-l-xl"
+                    style={{ background: n.accent, opacity: esActual ? 1 : 0.4 }}
+                  />
+                  {/* Brillo master */}
+                  {n.id === "master" && (
+                    <div
+                      className="absolute -right-8 -top-8 w-20 h-20 rounded-full pointer-events-none"
+                      style={{ background: `${n.accent}18`, filter: "blur(20px)" }}
+                    />
+                  )}
+
+                  <div className="flex justify-between items-start mb-1 relative z-10">
+                    <h4 className="font-bold text-lg" style={{ color: esActual ? "#fff" : "#cbd5e1" }}>
+                      {n.nombre}
+                      {esFuturo && <span className="ml-2 text-slate-600 text-sm">🔒</span>}
+                    </h4>
                     {esActual && (
-                      <span className="rounded px-1.5 py-0.5 text-[10px] font-bold" style={{ background: "rgba(16,185,129,0.2)", color: "#34d399" }}>ACTUAL</span>
+                      <span
+                        className="text-[10px] font-black uppercase px-2 py-0.5 rounded"
+                        style={{ background: n.accent, color: "#0f172a" }}
+                      >
+                        Actual
+                      </span>
                     )}
                   </div>
-                  <p className="text-[10px] text-slate-500">
-                    {n.requisito === 0 ? "Inicio" : `Requisito: ${fmtMoney(n.requisito)} en ventas`} · {n.comision}% comisión · {n.dias} días pago
+
+                  <p className="text-xs text-slate-500 mb-2 relative z-10">
+                    {n.requisito === 0
+                      ? "Punto de inicio."
+                      : <>Requiere: <strong style={{ color: n.accent }}>{fmtMoney(n.requisito)}</strong> en ventas</>}
                   </p>
+
+                  <div className="flex gap-2 relative z-10" style={{ opacity: esFuturo ? 0.6 : 1 }}>
+                    <span
+                      className="text-[10px] font-semibold px-2 py-1 rounded"
+                      style={{ background: "#0f172a", color: n.id === "master" ? n.accent : "#cbd5e1", border: `1px solid ${n.id === "master" ? n.accent + "40" : "#1e293b"}` }}
+                    >
+                      {n.comision}% Comisión
+                    </span>
+                    <span
+                      className="text-[10px] font-semibold px-2 py-1 rounded"
+                      style={{ background: "#0f172a", color: "#cbd5e1", border: "1px solid #1e293b" }}
+                    >
+                      Pago: {n.dias} días
+                    </span>
+                  </div>
                 </div>
               </div>
             );
           })}
         </div>
-      )}
+      </div>
     </section>
   );
 }
