@@ -235,7 +235,7 @@ function CatalogoContent() {
           <div className="flex flex-wrap items-center justify-center gap-2 text-xs font-semibold">
             {!loading && (
               <span className="bg-slate-800 text-slate-300 border border-slate-700 px-3 py-1.5 rounded-full flex items-center gap-1">
-                <Package className="h-3.5 w-3.5" style={{ color: "#f97316" }} /> {productos.length.toLocaleString("es-AR")}+ prod.
+                <Package className="h-3.5 w-3.5" style={{ color: "#f97316" }} /> Más de 5000 productos
               </span>
             )}
             {clienteLogueado ? (
