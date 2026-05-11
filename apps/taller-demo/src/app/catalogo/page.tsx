@@ -179,9 +179,14 @@ function CatalogoContent() {
     const map = new Map<string, number>();
     for (const p of productos) map.set(p.category, (map.get(p.category) || 0) + 1);
     const cats = Array.from(map.entries()).map(([id, count]) => ({ id, nombre: id, count }));
+    const ORDEN_FIJO: Record<string, number> = {
+      "Motosierras": 0,
+      "Desmalezadoras": 1,
+    };
     return cats.sort((a, b) => {
-      if (a.id === "Repuestos Varios") return 1;
-      if (b.id === "Repuestos Varios") return -1;
+      const oa = ORDEN_FIJO[a.id] ?? (a.id === "Repuestos Varios" ? 9999 : 100);
+      const ob = ORDEN_FIJO[b.id] ?? (b.id === "Repuestos Varios" ? 9999 : 100);
+      if (oa !== ob) return oa - ob;
       return a.nombre.localeCompare(b.nombre);
     });
   }, [productos]);
