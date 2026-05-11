@@ -148,7 +148,7 @@ export default function AdminPedidosPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [vendedores, setVendedores] = useState<VendedorData[]>([]);
   const [clientes, setClientes] = useState<ClienteData[]>([]);
-  const [vistaActiva, setVistaActiva] = useState<"pedidos" | "vendedores" | "clientes" | "dashboard" | "precios" | "finanzas">("dashboard");
+  const [vistaActiva, setVistaActiva] = useState<"pedidos" | "vendedores" | "gerentes" | "clientes" | "dashboard" | "precios" | "finanzas">("dashboard");
   const [precioStats, setPrecioStats] = useState<{ total: number; activos: number; precioMin: number; precioMax: number; precioPromedio: number } | null>(null);
   const [porcentajeAjuste, setPorcentajeAjuste] = useState("");
   const [ajustandoPrecios, setAjustandoPrecios] = useState(false);
@@ -390,6 +390,7 @@ export default function AdminPedidosPage() {
     { id: "dashboard", label: "Dashboard", icon: BarChart3 },
     { id: "pedidos", label: "Pedidos", icon: Package },
     { id: "vendedores", label: "Vendedores", icon: Store },
+    { id: "gerentes", label: "Gerentes", icon: Award },
     { id: "clientes", label: "Clientes", icon: Users },
     { id: "precios", label: "Precios", icon: Percent },
     { id: "finanzas", label: "Finanzas", icon: Wallet },
@@ -855,6 +856,202 @@ export default function AdminPedidosPage() {
                   </div>
                 );
               })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* === GERENTES === */}
+      {vistaActiva === "gerentes" && (
+        <div className="space-y-6">
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+              <Award className="h-5 w-5 text-purple-400" />
+              Gerentes de Ventas
+              <span className="text-xs font-normal text-gray-500 ml-1">— Ganan 10% de las comisiones de sus vendedores</span>
+            </h2>
+            <span className="text-sm text-gray-500">{vendedores.filter(v => v.es_gerente).length} gerentes activos</span>
+          </div>
+
+          {/* Lista de gerentes */}
+          {vendedores.filter(v => v.es_gerente).length === 0 ? (
+            <div className="rounded-xl border border-gray-800 p-10 text-center" style={{ backgroundColor: "#111827" }}>
+              <Award className="h-10 w-10 text-gray-700 mx-auto mb-3" />
+              <p className="text-gray-400 font-medium mb-1">No hay gerentes asignados</p>
+              <p className="text-xs text-gray-600 mb-4">Podés promover vendedores desde la pestaña Vendedores</p>
+              <button
+                onClick={() => setVistaActiva("vendedores" as any)}
+                className="px-4 py-2 rounded-md border border-gray-700 text-sm text-gray-300 hover:bg-gray-800 transition-colors"
+              >
+                Ir a Vendedores
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {vendedores.filter(v => v.es_gerente).map(gerente => {
+                const equipo = vendedores.filter(s => s.lider_id === gerente.id);
+                const ventasEquipo = equipo.reduce((sum, s) => {
+                  return sum + pedidos
+                    .filter(p => p.vendedor_id === s.id && p.estado !== "cancelado")
+                    .reduce((ps, p) => ps + (p.total || 0), 0);
+                }, 0);
+                const comisionesEquipo = equipo.reduce((sum, s) => {
+                  return sum + pedidos
+                    .filter(p => p.vendedor_id === s.id && p.estado !== "cancelado")
+                    .reduce((ps, p) => ps + (p.comision_monto || 0), 0);
+                }, 0);
+                const comisionGerente = comisionesEquipo * 0.10;
+                return (
+                  <div key={gerente.id} className="rounded-xl border border-purple-500/20 shadow-lg overflow-hidden" style={{ backgroundColor: "#111827" }}>
+                    {/* Cabecera gerente */}
+                    <div className="p-5 border-b border-gray-800 flex flex-wrap items-center justify-between gap-4">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-full bg-purple-900/50 border border-purple-500/30 flex items-center justify-center font-bold text-purple-300 text-lg flex-shrink-0">
+                          {gerente.nombre.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <span className="text-white font-bold text-base">{gerente.nombre}</span>
+                            <span className="text-[10px] rounded-full border border-purple-500/30 bg-purple-500/10 px-2 py-0.5 text-purple-300">👑 Gerente</span>
+                          </div>
+                          <p className="text-xs text-gray-500">{gerente.email} · Ref: <span className="text-gray-400 font-mono">{gerente.codigo_referido}</span></p>
+                          <p className="text-xs text-gray-600 mt-0.5">Comisión propia: {gerente.comision_pct}% · {equipo.length} vendedor{equipo.length !== 1 ? "es" : ""} a cargo</p>
+                        </div>
+                      </div>
+                      <div className="flex gap-4 text-right">
+                        <div>
+                          <p className="text-[10px] text-gray-500 uppercase tracking-wider">Ventas equipo</p>
+                          <p className="text-lg font-bold text-green-400">{fmtMoney(ventasEquipo)}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-gray-500 uppercase tracking-wider">Comisión gerente (10%)</p>
+                          <p className="text-lg font-bold text-purple-400">{fmtMoney(comisionGerente)}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Tabla de vendedores del equipo */}
+                    {equipo.length === 0 ? (
+                      <div className="p-5 text-center text-gray-600 text-sm">Sin vendedores asignados aún</div>
+                    ) : (
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-gray-800" style={{ backgroundColor: "rgba(0,0,0,0.2)" }}>
+                            <th className="text-left py-2 px-5 text-xs text-gray-500 font-semibold">Vendedor</th>
+                            <th className="text-right py-2 px-5 text-xs text-gray-500 font-semibold">Pedidos</th>
+                            <th className="text-right py-2 px-5 text-xs text-gray-500 font-semibold">Ventas</th>
+                            <th className="text-right py-2 px-5 text-xs text-gray-500 font-semibold">Comisión vendedor</th>
+                            <th className="text-right py-2 px-5 text-xs text-gray-500 font-semibold">10% → gerente</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {equipo.map(sub => {
+                            const pedidosSub = pedidos.filter(p => p.vendedor_id === sub.id && p.estado !== "cancelado");
+                            const ventasSub = pedidosSub.reduce((s, p) => s + (p.total || 0), 0);
+                            const comisionSub = pedidosSub.reduce((s, p) => s + (p.comision_monto || 0), 0);
+                            const parteGerente = comisionSub * 0.10;
+                            return (
+                              <tr key={sub.id} className="border-b border-gray-800/40 hover:bg-gray-800/20 transition">
+                                <td className="py-3 px-5">
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-7 h-7 rounded-full bg-gray-700 flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
+                                      {sub.nombre.charAt(0).toUpperCase()}
+                                    </div>
+                                    <div>
+                                      <p className="text-white font-medium">{sub.nombre}</p>
+                                      <p className="text-[10px] text-gray-500">{sub.email} · {sub.comision_pct}%+3% com.</p>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="py-3 px-5 text-right text-gray-400 text-xs">{pedidosSub.length}</td>
+                                <td className="py-3 px-5 text-right text-green-400 font-medium">{fmtMoney(ventasSub)}</td>
+                                <td className="py-3 px-5 text-right text-orange-400">{fmtMoney(comisionSub)}</td>
+                                <td className="py-3 px-5 text-right text-purple-400 font-bold">{fmtMoney(parteGerente)}</td>
+                              </tr>
+                            );
+                          })}
+                          <tr style={{ backgroundColor: "rgba(0,0,0,0.15)" }}>
+                            <td colSpan={2} className="py-2 px-5 text-xs text-gray-500 font-semibold">Total equipo</td>
+                            <td className="py-2 px-5 text-right text-green-300 text-xs font-bold">{fmtMoney(ventasEquipo)}</td>
+                            <td className="py-2 px-5 text-right text-orange-300 text-xs font-bold">{fmtMoney(comisionesEquipo)}</td>
+                            <td className="py-2 px-5 text-right text-purple-300 text-xs font-bold">{fmtMoney(comisionGerente)}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    )}
+
+                    {/* Acciones */}
+                    <div className="px-5 py-3 border-t border-gray-800 flex items-center justify-between">
+                      <p className="text-xs text-gray-600">Para gestionar el equipo, ir a la pestaña Vendedores</p>
+                      <button
+                        onClick={() => asignarGerente(gerente.id, gerente.lider_id || null, false)}
+                        disabled={guardandoGerente === gerente.id}
+                        className="px-3 py-1.5 text-xs rounded-md border border-red-800/50 text-red-400 hover:bg-red-900/20 transition disabled:opacity-50"
+                      >
+                        {guardandoGerente === gerente.id ? "..." : "Quitar rol gerente"}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Vendedores sin gerente */}
+          {vendedores.filter(v => !v.es_gerente && !v.lider_id).length > 0 && (
+            <div className="rounded-xl border border-gray-800 overflow-hidden" style={{ backgroundColor: "#111827" }}>
+              <div className="p-4 border-b border-gray-800">
+                <h3 className="text-sm font-bold text-gray-400 flex items-center gap-2">
+                  <Users className="h-4 w-4" /> Vendedores sin gerente asignado ({vendedores.filter(v => !v.es_gerente && !v.lider_id).length})
+                </h3>
+              </div>
+              <div className="divide-y divide-gray-800/50">
+                {vendedores.filter(v => !v.es_gerente && !v.lider_id).map(v => {
+                  const gerentes = vendedores.filter(g => g.es_gerente);
+                  return (
+                    <div key={v.id} className="flex items-center justify-between px-5 py-3 hover:bg-gray-800/20 transition">
+                      <div className="flex items-center gap-3">
+                        <div className="w-7 h-7 rounded-full bg-gray-700 flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
+                          {v.nombre.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <p className="text-white text-sm font-medium">{v.nombre}</p>
+                          <p className="text-[10px] text-gray-500">{v.email}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {gerentes.length > 0 ? (
+                          <>
+                            <select
+                              className="rounded-md border border-gray-700 bg-gray-900 px-2 py-1 text-xs text-white"
+                              value={asignandoGerenteId[v.id] ?? ""}
+                              onChange={(e) => setAsignandoGerenteId(prev => ({ ...prev, [v.id]: e.target.value }))}
+                            >
+                              <option value="">Asignar gerente...</option>
+                              {gerentes.map(g => (
+                                <option key={g.id} value={g.id}>{g.nombre}</option>
+                              ))}
+                            </select>
+                            <button
+                              onClick={() => {
+                                const sel = asignandoGerenteId[v.id];
+                                if (sel) asignarGerente(v.id, sel, false);
+                              }}
+                              disabled={!asignandoGerenteId[v.id] || guardandoGerente === v.id}
+                              className="px-3 py-1 text-xs rounded-md border border-purple-700/50 text-purple-400 hover:bg-purple-900/20 transition disabled:opacity-40"
+                            >
+                              {guardandoGerente === v.id ? "..." : "Asignar"}
+                            </button>
+                          </>
+                        ) : (
+                          <span className="text-xs text-gray-600">Primero promové un gerente</span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
         </div>
