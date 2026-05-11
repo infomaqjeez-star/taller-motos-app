@@ -168,7 +168,22 @@ export default function AdminPedidosPage() {
     }
     cargarPedidos();
     cargarDashboard();
+    cargarVendedores();
   }, [admin, authLoading, router]);
+
+  const cargarVendedores = async () => {
+    try {
+      const token = localStorage.getItem("admin_catalogo_session");
+      const parsed = token ? JSON.parse(token) : null;
+      const res = await fetch("/api/admin/vendedores", {
+        headers: parsed?.token ? { Authorization: `Bearer ${parsed.token}` } : {},
+      });
+      const data = await res.json();
+      if (data.vendedores) setVendedores(data.vendedores);
+    } catch (e) {
+      console.error("Error cargando vendedores:", e);
+    }
+  };
 
   const cargarPedidos = async () => {
     try {
@@ -307,7 +322,7 @@ export default function AdminPedidosPage() {
         const e = await res.json();
         alert(e.error || "Error al guardar");
       } else {
-        await cargarDashboard();
+        await cargarVendedores();
       }
     } catch {
       alert("Error al guardar");
