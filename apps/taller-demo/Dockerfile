@@ -9,8 +9,7 @@ WORKDIR /app
 
 # Copiar package.json (ahora el contexto es apps/taller-demo)
 COPY package.json ./package.json
-COPY package-lock.json ./package-lock.json
-RUN npm ci
+RUN npm install --no-audit --no-fund
 
 # Build
 FROM base AS builder
