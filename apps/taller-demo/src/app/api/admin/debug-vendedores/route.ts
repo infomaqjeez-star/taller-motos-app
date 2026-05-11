@@ -11,11 +11,18 @@ export async function GET() {
     k.includes("SUPA") || k.includes("SERVICE") || k.includes("supabase")
   );
 
+  const serviceKey2 = process.env.SUPABASE_SERVICE_KEY;
+  const serviceKey3 = process.env.SERVICE_ROLE_KEY;
+  const effectiveServiceKey = serviceKey || serviceKey2 || serviceKey3;
+
   const result: Record<string, any> = {
     env: {
       has_url: !!url,
       has_anon: !!anonKey,
       has_service: !!serviceKey,
+      has_service_alt1: !!serviceKey2,
+      has_service_alt2: !!serviceKey3,
+      has_effective_service: !!effectiveServiceKey,
       url_preview: url?.slice(0, 50),
       anon_preview: anonKey ? anonKey.slice(0, 20) + "..." : null,
       service_preview: serviceKey ? serviceKey.slice(0, 20) + "..." : null,
@@ -25,8 +32,8 @@ export async function GET() {
   };
 
   // Test con service role (sin RLS)
-  if (url && serviceKey) {
-    const sb = createClient(url, serviceKey);
+  if (url && effectiveServiceKey) {
+    const sb = createClient(url, effectiveServiceKey);
 
     // 1) Count total
     const { count, error: countErr } = await sb.from("vendedores").select("*", { count: "exact", head: true });
