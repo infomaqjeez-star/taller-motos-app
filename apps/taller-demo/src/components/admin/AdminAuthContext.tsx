@@ -11,7 +11,8 @@ interface Admin {
 interface AdminAuthContextValue {
   admin: Admin | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<{ error?: string }>;
+  login: (email: string, password: string) => Promise<{ error?: string; requires2FA?: boolean; tempToken?: string }>;
+  verify2FA: (tempToken: string, code: string) => Promise<{ error?: string }>;
   logout: () => void;
 }
 
@@ -45,6 +46,24 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
     const data = await res.json();
     if (!res.ok) return { error: data.error || "Error al iniciar sesión" };
 
+    if (data.requires2FA && data.tempToken) {
+      return { requires2FA: true, tempToken: data.tempToken };
+    }
+
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data.admin));
+    setAdmin(data.admin);
+    return {};
+  }, []);
+
+  const verify2FA = useCallback(async (tempToken: string, code: string) => {
+    const res = await fetch("/api/admin/verify-2fa", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tempToken, code }),
+    });
+    const data = await res.json();
+    if (!res.ok) return { error: data.error || "Código incorrecto" };
+
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data.admin));
     setAdmin(data.admin);
     return {};
@@ -56,7 +75,7 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <AdminAuthContext.Provider value={{ admin, loading, login, logout }}>
+    <AdminAuthContext.Provider value={{ admin, loading, login, verify2FA, logout }}>
       {children}
     </AdminAuthContext.Provider>
   );

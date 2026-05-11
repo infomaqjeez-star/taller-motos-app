@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
+import { SignJWT } from "jose";
 import { getSupabaseServer } from "@/lib/supabase-server";
+
+const SECRET = new TextEncoder().encode(
+  process.env.ADMIN_JWT_SECRET || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "fallback-secret"
+);
 
 export async function POST(req: NextRequest) {
   try {
@@ -13,7 +18,7 @@ export async function POST(req: NextRequest) {
 
     const { data: admin, error } = await supabase
       .from("admins_catalogo")
-      .select("id, nombre, email, password_hash, estado")
+      .select("id, nombre, email, password_hash, estado, totp_enabled, totp_secret")
       .eq("email", email.trim().toLowerCase())
       .single();
 
@@ -28,6 +33,19 @@ export async function POST(req: NextRequest) {
     const valid = await bcrypt.compare(password, admin.password_hash);
     if (!valid) {
       return NextResponse.json({ error: "Credenciales inválidas" }, { status: 401 });
+    }
+
+    // Si 2FA está activo, devolver tempToken para verificacion en paso 2
+    if (admin.totp_enabled && admin.totp_secret) {
+      const tempToken = await new SignJWT({ admin_id: admin.id, step: "2fa" })
+        .setProtectedHeader({ alg: "HS256" })
+        .setExpirationTime("5m")
+        .sign(SECRET);
+
+      return NextResponse.json({
+        requires2FA: true,
+        tempToken,
+      });
     }
 
     return NextResponse.json({
