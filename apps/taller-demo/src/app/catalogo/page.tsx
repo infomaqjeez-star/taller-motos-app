@@ -156,9 +156,14 @@ const ORDEN_CATEGORIA: Record<string, number> = {
 };
 function pesoCategoria(cat?: string): number {
   if (!cat) return 9998;
-  const exact = ORDEN_CATEGORIA[cat];
+  const normalized = cat.trim();
+  const exact = ORDEN_CATEGORIA[normalized];
   if (exact !== undefined) return exact;
-  if (cat === "Repuestos Varios") return 9999;
+  // Buscar case-insensitive
+  for (const [key, val] of Object.entries(ORDEN_CATEGORIA)) {
+    if (key.toLowerCase() === normalized.toLowerCase()) return val;
+  }
+  if (normalized.toLowerCase() === "repuestos varios") return 9999;
   return 100;
 }
 
