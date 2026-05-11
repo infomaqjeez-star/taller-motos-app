@@ -371,129 +371,144 @@ export default function AdminPedidosPage() {
 
   if (!admin) return null;
 
-  return (
-    <main className="mx-auto max-w-6xl px-4 py-6 pb-20">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <button
-            onClick={() => router.push("/catalogo")}
-            className="mb-4 flex items-center gap-1 text-sm text-gray-400 hover:text-white"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Volver al catálogo
-          </button>
-          <div className="flex items-center gap-2">
-            <Shield className="h-7 w-7 text-[#FF5722]" />
-            <h1 className="text-2xl font-black text-white">Panel de Pedidos</h1>
-          </div>
-          <p className="mt-1 text-sm text-gray-400">
-            Admin: {admin.nombre} ({admin.email})
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => router.push("/catalogo/admin/seguridad")}
-            className="rounded-lg border border-white/10 px-3 py-1.5 text-sm text-gray-400 hover:bg-white/5 hover:text-white flex items-center gap-1.5"
-          >
-            <Shield className="h-3.5 w-3.5 text-orange-400" /> Seguridad
-          </button>
-          <button
-            onClick={logout}
-            className="rounded-lg border border-white/10 px-3 py-1.5 text-sm text-gray-400 hover:bg-white/5 hover:text-white"
-          >
-            Cerrar sesión
-          </button>
-        </div>
-      </div>
+  const tabs = [
+    { id: "dashboard", label: "Dashboard", icon: BarChart3 },
+    { id: "pedidos", label: "Pedidos", icon: Package },
+    { id: "vendedores", label: "Vendedores", icon: Store },
+    { id: "clientes", label: "Clientes", icon: Users },
+    { id: "precios", label: "Precios", icon: Percent },
+    { id: "finanzas", label: "Finanzas", icon: Wallet },
+  ];
 
-      {/* Navegación por pestañas */}
-      <div className="mt-4 flex flex-wrap gap-2 border-b border-white/10 pb-3">
-        {[
-          { id: "dashboard", label: "Dashboard", icon: BarChart3 },
-          { id: "pedidos", label: "Pedidos", icon: Package },
-          { id: "vendedores", label: "Vendedores", icon: Store },
-          { id: "clientes", label: "Clientes", icon: Users },
-          { id: "precios", label: "Precios", icon: Percent },
-          { id: "finanzas", label: "Finanzas", icon: Wallet },
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setVistaActiva(tab.id as any)}
-            className={`flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium ${
-              vistaActiva === tab.id
-                ? "bg-[#FF5722]/20 text-[#FF5722] border border-[#FF5722]/30"
-                : "text-gray-400 hover:text-white hover:bg-white/5 border border-transparent"
-            }`}
-          >
-            <tab.icon className="h-4 w-4" />
-            {tab.label}
-          </button>
-        ))}
-      </div>
+  return (
+    <div className="min-h-screen flex flex-col" style={{ backgroundColor: "#080c16" }}>
+      {/* HEADER */}
+      <header className="border-b border-gray-800 px-6 py-4" style={{ backgroundColor: "#111827" }}>
+        <div className="mx-auto max-w-7xl">
+          <div className="flex justify-between items-start mb-5">
+            <div>
+              <button
+                onClick={() => router.push("/catalogo")}
+                className="mb-3 flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors"
+              >
+                <ArrowLeft className="h-4 w-4" /> Volver al catálogo
+              </button>
+              <div className="flex items-center gap-3">
+                <Shield className="h-6 w-6 text-orange-500" />
+                <h1 className="text-2xl font-bold text-white">Panel de Pedidos</h1>
+              </div>
+              <p className="text-sm text-gray-500 mt-1">Admin: {admin.nombre} ({admin.email})</p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => router.push("/catalogo/admin/seguridad")}
+                className="flex items-center gap-2 px-4 py-2 rounded-md border border-gray-700 text-gray-300 hover:bg-gray-800 transition-colors text-sm"
+              >
+                <Shield className="h-4 w-4 text-orange-500" /> Seguridad
+              </button>
+              <button
+                onClick={logout}
+                className="flex items-center gap-2 px-4 py-2 rounded-md border border-gray-700 text-gray-300 hover:bg-gray-800 transition-colors text-sm"
+              >
+                Cerrar sesión
+              </button>
+            </div>
+          </div>
+          {/* Tabs */}
+          <nav className="flex gap-1">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setVistaActiva(tab.id as any)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-t-md font-medium text-sm transition-colors ${
+                  vistaActiva === tab.id
+                    ? "bg-orange-600/10 text-orange-500 border border-orange-600/30 border-b-0"
+                    : "text-gray-400 hover:text-white hover:bg-gray-800"
+                }`}
+              >
+                <tab.icon className="h-4 w-4" />
+                {tab.label}
+              </button>
+            ))}
+          </nav>
+        </div>
+      </header>
+
+      {/* CONTENT */}
+      <main className="flex-grow p-6">
+        <div className="mx-auto max-w-7xl">
 
       {/* === DASHBOARD === */}
       {vistaActiva === "dashboard" && loadingDashboard && (
-        <div className="mt-16 flex flex-col items-center gap-3 text-gray-400">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#FF5722] border-t-transparent" />
+        <div className="mt-24 flex flex-col items-center gap-3 text-gray-400">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-orange-500 border-t-transparent" />
           <span className="text-sm">Cargando dashboard...</span>
         </div>
       )}
       {vistaActiva === "dashboard" && !loadingDashboard && dashboardError && (
-        <div className="mt-8 rounded-xl border border-red-500/30 bg-red-500/10 p-6 text-center">
+        <div className="mt-10 rounded-xl border border-red-800 bg-red-950/40 p-6 text-center">
           <p className="text-red-400 font-semibold mb-1">Error al cargar estadísticas</p>
-          <p className="text-xs text-gray-400">{dashboardError}</p>
-          <button onClick={cargarDashboard} className="mt-3 rounded-lg border border-white/10 px-4 py-2 text-sm text-gray-300 hover:bg-white/5">Reintentar</button>
+          <p className="text-xs text-gray-400 mb-3">{dashboardError}</p>
+          <button onClick={cargarDashboard} className="rounded-md border border-gray-700 px-4 py-2 text-sm text-gray-300 hover:bg-gray-800">Reintentar</button>
         </div>
       )}
       {vistaActiva === "dashboard" && !loadingDashboard && !dashboardError && stats && (
-        <div className="mt-4 space-y-4">
+        <div className="space-y-6">
           {/* KPIs */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <div className="rounded-xl p-5 border border-white/10 bg-white/[0.03] shadow-lg">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="rounded-xl p-5 border border-gray-800 shadow-lg" style={{ backgroundColor: "#111827" }}>
               <div className="flex justify-between items-start mb-2">
                 <div>
                   <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider">Ventas Totales (Mes)</p>
                   <h3 className="text-2xl font-bold text-white mt-1">{fmtMoney(stats.ventasMes)}</h3>
                 </div>
-                <div className="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center text-green-500"><TrendingUp className="h-5 w-5" /></div>
+                <div className="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center text-green-500">
+                  <TrendingUp className="h-5 w-5" />
+                </div>
               </div>
-              <p className="text-xs text-green-400 flex items-center gap-1"><TrendingUp className="h-3 w-3" /> {stats.ventasSemana > 0 ? "Semana activa" : "Sin movimientos"}</p>
+              <p className="text-xs text-green-400 flex items-center gap-1"><TrendingUp className="h-3 w-3" /> {stats.ventasSemana > 0 ? "Semana activa" : "Sin movimientos esta semana"}</p>
             </div>
-            <div className="rounded-xl p-5 border border-white/10 bg-white/[0.03] shadow-lg">
+            <div className="rounded-xl p-5 border border-gray-800 shadow-lg" style={{ backgroundColor: "#111827" }}>
               <div className="flex justify-between items-start mb-2">
                 <div>
                   <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider">Comisiones MADSJEEZ</p>
                   <h3 className="text-2xl font-bold text-white mt-1">{fmtMoney(stats.comisionesPendientes + stats.comisionesPagadas)}</h3>
                 </div>
-                <div className="w-10 h-10 rounded-lg bg-[#FF5722]/10 flex items-center justify-center text-[#FF5722]"><DollarSign className="h-5 w-5" /></div>
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: "rgba(234,88,12,0.1)", color: "#ea580c" }}>
+                  <DollarSign className="h-5 w-5" />
+                </div>
               </div>
               <p className="text-xs text-green-400 flex items-center gap-1"><TrendingUp className="h-3 w-3" /> Pendientes: {fmtMoney(stats.comisionesPendientes)}</p>
             </div>
-            <div className="rounded-xl p-5 border border-white/10 bg-white/[0.03] shadow-lg">
+            <div className="rounded-xl p-5 border border-gray-800 shadow-lg" style={{ backgroundColor: "#111827" }}>
               <div className="flex justify-between items-start mb-2">
                 <div>
                   <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider">Pedidos en Curso</p>
                   <h3 className="text-2xl font-bold text-white mt-1">{pedidos.filter(p => !["entregado", "cancelado"].includes(p.estado)).length}</h3>
                 </div>
-                <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-500"><Truck className="h-5 w-5" /></div>
+                <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-500">
+                  <Truck className="h-5 w-5" />
+                </div>
               </div>
               <p className="text-xs text-gray-500 flex items-center gap-1">{pedidos.filter(p => p.estado === "enviado").length} despachados</p>
             </div>
-            <div className="rounded-xl p-5 border border-red-500/30 bg-white/[0.03] shadow-[0_0_15px_rgba(220,38,38,0.1)]">
+            <div className="rounded-xl p-5 border shadow-[0_0_15px_rgba(220,38,38,0.15)]" style={{ backgroundColor: "#111827", borderColor: "rgba(220,38,38,0.3)" }}>
               <div className="flex justify-between items-start mb-2">
                 <div>
-                  <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider">Cancelados / Reclamos</p>
-                  <h3 className="text-2xl font-bold text-red-400 mt-1">{pedidos.filter(p => p.estado === "cancelado").length}</h3>
+                  <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider">Problemas / Reclamos</p>
+                  <h3 className="text-2xl font-bold text-red-500 mt-1">{pedidos.filter(p => p.estado === "cancelado").length}</h3>
                 </div>
-                <div className="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center text-red-400"><X className="h-5 w-5" /></div>
+                <div className="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center text-red-500">
+                  <AlertTriangle className="h-5 w-5" />
+                </div>
               </div>
-              <p className="text-xs text-red-400 flex items-center gap-1"><Clock className="h-3 w-3" /> Requieren atención</p>
+              <p className="text-xs text-red-500 flex items-center gap-1"><Clock className="h-3 w-3" /> Requieren atención urgente</p>
             </div>
           </div>
 
           {/* Gráficos */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-            <div className="lg:col-span-2 rounded-xl p-5 border border-white/10 bg-white/[0.03] shadow-lg">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 rounded-xl p-6 border border-gray-800 shadow-lg" style={{ backgroundColor: "#111827" }}>
               <h3 className="text-lg font-bold text-white mb-4">Evolución de Ventas y Comisiones</h3>
               <div className="relative h-64 w-full">
                 {evolucion ? (
@@ -501,176 +516,130 @@ export default function AdminPedidosPage() {
                     data={{
                       labels: evolucion.labels,
                       datasets: [
-                        {
-                          label: "Ventas ($)",
-                          data: evolucion.ventas,
-                          borderColor: "#10b981",
-                          backgroundColor: "rgba(16, 185, 129, 0.1)",
-                          borderWidth: 2,
-                          tension: 0.4,
-                          fill: true,
-                          pointRadius: 3,
-                        },
-                        {
-                          label: "Comisiones ($)",
-                          data: evolucion.comisiones,
-                          borderColor: "#FF5722",
-                          backgroundColor: "rgba(255, 87, 34, 0.1)",
-                          borderWidth: 2,
-                          tension: 0.4,
-                          fill: true,
-                          pointRadius: 3,
-                        },
+                        { label: "Ventas ($)", data: evolucion.ventas, borderColor: "#10b981", backgroundColor: "rgba(16,185,129,0.1)", borderWidth: 2, tension: 0.4, fill: true, pointRadius: 3 },
+                        { label: "Comisiones ($)", data: evolucion.comisiones, borderColor: "#ea580c", backgroundColor: "rgba(234,88,12,0.1)", borderWidth: 2, tension: 0.4, fill: true, pointRadius: 3 },
                       ],
                     }}
-                    options={{
-                      responsive: true,
-                      maintainAspectRatio: false,
-                      plugins: {
-                        legend: { position: "top", labels: { color: "#9ca3af" } },
-                      },
-                      scales: {
-                        y: { beginAtZero: true, grid: { color: "#1f2937" }, ticks: { color: "#9ca3af" } },
-                        x: { grid: { color: "#1f2937" }, ticks: { color: "#9ca3af" } },
-                      },
-                    }}
+                    options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "top", labels: { color: "#9ca3af" } } }, scales: { y: { beginAtZero: true, grid: { color: "#1f2937" }, ticks: { color: "#9ca3af" } }, x: { grid: { color: "#1f2937" }, ticks: { color: "#9ca3af" } } } }}
                   />
                 ) : (
-                  <div className="flex items-center justify-center h-full text-gray-500 text-sm">Sin datos de evolución</div>
+                  <div className="flex items-center justify-center h-full text-gray-600 text-sm">Sin datos de evolución</div>
                 )}
               </div>
             </div>
-            <div className="rounded-xl p-5 border border-white/10 bg-white/[0.03] shadow-lg">
+            <div className="rounded-xl p-6 border border-gray-800 shadow-lg" style={{ backgroundColor: "#111827" }}>
               <h3 className="text-lg font-bold text-white mb-4">Estado de Despachos</h3>
-              <div className="relative h-56 w-full flex justify-center">
+              <div className="relative h-52 w-full flex justify-center">
                 {Object.keys(pedidosPorEstado).length > 0 ? (
                   <Doughnut
-                    data={{
-                      labels: ["Pendiente", "Confirmado", "Pagado", "Enviado", "Entregado", "Cancelado"],
-                      datasets: [
-                        {
-                          data: [
-                            pedidosPorEstado.pendiente || 0,
-                            pedidosPorEstado.confirmado || 0,
-                            pedidosPorEstado.pagado || 0,
-                            pedidosPorEstado.enviado || 0,
-                            pedidosPorEstado.entregado || 0,
-                            pedidosPorEstado.cancelado || 0,
-                          ],
-                          backgroundColor: ["#eab308", "#3b82f6", "#10b981", "#8b5cf6", "#10b981", "#ef4444"],
-                          borderWidth: 0,
-                          hoverOffset: 4,
-                        },
-                      ],
-                    }}
-                    options={{
-                      responsive: true,
-                      maintainAspectRatio: false,
-                      cutout: "70%",
-                      plugins: {
-                        legend: { display: false },
-                      },
-                    }}
+                    data={{ labels: ["Pendiente","Confirmado","Pagado","Enviado","Entregado","Cancelado"], datasets: [{ data: [pedidosPorEstado.pendiente||0,pedidosPorEstado.confirmado||0,pedidosPorEstado.pagado||0,pedidosPorEstado.enviado||0,pedidosPorEstado.entregado||0,pedidosPorEstado.cancelado||0], backgroundColor: ["#eab308","#3b82f6","#10b981","#8b5cf6","#34d399","#ef4444"], borderWidth: 0, hoverOffset: 4 }] }}
+                    options={{ responsive: true, maintainAspectRatio: false, cutout: "75%", plugins: { legend: { display: false } } }}
                   />
                 ) : (
-                  <div className="flex items-center justify-center h-full text-gray-500 text-sm">Sin datos</div>
+                  <div className="flex items-center justify-center h-full text-gray-600 text-sm">Sin datos</div>
                 )}
               </div>
-              <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
-                <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-yellow-500" /> Pendiente</div>
-                <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-blue-500" /> Confirmado</div>
-                <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-green-500" /> Pagado</div>
-                <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-purple-500" /> Enviado</div>
-                <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-emerald-500" /> Entregado</div>
-                <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-red-500" /> Cancelado</div>
+              <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-gray-400">
+                <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-yellow-500 flex-shrink-0" />Pendiente</div>
+                <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-blue-500 flex-shrink-0" />Confirmado</div>
+                <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-green-500 flex-shrink-0" />Pagado</div>
+                <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-purple-500 flex-shrink-0" />Enviado</div>
+                <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-emerald-400 flex-shrink-0" />Entregado</div>
+                <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-red-500 flex-shrink-0" />Cancelado</div>
               </div>
             </div>
           </div>
 
-          {/* Tablas de ranking y alertas */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+          {/* Ranking y Alertas */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Top Vendedores */}
-            <div className="rounded-xl border border-white/10 bg-white/[0.03] shadow-lg overflow-hidden">
-              <div className="p-4 border-b border-white/10 flex justify-between items-center">
-                <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2"><Award className="h-4 w-4 text-yellow-500" /> Top Vendedores</h3>
-                <button onClick={exportarVendedores} className="text-xs text-[#FF5722] hover:text-white transition">Ver todos</button>
+            <div className="rounded-xl border border-gray-800 shadow-lg overflow-hidden" style={{ backgroundColor: "#111827" }}>
+              <div className="p-4 border-b border-gray-800 flex justify-between items-center">
+                <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                  <Award className="h-4 w-4 text-yellow-500" /> Top Vendedores
+                </h3>
+                <button onClick={exportarVendedores} className="text-xs text-orange-500 hover:text-white transition">Ver todos</button>
               </div>
-              <div className="p-0">
-                {vendedores.slice(0, 5).map((v, i) => (
-                  <div key={v.id} className="flex items-center justify-between border-b border-white/5 hover:bg-white/5 px-4 py-3 transition">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center font-bold text-white text-xs">{v.nombre.charAt(0).toUpperCase()}</div>
-                      <div>
-                        <p className="text-white font-medium text-sm">{v.nombre}</p>
-                        <p className="text-xs text-gray-500">{v.total_vendido ? (v.total_vendido / 1000).toFixed(0) + "k" : "0"} ventas · {v.comision_pct}% com.</p>
-                      </div>
-                    </div>
-                    <span className="text-green-400 font-medium text-sm">{fmtMoney(v.total_vendido)}</span>
-                  </div>
-                ))}
-                {vendedores.length === 0 && (
-                  <div className="px-4 py-8 text-center text-gray-400 text-sm">Sin vendedores</div>
-                )}
-              </div>
+              <table className="w-full text-sm">
+                <tbody>
+                  {vendedores.slice(0, 5).map((v) => (
+                    <tr key={v.id} className="border-b border-gray-800/50 hover:bg-gray-800/30 transition">
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center font-bold text-white text-xs flex-shrink-0">{v.nombre.charAt(0).toUpperCase()}</div>
+                          <div>
+                            <p className="text-white font-medium">{v.nombre}</p>
+                            <p className="text-xs text-gray-500">{v.comision_pct}% comisión{v.es_gerente ? " · 👑 Gerente" : ""}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-3 px-4 text-right text-green-400 font-medium whitespace-nowrap">{fmtMoney(v.total_vendido)}</td>
+                    </tr>
+                  ))}
+                  {vendedores.length === 0 && (
+                    <tr><td colSpan={2} className="py-8 text-center text-gray-600 text-sm">Sin vendedores</td></tr>
+                  )}
+                </tbody>
+              </table>
             </div>
 
             {/* Compradores VIP */}
-            <div className="rounded-xl border border-white/10 bg-white/[0.03] shadow-lg overflow-hidden">
-              <div className="p-4 border-b border-white/10 flex justify-between items-center">
-                <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2"><Star className="h-4 w-4 text-blue-400" /> Compradores VIP</h3>
-                <button onClick={exportarClientes} className="text-xs text-[#FF5722] hover:text-white transition">Ver todos</button>
+            <div className="rounded-xl border border-gray-800 shadow-lg overflow-hidden" style={{ backgroundColor: "#111827" }}>
+              <div className="p-4 border-b border-gray-800 flex justify-between items-center">
+                <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                  <Star className="h-4 w-4 text-blue-400" /> Compradores VIP
+                </h3>
+                <button onClick={exportarClientes} className="text-xs text-orange-500 hover:text-white transition">Ver todos</button>
               </div>
-              <div className="p-0">
-                {clientes.slice(0, 5).map((c, i) => (
-                  <div key={c.id} className="flex items-center justify-between border-b border-white/5 hover:bg-white/5 px-4 py-3 transition">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center font-bold text-white text-xs">{c.nombre ? c.nombre.charAt(0).toUpperCase() : "?"}</div>
-                      <div>
-                        <p className="text-white font-medium text-sm">{c.nombre || "Sin nombre"}</p>
-                        <p className="text-xs text-gray-500">{c.email || "-"}</p>
-                      </div>
-                    </div>
-                    <span className="text-gray-300 text-xs">{new Date(c.created_at).toLocaleDateString("es-AR")}</span>
-                  </div>
-                ))}
-                {clientes.length === 0 && (
-                  <div className="px-4 py-8 text-center text-gray-400 text-sm">Sin clientes</div>
-                )}
-              </div>
+              <table className="w-full text-sm">
+                <tbody>
+                  {clientes.slice(0, 5).map((c) => (
+                    <tr key={c.id} className="border-b border-gray-800/50 hover:bg-gray-800/30 transition">
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center font-bold text-white text-xs flex-shrink-0">{c.nombre ? c.nombre.charAt(0).toUpperCase() : "?"}</div>
+                          <div>
+                            <p className="text-white font-medium">{c.nombre || "Sin nombre"}</p>
+                            <p className="text-xs text-gray-500">{c.email || "-"}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-3 px-4 text-right text-gray-400 text-xs whitespace-nowrap">{new Date(c.created_at).toLocaleDateString("es-AR")}</td>
+                    </tr>
+                  ))}
+                  {clientes.length === 0 && (
+                    <tr><td colSpan={2} className="py-8 text-center text-gray-600 text-sm">Sin clientes</td></tr>
+                  )}
+                </tbody>
+              </table>
             </div>
 
-            {/* Alertas de Pedidos */}
-            <div className="rounded-xl border border-white/10 bg-white/[0.03] shadow-lg overflow-hidden">
-              <div className="p-4 border-b border-white/10 bg-red-500/5">
-                <h3 className="text-sm font-bold text-red-400 uppercase tracking-wider flex items-center gap-2"><AlertTriangle className="h-4 w-4" /> Alertas de Pedidos</h3>
+            {/* Alertas */}
+            <div className="rounded-xl border border-gray-800 shadow-lg overflow-hidden" style={{ backgroundColor: "#111827" }}>
+              <div className="p-4 border-b border-gray-800 bg-red-500/5">
+                <h3 className="text-sm font-bold text-red-500 uppercase tracking-wider flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4" /> Alertas de Pedidos
+                </h3>
               </div>
               <div className="p-4 space-y-3">
                 {pedidos.filter(p => p.estado === "cancelado").slice(0, 3).map((p) => (
-                  <div key={p.id} className="rounded-lg p-3 border border-white/10 bg-white/5">
+                  <div key={p.id} className="rounded-lg p-3 border border-gray-800" style={{ backgroundColor: "#080c16" }}>
                     <div className="flex justify-between items-start mb-1">
                       <span className="text-xs font-bold text-red-400">#{p.id.slice(0, 8).toUpperCase()}</span>
                       <span className="text-[10px] bg-red-500/20 text-red-400 px-2 py-0.5 rounded">Cancelado</span>
                     </div>
-                    <p className="text-sm text-white mb-1">{p.items?.map(i => i.nombre).slice(0, 2).join(", ") || "Sin items"}{p.items && p.items.length > 2 ? "..." : ""}</p>
+                    <p className="text-sm text-white mb-2">{p.items?.map((i: any) => i.nombre).slice(0, 2).join(", ") || "Sin items"}</p>
                     <div className="flex justify-between items-center text-xs text-gray-500">
                       <span>Total: {fmtMoney(p.total)}</span>
-                      <button onClick={() => setSelected(p)} className="text-[#FF5722] hover:text-white">Ver detalle</button>
+                      <button onClick={() => setSelected(p)} className="text-orange-500 hover:text-white">Gestionar</button>
                     </div>
                   </div>
                 ))}
                 {pedidos.filter(p => p.estado === "cancelado").length === 0 && (
-                  <div className="text-center text-gray-400 text-sm py-4">Sin pedidos cancelados</div>
+                  <div className="text-center text-gray-600 text-sm py-6">Sin pedidos cancelados</div>
                 )}
               </div>
             </div>
-          </div>
-
-          {/* Resumen rápido */}
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <StatCard label="Total Vendedores" value={String(stats.totalVendedores)} icon={<Store className="h-5 w-5 text-blue-400" />} color="blue" />
-            <StatCard label="Total Clientes" value={String(stats.totalClientes)} icon={<Users className="h-5 w-5 text-purple-400" />} color="purple" />
-            <StatCard label="Carritos Abandonados" value={String(stats.totalCarritosAbandonados)} icon={<ShoppingCart className="h-5 w-5 text-orange-400" />} color="orange" />
-            <StatCard label="Comisiones Pagadas" value={fmtMoney(stats.comisionesPagadas)} icon={<Check className="h-5 w-5 text-[#39FF14]" />} color="green" />
           </div>
         </div>
       )}
@@ -1232,7 +1201,9 @@ export default function AdminPedidosPage() {
           </div>
         </div>
       )}
-    </main>
+        </div>
+      </main>
+    </div>
   );
 }
 
