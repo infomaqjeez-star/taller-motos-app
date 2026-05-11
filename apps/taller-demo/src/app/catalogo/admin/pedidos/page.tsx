@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, Suspense, type ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAdminAuth } from "@/components/admin/AdminAuthContext";
 import {
@@ -142,6 +142,14 @@ type Vista = "pedidos" | "vendedores" | "gerentes" | "clientes" | "dashboard" | 
 const VISTAS_VALIDAS: Vista[] = ["dashboard", "pedidos", "vendedores", "gerentes", "clientes", "precios", "finanzas"];
 
 export default function AdminPedidosPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: "#080c16" }}><div className="h-8 w-8 animate-spin rounded-full border-2 border-orange-500 border-t-transparent" /></div>}>
+      <AdminPedidosContent />
+    </Suspense>
+  );
+}
+
+function AdminPedidosContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { admin, logout, loading: authLoading, getToken } = useAdminAuth();
@@ -1621,3 +1629,4 @@ function EstadoBadge({ estado }: { estado: string }) {
     </span>
   );
 }
+
