@@ -72,6 +72,8 @@ interface Pedido {
   estado: string;
   comision_monto: number;
   comision_estado: string | null;
+  gerente_id?: string | null;
+  comision_gerente_monto?: number;
   whatsapp_enviado: boolean;
   created_at: string;
   vendedor?: {
@@ -80,6 +82,8 @@ interface Pedido {
     codigo_referido: string;
     comision_pct: number;
     nivel_vendedor?: string;
+    lider_id?: string | null;
+    es_gerente?: boolean;
   } | null;
   fecha_pago_comision?: string | null;
   fecha_limite_pago?: string | null;
@@ -121,6 +125,8 @@ interface VendedorData {
   comision_pct: number;
   estado: string;
   created_at: string;
+  lider_id?: string | null;
+  es_gerente?: boolean;
 }
 
 interface ClienteData {
@@ -751,6 +757,11 @@ export default function AdminPedidosPage() {
                       <span className={`rounded-full border px-2 py-0.5 text-[10px] capitalize ${getColorNivel(v.nivel_vendedor)}`}>
                         {v.nivel_vendedor?.replace("_", " ") || "nuevo"}
                       </span>
+                      {v.es_gerente && (
+                        <span className="rounded-full border border-purple-500/30 bg-purple-500/10 px-2 py-0.5 text-[10px] text-purple-300">
+                          Gerente
+                        </span>
+                      )}
                       <span className="text-white font-semibold">{v.nombre}</span>
                     </div>
                     <span className="font-bold text-[#39FF14]">{fmtMoney(v.total_vendido)}</span>
@@ -759,6 +770,9 @@ export default function AdminPedidosPage() {
                     <span>{v.email}</span>
                     <span>Ref: {v.codigo_referido}</span>
                     <span>Comisión: {v.comision_pct}%</span>
+                    {v.lider_id && (
+                      <span className="text-purple-300">Tiene Gerente</span>
+                    )}
                   </div>
                 </div>
               ))}

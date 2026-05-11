@@ -8,7 +8,7 @@ export async function GET(req: NextRequest) {
     // Estadísticas de vendedores
     const { data: vendedores, error: vError } = await supabase
       .from("vendedores")
-      .select("id, nombre, email, codigo_referido, comision_pct, nivel_vendedor, total_vendido, created_at, estado");
+      .select("id, nombre, email, codigo_referido, comision_pct, nivel_vendedor, total_vendido, created_at, estado, lider_id, es_gerente");
 
     // Estadísticas de clientes
     const { data: clientes, error: cError } = await supabase
@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
     // Pedidos
     const { data: pedidos, error: pError } = await supabase
       .from("pedidos_catalogo")
-      .select("estado, total, comision_monto, comision_estado, created_at, vendedor_id");
+      .select("estado, total, comision_monto, comision_estado, created_at, vendedor_id, gerente_id, comision_gerente_monto");
 
     // Carritos abandonados (clientes que tienen items en carrito pero no hicieron pedido)
     const { data: carritos, error: cartError } = await supabase
