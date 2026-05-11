@@ -51,21 +51,32 @@ export async function GET(req: NextRequest) {
       }
     } catch {}
 
-    // Carritos abandonados (clientes que tienen items en carrito pero no hicieron pedido)
-    const { data: carritos, error: cartError } = await supabase
-      .from("cart_items")
-      .select("cliente_id, sku, cantidad, created_at");
+    // Carritos abandonados (tolerante - tabla puede no existir)
+    let carritos: any[] = [];
+    try {
+      const { data: c } = await supabase.from("cart_items").select("cliente_id, sku, cantidad, created_at");
+      carritos = c || [];
+    } catch {}
 
-    // Productos activos
-    const { data: productos, error: prodError } = await supabase
-      .from("catalog_products")
-      .select("id, active")
-      .eq("active", true);
+    // Productos activos (tolerante - nombre de tabla puede variar)
+    let productos: any[] = [];
+    try {
+      const { data: p1 } = await supabase.from("catalog_products").select("id").eq("active", true);
+      if (p1) { productos = p1; }
+    } catch {}
+    if (productos.length === 0) {
+      try {
+        const { data: p2 } = await supabase.from("productos").select("id").eq("activo", true);
+        if (p2) productos = p2;
+      } catch {}
+    }
 
-    if (vError || cError || pError || cartError || prodError) {
+    if (vError || cError || pError) {
+      const detalle = vError?.message || cError?.message || pError?.message || "desconocido";
+      console.error("dashboard error detalle:", { vError, cError, pError });
       return NextResponse.json({
-        error: "Error al cargar estadísticas",
-        details: { vError: vError?.message, cError: cError?.message, pError: pError?.message, cartError: cartError?.message, prodError: prodError?.message }
+        error: detalle,
+        details: { vError: vError?.message, cError: cError?.message, pError: pError?.message }
       }, { status: 500 });
     }
 
