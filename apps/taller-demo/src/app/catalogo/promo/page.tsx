@@ -15,7 +15,7 @@ export default function PromoBannersPage() {
   const { vendedor } = useVendedorAuth();
   const [copied, setCopied] = useState(false);
   const [copiedTexto, setCopiedTexto] = useState(false);
-  const [modo, setModo] = useState<"story_oscuro" | "story_claro" | "post_oscuro" | "post_claro">("story_oscuro");
+  const [modo, setModo] = useState<"story_oscuro" | "story_claro" | "post_oscuro" | "post_claro" | "wa_azul" | "wa_neon">("wa_azul");
 
   const codigo = vendedor?.codigo_referido || "MAQ001";
   const linkReferido = vendedor
@@ -290,6 +290,160 @@ export default function PromoBannersPage() {
     </div>
   );
 
+  // WhatsApp Azul & Naranja Premium
+  const WaAzul = () => (
+    <div
+      className="relative flex flex-col overflow-hidden rounded-3xl shadow-2xl border-4 border-gray-900"
+      style={{
+        width: 360, height: 640,
+        backgroundColor: "#0f172a",
+        backgroundImage: "radial-gradient(rgba(255,255,255,0.05) 2px, transparent 2px)",
+        backgroundSize: "24px 24px",
+      }}
+    >
+      {/* Zona segura superior simulada */}
+      <div className="h-[60px] w-full z-20 pointer-events-none"
+        style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0.5), transparent)" }} />
+
+      {/* Contenido principal */}
+      <div className="flex-grow flex flex-col justify-center px-6 py-12 z-10">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h3 className="text-5xl font-black text-white tracking-tighter">
+            MAQ<span className="text-orange-500">JEEZ</span>
+          </h3>
+          <div className="inline-block px-3 py-1 rounded-full mt-2"
+            style={{ background: "rgba(249,115,22,0.2)", border: "1px solid rgba(249,115,22,0.5)" }}>
+            <p className="text-orange-400 font-bold text-[10px] uppercase tracking-widest">Catálogo Mayorista 2026</p>
+          </div>
+        </div>
+
+        {/* Beneficios en Cajas Oscuras */}
+        <div className="space-y-3 mb-8">
+          <div className="flex items-center p-3 rounded-xl border shadow-lg"
+            style={{ background: "rgba(30,41,59,0.8)", borderColor: "#334155" }}>
+            <div className="rounded-lg p-2 mr-3" style={{ background: "#334155" }}>
+              <span className="text-orange-400 text-lg font-black block w-5 text-center">%</span>
+            </div>
+            <p className="text-gray-200 text-xs font-bold leading-tight">
+              Hasta 20% OFF<br /><span className="text-[10px] text-gray-400 font-normal">comprando por volumen</span>
+            </p>
+          </div>
+          <div className="flex items-center p-3 rounded-xl border shadow-lg"
+            style={{ background: "rgba(30,41,59,0.8)", borderColor: "#334155" }}>
+            <div className="rounded-lg p-2 mr-3" style={{ background: "#334155" }}>
+              <span className="text-orange-400 text-lg font-black block w-5 text-center">🚚</span>
+            </div>
+            <p className="text-gray-200 text-xs font-bold leading-tight">
+              Envío Gratis<br /><span className="text-[10px] text-gray-400 font-normal">en compras +$100.000</span>
+            </p>
+          </div>
+          <div className="flex items-center p-3 rounded-xl border shadow-lg"
+            style={{ background: "rgba(30,41,59,0.8)", borderColor: "#334155" }}>
+            <div className="rounded-lg p-2 mr-3" style={{ background: "#334155" }}>
+              <span className="text-orange-400 text-lg font-black block w-5 text-center">⭐</span>
+            </div>
+            <p className="text-gray-200 text-xs font-bold leading-tight">
+              +6% de Descuento Extra<br /><span className="text-[10px] text-gray-400 font-normal">sumando registro y referidos</span>
+            </p>
+          </div>
+        </div>
+
+        {/* Código y Link */}
+        <div className="text-center p-4 rounded-2xl border shadow-lg"
+          style={{ background: "#0f172a", borderColor: "#475569", boxShadow: "0 0 20px rgba(0,0,0,0.5)" }}>
+          <p className="text-gray-400 text-[10px] uppercase font-bold mb-1">Tu código de acceso:</p>
+          <p className="text-white font-black text-2xl tracking-widest mb-3">
+            {codigo.slice(0, 3)}<span className="text-orange-500">{codigo.slice(3)}</span>
+          </p>
+          <div className="text-white font-bold text-sm py-3 px-4 rounded-xl shadow-lg"
+            style={{ background: "#f97316" }}>
+            appjeezpro.store/catalogo
+          </div>
+        </div>
+      </div>
+
+      {/* Zona segura inferior simulada */}
+      <div className="h-[80px] w-full z-20 pointer-events-none"
+        style={{ background: "linear-gradient(to top, rgba(0,0,0,0.6), transparent)" }} />
+    </div>
+  );
+
+  // WhatsApp Azul Profundo & Verde Neón
+  const WaNeon = () => (
+    <div
+      className="relative flex flex-col overflow-hidden rounded-3xl shadow-2xl border-4 border-gray-200"
+      style={{
+        width: 360, height: 640,
+        background: "linear-gradient(135deg, #020617 0%, #1e3a8a 100%)",
+      }}
+    >
+      {/* Zona segura superior */}
+      <div className="h-[60px] w-full z-20 pointer-events-none"
+        style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0.5), transparent)" }} />
+
+      <div className="flex-grow flex flex-col px-6 py-10 z-10 relative">
+        {/* Elementos decorativos de fondo */}
+        <div className="absolute top-20 right-[-50px] w-48 h-48 rounded-full pointer-events-none"
+          style={{ background: "rgba(74,222,128,0.1)", filter: "blur(40px)" }} />
+        <div className="absolute bottom-20 left-[-50px] w-48 h-48 rounded-full pointer-events-none"
+          style={{ background: "rgba(59,130,246,0.2)", filter: "blur(40px)" }} />
+
+        {/* Título */}
+        <div className="text-left mt-6 mb-6 z-10">
+          <h3 className="text-4xl font-black text-white tracking-tighter">MAQJEEZ</h3>
+          <div className="h-1 w-12 mt-2 mb-2" style={{ background: "#4ade80" }} />
+          <p className="font-semibold text-xs uppercase tracking-wide" style={{ color: "#bfdbfe" }}>
+            Repuestos para<br />Moto-Implementos
+          </p>
+        </div>
+
+        {/* Gran Ahorro Destacado */}
+        <div className="rounded-2xl p-5 mb-6 z-10"
+          style={{ background: "rgba(255,255,255,0.1)", backdropFilter: "blur(10px)", border: "1px solid rgba(255,255,255,0.2)" }}>
+          <p className="text-xs font-bold uppercase mb-1" style={{ color: "#bfdbfe" }}>Ahorro Máximo Posible</p>
+          <div className="flex items-baseline">
+            <span className="text-5xl font-black" style={{ color: "#4ade80" }}>21%</span>
+            <span className="text-lg font-bold ml-1" style={{ color: "#4ade80" }}>OFF</span>
+          </div>
+        </div>
+
+        {/* Beneficios Lista Limpia */}
+        <ul className="space-y-4 z-10 mb-auto">
+          <li className="flex items-center">
+            <div className="w-1.5 h-1.5 rounded-full mr-3" style={{ background: "#4ade80", boxShadow: "0 0 5px #4ade80" }} />
+            <p className="text-white text-sm font-semibold">20% OFF por compras por volumen</p>
+          </li>
+          <li className="flex items-center">
+            <div className="w-1.5 h-1.5 rounded-full mr-3" style={{ background: "#4ade80", boxShadow: "0 0 5px #4ade80" }} />
+            <p className="text-white text-sm font-semibold">Envío bonificado (+$100.000)</p>
+          </li>
+          <li className="flex items-center">
+            <div className="w-1.5 h-1.5 rounded-full mr-3" style={{ background: "#4ade80", boxShadow: "0 0 5px #4ade80" }} />
+            <p className="text-white text-sm font-semibold">Beneficios extra clientes & referidos</p>
+          </li>
+        </ul>
+
+        {/* CTA Bottom */}
+        <div className="mt-6 z-10">
+          <p className="text-center text-[11px] mb-2" style={{ color: "#93c5fd" }}>
+            Ingresá tu código{" "}
+            <span className="font-bold px-1 rounded" style={{ color: "#4ade80", background: "rgba(30,58,138,0.5)" }}>{codigo}</span>{" "}
+            en:
+          </p>
+          <div className="text-slate-900 font-black text-sm py-3 text-center rounded-lg w-full"
+            style={{ background: "#4ade80" }}>
+            appjeezpro.store/catalogo
+          </div>
+        </div>
+      </div>
+
+      {/* Zona segura inferior */}
+      <div className="h-[80px] w-full z-20 pointer-events-none"
+        style={{ background: "linear-gradient(to top, rgba(0,0,0,0.6), transparent)" }} />
+    </div>
+  );
+
   return (
     <main className="mx-auto max-w-5xl px-4 py-6 pb-20">
       <button
@@ -305,7 +459,7 @@ export default function PromoBannersPage() {
         <h1 className="text-2xl font-black text-white">Generador de Banners</h1>
       </div>
       <p className="mt-2 text-sm text-gray-400">
-        Diseños optimizados para WhatsApp e Instagram Stories. Elegí tu estilo.
+        Diseños optimizados para WhatsApp, Instagram y Facebook. Elegí tu formato y estilo.
       </p>
 
       {/* Link de referido */}
@@ -371,6 +525,26 @@ export default function PromoBannersPage() {
         >
           📋 Post Claro
         </button>
+        <button
+          onClick={() => setModo("wa_azul")}
+          className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium ${
+            modo === "wa_azul"
+              ? "border-[#FF5722] bg-[#FF5722]/20 text-[#FF5722]"
+              : "border-white/10 text-gray-400 hover:border-white/20"
+          }`}
+        >
+          💬 WA Azul/Naranja
+        </button>
+        <button
+          onClick={() => setModo("wa_neon")}
+          className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium ${
+            modo === "wa_neon"
+              ? "border-[#FF5722] bg-[#FF5722]/20 text-[#FF5722]"
+              : "border-white/10 text-gray-400 hover:border-white/20"
+          }`}
+        >
+          ⚡ WA Verde Neón
+        </button>
       </div>
 
       {/* Vista previa del banner */}
@@ -380,10 +554,12 @@ export default function PromoBannersPage() {
             {modo === "story_oscuro" ? "Story · Industrial Premium (9:16)" :
              modo === "story_claro" ? "Story · Claro / Corporativo (9:16)" :
              modo === "post_oscuro" ? "Post · Impacto Industrial (1:1)" :
-             "Post · Claro B2B (1:1)"}
+             modo === "post_claro" ? "Post · Claro B2B (1:1)" :
+             modo === "wa_azul" ? "WhatsApp · Azul & Naranja" :
+             "WhatsApp · Verde Neón"}
           </h3>
           <span className="text-xs text-gray-500">
-            {modo.startsWith("story") ? "360 x 640 px · 9:16" : "450 x 450 px · 1:1"}
+            {modo.startsWith("story") || modo.startsWith("wa") ? "360 x 640 px · 9:16" : "450 x 450 px · 1:1"}
           </span>
         </div>
 
@@ -391,7 +567,9 @@ export default function PromoBannersPage() {
           {modo === "story_oscuro" ? <BannerOscuro /> :
            modo === "story_claro" ? <BannerClaro /> :
            modo === "post_oscuro" ? <PostOscuro /> :
-           <PostClaro />}
+           modo === "post_claro" ? <PostClaro /> :
+           modo === "wa_azul" ? <WaAzul /> :
+           <WaNeon />}
         </div>
 
         <p className="mt-3 text-center text-xs text-gray-500">
