@@ -1,24 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSupabaseServer } from "@/lib/supabase-server";
+import { getSupabaseAdmin } from "@/lib/supabase-server";
 
 export async function GET(req: NextRequest) {
   try {
-    const supabase = getSupabaseServer();
+    const supabase = getSupabaseAdmin();
 
-    // Traer todos los pedidos del catálogo con info del vendedor
-    const { data: pedidos, error } = await supabase
+    // Intentar con join a vendedores
+    let pedidos: any[] = [];
+    const { data, error } = await supabase
       .from("pedidos_catalogo")
-      .select(`
-        *,
-        vendedor:vendedores(id, nombre, codigo_referido, comision_pct, nivel_vendedor)
-      `)
+      .select(`*, vendedor:vendedores(id, nombre, codigo_referido, comision_pct, nivel_vendedor)`)
       .order("created_at", { ascending: false });
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+    if (!error && data) {
+      pedidos = data;
+    } else {
+      // Fallback sin join si falla
+      console.warn("admin/pedidos join error:", error?.message, "- intentando sin join");
+      const { data: data2, error: error2 } = await supabase
+        .from("pedidos_catalogo")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error2) return NextResponse.json({ error: error2.message }, { status: 500 });
+      pedidos = (data2 || []).map((p: any) => ({ ...p, vendedor: null }));
     }
 
-    return NextResponse.json({ pedidos: pedidos || [] });
+    return NextResponse.json({ pedidos });
   } catch (err) {
     console.error("admin/pedidos error:", err);
     return NextResponse.json({ error: "Error interno" }, { status: 500 });
@@ -32,7 +39,7 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "ID requerido" }, { status: 400 });
     }
 
-    const supabase = getSupabaseServer();
+    const supabase = getSupabaseAdmin();
 
     const updateData: Record<string, any> = {};
     if (estado) updateData.estado = estado;
