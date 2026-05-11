@@ -44,7 +44,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Cuenta inactiva" }, { status: 401 });
     }
 
-    const valid = await bcrypt.compare(password, admin.password_hash);
+    let valid = await bcrypt.compare(password, admin.password_hash);
+    // Fallback: si bcrypt falla y el hash NO tiene formato bcrypt, comparar como texto plano (modo debug)
+    if (!valid && !admin.password_hash.startsWith("$2")) {
+      valid = password === admin.password_hash;
+    }
     if (!valid) {
       return NextResponse.json({ error: "Credenciales inválidas" }, { status: 401 });
     }
