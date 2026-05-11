@@ -5,44 +5,67 @@ export async function GET(req: NextRequest) {
   try {
     const supabase = getSupabaseServer();
 
-    // Vendedores - tolerante
-    let vendedoresConGerente: any[] = [];
+    // Vendedores - sin total_vendido (columna calculada, no existe en tabla base)
+    let vendedoresBase: any[] = [];
     try {
       const { data } = await supabase
         .from("vendedores")
-        .select("id, nombre, email, codigo_referido, comision_pct, nivel_vendedor, total_vendido, created_at, estado, lider_id, es_gerente");
-      vendedoresConGerente = data || [];
+        .select("id, nombre, email, codigo_referido, comision_pct, nivel_vendedor, created_at, estado, lider_id, es_gerente");
+      vendedoresBase = data || [];
     } catch {
       try {
         const { data } = await supabase
           .from("vendedores")
-          .select("id, nombre, email, codigo_referido, comision_pct, nivel_vendedor, total_vendido, created_at, estado");
-        vendedoresConGerente = (data || []).map(v => ({ ...v, lider_id: null, es_gerente: false }));
+          .select("id, nombre, email, codigo_referido, comision_pct, nivel_vendedor, created_at, estado");
+        vendedoresBase = (data || []).map((v: any) => ({ ...v, lider_id: null, es_gerente: false }));
       } catch {}
     }
 
-    // Clientes - tolerante
-    let clientes: any[] = [];
-    try {
-      const { data } = await supabase.from("clientes").select("id, nombre, email, telefono, dni, created_at");
-      clientes = data || [];
-    } catch {}
-
-    // Pedidos - tolerante
+    // Pedidos - con datos_cliente JSONB para extraer clientes
     let pedidosConGerente: any[] = [];
     try {
       const { data } = await supabase
         .from("pedidos_catalogo")
-        .select("id, estado, total, comision_monto, comision_estado, created_at, vendedor_id, gerente_id, comision_gerente_monto");
+        .select("id, estado, total, comision_monto, comision_estado, created_at, vendedor_id, datos_cliente, gerente_id, comision_gerente_monto");
       pedidosConGerente = data || [];
     } catch {
       try {
         const { data } = await supabase
           .from("pedidos_catalogo")
-          .select("id, estado, total, comision_monto, comision_estado, created_at, vendedor_id");
-        pedidosConGerente = (data || []).map(p => ({ ...p, gerente_id: null, comision_gerente_monto: 0 }));
+          .select("id, estado, total, comision_monto, comision_estado, created_at, vendedor_id, datos_cliente");
+        pedidosConGerente = (data || []).map((p: any) => ({ ...p, gerente_id: null, comision_gerente_monto: 0 }));
       } catch {}
     }
+
+    // Calcular total_vendido por vendedor desde pedidos
+    const totalVendidoMap: Record<string, number> = {};
+    pedidosConGerente.forEach((p: any) => {
+      if (p.vendedor_id && p.estado !== "cancelado") {
+        totalVendidoMap[p.vendedor_id] = (totalVendidoMap[p.vendedor_id] || 0) + (p.total || 0);
+      }
+    });
+    const vendedoresConGerente = vendedoresBase.map((v: any) => ({
+      ...v,
+      total_vendido: totalVendidoMap[v.id] || 0,
+    }));
+
+    // Extraer clientes únicos desde datos_cliente JSONB de pedidos (no hay tabla clientes)
+    const clientesMap: Record<string, any> = {};
+    pedidosConGerente.forEach((p: any) => {
+      const dc = p.datos_cliente || {};
+      const email = dc.email || dc.correo;
+      if (email && !clientesMap[email]) {
+        clientesMap[email] = {
+          id: email,
+          nombre: dc.nombre || dc.name || "Sin nombre",
+          email,
+          telefono: dc.telefono || dc.phone || "",
+          dni: dc.dni || "",
+          created_at: p.created_at,
+        };
+      }
+    });
+    const clientes = Object.values(clientesMap);
 
     // Carritos - tolerante
     let carritos: any[] = [];
