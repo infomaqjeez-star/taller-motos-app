@@ -5,79 +5,62 @@ export async function GET(req: NextRequest) {
   try {
     const supabase = getSupabaseServer();
 
-    // Estadísticas de vendedores (columnas base siempre presentes)
-    const { data: vendedores, error: vError } = await supabase
-      .from("vendedores")
-      .select("id, nombre, email, codigo_referido, comision_pct, nivel_vendedor, total_vendido, created_at, estado");
-
-    // Intentar cargar columnas de gerente opcionales
-    let vendedoresConGerente: any[] = vendedores || [];
+    // Vendedores - tolerante
+    let vendedoresConGerente: any[] = [];
     try {
-      const { data: vg } = await supabase
+      const { data } = await supabase
         .from("vendedores")
-        .select("id, lider_id, es_gerente");
-      if (vg && vg.length > 0 && "lider_id" in vg[0]) {
-        const mapaGerente = Object.fromEntries(vg.map(v => [v.id, v]));
-        vendedoresConGerente = (vendedores || []).map(v => ({
-          ...v,
-          lider_id: mapaGerente[v.id]?.lider_id ?? null,
-          es_gerente: mapaGerente[v.id]?.es_gerente ?? false,
-        }));
-      }
-    } catch {}
-
-    // Estadísticas de clientes
-    const { data: clientes, error: cError } = await supabase
-      .from("clientes")
-      .select("id, nombre, email, telefono, dni, created_at");
-
-    // Pedidos (columnas base)
-    const { data: pedidos, error: pError } = await supabase
-      .from("pedidos_catalogo")
-      .select("estado, total, comision_monto, comision_estado, created_at, vendedor_id");
-
-    // Intentar cargar columnas de gerente opcionales en pedidos
-    let pedidosConGerente: any[] = pedidos || [];
-    try {
-      const { data: pg } = await supabase
-        .from("pedidos_catalogo")
-        .select("id, gerente_id, comision_gerente_monto");
-      if (pg && pg.length > 0 && "gerente_id" in pg[0]) {
-        pedidosConGerente = (pedidos || []).map((p, i) => ({
-          ...p,
-          gerente_id: pg[i]?.gerente_id ?? null,
-          comision_gerente_monto: pg[i]?.comision_gerente_monto ?? 0,
-        }));
-      }
-    } catch {}
-
-    // Carritos abandonados (tolerante - tabla puede no existir)
-    let carritos: any[] = [];
-    try {
-      const { data: c } = await supabase.from("cart_items").select("cliente_id, sku, cantidad, created_at");
-      carritos = c || [];
-    } catch {}
-
-    // Productos activos (tolerante - nombre de tabla puede variar)
-    let productos: any[] = [];
-    try {
-      const { data: p1 } = await supabase.from("catalog_products").select("id").eq("active", true);
-      if (p1) { productos = p1; }
-    } catch {}
-    if (productos.length === 0) {
+        .select("id, nombre, email, codigo_referido, comision_pct, nivel_vendedor, total_vendido, created_at, estado, lider_id, es_gerente");
+      vendedoresConGerente = data || [];
+    } catch {
       try {
-        const { data: p2 } = await supabase.from("productos").select("id").eq("activo", true);
-        if (p2) productos = p2;
+        const { data } = await supabase
+          .from("vendedores")
+          .select("id, nombre, email, codigo_referido, comision_pct, nivel_vendedor, total_vendido, created_at, estado");
+        vendedoresConGerente = (data || []).map(v => ({ ...v, lider_id: null, es_gerente: false }));
       } catch {}
     }
 
-    if (vError || cError || pError) {
-      const detalle = vError?.message || cError?.message || pError?.message || "desconocido";
-      console.error("dashboard error detalle:", { vError, cError, pError });
-      return NextResponse.json({
-        error: detalle,
-        details: { vError: vError?.message, cError: cError?.message, pError: pError?.message }
-      }, { status: 500 });
+    // Clientes - tolerante
+    let clientes: any[] = [];
+    try {
+      const { data } = await supabase.from("clientes").select("id, nombre, email, telefono, dni, created_at");
+      clientes = data || [];
+    } catch {}
+
+    // Pedidos - tolerante
+    let pedidosConGerente: any[] = [];
+    try {
+      const { data } = await supabase
+        .from("pedidos_catalogo")
+        .select("id, estado, total, comision_monto, comision_estado, created_at, vendedor_id, gerente_id, comision_gerente_monto");
+      pedidosConGerente = data || [];
+    } catch {
+      try {
+        const { data } = await supabase
+          .from("pedidos_catalogo")
+          .select("id, estado, total, comision_monto, comision_estado, created_at, vendedor_id");
+        pedidosConGerente = (data || []).map(p => ({ ...p, gerente_id: null, comision_gerente_monto: 0 }));
+      } catch {}
+    }
+
+    // Carritos - tolerante
+    let carritos: any[] = [];
+    try {
+      const { data } = await supabase.from("cart_items").select("cliente_id, sku, cantidad, created_at");
+      carritos = data || [];
+    } catch {}
+
+    // Productos - tolerante
+    let productos: any[] = [];
+    try {
+      const { data } = await supabase.from("catalog_products").select("id").eq("active", true);
+      productos = data || [];
+    } catch {
+      try {
+        const { data } = await supabase.from("productos").select("id").eq("activo", true);
+        productos = data || [];
+      } catch {}
     }
 
     const hoy = new Date();
