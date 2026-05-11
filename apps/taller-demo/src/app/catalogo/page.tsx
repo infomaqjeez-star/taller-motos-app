@@ -36,7 +36,7 @@ function DropdownCategorias({
     : categorias.find((c) => c.id === catId)?.nombre || "Seleccionar";
 
   return (
-    <div className="relative flex-1 min-w-0">
+    <div className="relative flex-1 min-w-0 z-30">
       <button
         type="button"
         onClick={() => setOpen(!open)}
@@ -47,8 +47,8 @@ function DropdownCategorias({
       </button>
       {open && (
         <>
-          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute z-20 mt-1 w-full max-h-64 overflow-y-auto rounded-lg border border-white/10 bg-[#1a1a1a] py-1 shadow-xl">
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="absolute z-50 mt-1 w-full max-h-64 overflow-y-auto rounded-lg border border-white/10 bg-[#1a1a1a] py-1 shadow-xl">
             <button
               type="button"
               onClick={() => { onChange("todas"); setOpen(false); }}
