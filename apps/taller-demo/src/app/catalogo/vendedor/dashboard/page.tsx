@@ -147,6 +147,12 @@ export default function VendedorDashboardPage() {
             <Info className="h-3 w-3 text-slate-500" /> Comisiones: Máx. {getDiasMaximosNivel((vendedor as any).nivel_vendedor)} días
           </p>
           <button
+            onClick={() => router.push("/catalogo")}
+            className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-sm font-semibold transition-colors text-slate-200"
+          >
+            <Store className="h-4 w-4" /> Catálogo
+          </button>
+          <button
             onClick={logout}
             className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-sm font-semibold transition-colors text-slate-200"
           >
