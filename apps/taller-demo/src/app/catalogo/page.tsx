@@ -212,11 +212,45 @@ function CatalogoContent() {
 
   const filtrados = useMemo(() => {
     const qq = q.trim().toLowerCase();
-    return productosOrdenados.filter((p) => {
-      if (catId !== "todas" && p.category !== catId) return false;
-      if (!qq) return true;
-      return p.sku.toLowerCase().includes(qq) || p.name.toLowerCase().includes(qq);
-    });
+    if (!qq) {
+      // Sin busqueda: mantener orden por categoria + SKU
+      return productosOrdenados.filter((p) => {
+        if (catId !== "todas" && p.category !== catId) return false;
+        return true;
+      });
+    }
+
+    // Scoring de relevancia
+    const palabras = qq.split(/\s+/).filter(Boolean);
+    const scored = productosOrdenados
+      .filter((p) => {
+        if (catId !== "todas" && p.category !== catId) return false;
+        return true;
+      })
+      .map((p) => {
+        const skuLow = p.sku.toLowerCase();
+        const nameLow = p.name.toLowerCase();
+        let score = 0;
+
+        if (skuLow === qq) score += 1000;
+        else if (skuLow.startsWith(qq)) score += 500;
+        else if (skuLow.includes(qq)) score += 150;
+
+        if (nameLow === qq) score += 800;
+        else if (nameLow.startsWith(qq)) score += 300;
+        else if (nameLow.includes(qq)) score += 200;
+
+        for (const palabra of palabras) {
+          if (skuLow.includes(palabra)) score += 50;
+          if (nameLow.includes(palabra)) score += 40;
+        }
+
+        return { producto: p, score };
+      })
+      .filter((s) => s.score > 0)
+      .sort((a, b) => b.score - a.score);
+
+    return scored.map((s) => s.producto);
   }, [productosOrdenados, catId, q]);
 
   const porCategoria = useMemo(() => {
