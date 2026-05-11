@@ -150,8 +150,8 @@ export default function CatalogoMaqjeezPage() {
 }
 
 const ORDEN_CATEGORIA: Record<string, number> = {
-  "Motosierras": 0,
-  "Desmalezadoras": 1,
+  "Desmalezadoras": 0,
+  "Motosierras": 1,
   "Grupos Electrógenos": 2,
 };
 function pesoCategoria(cat?: string): number {
