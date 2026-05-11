@@ -182,12 +182,20 @@ export default function AdminPedidosPage() {
             Admin: {admin.nombre} ({admin.email})
           </p>
         </div>
-        <button
-          onClick={logout}
-          className="rounded-lg border border-white/10 px-3 py-1.5 text-sm text-gray-400 hover:bg-white/5 hover:text-white"
-        >
-          Cerrar sesión
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => router.push("/catalogo/admin/seguridad")}
+            className="rounded-lg border border-white/10 px-3 py-1.5 text-sm text-gray-400 hover:bg-white/5 hover:text-white flex items-center gap-1.5"
+          >
+            <Shield className="h-3.5 w-3.5 text-orange-400" /> Seguridad
+          </button>
+          <button
+            onClick={logout}
+            className="rounded-lg border border-white/10 px-3 py-1.5 text-sm text-gray-400 hover:bg-white/5 hover:text-white"
+          >
+            Cerrar sesión
+          </button>
+        </div>
       </div>
 
       {/* Stats */}

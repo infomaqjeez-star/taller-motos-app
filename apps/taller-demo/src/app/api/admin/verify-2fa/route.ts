@@ -1,11 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
-import { jwtVerify } from "jose";
+import { jwtVerify, SignJWT } from "jose";
 import { TOTP } from "otpauth";
 import { getSupabaseServer } from "@/lib/supabase-server";
 
 const SECRET = new TextEncoder().encode(
   process.env.ADMIN_JWT_SECRET || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "fallback-secret"
 );
+
+async function createAdminToken(adminId: string, email: string) {
+  return new SignJWT({ admin_id: adminId, email, type: "admin_session" })
+    .setProtectedHeader({ alg: "HS256" })
+    .setExpirationTime("8h")
+    .sign(SECRET);
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -49,12 +56,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Código incorrecto o expirado" }, { status: 401 });
     }
 
+    const adminToken = await createAdminToken(admin.id, admin.email);
     return NextResponse.json({
       admin: {
         id: admin.id,
         nombre: admin.nombre,
         email: admin.email,
       },
+      adminToken,
     });
   } catch (err) {
     console.error("admin/verify-2fa error:", err);

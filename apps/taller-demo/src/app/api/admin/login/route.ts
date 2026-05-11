@@ -7,6 +7,20 @@ const SECRET = new TextEncoder().encode(
   process.env.ADMIN_JWT_SECRET || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "fallback-secret"
 );
 
+async function createTempToken(adminId: string) {
+  return new SignJWT({ admin_id: adminId, step: "2fa" })
+    .setProtectedHeader({ alg: "HS256" })
+    .setExpirationTime("5m")
+    .sign(SECRET);
+}
+
+async function createAdminToken(adminId: string, email: string) {
+  return new SignJWT({ admin_id: adminId, email, type: "admin_session" })
+    .setProtectedHeader({ alg: "HS256" })
+    .setExpirationTime("8h")
+    .sign(SECRET);
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { email, password } = await req.json();
@@ -37,23 +51,21 @@ export async function POST(req: NextRequest) {
 
     // Si 2FA está activo, devolver tempToken para verificacion en paso 2
     if (admin.totp_enabled && admin.totp_secret) {
-      const tempToken = await new SignJWT({ admin_id: admin.id, step: "2fa" })
-        .setProtectedHeader({ alg: "HS256" })
-        .setExpirationTime("5m")
-        .sign(SECRET);
-
+      const tempToken = await createTempToken(admin.id);
       return NextResponse.json({
         requires2FA: true,
         tempToken,
       });
     }
 
+    const adminToken = await createAdminToken(admin.id, admin.email);
     return NextResponse.json({
       admin: {
         id: admin.id,
         nombre: admin.nombre,
         email: admin.email,
       },
+      adminToken,
     });
   } catch (err) {
     console.error("admin/login error:", err);

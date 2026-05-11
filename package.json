@@ -1,5 +1,9 @@
 {
   "dependencies": {
-    "otpauth": "^9.5.1"
+    "otpauth": "^9.5.1",
+    "qrcode": "^1.5.4"
+  },
+  "devDependencies": {
+    "@types/qrcode": "^1.5.6"
   }
 }
