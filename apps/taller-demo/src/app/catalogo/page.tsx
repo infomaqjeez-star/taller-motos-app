@@ -223,6 +223,13 @@ function CatalogoContent() {
                 👤 Cliente (-3%)
               </Link>
             )}
+            {/* Descuentos */}
+            <Link
+              href="/catalogo/descuentos"
+              className="flex items-center gap-1 rounded-lg border border-[#39FF14]/30 bg-[#39FF14]/10 px-2 py-1 text-[10px] font-bold text-[#39FF14] hover:bg-[#39FF14]/20"
+            >
+              🎁 Descuentos
+            </Link>
             {/* Vendedor */}
             {vendedorLogueado ? (
               <Link

@@ -10,21 +10,46 @@ function generarCodigo(): string {
 
 export async function POST(req: NextRequest) {
   try {
-    const { nombre, email, telefono, password } = await req.json();
+    const { nombre, email, telefono, password, dni_cuit } = await req.json();
     if (!nombre || !email || !password) {
       return NextResponse.json({ error: "Nombre, email y contraseña requeridos" }, { status: 400 });
     }
 
-    // Verificar si email existe
     const supabase = getSupabaseServer();
-    const { data: existente } = await supabase
+
+    // Validar DNI/CUIT si se proporciona
+    if (dni_cuit) {
+      const { data: dupDni } = await supabase
+        .from("vendedores")
+        .select("id")
+        .eq("dni_cuit", dni_cuit.trim())
+        .single();
+
+      if (dupDni) {
+        return NextResponse.json({ error: "El DNI/CUIT ya está registrado como vendedor" }, { status: 409 });
+      }
+    }
+
+    // Verificar si email existe en vendedores
+    const { data: existenteVendedor } = await supabase
       .from("vendedores")
       .select("id")
       .eq("email", email.trim().toLowerCase())
       .single();
 
-    if (existente) {
-      return NextResponse.json({ error: "El email ya está registrado" }, { status: 409 });
+    if (existenteVendedor) {
+      return NextResponse.json({ error: "El email ya está registrado como vendedor" }, { status: 409 });
+    }
+
+    // Verificar si email existe en clientes (no puede ser vendedor si es cliente)
+    const { data: existenteCliente } = await supabase
+      .from("clientes_catalogo")
+      .select("id")
+      .eq("email", email.trim().toLowerCase())
+      .single();
+
+    if (existenteCliente) {
+      return NextResponse.json({ error: "Este email ya está registrado como cliente. No podés ser vendedor con el mismo email." }, { status: 409 });
     }
 
     // Generar código único
@@ -50,6 +75,7 @@ export async function POST(req: NextRequest) {
         nombre: nombre.trim(),
         email: email.trim().toLowerCase(),
         telefono: telefono?.trim() || null,
+        dni_cuit: dni_cuit?.trim() || null,
         password_hash,
         comision_pct: 10,
         estado: "activo",

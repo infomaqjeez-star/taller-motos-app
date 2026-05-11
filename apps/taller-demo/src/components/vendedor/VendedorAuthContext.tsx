@@ -14,7 +14,7 @@ interface VendedorAuthContextValue {
   vendedor: Vendedor | null;
   token: string | null;
   login: (email: string, password: string) => Promise<{ error?: string }>;
-  register: (data: { nombre: string; email: string; telefono?: string; password: string }) => Promise<{ error?: string }>;
+  register: (data: { nombre: string; email: string; telefono?: string; dni_cuit?: string; password: string }) => Promise<{ error?: string }>;
   logout: () => void;
   loading: boolean;
 }

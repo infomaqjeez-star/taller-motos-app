@@ -17,6 +17,7 @@ export default function VendedorLoginPage() {
     nombre: "",
     email: "",
     telefono: "",
+    dni_cuit: "",
     password: "",
     confirmPassword: "",
   });
@@ -46,6 +47,7 @@ export default function VendedorLoginPage() {
         nombre: form.nombre,
         email: form.email,
         telefono: form.telefono,
+        dni_cuit: form.dni_cuit,
         password: form.password,
       });
       if (res.error) {
@@ -125,15 +127,30 @@ export default function VendedorLoginPage() {
         </div>
 
         {isRegister && (
-          <div>
-            <label className="mb-1 block text-xs font-medium text-gray-400">Teléfono</label>
-            <input
-              className="input input-sm w-full"
-              value={form.telefono}
-              onChange={(e) => update("telefono", e.target.value)}
-              placeholder="11 2345 6789"
-            />
-          </div>
+          <>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-gray-400">Teléfono</label>
+              <input
+                className="input input-sm w-full"
+                value={form.telefono}
+                onChange={(e) => update("telefono", e.target.value)}
+                placeholder="11 2345 6789"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-gray-400">DNI o CUIT *</label>
+              <input
+                required
+                className="input input-sm w-full"
+                value={form.dni_cuit}
+                onChange={(e) => update("dni_cuit", e.target.value)}
+                placeholder="Ej: 20333444556 o 33344455"
+              />
+              <p className="mt-1 text-[10px] text-gray-500">
+                No podés registrar el mismo DNI/CUIT en otra cuenta de vendedor.
+              </p>
+            </div>
+          </>
         )}
 
         <div>
