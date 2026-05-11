@@ -155,6 +155,8 @@ export default function AdminPedidosPage() {
   const [mensajeAjuste, setMensajeAjuste] = useState("");
   const [evolucion, setEvolucion] = useState<EvolucionData | null>(null);
   const [pedidosPorEstado, setPedidosPorEstado] = useState<Record<string, number>>({});
+  const [loadingDashboard, setLoadingDashboard] = useState(true);
+  const [dashboardError, setDashboardError] = useState<string | null>(null);
   const [guardandoGerente, setGuardandoGerente] = useState<string | null>(null);
   const [asignandoGerenteId, setAsignandoGerenteId] = useState<Record<string, string>>({});
 
@@ -181,18 +183,27 @@ export default function AdminPedidosPage() {
   };
 
   const cargarDashboard = async () => {
+    setLoadingDashboard(true);
+    setDashboardError(null);
     try {
       const res = await fetch("/api/admin/dashboard");
       const data = await res.json();
+      if (!res.ok || data.error) {
+        setDashboardError(data.error || "Error al cargar dashboard");
+        return;
+      }
       if (data.resumen) {
         setStats(data.resumen);
-        setVendedores(data.topVendedores || []);
-        setClientes(data.clientesRecientes || []);
+        setVendedores(data.vendedores || data.topVendedores || []);
+        setClientes(data.clientes || data.clientesRecientes || []);
         setEvolucion(data.evolucion || null);
         setPedidosPorEstado(data.pedidosPorEstado || {});
       }
-    } catch (e) {
+    } catch (e: any) {
+      setDashboardError(e.message || "Error de red");
       console.error("Error cargando dashboard:", e);
+    } finally {
+      setLoadingDashboard(false);
     }
   };
 
@@ -421,7 +432,20 @@ export default function AdminPedidosPage() {
       </div>
 
       {/* === DASHBOARD === */}
-      {vistaActiva === "dashboard" && stats && (
+      {vistaActiva === "dashboard" && loadingDashboard && (
+        <div className="mt-16 flex flex-col items-center gap-3 text-gray-400">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#FF5722] border-t-transparent" />
+          <span className="text-sm">Cargando dashboard...</span>
+        </div>
+      )}
+      {vistaActiva === "dashboard" && !loadingDashboard && dashboardError && (
+        <div className="mt-8 rounded-xl border border-red-500/30 bg-red-500/10 p-6 text-center">
+          <p className="text-red-400 font-semibold mb-1">Error al cargar estadísticas</p>
+          <p className="text-xs text-gray-400">{dashboardError}</p>
+          <button onClick={cargarDashboard} className="mt-3 rounded-lg border border-white/10 px-4 py-2 text-sm text-gray-300 hover:bg-white/5">Reintentar</button>
+        </div>
+      )}
+      {vistaActiva === "dashboard" && !loadingDashboard && !dashboardError && stats && (
         <div className="mt-4 space-y-4">
           {/* KPIs */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
