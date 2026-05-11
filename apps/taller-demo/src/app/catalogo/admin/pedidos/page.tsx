@@ -140,7 +140,7 @@ interface ClienteData {
 
 export default function AdminPedidosPage() {
   const router = useRouter();
-  const { admin, logout, loading: authLoading } = useAdminAuth();
+  const { admin, logout, loading: authLoading, getToken } = useAdminAuth();
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Pedido | null>(null);
@@ -155,6 +155,8 @@ export default function AdminPedidosPage() {
   const [mensajeAjuste, setMensajeAjuste] = useState("");
   const [evolucion, setEvolucion] = useState<EvolucionData | null>(null);
   const [pedidosPorEstado, setPedidosPorEstado] = useState<Record<string, number>>({});
+  const [guardandoGerente, setGuardandoGerente] = useState<string | null>(null);
+  const [asignandoGerenteId, setAsignandoGerenteId] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (authLoading) return;
@@ -279,6 +281,27 @@ export default function AdminPedidosPage() {
       cargarPedidos();
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  const asignarGerente = async (vendedorId: string, nuevoGerenteId: string | null, esGerente?: boolean) => {
+    setGuardandoGerente(vendedorId);
+    try {
+      const res = await fetch("/api/admin/vendedores/gerente", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
+        body: JSON.stringify({ vendedor_id: vendedorId, lider_id: nuevoGerenteId, es_gerente: esGerente }),
+      });
+      if (!res.ok) {
+        const e = await res.json();
+        alert(e.error || "Error al guardar");
+      } else {
+        await cargarDashboard();
+      }
+    } catch {
+      alert("Error al guardar");
+    } finally {
+      setGuardandoGerente(null);
     }
   };
 
@@ -750,32 +773,80 @@ export default function AdminPedidosPage() {
             </div>
           ) : (
             <div className="space-y-2">
-              {vendedores.map((v) => (
-                <div key={v.id} className="rounded-xl border border-white/10 bg-white/[0.03] p-3 text-sm">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className={`rounded-full border px-2 py-0.5 text-[10px] capitalize ${getColorNivel(v.nivel_vendedor)}`}>
-                        {v.nivel_vendedor?.replace("_", " ") || "nuevo"}
-                      </span>
-                      {v.es_gerente && (
-                        <span className="rounded-full border border-purple-500/30 bg-purple-500/10 px-2 py-0.5 text-[10px] text-purple-300">
-                          Gerente
+              {vendedores.map((v) => {
+                const gerenteActual = vendedores.find(g => g.id === v.lider_id);
+                const gerentes = vendedores.filter(g => g.es_gerente && g.id !== v.id);
+                const subordinados = vendedores.filter(s => s.lider_id === v.id);
+                return (
+                  <div key={v.id} className={`rounded-xl border bg-white/[0.03] p-4 text-sm ${v.es_gerente ? "border-purple-500/30" : "border-white/10"}`}>
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className={`rounded-full border px-2 py-0.5 text-[10px] capitalize ${getColorNivel(v.nivel_vendedor)}`}>
+                          {v.nivel_vendedor?.replace("_", " ") || "nuevo"}
                         </span>
-                      )}
-                      <span className="text-white font-semibold">{v.nombre}</span>
+                        {v.es_gerente && (
+                          <span className="rounded-full border border-purple-500/30 bg-purple-500/10 px-2 py-0.5 text-[10px] text-purple-300">
+                            👑 Gerente
+                          </span>
+                        )}
+                        <span className="text-white font-semibold">{v.nombre}</span>
+                        {v.es_gerente && subordinados.length > 0 && (
+                          <span className="text-[10px] text-gray-400">{subordinados.length} vendedor{subordinados.length > 1 ? "es" : ""} a cargo</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-[#39FF14]">{fmtMoney(v.total_vendido)}</span>
+                      </div>
                     </div>
-                    <span className="font-bold text-[#39FF14]">{fmtMoney(v.total_vendido)}</span>
+                    <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-gray-400">
+                      <span>{v.email}</span>
+                      <span>Ref: {v.codigo_referido}</span>
+                      <span>Comisión: {v.comision_pct}{v.lider_id ? "+3" : ""}%</span>
+                      {gerenteActual && <span className="text-purple-300">Gerente: {gerenteActual.nombre}</span>}
+                    </div>
+                    {/* Panel de gestión de jerarquía */}
+                    <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-white/5 pt-3">
+                      {/* Toggle Gerente */}
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <span className="text-xs text-gray-400">Es Gerente</span>
+                        <button
+                          onClick={() => asignarGerente(v.id, v.lider_id || null, !v.es_gerente)}
+                          disabled={guardandoGerente === v.id}
+                          className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${v.es_gerente ? "bg-purple-600" : "bg-gray-600"} disabled:opacity-50`}
+                        >
+                          <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${v.es_gerente ? "translate-x-5" : "translate-x-1"}`} />
+                        </button>
+                      </label>
+                      {/* Asignar Gerente (solo si NO es gerente) */}
+                      {!v.es_gerente && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-gray-400">Asignar Gerente:</span>
+                          <select
+                            className="rounded-lg border border-white/10 bg-[#1a1a1a] px-2 py-1 text-xs text-white"
+                            value={asignandoGerenteId[v.id] ?? (v.lider_id || "")}
+                            onChange={(e) => setAsignandoGerenteId(prev => ({ ...prev, [v.id]: e.target.value }))}
+                          >
+                            <option value="">Sin gerente</option>
+                            {gerentes.map(g => (
+                              <option key={g.id} value={g.id}>{g.nombre}</option>
+                            ))}
+                          </select>
+                          <button
+                            onClick={() => {
+                              const sel = asignandoGerenteId[v.id] ?? (v.lider_id || "");
+                              asignarGerente(v.id, sel || null, v.es_gerente);
+                            }}
+                            disabled={guardandoGerente === v.id}
+                            className="rounded-lg border border-white/10 px-2 py-1 text-xs text-gray-400 hover:text-white hover:bg-white/5 disabled:opacity-50"
+                          >
+                            {guardandoGerente === v.id ? "..." : "Guardar"}
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <div className="mt-1 flex items-center gap-3 text-xs text-gray-400">
-                    <span>{v.email}</span>
-                    <span>Ref: {v.codigo_referido}</span>
-                    <span>Comisión: {v.comision_pct}%</span>
-                    {v.lider_id && (
-                      <span className="text-purple-300">Tiene Gerente</span>
-                    )}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
