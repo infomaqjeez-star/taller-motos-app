@@ -962,42 +962,188 @@ export default function AdminPedidosPage() {
       )}
 
       {/* === FINANZAS === */}
-      {vistaActiva === "finanzas" && stats && (
-        <div className="mt-4 space-y-4">
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <StatCard label="Ventas Totales" value={fmtMoney(stats.ventasTotales)} icon={<TrendingUp className="h-5 w-5 text-green-400" />} color="green" />
-            <StatCard label="Ventas Mes" value={fmtMoney(stats.ventasMes)} icon={<Calendar className="h-5 w-5 text-cyan-400" />} color="cyan" />
-            <StatCard label="Ventas Semana" value={fmtMoney(stats.ventasSemana)} icon={<Clock className="h-5 w-5 text-yellow-400" />} color="yellow" />
-            <StatCard label="Carritos Abandonados" value={String(stats.totalCarritosAbandonados)} icon={<ShoppingCart className="h-5 w-5 text-orange-400" />} color="orange" />
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <StatCard label="Comisiones Pendientes" value={fmtMoney(stats.comisionesPendientes)} icon={<DollarSign className="h-5 w-5 text-[#FF5722]" />} color="orange" />
-            <StatCard label="Comisiones Pagadas" value={fmtMoney(stats.comisionesPagadas)} icon={<Check className="h-5 w-5 text-[#39FF14]" />} color="green" />
-          </div>
-          <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-            <h3 className="text-sm font-bold text-white mb-3">Resumen Financiero</h3>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between border-b border-white/5 py-2">
-                <span className="text-gray-400">Total Vendedores</span>
-                <span className="text-white font-medium">{stats.totalVendedores}</span>
+      {vistaActiva === "finanzas" && (
+        <div className="space-y-6">
+          {/* KPIs financieros */}
+          {stats && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="rounded-xl p-5 border border-gray-800 shadow-lg" style={{ backgroundColor: "#111827" }}>
+                <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-1">Ventas Totales</p>
+                <h3 className="text-2xl font-bold text-white">{fmtMoney(stats.ventasTotales)}</h3>
+                <p className="text-xs text-gray-500 mt-1">Mes: {fmtMoney(stats.ventasMes)}</p>
               </div>
-              <div className="flex justify-between border-b border-white/5 py-2">
-                <span className="text-gray-400">Total Clientes</span>
-                <span className="text-white font-medium">{stats.totalClientes}</span>
+              <div className="rounded-xl p-5 border border-gray-800 shadow-lg" style={{ backgroundColor: "#111827" }}>
+                <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-1">Comisiones Vendedores</p>
+                <h3 className="text-2xl font-bold text-orange-400">{fmtMoney(stats.comisionesPendientes)}</h3>
+                <p className="text-xs text-gray-500 mt-1">Pendientes de pago</p>
               </div>
-              <div className="flex justify-between border-b border-white/5 py-2">
-                <span className="text-gray-400">Total Pedidos</span>
-                <span className="text-white font-medium">{stats.totalPedidos}</span>
+              <div className="rounded-xl p-5 border border-gray-800 shadow-lg" style={{ backgroundColor: "#111827" }}>
+                <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-1">Comisiones Pagadas</p>
+                <h3 className="text-2xl font-bold text-green-400">{fmtMoney(stats.comisionesPagadas)}</h3>
+                <p className="text-xs text-gray-500 mt-1">Liquidadas</p>
               </div>
-              <div className="flex justify-between border-b border-white/5 py-2">
-                <span className="text-gray-400">Productos Activos</span>
-                <span className="text-white font-medium">{stats.totalProductos}</span>
-              </div>
-              <div className="flex justify-between border-b border-white/5 py-2">
-                <span className="text-gray-400">Items en Carritos</span>
-                <span className="text-white font-medium">{stats.totalItemsCarrito}</span>
+              <div className="rounded-xl p-5 border border-gray-800 shadow-lg" style={{ backgroundColor: "#111827" }}>
+                <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-1">Total Pedidos</p>
+                <h3 className="text-2xl font-bold text-white">{stats.totalPedidos}</h3>
+                <p className="text-xs text-gray-500 mt-1">Vendedores: {stats.totalVendedores}</p>
               </div>
             </div>
+          )}
+
+          {/* Panel de Gerentes - Comisión 10% sobre ventas de sus vendedores */}
+          <div className="rounded-xl border border-gray-800 shadow-lg overflow-hidden" style={{ backgroundColor: "#111827" }}>
+            <div className="p-5 border-b border-gray-800">
+              <h3 className="text-base font-bold text-white flex items-center gap-2">
+                👑 Comisiones de Gerentes
+                <span className="text-xs font-normal text-gray-500 ml-1">— 10% sobre comisiones de sus vendedores asignados</span>
+              </h3>
+            </div>
+            {vendedores.filter(v => v.es_gerente).length === 0 ? (
+              <div className="p-8 text-center text-gray-600 text-sm">
+                No hay gerentes asignados aún.{" "}
+                <button onClick={() => setVistaActiva("vendedores" as any)} className="text-orange-500 hover:text-white underline">
+                  Ir a Vendedores para asignar
+                </button>
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-800">
+                {vendedores.filter(v => v.es_gerente).map(gerente => {
+                  const subordinados = vendedores.filter(s => s.lider_id === gerente.id);
+                  const comisionGerenteTotal = subordinados.reduce((sum, s) => {
+                    const comisionSub = pedidos
+                      .filter(p => p.vendedor_id === s.id && p.estado !== "cancelado")
+                      .reduce((ps, p) => ps + (p.comision_monto || 0), 0);
+                    return sum + comisionSub * 0.10;
+                  }, 0);
+                  const ventasSubTotal = subordinados.reduce((sum, s) => {
+                    return sum + pedidos
+                      .filter(p => p.vendedor_id === s.id && p.estado !== "cancelado")
+                      .reduce((ps, p) => ps + (p.total || 0), 0);
+                  }, 0);
+                  return (
+                    <div key={gerente.id} className="p-5">
+                      {/* Cabecera gerente */}
+                      <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-purple-900/50 border border-purple-500/30 flex items-center justify-center font-bold text-purple-300 text-sm flex-shrink-0">
+                            {gerente.nombre.charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-white font-semibold">{gerente.nombre}</span>
+                              <span className="text-[10px] rounded-full border border-purple-500/30 bg-purple-500/10 px-2 py-0.5 text-purple-300">👑 Gerente</span>
+                            </div>
+                            <p className="text-xs text-gray-500">{gerente.email} · Ref: {gerente.codigo_referido}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs text-gray-500 uppercase tracking-wider">Comisión gerente (10%)</p>
+                          <p className="text-xl font-bold text-purple-400">{fmtMoney(comisionGerenteTotal)}</p>
+                          <p className="text-xs text-gray-500">sobre {fmtMoney(ventasSubTotal)} en ventas de su equipo</p>
+                        </div>
+                      </div>
+                      {/* Vendedores subordinados */}
+                      {subordinados.length === 0 ? (
+                        <p className="text-xs text-gray-600 pl-2">Sin vendedores asignados aún.</p>
+                      ) : (
+                        <div className="rounded-lg border border-gray-800 overflow-hidden" style={{ backgroundColor: "#080c16" }}>
+                          <table className="w-full text-sm">
+                            <thead>
+                              <tr className="border-b border-gray-800">
+                                <th className="text-left py-2 px-4 text-xs text-gray-500 font-semibold">Vendedor</th>
+                                <th className="text-right py-2 px-4 text-xs text-gray-500 font-semibold">Ventas</th>
+                                <th className="text-right py-2 px-4 text-xs text-gray-500 font-semibold">Comisión (base+3%)</th>
+                                <th className="text-right py-2 px-4 text-xs text-gray-500 font-semibold">10% al gerente</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {subordinados.map(sub => {
+                                const ventasSub = pedidos
+                                  .filter(p => p.vendedor_id === sub.id && p.estado !== "cancelado")
+                                  .reduce((s, p) => s + (p.total || 0), 0);
+                                const comisionSub = pedidos
+                                  .filter(p => p.vendedor_id === sub.id && p.estado !== "cancelado")
+                                  .reduce((s, p) => s + (p.comision_monto || 0), 0);
+                                const parteGerente = comisionSub * 0.10;
+                                return (
+                                  <tr key={sub.id} className="border-b border-gray-800/50 hover:bg-gray-800/20 transition">
+                                    <td className="py-3 px-4">
+                                      <div className="flex items-center gap-2">
+                                        <div className="w-6 h-6 rounded-full bg-gray-700 flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0">
+                                          {sub.nombre.charAt(0).toUpperCase()}
+                                        </div>
+                                        <div>
+                                          <p className="text-white text-xs font-medium">{sub.nombre}</p>
+                                          <p className="text-[10px] text-gray-500">{sub.comision_pct}%+3% com.</p>
+                                        </div>
+                                      </div>
+                                    </td>
+                                    <td className="py-3 px-4 text-right text-green-400 text-xs font-medium">{fmtMoney(ventasSub)}</td>
+                                    <td className="py-3 px-4 text-right text-orange-400 text-xs font-medium">{fmtMoney(comisionSub)}</td>
+                                    <td className="py-3 px-4 text-right text-purple-400 text-xs font-bold">{fmtMoney(parteGerente)}</td>
+                                  </tr>
+                                );
+                              })}
+                              <tr className="bg-gray-800/20">
+                                <td colSpan={2} className="py-2 px-4 text-xs text-gray-500">Total equipo</td>
+                                <td className="py-2 px-4 text-right text-xs text-orange-300 font-semibold">
+                                  {fmtMoney(subordinados.reduce((s, sub) => s + pedidos.filter(p => p.vendedor_id === sub.id && p.estado !== "cancelado").reduce((ps, p) => ps + (p.comision_monto || 0), 0), 0))}
+                                </td>
+                                <td className="py-2 px-4 text-right text-xs text-purple-300 font-bold">{fmtMoney(comisionGerenteTotal)}</td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Tabla de comisiones individuales de vendedores */}
+          <div className="rounded-xl border border-gray-800 shadow-lg overflow-hidden" style={{ backgroundColor: "#111827" }}>
+            <div className="p-5 border-b border-gray-800">
+              <h3 className="text-base font-bold text-white">Comisiones por Vendedor</h3>
+            </div>
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-800">
+                  <th className="text-left py-3 px-4 text-xs text-gray-500 font-semibold">Vendedor</th>
+                  <th className="text-right py-3 px-4 text-xs text-gray-500 font-semibold">Ventas totales</th>
+                  <th className="text-right py-3 px-4 text-xs text-gray-500 font-semibold">Comisión pendiente</th>
+                  <th className="text-right py-3 px-4 text-xs text-gray-500 font-semibold">Comisión pagada</th>
+                  <th className="text-right py-3 px-4 text-xs text-gray-500 font-semibold">Gerente</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[...vendedores]
+                  .sort((a, b) => (b.total_vendido || 0) - (a.total_vendido || 0))
+                  .map(v => {
+                    const comPend = pedidos.filter(p => p.vendedor_id === v.id && p.comision_estado === "pendiente").reduce((s, p) => s + (p.comision_monto || 0), 0);
+                    const comPag = pedidos.filter(p => p.vendedor_id === v.id && p.comision_estado === "pagada").reduce((s, p) => s + (p.comision_monto || 0), 0);
+                    const gerenteV = vendedores.find(g => g.id === v.lider_id);
+                    return (
+                      <tr key={v.id} className="border-b border-gray-800/50 hover:bg-gray-800/20 transition">
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-2">
+                            <div className="w-7 h-7 rounded-full bg-gray-700 flex items-center justify-center font-bold text-white text-xs flex-shrink-0">{v.nombre.charAt(0).toUpperCase()}</div>
+                            <div>
+                              <p className="text-white font-medium">{v.nombre} {v.es_gerente && "👑"}</p>
+                              <p className="text-[10px] text-gray-500">{v.comision_pct}%{v.lider_id ? "+3%" : ""}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 text-right text-green-400 font-medium">{fmtMoney(v.total_vendido)}</td>
+                        <td className="py-3 px-4 text-right text-orange-400">{fmtMoney(comPend)}</td>
+                        <td className="py-3 px-4 text-right text-green-400">{fmtMoney(comPag)}</td>
+                        <td className="py-3 px-4 text-right text-xs text-purple-300">{gerenteV ? gerenteV.nombre : <span className="text-gray-600">—</span>}</td>
+                      </tr>
+                    );
+                  })}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
