@@ -26,6 +26,8 @@ import {
   Download,
   BarChart3,
   Store,
+  Percent,
+  RefreshCcw,
 } from "lucide-react";
 
 interface Pedido {
@@ -118,7 +120,11 @@ export default function AdminPedidosPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [vendedores, setVendedores] = useState<VendedorData[]>([]);
   const [clientes, setClientes] = useState<ClienteData[]>([]);
-  const [vistaActiva, setVistaActiva] = useState<"pedidos" | "vendedores" | "clientes" | "dashboard">("dashboard");
+  const [vistaActiva, setVistaActiva] = useState<"pedidos" | "vendedores" | "clientes" | "dashboard" | "precios">("dashboard");
+  const [precioStats, setPrecioStats] = useState<{ total: number; activos: number; precioMin: number; precioMax: number; precioPromedio: number } | null>(null);
+  const [porcentajeAjuste, setPorcentajeAjuste] = useState("");
+  const [ajustandoPrecios, setAjustandoPrecios] = useState(false);
+  const [mensajeAjuste, setMensajeAjuste] = useState("");
 
   useEffect(() => {
     if (authLoading) return;
@@ -186,6 +192,49 @@ export default function AdminPedidosPage() {
       ])
     ];
     exportarCSV("clientes", filas);
+  };
+
+  const cargarPrecios = async () => {
+    try {
+      const token = localStorage.getItem("admin_catalogo_session");
+      const parsed = token ? JSON.parse(token) : null;
+      const res = await fetch("/api/admin/precios", {
+        headers: parsed?.token ? { Authorization: `Bearer ${parsed.token}` } : {},
+      });
+      const data = await res.json();
+      if (data.stats) setPrecioStats(data.stats);
+    } catch (e) {
+      console.error("Error cargando precios:", e);
+    }
+  };
+
+  const ajustarPrecios = async (porcentaje: number) => {
+    if (!confirm(`¿Confirmás ajustar todos los precios un ${porcentaje > 0 ? "+" : ""}${porcentaje}%?`)) return;
+    setAjustandoPrecios(true);
+    setMensajeAjuste("");
+    try {
+      const token = localStorage.getItem("admin_catalogo_session");
+      const parsed = token ? JSON.parse(token) : null;
+      const res = await fetch("/api/admin/precios", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(parsed?.token ? { Authorization: `Bearer ${parsed.token}` } : {}),
+        },
+        body: JSON.stringify({ porcentaje }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setMensajeAjuste(`Precios actualizados: ${data.actualizados} productos ajustados ${porcentaje > 0 ? "+" : ""}${porcentaje}%`);
+        cargarPrecios();
+      } else {
+        setMensajeAjuste("Error: " + (data.error || "Desconocido"));
+      }
+    } catch (e: any) {
+      setMensajeAjuste("Error de red: " + e.message);
+    } finally {
+      setAjustandoPrecios(false);
+    }
   };
 
   const actualizarEstado = async (id: string, estado: string) => {
@@ -298,6 +347,7 @@ export default function AdminPedidosPage() {
           { id: "pedidos", label: "Pedidos", icon: Package },
           { id: "vendedores", label: "Vendedores", icon: Store },
           { id: "clientes", label: "Clientes", icon: Users },
+          { id: "precios", label: "Precios", icon: Percent },
         ].map((tab) => (
           <button
             key={tab.id}
@@ -572,6 +622,86 @@ export default function AdminPedidosPage() {
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* === PRECIOS === */}
+      {vistaActiva === "precios" && (
+        <div className="mt-4 space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+              <Percent className="h-5 w-5 text-[#FF5722]" />
+              Ajuste de Precios
+            </h2>
+            <button onClick={cargarPrecios} className="flex items-center gap-1 rounded-lg border border-white/10 px-3 py-1.5 text-xs text-gray-400 hover:text-white hover:bg-white/5">
+              <RefreshCcw className="h-3.5 w-3.5" /> Actualizar
+            </button>
+          </div>
+
+          {precioStats && (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <StatCard label="Total Productos" value={String(precioStats.total)} icon={<Package className="h-5 w-5 text-blue-400" />} color="blue" />
+              <StatCard label="Activos" value={String(precioStats.activos)} icon={<Check className="h-5 w-5 text-[#39FF14]" />} color="green" />
+              <StatCard label="Precio Promedio" value={fmtMoney(precioStats.precioPromedio)} icon={<DollarSign className="h-5 w-5 text-emerald-400" />} color="emerald" />
+              <StatCard label="Rango" value={`${fmtMoney(precioStats.precioMin)} - ${fmtMoney(precioStats.precioMax)}`} icon={<TrendingUp className="h-5 w-5 text-yellow-400" />} color="yellow" />
+            </div>
+          )}
+
+          <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+            <h3 className="text-sm font-bold text-white mb-3">Ajustar todos los precios</h3>
+            <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-end">
+              <div className="flex-grow">
+                <label className="text-xs text-gray-400 mb-1 block">Porcentaje de ajuste</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    value={porcentajeAjuste}
+                    onChange={(e) => setPorcentajeAjuste(e.target.value)}
+                    placeholder="Ej: -50 para mitad, +20 para aumentar 20%"
+                    className="w-full sm:w-64 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-[#FF5722]"
+                  />
+                  <span className="text-sm text-gray-400">%</span>
+                </div>
+                <p className="text-[10px] text-gray-500 mt-1">-50 = precio a la mitad | +20 = aumentar 20%</p>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => ajustarPrecios(Number(porcentajeAjuste))}
+                  disabled={ajustandoPrecios || !porcentajeAjuste || isNaN(Number(porcentajeAjuste))}
+                  className="rounded-lg bg-[#FF5722] px-4 py-2 text-sm font-bold text-white hover:bg-[#FF5722]/80 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {ajustandoPrecios ? "Aplicando..." : "Aplicar"}
+                </button>
+                <button
+                  onClick={() => { setPorcentajeAjuste("-50"); }}
+                  className="rounded-lg border border-white/10 px-3 py-2 text-xs text-gray-400 hover:text-white hover:bg-white/5"
+                >
+                  Mitad (-50%)
+                </button>
+              </div>
+            </div>
+            {mensajeAjuste && (
+              <p className={`mt-3 text-xs ${mensajeAjuste.includes("Error") ? "text-red-400" : "text-[#39FF14]"}`}>
+                {mensajeAjuste}
+              </p>
+            )}
+          </div>
+
+          <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+            <h3 className="text-sm font-bold text-white mb-2">Atajos rápidos</h3>
+            <div className="flex flex-wrap gap-2">
+              {[-50, -30, -20, -10, 10, 20, 30, 50].map((pct) => (
+                <button
+                  key={pct}
+                  onClick={() => ajustarPrecios(pct)}
+                  disabled={ajustandoPrecios}
+                  className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-gray-400 hover:text-white hover:bg-white/5 disabled:opacity-40"
+                >
+                  {pct > 0 ? "+" : ""}{pct}%
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       )}
 
