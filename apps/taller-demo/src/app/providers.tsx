@@ -4,6 +4,7 @@ import { AuthProvider } from "@/components/auth/AuthProvider";
 import { CartProvider } from "@/components/catalogo/CartContext";
 import { VendedorAuthProvider } from "@/components/vendedor/VendedorAuthContext";
 import { ClienteAuthProvider } from "@/components/cliente/ClienteAuthContext";
+import { AdminAuthProvider } from "@/components/admin/AdminAuthContext";
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -11,9 +12,11 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       <AuthProvider>
         <VendedorAuthProvider>
           <ClienteAuthProvider>
-            <CartProvider>
-              {children}
-            </CartProvider>
+            <AdminAuthProvider>
+              <CartProvider>
+                {children}
+              </CartProvider>
+            </AdminAuthProvider>
           </ClienteAuthProvider>
         </VendedorAuthProvider>
       </AuthProvider>
