@@ -119,12 +119,14 @@ export default function VendedorDashboardPage() {
       {/* HEADER */}
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
         <div className="flex items-center gap-4">
-          <div
-            className="p-3 rounded-xl shadow-lg"
+          <button
+            onClick={() => router.push("/catalogo")}
+            className="p-3 rounded-xl shadow-lg transition-opacity hover:opacity-80"
             style={{ background: "linear-gradient(to bottom right, #f97316, #dc2626)", boxShadow: "0 10px 30px rgba(249,115,22,0.2)" }}
+            title="Ir al catálogo"
           >
             <Store className="text-2xl text-white h-6 w-6" />
-          </div>
+          </button>
           <div>
             <h1 className="text-2xl md:text-3xl font-bold text-white tracking-tight">Dashboard de Vendedor</h1>
             <div className="flex items-center gap-2 mt-1">
