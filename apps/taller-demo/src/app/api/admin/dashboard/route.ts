@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSupabaseServer } from "@/lib/supabase-server";
+import { getSupabaseAdmin } from "@/lib/supabase-server";
 
 export async function GET(req: NextRequest) {
   try {
-    const supabase = getSupabaseServer();
+    const supabase = getSupabaseAdmin();
 
     // Vendedores - intentar con columnas de gerente, fallback sin ellas
     let vendedoresBase: any[] = [];
