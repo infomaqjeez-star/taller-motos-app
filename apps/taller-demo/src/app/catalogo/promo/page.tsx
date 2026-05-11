@@ -15,7 +15,7 @@ export default function PromoBannersPage() {
   const { vendedor } = useVendedorAuth();
   const [copied, setCopied] = useState(false);
   const [copiedTexto, setCopiedTexto] = useState(false);
-  const [modo, setModo] = useState<"oscuro" | "claro">("oscuro");
+  const [modo, setModo] = useState<"story_oscuro" | "story_claro" | "post_oscuro" | "post_claro">("story_oscuro");
 
   const codigo = vendedor?.codigo_referido || "MAQ001";
   const linkReferido = vendedor
@@ -161,6 +161,135 @@ export default function PromoBannersPage() {
     </div>
   );
 
+  // Post Oscuro - Impacto Industrial (1:1)
+  const PostOscuro = () => (
+    <div
+      className="relative flex flex-col overflow-hidden rounded-xl shadow-2xl border border-gray-800 p-6"
+      style={{ width: 450, height: 450, background: "radial-gradient(at center, #374151, #111827)" }}
+    >
+      {/* Header */}
+      <div className="flex justify-between items-center mb-4 border-b border-gray-700 pb-3">
+        <div>
+          <h3 className="text-4xl font-black text-white tracking-tighter leading-none">
+            MAQ<span className="text-orange-500">JEEZ</span>
+          </h3>
+          <p className="text-gray-400 font-bold text-[10px] uppercase tracking-widest mt-1">
+            Repuestos Moto-Implementos
+          </p>
+        </div>
+        <div className="text-white text-xs font-black px-3 py-1 rounded uppercase tracking-wider shadow-lg"
+          style={{ background: "#ea580c", transform: "rotate(3deg)" }}>
+          Catálogo 2026
+        </div>
+      </div>
+
+      {/* Grid de Beneficios */}
+      <div className="grid grid-cols-2 gap-3 mb-auto">
+        <div className="flex flex-col items-center text-center bg-gray-800/60 p-3 rounded-lg border border-gray-700">
+          <span className="text-orange-500 text-2xl font-black mb-1">%</span>
+          <p className="text-gray-200 text-xs font-semibold leading-tight">
+            Hasta 20% OFF<br /><span className="text-[10px] text-gray-400">por volumen</span>
+          </p>
+        </div>
+        <div className="flex flex-col items-center text-center bg-gray-800/60 p-3 rounded-lg border border-gray-700">
+          <span className="text-orange-500 text-2xl mb-1">🚚</span>
+          <p className="text-gray-200 text-xs font-semibold leading-tight">
+            Envío Gratis<br /><span className="text-[10px] text-gray-400">+$100.000</span>
+          </p>
+        </div>
+        <div className="flex flex-col items-center text-center bg-gray-800/60 p-3 rounded-lg border border-gray-700">
+          <span className="text-orange-500 text-2xl mb-1">⚡</span>
+          <p className="text-gray-200 text-xs font-semibold leading-tight">
+            3% Extra<br /><span className="text-[10px] text-gray-400">cliente registrado</span>
+          </p>
+        </div>
+        <div className="flex flex-col items-center text-center bg-gray-800/60 p-3 rounded-lg border border-gray-700">
+          <span className="text-orange-500 text-2xl mb-1">🤝</span>
+          <p className="text-gray-200 text-xs font-semibold leading-tight">
+            3% Extra<br /><span className="text-[10px] text-gray-400">con referido</span>
+          </p>
+        </div>
+      </div>
+
+      {/* Call to Action */}
+      <div className="mt-4 p-4 rounded-xl border text-center relative overflow-hidden"
+        style={{ background: "linear-gradient(to right, #111827, #000000)", borderColor: "rgba(249,115,22,0.3)" }}>
+        <div className="absolute inset-0" style={{ background: "rgba(249,115,22,0.1)", filter: "blur(20px)" }} />
+        <p className="text-gray-300 text-[11px] font-bold uppercase relative z-10 mb-1">
+          Usá el código{" "}
+          <span className="text-orange-500 text-sm px-2 py-0.5 rounded border"
+            style={{ background: "#1f2937", borderColor: "#374151" }}>{codigo}</span>
+        </p>
+        <div className="text-white font-black text-sm px-6 py-2.5 rounded-lg shadow-lg relative z-10 w-full mt-1"
+          style={{ background: "#ea580c" }}>
+          APPJEEZPRO.STORE/CATALOGO
+        </div>
+      </div>
+    </div>
+  );
+
+  // Post Claro - Claro B2B (1:1)
+  const PostClaro = () => (
+    <div
+      className="relative flex flex-col overflow-hidden rounded-xl shadow-2xl border border-gray-200 bg-white"
+      style={{ width: 450, height: 450 }}
+    >
+      {/* Barra superior naranja */}
+      <div className="h-2 w-full" style={{ background: "#ea580c" }} />
+
+      <div className="p-6 flex flex-col h-full">
+        {/* Header */}
+        <div className="text-center mb-5">
+          <h3 className="text-4xl font-black text-gray-900 tracking-tighter">MAQJEEZ</h3>
+          <p className="font-bold text-xs uppercase tracking-widest mt-0.5" style={{ color: "#ea580c" }}>
+            Repuestos Moto-Implementos
+          </p>
+        </div>
+
+        {/* Lista de Beneficios */}
+        <div className="rounded-xl p-4 border flex-grow mb-4 flex flex-col justify-center"
+          style={{ background: "#f9fafb", borderColor: "#f3f4f6" }}>
+          <ul className="space-y-3">
+            <li className="flex items-center">
+              <div className="rounded-lg p-1.5 mr-3 text-sm font-bold w-8 h-8 flex items-center justify-center"
+                style={{ background: "#ffedd5", color: "#ea580c" }}>%</div>
+              <p className="text-gray-800 text-sm font-bold">Hasta 20% OFF por volumen</p>
+            </li>
+            <li className="flex items-center">
+              <div className="rounded-lg p-1.5 mr-3 text-sm font-bold w-8 h-8 flex items-center justify-center"
+                style={{ background: "#dcfce7", color: "#16a34a" }}>🚚</div>
+              <p className="text-gray-800 text-sm font-bold">Envío gratis superando $100.000</p>
+            </li>
+            <li className="flex items-center">
+              <div className="rounded-lg p-1.5 mr-3 text-sm font-bold w-8 h-8 flex items-center justify-center"
+                style={{ background: "#dbeafe", color: "#2563eb" }}>⚡</div>
+              <p className="text-gray-800 text-sm font-bold">3% extra para clientes registrados</p>
+            </li>
+            <li className="flex items-center">
+              <div className="rounded-lg p-1.5 mr-3 text-sm font-bold w-8 h-8 flex items-center justify-center"
+                style={{ background: "#f3e8ff", color: "#9333ea" }}>🤝</div>
+              <p className="text-gray-800 text-sm font-bold">3% extra con link de referido</p>
+            </li>
+          </ul>
+        </div>
+
+        {/* Footer */}
+        <div className="text-white rounded-xl p-4 text-center flex items-center justify-between"
+          style={{ background: "#111827" }}>
+          <div className="text-left">
+            <p className="text-gray-400 text-[10px] font-bold uppercase mb-0.5">Código Promocional</p>
+            <p className="font-black text-lg" style={{ color: "#fb923c" }}>{codigo}</p>
+          </div>
+          <div className="h-8 w-px bg-gray-700 mx-2" />
+          <div className="text-right">
+            <p className="text-white font-bold text-[11px] leading-tight mb-1">Ingresá a la tienda:</p>
+            <p className="font-bold text-[11px] underline" style={{ color: "#fb923c" }}>appjeezpro.store</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <main className="mx-auto max-w-5xl px-4 py-6 pb-20">
       <button
@@ -201,26 +330,46 @@ export default function PromoBannersPage() {
       )}
 
       {/* Selector de modo */}
-      <div className="mt-6 flex gap-2">
+      <div className="mt-6 flex flex-wrap gap-2">
         <button
-          onClick={() => setModo("oscuro")}
-          className={`flex items-center gap-1.5 rounded-lg border px-4 py-2 text-sm font-medium ${
-            modo === "oscuro"
+          onClick={() => setModo("story_oscuro")}
+          className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium ${
+            modo === "story_oscuro"
               ? "border-[#FF5722] bg-[#FF5722]/20 text-[#FF5722]"
               : "border-white/10 text-gray-400 hover:border-white/20"
           }`}
         >
-          🌙 Industrial Premium
+          🌙 Story Oscuro
         </button>
         <button
-          onClick={() => setModo("claro")}
-          className={`flex items-center gap-1.5 rounded-lg border px-4 py-2 text-sm font-medium ${
-            modo === "claro"
+          onClick={() => setModo("story_claro")}
+          className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium ${
+            modo === "story_claro"
               ? "border-[#FF5722] bg-[#FF5722]/20 text-[#FF5722]"
               : "border-white/10 text-gray-400 hover:border-white/20"
           }`}
         >
-          ☀️ Claro / Corporativo
+          ☀️ Story Claro
+        </button>
+        <button
+          onClick={() => setModo("post_oscuro")}
+          className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium ${
+            modo === "post_oscuro"
+              ? "border-[#FF5722] bg-[#FF5722]/20 text-[#FF5722]"
+              : "border-white/10 text-gray-400 hover:border-white/20"
+          }`}
+        >
+          🖼️ Post Oscuro
+        </button>
+        <button
+          onClick={() => setModo("post_claro")}
+          className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium ${
+            modo === "post_claro"
+              ? "border-[#FF5722] bg-[#FF5722]/20 text-[#FF5722]"
+              : "border-white/10 text-gray-400 hover:border-white/20"
+          }`}
+        >
+          📋 Post Claro
         </button>
       </div>
 
@@ -228,13 +377,21 @@ export default function PromoBannersPage() {
       <div className="mt-6">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-bold text-gray-300">
-            {modo === "oscuro" ? "Opción 1: Industrial Premium" : "Opción 2: Claro / Corporativo"}
+            {modo === "story_oscuro" ? "Story · Industrial Premium (9:16)" :
+             modo === "story_claro" ? "Story · Claro / Corporativo (9:16)" :
+             modo === "post_oscuro" ? "Post · Impacto Industrial (1:1)" :
+             "Post · Claro B2B (1:1)"}
           </h3>
-          <span className="text-xs text-gray-500">360 x 640 px · 9:16</span>
+          <span className="text-xs text-gray-500">
+            {modo.startsWith("story") ? "360 x 640 px · 9:16" : "450 x 450 px · 1:1"}
+          </span>
         </div>
 
         <div className="flex justify-center bg-gray-800/50 rounded-xl p-6">
-          {modo === "oscuro" ? <BannerOscuro /> : <BannerClaro />}
+          {modo === "story_oscuro" ? <BannerOscuro /> :
+           modo === "story_claro" ? <BannerClaro /> :
+           modo === "post_oscuro" ? <PostOscuro /> :
+           <PostClaro />}
         </div>
 
         <p className="mt-3 text-center text-xs text-gray-500">
