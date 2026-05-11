@@ -223,7 +223,6 @@ export async function POST(request: NextRequest) {
             cantidad: item.cantidad,
             precio_unit: item.precioUnit,
             subtotal: item.subtotal,
-            warranty_days: item.warrantyDays || 30,
           }));
 
           const { error: itemsError } = await supabase
