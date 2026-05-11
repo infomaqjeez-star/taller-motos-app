@@ -5,36 +5,37 @@ export async function GET(req: NextRequest) {
   try {
     const supabase = getSupabaseServer();
 
-    // Vendedores - sin total_vendido (columna calculada, no existe en tabla base)
+    // Vendedores - intentar con columnas de gerente, fallback sin ellas
     let vendedoresBase: any[] = [];
-    try {
-      const { data } = await supabase
+    {
+      const { data, error } = await supabase
         .from("vendedores")
         .select("id, nombre, email, codigo_referido, comision_pct, nivel_vendedor, created_at, estado, lider_id, es_gerente");
-      vendedoresBase = data || [];
-    } catch {
-      try {
-        const { data } = await supabase
+      if (!error && data) {
+        vendedoresBase = data;
+      } else {
+        // columnas opcionales no existen aún, select sin ellas
+        const { data: data2 } = await supabase
           .from("vendedores")
           .select("id, nombre, email, codigo_referido, comision_pct, nivel_vendedor, created_at, estado");
-        vendedoresBase = (data || []).map((v: any) => ({ ...v, lider_id: null, es_gerente: false }));
-      } catch {}
+        vendedoresBase = (data2 || []).map((v: any) => ({ ...v, lider_id: null, es_gerente: false }));
+      }
     }
 
-    // Pedidos - con datos_cliente JSONB para extraer clientes
+    // Pedidos - intentar con columnas de gerente, fallback sin ellas
     let pedidosConGerente: any[] = [];
-    try {
-      const { data } = await supabase
+    {
+      const { data, error } = await supabase
         .from("pedidos_catalogo")
         .select("id, estado, total, comision_monto, comision_estado, created_at, vendedor_id, datos_cliente, gerente_id, comision_gerente_monto");
-      pedidosConGerente = data || [];
-    } catch {
-      try {
-        const { data } = await supabase
+      if (!error && data) {
+        pedidosConGerente = data;
+      } else {
+        const { data: data2 } = await supabase
           .from("pedidos_catalogo")
           .select("id, estado, total, comision_monto, comision_estado, created_at, vendedor_id, datos_cliente");
-        pedidosConGerente = (data || []).map((p: any) => ({ ...p, gerente_id: null, comision_gerente_monto: 0 }));
-      } catch {}
+        pedidosConGerente = (data2 || []).map((p: any) => ({ ...p, gerente_id: null, comision_gerente_monto: 0 }));
+      }
     }
 
     // Calcular total_vendido por vendedor desde pedidos
