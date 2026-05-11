@@ -429,7 +429,7 @@ function CatalogoContent() {
                     <h2 className="text-xl md:text-2xl font-black uppercase tracking-wider" style={{ color: "#f97316" }}>{c.nombre}</h2>
                     <div className="h-px flex-grow" style={{ background: "#1e293b" }} />
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                  <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4 md:gap-5 lg:gap-6">
                     {lista.map((p) => (
                       <ProductCard key={p.sku} producto={p} addItem={addItem} />
                     ))}
@@ -447,7 +447,7 @@ function CatalogoContent() {
               <h2 className="text-xl md:text-2xl font-black uppercase tracking-wider" style={{ color: "#f97316" }}>{catId}</h2>
               <div className="h-px flex-grow" style={{ background: "#1e293b" }} />
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4 md:gap-5 lg:gap-6">
               {filtrados.map((p) => (
                 <ProductCard key={p.sku} producto={p} addItem={addItem} />
               ))}
@@ -509,12 +509,12 @@ function ProductCard({ producto, addItem }: { producto: Producto; addItem: (item
       }}
     >
       {/* Image */}
-      <div className="bg-slate-50 h-48 p-4 relative flex items-center justify-center overflow-hidden">
+      <div className="bg-slate-50 h-32 sm:h-40 md:h-48 p-2 sm:p-3 md:p-4 relative flex items-center justify-center overflow-hidden">
         <span
-          className="absolute top-3 left-3 text-white text-xs font-bold font-mono px-2 py-1 rounded shadow-md border"
+          className="absolute top-2 left-2 sm:top-3 sm:left-3 text-white text-[10px] sm:text-xs font-bold font-mono px-1.5 sm:px-2 py-0.5 sm:py-1 rounded shadow-md border"
           style={{ background: "rgba(15,23,42,0.9)", backdropFilter: "blur(4px)", borderColor: "#334155" }}
         >
-          SKU: {producto.sku}
+          {producto.sku}
         </span>
         {hasImage ? (
           <img
@@ -532,28 +532,29 @@ function ProductCard({ producto, addItem }: { producto: Producto; addItem: (item
       </div>
 
       {/* Info */}
-      <div className="p-5 flex flex-col flex-grow">
-        <h3 className="text-slate-200 font-semibold text-sm leading-tight min-h-[2.5rem] mb-2">{producto.name}</h3>
+      <div className="p-2 sm:p-3 md:p-5 flex flex-col flex-grow">
+        <h3 className="text-slate-200 font-semibold text-[11px] sm:text-xs md:text-sm leading-tight min-h-[2rem] sm:min-h-[2.5rem] mb-1 sm:mb-2">{producto.name}</h3>
         <div className="mt-auto">
-          <p className="text-xs text-slate-500 mb-0.5">Precio de referencia</p>
-          <div className="font-black text-2xl tracking-tight mb-4" style={{ color: "#10b981" }}>{fmtPrecio(producto.catalog_price)}</div>
+          <p className="hidden sm:block text-xs text-slate-500 mb-0.5">Precio de referencia</p>
+          <div className="font-black text-lg sm:text-xl md:text-2xl tracking-tight mb-2 sm:mb-4" style={{ color: "#10b981" }}>{fmtPrecio(producto.catalog_price)}</div>
 
-          <div className="flex items-stretch gap-2">
-            <div className="flex items-center bg-slate-950 rounded-xl border border-slate-700 overflow-hidden w-24 shrink-0">
-              <button onClick={decrease} className="w-8 h-full flex justify-center items-center text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
-                <Minus className="h-3.5 w-3.5" />
+          <div className="flex items-stretch gap-1 sm:gap-2">
+            <div className="hidden sm:flex items-center bg-slate-950 rounded-xl border border-slate-700 overflow-hidden w-20 md:w-24 shrink-0">
+              <button onClick={decrease} className="w-7 md:w-8 h-full flex justify-center items-center text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
+                <Minus className="h-3 w-3 md:h-3.5 md:w-3.5" />
               </button>
-              <input type="number" value={qty} readOnly className="w-full h-10 bg-transparent text-center text-white font-bold text-sm outline-none" />
-              <button onClick={increase} className="w-8 h-full flex justify-center items-center text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
-                <Plus className="h-3.5 w-3.5" />
+              <input type="number" value={qty} readOnly className="w-full h-8 md:h-10 bg-transparent text-center text-white font-bold text-xs md:text-sm outline-none" />
+              <button onClick={increase} className="w-7 md:w-8 h-full flex justify-center items-center text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
+                <Plus className="h-3 w-3 md:h-3.5 md:w-3.5" />
               </button>
             </div>
             <button
               onClick={handleAdd}
-              className="flex-grow font-bold rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 text-white text-sm"
+              className="flex-grow font-bold rounded-lg sm:rounded-xl shadow-lg transition-all flex items-center justify-center gap-1 text-white text-[10px] sm:text-xs md:text-sm py-2"
               style={{ background: "#f97316", boxShadow: "0 10px 25px rgba(249,115,22,0.2)" }}
             >
-              {qty > 1 ? `${qty}x Agregar` : "Agregar"}
+              <Plus className="h-3 w-3 sm:hidden" />
+              {qty > 1 ? `${qty}x` : ""} Agregar
             </button>
           </div>
         </div>
