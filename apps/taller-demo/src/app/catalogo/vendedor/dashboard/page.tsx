@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useVendedorAuth } from "@/components/vendedor/VendedorAuthContext";
 import {
-  Store, LogOut, Copy, Check, DollarSign, ShoppingBag, TrendingUp, Clock, Users, ArrowLeft, Award, Timer, Calendar
+  Store, LogOut, Copy, Check, DollarSign, ShoppingBag, TrendingUp, Clock, Users, ArrowLeft, Award, Timer, Calendar, ChevronDown, Star, Target
 } from "lucide-react";
 
 interface Pedido {
@@ -24,6 +24,10 @@ interface Resumen {
   total_ventas: number;
   comision_pendiente: number;
   comision_pagada: number;
+}
+
+function fmtMoney(n: number) {
+  return "$" + (n || 0).toLocaleString("es-AR", { maximumFractionDigits: 0 });
 }
 
 export default function VendedorDashboardPage() {
@@ -69,8 +73,6 @@ export default function VendedorDashboardPage() {
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
-
-  const fmtMoney = (n: number) => "$" + (n || 0).toLocaleString("es-AR", { maximumFractionDigits: 0 });
 
   const calcularDiasRestantes = (fechaLimite?: string | null): number => {
     if (!fechaLimite) return 0;
@@ -169,6 +171,14 @@ export default function VendedorDashboardPage() {
         </div>
       </div>
 
+      {/* NIVELES DE VENDEDOR */}
+      {vendedor && (
+        <NivelesVendedor
+          vendedor={vendedor}
+          ventasTotales={resumen?.total_ventas || 0}
+        />
+      )}
+
       {/* Stats */}
       {resumen && (
         <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -247,6 +257,137 @@ export default function VendedorDashboardPage() {
         )}
       </div>
     </main>
+  );
+}
+
+function NivelesVendedor({ vendedor, ventasTotales }: { vendedor: { nivel_vendedor?: string; comision_pct?: number }; ventasTotales: number }) {
+  const [tablaOpen, setTablaOpen] = useState(false);
+
+  const niveles = [
+    { id: "nuevo", nombre: "Nuevo", comision: 10, requisito: 0, color: "text-gray-400", bg: "bg-gray-500/10", border: "border-gray-500/30", dias: 30 },
+    { id: "junior", nombre: "Junior", comision: 11, requisito: 10000000, color: "text-blue-400", bg: "bg-blue-500/10", border: "border-blue-500/30", dias: 30 },
+    { id: "senior", nombre: "Senior", comision: 12, requisito: 30000000, color: "text-purple-400", bg: "bg-purple-500/10", border: "border-purple-500/30", dias: 20 },
+    { id: "senior_pro", nombre: "Senior Pro", comision: 12, requisito: 50000000, color: "text-orange-400", bg: "bg-orange-500/10", border: "border-orange-500/30", dias: 15 },
+    { id: "master", nombre: "Master", comision: 15, requisito: 100000000, color: "text-[#FF5722]", bg: "bg-[#FF5722]/10", border: "border-[#FF5722]/30", dias: 7 },
+  ];
+
+  const nivelActual = vendedor.nivel_vendedor || "nuevo";
+  const idxActual = niveles.findIndex((n) => n.id === nivelActual);
+  const infoActual = niveles[idxActual];
+  const siguiente = idxActual < niveles.length - 1 ? niveles[idxActual + 1] : null;
+
+  // Progreso hacia siguiente nivel
+  let progresoPct = 100;
+  let restante = 0;
+  if (siguiente) {
+    const desde = infoActual.requisito;
+    const hasta = siguiente.requisito;
+    const avance = Math.max(0, ventasTotales - desde);
+    const rango = hasta - desde;
+    progresoPct = Math.min(100, Math.round((avance / rango) * 100));
+    restante = Math.max(0, hasta - ventasTotales);
+  }
+
+  return (
+    <div className="mt-5 rounded-xl border border-white/10 bg-white/[0.03] p-4 space-y-4">
+      {/* Header nivel actual */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <Star className={`h-5 w-5 ${infoActual.color}`} />
+          <div>
+            <h2 className="text-lg font-black text-white">Nivel {infoActual.nombre}</h2>
+            <p className="text-xs text-gray-400">
+              {siguiente
+                ? `${fmtMoney(restante)} para subir a ${siguiente.nombre}`
+                : "¡Nivel máximo alcanzado!"}
+            </p>
+          </div>
+        </div>
+        <span className={`rounded-full border px-3 py-1 text-xs font-bold ${infoActual.border} ${infoActual.bg} ${infoActual.color}`}>
+          {infoActual.comision}% comisión
+        </span>
+      </div>
+
+      {/* Barra de progreso */}
+      {siguiente && (
+        <div>
+          <div className="flex justify-between text-xs text-gray-500 mb-1">
+            <span>Ventas: {fmtMoney(ventasTotales)}</span>
+            <span>Meta: {fmtMoney(siguiente.requisito)}</span>
+          </div>
+          <div className="h-3 w-full rounded-full bg-white/10 overflow-hidden">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-[#39FF14] to-[#FF5722] transition-all"
+              style={{ width: `${progresoPct}%` }}
+            />
+          </div>
+          <p className="mt-1 text-xs text-gray-500 text-right">{progresoPct}% completado</p>
+        </div>
+      )}
+
+      {/* Beneficios del nivel actual */}
+      <div className={`rounded-lg border ${infoActual.border} ${infoActual.bg} p-3 space-y-2`}>
+        <p className={`text-sm font-bold ${infoActual.color}`}>Beneficios de {infoActual.nombre}</p>
+        <div className="grid grid-cols-2 gap-2 text-xs">
+          <div className="flex items-center gap-1 text-gray-300">
+            <DollarSign className={`h-3 w-3 ${infoActual.color}`} />
+            {infoActual.comision}% por venta
+          </div>
+          <div className="flex items-center gap-1 text-gray-300">
+            <Timer className={`h-3 w-3 ${infoActual.color}`} />
+            Pago en {infoActual.dias} días
+          </div>
+        </div>
+      </div>
+
+      {/* Tabla de niveles desplegable */}
+      <button
+        onClick={() => setTablaOpen(!tablaOpen)}
+        className="flex w-full items-center justify-between rounded-lg bg-white/5 px-3 py-2 text-xs text-gray-400 hover:bg-white/10"
+      >
+        <span className="flex items-center gap-1">
+          <Target className="h-3 w-3" />
+          Ver todos los niveles y requisitos
+        </span>
+        <ChevronDown className={`h-3 w-3 transition-transform ${tablaOpen ? "rotate-180" : ""}`} />
+      </button>
+
+      {tablaOpen && (
+        <div className="space-y-2">
+          {niveles.map((n, i) => {
+            const esActual = n.id === nivelActual;
+            const esFuturo = i > idxActual;
+            return (
+              <div
+                key={n.id}
+                className={`flex items-center gap-3 rounded-lg border p-2.5 ${
+                  esActual
+                    ? `${n.border} ${n.bg}`
+                    : esFuturo
+                    ? "border-white/5 bg-white/[0.02] opacity-60"
+                    : "border-white/10 bg-white/[0.03]"
+                }`}
+              >
+                <div className={`flex h-8 w-8 items-center justify-center rounded-full ${esActual ? n.bg : "bg-white/5"}`}>
+                  <span className={`text-xs font-bold ${esActual ? n.color : "text-gray-500"}`}>{i + 1}</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className={`text-sm font-bold ${esActual ? n.color : "text-gray-300"}`}>{n.nombre}</span>
+                    {esActual && (
+                      <span className="rounded bg-[#39FF14]/20 px-1.5 py-0.5 text-[10px] text-[#39FF14] font-bold">ACTUAL</span>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-gray-500">
+                    {n.requisito === 0 ? "Inicio" : `Requisito: ${fmtMoney(n.requisito)} en ventas`} · {n.comision}% comisión · {n.dias} días pago
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }
 

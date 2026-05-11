@@ -101,11 +101,30 @@ export default function CheckoutPage() {
     // Obtener vendedor referido del localStorage
     const vendedorId = localStorage.getItem("ref_vendedor_id");
     let comisionMonto = 0;
+    let comisionPct = 0;
 
-    // Si hay vendedor, calcular comisión (10% default si no podemos obtener el % real)
+    // Si hay vendedor, calcular comisión según su nivel
     if (vendedorId) {
-      const comisionPct = 10; // default, podría fetchearse del vendedor
-      comisionMonto = Math.round((totals.subtotal * comisionPct) / 100);
+      try {
+        const res = await fetch(`/api/vendedor/public?codigo=${encodeURIComponent(localStorage.getItem("ref_codigo") || "")}`);
+        const data = await res.json();
+        if (data.vendedor) {
+          // Comisión según nivel: nuevo/junior 10%, senior/senior_pro 12%, master 15%
+          const nivel = data.vendedor.nivel_vendedor || "nuevo";
+          const pctMap: Record<string, number> = {
+            nuevo: 10,
+            junior: 11,
+            senior: 12,
+            senior_pro: 12,
+            master: 15,
+          };
+          comisionPct = pctMap[nivel] || 10;
+          comisionMonto = Math.round((totals.subtotal * comisionPct) / 100);
+        }
+      } catch {
+        // fallback 10%
+        comisionMonto = Math.round((totals.subtotal * 10) / 100);
+      }
     }
 
     // Guardar pedido en DB
