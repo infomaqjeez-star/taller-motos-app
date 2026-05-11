@@ -6,8 +6,22 @@ export async function GET() {
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
+  // Listar todas las variables de entorno que contengan "SUPA" o "SERVICE"
+  const relevantEnvKeys = Object.keys(process.env).filter(k =>
+    k.includes("SUPA") || k.includes("SERVICE") || k.includes("supabase")
+  );
+
   const result: Record<string, any> = {
-    env: { has_url: !!url, has_anon: !!anonKey, has_service: !!serviceKey, url_preview: url?.slice(0, 40) },
+    env: {
+      has_url: !!url,
+      has_anon: !!anonKey,
+      has_service: !!serviceKey,
+      url_preview: url?.slice(0, 50),
+      anon_preview: anonKey ? anonKey.slice(0, 20) + "..." : null,
+      service_preview: serviceKey ? serviceKey.slice(0, 20) + "..." : null,
+      service_length: serviceKey?.length ?? 0,
+      relevant_env_keys: relevantEnvKeys,
+    },
   };
 
   // Test con service role (sin RLS)
