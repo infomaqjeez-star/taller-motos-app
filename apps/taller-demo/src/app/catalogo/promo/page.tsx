@@ -1,35 +1,26 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useVendedorAuth } from "@/components/vendedor/VendedorAuthContext";
 import {
   ArrowLeft,
-  Download,
-  Smartphone,
-  Image,
-  Share2,
   Copy,
   Check,
   Camera,
-  ShoppingBag,
-  Percent,
-  Truck,
-  Zap,
 } from "lucide-react";
 
 export default function PromoBannersPage() {
   const router = useRouter();
   const { vendedor } = useVendedorAuth();
   const [copied, setCopied] = useState(false);
-  const [selectedBanner, setSelectedBanner] = useState(0);
-  const bannerRef = useRef<HTMLDivElement>(null);
+  const [copiedTexto, setCopiedTexto] = useState(false);
+  const [modo, setModo] = useState<"oscuro" | "claro">("oscuro");
 
+  const codigo = vendedor?.codigo_referido || "MAQ001";
   const linkReferido = vendedor
     ? `https://appjeezpro.store/catalogo?ref=${vendedor.codigo_referido}`
     : "https://appjeezpro.store/catalogo";
-
-  const codigo = vendedor?.codigo_referido || "MAQ001";
 
   const copyLink = () => {
     navigator.clipboard.writeText(linkReferido);
@@ -37,139 +28,141 @@ export default function PromoBannersPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const banners = [
-    {
-      id: 0,
-      name: "Story WhatsApp / Instagram",
-      ratio: "9:16",
-      style: { width: 360, height: 640 },
-      tipo: "story",
-    },
-    {
-      id: 1,
-      name: "Post Instagram / Facebook",
-      ratio: "1:1",
-      style: { width: 500, height: 500 },
-      tipo: "post",
-    },
-    {
-      id: 2,
-      name: "Estado WhatsApp",
-      ratio: "9:16",
-      style: { width: 360, height: 640 },
-      tipo: "whatsapp",
-    },
-  ];
-
-  const downloadBanner = () => {
-    // Por ahora, instruimos al usuario a hacer captura de pantalla
-    alert(
-      "Para descargar el banner:\n\n" +
-      "1. Hacé clic derecho sobre el banner → 'Guardar imagen como...'\n" +
-      "2. O usá la tecla Impr Pant y recortá el banner\n\n" +
-      "Tip: En Chrome podés hacer clic derecho → Inspect → en la consola ejecutá: document.querySelector('[data-banner]').scrollIntoView() y luego capturá."
-    );
+  const copyTexto = () => {
+    const texto = `🛒 ¡Catálogo MAQJEEZ 2026!\n\nRepuestos para desmalezadoras, motosierras, grupos electrógenos y más.\n\n💰 Hasta 20% OFF por volumen\n🚚 Envío gratis en compras +$100.000\n${vendedor ? `🎁 3% extra con mi código: ${codigo}\n` : ''}\n${linkReferido}`;
+    navigator.clipboard.writeText(texto);
+    setCopiedTexto(true);
+    setTimeout(() => setCopiedTexto(false), 2000);
   };
 
-  const BannerContent = ({ tipo }: { tipo: string }) => {
-    const isStory = tipo === "story" || tipo === "whatsapp";
-    const isWhatsApp = tipo === "whatsapp";
+  // Banner Oscuro - Industrial Premium
+  const BannerOscuro = () => (
+    <div
+      className="relative flex flex-col overflow-hidden rounded-3xl border-4 border-gray-900 shadow-2xl"
+      style={{ width: 360, height: 640, background: "radial-gradient(at top left, #374151, #111827)" }}
+    >
+      {/* Header */}
+      <div className="pt-10 pb-6 px-6 text-center z-10">
+        <h3 className="text-5xl font-black text-white tracking-tighter drop-shadow-lg">
+          MAQ<span className="text-orange-500">JEEZ</span>
+        </h3>
+        <p className="text-gray-300 font-semibold text-sm mt-1 uppercase tracking-widest">
+          Repuestos Moto-Implementos
+        </p>
+      </div>
 
-    return (
-      <div
-        ref={bannerRef}
-        data-banner="true"
-        className={`relative flex flex-col items-center justify-center overflow-hidden ${
-          isStory ? "aspect-[9/16]" : "aspect-square"
-        }`}
-        style={{
-          background: isWhatsApp
-            ? "linear-gradient(180deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)"
-            : "linear-gradient(135deg, #FF5722 0%, #E64A19 30%, #FDB71A 70%, #39FF14 100%)",
-          width: "100%",
-          height: "100%",
-        }}
-      >
-        {/* Patrón de fondo */}
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute inset-0" style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-          }} />
+      {/* Beneficios */}
+      <div className="px-6 flex-grow flex flex-col justify-center space-y-4 z-10">
+        <div className="flex items-center bg-gray-800/80 p-3 rounded-xl border border-gray-700">
+          <span className="text-orange-500 text-xl mr-3 font-bold">%</span>
+          <p className="text-white text-sm font-semibold">Hasta 20% OFF por volumen</p>
         </div>
-
-        {/* Logo / Marca */}
-        <div className="relative z-10 flex flex-col items-center px-6 text-center">
-          <div className={`${isStory ? "text-5xl mb-4" : "text-4xl mb-3"} font-black text-white drop-shadow-lg`}>
-            MAQJEEZ
-          </div>
-          
-          <div className={`${isStory ? "text-lg mb-2" : "text-base mb-1"} font-bold text-white/90`}>
-            Repuestos para Moto-Implementos
-          </div>
-
-          {/* Beneficios */}
-          <div className={`mt-4 ${isStory ? "space-y-3" : "space-y-2"}`}>
-            <div className={`flex items-center gap-2 ${isStory ? "text-base" : "text-sm"} text-white font-semibold`}>
-              <Percent className={`${isStory ? "h-5 w-5" : "h-4 w-4"} text-[#39FF14]`} />
-              Hasta 20% OFF por volumen
-            </div>
-            <div className={`flex items-center gap-2 ${isStory ? "text-base" : "text-sm"} text-white font-semibold`}>
-              <Truck className={`${isStory ? "h-5 w-5" : "h-4 w-4"} text-[#39FF14]`} />
-              Envío gratis +$100.000
-            </div>
-            <div className={`flex items-center gap-2 ${isStory ? "text-base" : "text-sm"} text-white font-semibold`}>
-              <Zap className={`${isStory ? "h-5 w-5" : "h-4 w-4"} text-[#39FF14]`} />
-              3% extra cliente registrado
-            </div>
-            {vendedor && (
-              <div className={`flex items-center gap-2 ${isStory ? "text-base" : "text-sm"} text-white font-semibold`}>
-                <ShoppingBag className={`${isStory ? "h-5 w-5" : "h-4 w-4"} text-[#39FF14]`} />
-                3% extra con mi link de referido
-              </div>
-            )}
-          </div>
-
-          {/* Precio destacado */}
-          {isStory && (
-            <div className="mt-6 rounded-2xl border-2 border-white/30 bg-white/10 px-6 py-3 backdrop-blur-sm">
-              <p className="text-sm text-white/80">Ahorrá hasta</p>
-              <p className="text-3xl font-black text-[#39FF14]">21%</p>
-              <p className="text-sm text-white/80">en tu compra</p>
-            </div>
-          )}
-
-          {/* Link */}
-          <div className={`mt-${isStory ? "8" : "4"} rounded-xl border border-white/30 bg-black/30 px-4 py-2 backdrop-blur-sm`}>
-            <p className={`${isStory ? "text-base" : "text-sm"} font-mono text-white font-bold`}>
-              appjeezpro.store/catalogo
-            </p>
-            {vendedor && (
-              <p className={`${isStory ? "text-sm" : "text-xs"} text-[#39FF14] font-mono mt-1`}>
-                Código: {codigo}
-              </p>
-            )}
-          </div>
-
-          {/* QR hint */}
-          <div className={`mt-${isStory ? "4" : "2"} text-white/60 ${isStory ? "text-sm" : "text-xs"}`}>
-            Escanéá o ingresá al link
-          </div>
+        <div className="flex items-center bg-gray-800/80 p-3 rounded-xl border border-gray-700">
+          <span className="text-orange-500 text-xl mr-3">🚚</span>
+          <p className="text-white text-sm font-semibold">Envío gratis +$100.000</p>
         </div>
+        <div className="flex items-center bg-gray-800/80 p-3 rounded-xl border border-gray-700">
+          <span className="text-orange-500 text-xl mr-3">⚡</span>
+          <p className="text-white text-sm font-semibold">3% extra cliente registrado</p>
+        </div>
+        <div className="flex items-center bg-gray-800/80 p-3 rounded-xl border border-gray-700">
+          <span className="text-orange-500 text-xl mr-3">🤝</span>
+          <p className="text-white text-sm font-semibold">3% extra link de referido</p>
+        </div>
+      </div>
 
-        {/* Footer marca */}
-        <div className="absolute bottom-4 left-0 right-0 text-center">
-          <p className={`text-white/50 ${isStory ? "text-xs" : "text-[10px]"}`}>
-            Catálogo Maqjeez 2026
+      {/* Destacado 21% */}
+      <div className="mx-6 mt-4 mb-4 text-center z-10">
+        <div className="inline-block px-6 py-2 rounded-full bg-gradient-to-r from-orange-600 to-orange-400"
+          style={{ boxShadow: "0 0 20px rgba(249,115,22,0.4)" }}>
+          <p className="text-white text-sm font-bold">
+            AHORRÁ HASTA UN <span className="text-2xl font-black">21%</span>
           </p>
         </div>
       </div>
-    );
-  };
 
-  const currentBanner = banners[selectedBanner];
+      {/* Footer */}
+      <div className="mt-auto pt-6 pb-8 px-6 text-center border-t border-gray-800 z-10" style={{ background: "#111827" }}>
+        <div className="border border-orange-500/50 rounded-lg p-3 mb-2" style={{ background: "rgba(0,0,0,0.5)" }}>
+          <p className="text-gray-300 text-xs mb-1">Ingresá con el código:</p>
+          <p className="text-orange-400 font-black text-xl tracking-wider">{codigo}</p>
+        </div>
+        <p className="text-white font-bold text-sm py-3 rounded-lg" style={{ background: "#ea580c" }}>
+          appjeezpro.store/catalogo
+        </p>
+        <p className="text-gray-500 text-xs mt-3">Catálogo Maqjeez 2026</p>
+      </div>
+    </div>
+  );
+
+  // Banner Claro - Corporativo
+  const BannerClaro = () => (
+    <div
+      className="relative flex flex-col overflow-hidden rounded-3xl border-4 border-gray-200 shadow-2xl bg-white"
+      style={{ width: 360, height: 640 }}
+    >
+      {/* Fondo Superior */}
+      <div
+        className="pt-12 pb-24 px-6 text-center"
+        style={{
+          background: "linear-gradient(to bottom right, #f97316, #c2410c)",
+          borderBottomLeftRadius: "50%",
+          borderBottomRightRadius: "50%",
+        }}
+      >
+        <h3 className="text-5xl font-black text-white tracking-tighter">MAQJEEZ</h3>
+        <p className="text-orange-100 font-semibold text-sm mt-1 uppercase">
+          Repuestos Moto-Implementos
+        </p>
+      </div>
+
+      {/* Contenido */}
+      <div className="px-6 -mt-16 flex-grow flex flex-col z-10">
+        {/* Tarjeta de Beneficios */}
+        <div className="bg-white rounded-2xl shadow-xl p-5 border border-gray-100 mb-4">
+          <ul className="space-y-4">
+            <li className="flex items-start">
+              <span className="bg-orange-100 text-orange-600 rounded-full p-1 mr-3 text-sm font-bold w-6 h-6 flex items-center justify-center">%</span>
+              <p className="text-gray-800 text-sm font-bold mt-0.5">Hasta 20% OFF por volumen</p>
+            </li>
+            <li className="flex items-start">
+              <span className="bg-green-100 text-green-600 rounded-full p-1 mr-3 text-sm font-bold w-6 h-6 flex items-center justify-center">🚚</span>
+              <p className="text-gray-800 text-sm font-bold mt-0.5">Envío gratis +$100.000</p>
+            </li>
+            <li className="flex items-start">
+              <span className="bg-blue-100 text-blue-600 rounded-full p-1 mr-3 text-sm font-bold w-6 h-6 flex items-center justify-center">⚡</span>
+              <p className="text-gray-800 text-sm font-bold mt-0.5">3% extra cliente registrado</p>
+            </li>
+            <li className="flex items-start">
+              <span className="bg-purple-100 text-purple-600 rounded-full p-1 mr-3 text-sm font-bold w-6 h-6 flex items-center justify-center">🤝</span>
+              <p className="text-gray-800 text-sm font-bold mt-0.5">3% extra con referido</p>
+            </li>
+          </ul>
+        </div>
+
+        {/* Destacado */}
+        <div className="text-center my-auto">
+          <p className="text-gray-500 font-bold uppercase text-xs">Ahorrá en tu compra hasta</p>
+          <p className="text-5xl font-black text-orange-600 mt-1">21%</p>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="p-6 text-center border-t border-gray-200" style={{ background: "#f9fafb" }}>
+        <p className="text-gray-500 text-xs font-bold uppercase mb-2">Usá este código:</p>
+        <div className="border-2 border-dashed border-orange-500 bg-orange-50 text-orange-600 font-black text-2xl py-2 rounded-lg mb-4 tracking-widest">
+          {codigo}
+        </div>
+        <div className="text-white font-bold py-3 rounded-lg w-full mb-2" style={{ background: "#111827" }}>
+          IR AL CATÁLOGO
+        </div>
+        <p className="text-gray-400 text-[10px]">appjeezpro.store/catalogo</p>
+      </div>
+    </div>
+  );
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-6 pb-20">
+    <main className="mx-auto max-w-5xl px-4 py-6 pb-20">
       <button
         onClick={() => router.push("/catalogo")}
         className="mb-4 flex items-center gap-1 text-sm text-gray-400 hover:text-white"
@@ -183,7 +176,7 @@ export default function PromoBannersPage() {
         <h1 className="text-2xl font-black text-white">Generador de Banners</h1>
       </div>
       <p className="mt-2 text-sm text-gray-400">
-        Creá banners promocionales para WhatsApp, Instagram y Facebook.
+        Diseños optimizados para WhatsApp e Instagram Stories. Elegí tu estilo.
       </p>
 
       {/* Link de referido */}
@@ -207,55 +200,52 @@ export default function PromoBannersPage() {
         </div>
       )}
 
-      {/* Selector de formato */}
-      <div className="mt-6 flex flex-wrap gap-2">
-        {banners.map((b) => (
-          <button
-            key={b.id}
-            onClick={() => setSelectedBanner(b.id)}
-            className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium ${
-              selectedBanner === b.id
-                ? "border-[#FF5722] bg-[#FF5722]/20 text-[#FF5722]"
-                : "border-white/10 text-gray-400 hover:border-white/20"
-            }`}
-          >
-            {b.tipo === "story" ? <Smartphone className="h-3.5 w-3.5" /> : b.tipo === "whatsapp" ? <Share2 className="h-3.5 w-3.5" /> : <Image className="h-3.5 w-3.5" />}
-            {b.name}
-          </button>
-        ))}
+      {/* Selector de modo */}
+      <div className="mt-6 flex gap-2">
+        <button
+          onClick={() => setModo("oscuro")}
+          className={`flex items-center gap-1.5 rounded-lg border px-4 py-2 text-sm font-medium ${
+            modo === "oscuro"
+              ? "border-[#FF5722] bg-[#FF5722]/20 text-[#FF5722]"
+              : "border-white/10 text-gray-400 hover:border-white/20"
+          }`}
+        >
+          🌙 Industrial Premium
+        </button>
+        <button
+          onClick={() => setModo("claro")}
+          className={`flex items-center gap-1.5 rounded-lg border px-4 py-2 text-sm font-medium ${
+            modo === "claro"
+              ? "border-[#FF5722] bg-[#FF5722]/20 text-[#FF5722]"
+              : "border-white/10 text-gray-400 hover:border-white/20"
+          }`}
+        >
+          ☀️ Claro / Corporativo
+        </button>
       </div>
 
       {/* Vista previa del banner */}
       <div className="mt-6">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-bold text-gray-300">Vista previa</h3>
-          <button
-            onClick={downloadBanner}
-            className="flex items-center gap-1 rounded-lg bg-[#39FF14] px-3 py-1.5 text-xs font-bold text-black hover:bg-[#32E612]"
-          >
-            <Download className="h-3.5 w-3.5" />
-            Cómo guardar
-          </button>
+          <h3 className="text-sm font-bold text-gray-300">
+            {modo === "oscuro" ? "Opción 1: Industrial Premium" : "Opción 2: Claro / Corporativo"}
+          </h3>
+          <span className="text-xs text-gray-500">360 x 640 px · 9:16</span>
         </div>
 
         <div className="flex justify-center bg-gray-800/50 rounded-xl p-6">
-          <div
-            className="overflow-hidden rounded-xl shadow-2xl"
-            style={{ maxWidth: currentBanner.style.width, width: "100%" }}
-          >
-            <BannerContent tipo={currentBanner.tipo} />
-          </div>
+          {modo === "oscuro" ? <BannerOscuro /> : <BannerClaro />}
         </div>
 
         <p className="mt-3 text-center text-xs text-gray-500">
-          {currentBanner.ratio} · Hacé clic derecho sobre el banner → "Guardar imagen como..."
+          Hacé clic derecho sobre el banner → "Guardar imagen como..."
         </p>
       </div>
 
       {/* Instrucciones */}
       <div className="mt-8 rounded-xl border border-white/10 bg-white/[0.03] p-4 space-y-3">
         <h3 className="text-sm font-bold text-[#FDB71A]">
-          Cómo usar en WhatsApp / Instagram
+          Cómo publicar en WhatsApp / Instagram
         </h3>
         <div className="space-y-2 text-xs text-gray-400">
           <p>1. Hacé clic derecho sobre el banner → "Guardar imagen como..."</p>
@@ -275,20 +265,16 @@ export default function PromoBannersPage() {
           <p>💰 Hasta 20% OFF por volumen</p>
           <p>🚚 Envío gratis en compras +$100.000</p>
           {vendedor && (
-            <p>🎁 3% extra usando mi link: {codigo}</p>
+            <p>🎁 3% extra usando mi código: {codigo}</p>
           )}
           <p className="text-[#39FF14] font-mono mt-2">{linkReferido}</p>
         </div>
         <button
-          onClick={() => {
-            const texto = `🛒 ¡Catálogo MAQJEEZ 2026!\n\nRepuestos para desmalezadoras, motosierras, grupos electrógenos y más.\n\n💰 Hasta 20% OFF por volumen\n🚚 Envío gratis en compras +$100.000\n${vendedor ? `🎁 3% extra con mi código: ${codigo}\n` : ''}\n${linkReferido}`;
-            navigator.clipboard.writeText(texto);
-            alert("Texto copiado al portapapeles");
-          }}
+          onClick={copyTexto}
           className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#FF5722] py-2 text-xs font-bold text-white hover:bg-[#E64A19]"
         >
-          <Copy className="h-3.5 w-3.5" />
-          Copiar texto para publicar
+          {copiedTexto ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+          {copiedTexto ? "¡Copiado!" : "Copiar texto para publicar"}
         </button>
       </div>
     </main>
