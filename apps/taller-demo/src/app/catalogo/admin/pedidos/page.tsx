@@ -89,10 +89,28 @@ interface Pedido {
   fecha_limite_pago?: string | null;
   fecha_liquidacion?: string | null;
   dias_restantes?: number;
+  updated_at?: string | null;
+  fecha_confirmado?: string | null;
+  fecha_pagado?: string | null;
+  fecha_enviado?: string | null;
+  fecha_entregado?: string | null;
+  fecha_cancelado?: string | null;
 }
 
 function fmtMoney(n: number) {
   return "$" + (n || 0).toLocaleString("es-AR", { maximumFractionDigits: 0 });
+}
+
+function fmtFechaHora(iso?: string | null) {
+  if (!iso) return null;
+  const d = new Date(iso);
+  return d.toLocaleString("es-AR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 interface DashboardStats {
@@ -326,7 +344,10 @@ function AdminPedidosContent() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id, estado }),
       });
-      cargarPedidos();
+      await cargarPedidos();
+      // Refrescar selected con datos actualizados
+      const refreshed = pedidos.find((p) => p.id === id);
+      if (refreshed) setSelected(refreshed);
     } catch (e) {
       console.error(e);
     }
@@ -736,6 +757,10 @@ function AdminPedidosContent() {
                       <div className="flex items-center gap-2">
                         <span className="font-mono text-xs text-blue-400">#{p.id.slice(0, 8)}</span>
                         <EstadoBadge estado={p.estado} />
+                        <span className="text-[10px] text-gray-500 flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {fmtFechaHora(p.created_at)}
+                        </span>
                         {p.vendedor && (
                           <>
                             <span className={`rounded-full border px-2 py-0.5 text-[10px] capitalize ${getColorNivel(p.vendedor.nivel_vendedor)}`}>
@@ -1417,8 +1442,18 @@ function AdminPedidosContent() {
                 <button
                   key={e}
                   onClick={() => {
+                    const now = new Date().toISOString();
+                    const estadoFechaMap: Record<string, keyof Pedido> = {
+                      confirmado: "fecha_confirmado",
+                      pagado: "fecha_pagado",
+                      enviado: "fecha_enviado",
+                      entregado: "fecha_entregado",
+                      cancelado: "fecha_cancelado",
+                    };
+                    const update: Partial<Pedido> = { estado: e, updated_at: now };
+                    if (estadoFechaMap[e]) update[estadoFechaMap[e]] = now;
+                    setSelected({ ...selected, ...update } as Pedido);
                     actualizarEstado(selected.id, e);
-                    setSelected({ ...selected, estado: e });
                   }}
                   disabled={selected.estado === e}
                   className={`rounded-lg border px-3 py-1 text-xs font-medium capitalize ${
@@ -1431,6 +1466,47 @@ function AdminPedidosContent() {
                 </button>
               ))}
             </div>
+
+            {/* Timeline de estados */}
+            <section className="mt-4">
+              <h3 className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+                <Timer className="h-3 w-3" /> Historial de estados
+              </h3>
+              <div className="rounded-lg bg-white/[0.03] border border-white/5 p-3">
+                <div className="space-y-2">
+                  {[
+                    { label: "Creado", fecha: selected.created_at, color: "text-gray-400" },
+                    { label: "Confirmado", fecha: selected.fecha_confirmado, color: "text-blue-400" },
+                    { label: "Pagado", fecha: selected.fecha_pagado, color: "text-[#39FF14]" },
+                    { label: "Enviado", fecha: selected.fecha_enviado, color: "text-purple-400" },
+                    { label: "Entregado", fecha: selected.fecha_entregado, color: "text-[#39FF14]" },
+                    { label: "Cancelado", fecha: selected.fecha_cancelado, color: "text-red-400" },
+                  ]
+                    .filter((s) => s.fecha)
+                    .map((s, i, arr) => (
+                      <div key={s.label} className="flex items-center gap-3">
+                        <div className="flex flex-col items-center">
+                          <div className={`w-2 h-2 rounded-full ${s.color.replace("text-", "bg-")}`} />
+                          {i < arr.length - 1 && (
+                            <div className="w-px h-4 bg-white/10" />
+                          )}
+                        </div>
+                        <div className="flex-1 flex items-center justify-between">
+                          <span className={`text-xs font-medium ${s.color}`}>{s.label}</span>
+                          <span className="text-[10px] text-gray-500 font-mono">{fmtFechaHora(s.fecha)}</span>
+                        </div>
+                      </div>
+                    ))}
+                  {selected.updated_at && selected.updated_at !== selected.created_at && (
+                    <div className="pt-1 border-t border-white/5 mt-1">
+                      <span className="text-[10px] text-gray-600">
+                        Última actualización: {fmtFechaHora(selected.updated_at)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </section>
 
             {/* Cliente */}
             <section className="mt-6 space-y-2">

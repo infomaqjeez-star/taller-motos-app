@@ -61,7 +61,21 @@ export async function PATCH(req: NextRequest) {
     const supabase = getSupabaseAdmin();
 
     const updateData: Record<string, any> = {};
-    if (estado) updateData.estado = estado;
+    if (estado) {
+      updateData.estado = estado;
+      updateData.updated_at = new Date().toISOString();
+      // Guardar timestamp del cambio de estado
+      const estadoFechaMap: Record<string, string> = {
+        confirmado: "fecha_confirmado",
+        pagado: "fecha_pagado",
+        enviado: "fecha_enviado",
+        entregado: "fecha_entregado",
+        cancelado: "fecha_cancelado",
+      };
+      if (estadoFechaMap[estado]) {
+        updateData[estadoFechaMap[estado]] = new Date().toISOString();
+      }
+    }
     if (comision_estado) updateData.comision_estado = comision_estado;
 
     const { error } = await supabase
