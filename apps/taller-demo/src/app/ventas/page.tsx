@@ -584,8 +584,8 @@ export default function VentasPage() {
 
       {/* ── Tabs ── */}
       <div
-        className="sticky z-30 border-b border-white/[0.06] backdrop-blur-xl" style={{ background: "rgba(9,9,11,0.85)" }}
-        style={{ top: "var(--maqjeez-header-height, 7rem)" }}
+        className="sticky z-30 border-b border-white/[0.06] backdrop-blur-xl"
+        style={{ background: "rgba(9,9,11,0.85)", top: "var(--maqjeez-header-height, 7rem)" }}
       >
         <div className="mx-auto flex max-w-5xl px-4 sm:px-5 lg:px-6">
           {([
