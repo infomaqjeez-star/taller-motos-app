@@ -39,10 +39,8 @@ export async function GET(request: NextRequest) {
           .order("created_at", { ascending: false })
           .limit(100);
 
-        console.log("[API Ventas] Resultado:", result.data?.length || 0, "ventas encontradas");
-        console.log("[API Ventas] Datos crudos:", JSON.stringify(result.data, null, 2));
         if (result.error) {
-          console.error("[API Ventas] Error en consulta:", result.error);
+          console.error("[API Ventas] Error en consulta all:", result.error);
         }
         break;
       }
@@ -50,7 +48,6 @@ export async function GET(request: NextRequest) {
       case "today": {
         // Ventas del día específico
         const targetDate = fecha || new Date().toISOString().split("T")[0];
-        console.log("[API Ventas] Consultando ventas para fecha:", targetDate);
 
         result = await supabase
           .from("ventas_repuestos")
@@ -59,10 +56,8 @@ export async function GET(request: NextRequest) {
           .lt("created_at", `${targetDate}T23:59:59`)
           .order("created_at", { ascending: false });
 
-        console.log("[API Ventas] Resultado:", result.data?.length || 0, "ventas encontradas");
-        console.log("[API Ventas] Datos crudos:", JSON.stringify(result.data, null, 2));
         if (result.error) {
-          console.error("[API Ventas] Error en consulta:", result.error);
+          console.error("[API Ventas] Error en consulta today:", result.error);
         }
         break;
       }
@@ -175,6 +170,7 @@ export async function POST(request: NextRequest) {
               sku: item.sku,
               cantidad: item.cantidad,
               precio_unit: item.precioUnit,
+              warranty_days: item.warrantyDays ?? null,
             });
           }
         }
@@ -221,6 +217,7 @@ export async function POST(request: NextRequest) {
             sku: item.sku || "",
             cantidad: item.cantidad,
             precio_unit: item.precioUnit,
+            warranty_days: item.warrantyDays ?? null,
           }));
 
           const { error: itemsError } = await supabase
