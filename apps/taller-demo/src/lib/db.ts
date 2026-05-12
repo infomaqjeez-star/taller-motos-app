@@ -2,7 +2,7 @@
 // CAPA DE DATOS — API Routes server-side (Railway + Supabase)
 // ============================================================
 
-import { WorkOrder, StockItem, PartToOrder, Pago, PlantillaWhatsApp, AgendaCliente, HistorialReparacion, FlexEnvio, VentaRepuesto, VentaItem, VentasStats, VentasPorDia, TopProducto, Tarea } from "./types";
+import { WorkOrder, StockItem, PartToOrder, Pago, PlantillaWhatsApp, AgendaCliente, HistorialReparacion, FlexEnvio, VentaRepuesto, VentaItem, VentasStats, VentasPorDia, TopProducto, Tarea, CorreoDespacho } from "./types";
 
 // ─── Helper genérico para llamar a /api/db ────────────────────
 
@@ -745,5 +745,49 @@ export const tareasDb = {
       body: JSON.stringify({ action: "delete", id }),
     });
     if (!res.ok) { const e = await res.json(); throw new Error(e.error ?? "Error al eliminar tarea"); }
+  },
+};
+
+// ─── Correo Argentino - Despachos ─────────────────────────────
+
+export const correoDb = {
+  async getAll(desde?: string, hasta?: string): Promise<CorreoDespacho[]> {
+    const params = new URLSearchParams();
+    if (desde) params.set("desde", desde);
+    if (hasta) params.set("hasta", hasta);
+    const res = await fetch(`/api/correo?${params}`);
+    if (!res.ok) { const e = await res.json(); throw new Error(e.error ?? "Error al obtener despachos"); }
+    return await res.json();
+  },
+
+  async create(d: Omit<CorreoDespacho, "id" | "created_at" | "updated_at">): Promise<CorreoDespacho> {
+    const res = await fetch("/api/correo", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "create", despacho: d }),
+    });
+    if (!res.ok) { const e = await res.json(); throw new Error(e.error ?? "Error al crear despacho"); }
+    const json = await res.json();
+    return json.data;
+  },
+
+  async update(id: string, d: Partial<CorreoDespacho>): Promise<CorreoDespacho> {
+    const res = await fetch("/api/correo", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "update", id, despacho: d }),
+    });
+    if (!res.ok) { const e = await res.json(); throw new Error(e.error ?? "Error al actualizar despacho"); }
+    const json = await res.json();
+    return json.data;
+  },
+
+  async delete(id: string): Promise<void> {
+    const res = await fetch("/api/correo", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "delete", id }),
+    });
+    if (!res.ok) { const e = await res.json(); throw new Error(e.error ?? "Error al eliminar despacho"); }
   },
 };

@@ -6,7 +6,7 @@ import { useState, useEffect, useRef, useLayoutEffect } from "react";
 import {
   Package, LayoutDashboard, AlertTriangle,
   MessageCircle, BarChart2, Users, ShoppingCart,
-  Clock, Timer, Settings, CheckCircle, Bug, BookOpen,
+  Clock, Timer, Settings, CheckCircle, Bug, BookOpen, Mail,
 } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
 import { useAlarms } from "../hooks/useAlarms";
@@ -91,38 +91,36 @@ export default function Navbar({
     { href: "/estadisticas", label: "Estadísticas", icon: BarChart2,       badge: 0,             badgeColor: "" },
     { href: "/agenda",       label: "Agenda",       icon: Users,           badge: 0,             badgeColor: "" },
     { href: "/inventario",   label: "Pedidos",     icon: Package,         badge: lowStockCount, badgeColor: "bg-yellow-500" },
+    { href: "/correo",       label: "Correo",       icon: Mail,            badge: 0,             badgeColor: "" },
   ];
 
   const flexUrgent = flexAlarm && flexAlarm.diff < 1800000;
   const correoUrgent = correoAlarm && correoAlarm.diff < 1800000;
 
   const linkClass = (active: boolean) =>
-    `relative flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl px-2.5 py-2 text-xs font-semibold transition-all sm:text-sm sm:gap-2 sm:px-3 ${
-      active ? "text-white" : "text-[#1E3A8A] hover:bg-[#E09A00]/40"
+    `relative flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 py-2 text-xs font-semibold transition-all sm:text-sm sm:gap-2 sm:px-3 ${
+      active ? "bg-brand-panel text-white rounded-t-xl border-t border-x border-white/5 shadow-[0_-5px_15px_rgba(0,0,0,0.15)]" : "text-black/70 hover:text-black hover:bg-black/5"
     }`;
-
-  const activeStyle = {
-    background: "rgba(30,58,138,0.92)",
-    boxShadow: "0 0 14px 2px rgba(0,229,255,0.35)",
-    border: "1px solid rgba(0,229,255,0.50)",
-  } as const;
 
   return (
     <header
       ref={headerRef}
-      className="sticky top-0 z-50 border-b border-[#E09A00] bg-[#FDB71A] shadow-md shadow-black/10"
+      className="sticky top-0 z-50 bg-brand-yellow shadow-sm"
     >
       <div className="mx-auto max-w-[96rem] px-3 sm:px-4 lg:px-8">
-        {/* ── Fila 1: logo + menú completo (sin relojes) ── */}
         <div className="flex min-h-[3.25rem] items-center justify-between gap-2 py-2">
           <Link
             href="/landing"
-            className="relative z-20 flex shrink-0 items-center"
+            className="relative z-20 flex shrink-0 items-center gap-3 group"
             aria-label="Inicio Maqjeez"
           >
-            <span className="flex h-10 w-10 select-none items-center justify-center rounded-xl bg-gradient-to-br from-[#FDB71A] to-[#E09A00] text-lg font-black leading-none text-black shadow-sm ring-1 ring-black/10">
-              M
-            </span>
+            <div className="relative flex items-center justify-center w-10 h-10 bg-black rounded-lg shadow-[inset_0_-2px_6px_rgba(255,255,255,0.2)] group-hover:-translate-y-0.5 transition-transform">
+              <span className="text-brand-yellow text-lg font-black">M</span>
+            </div>
+            <div className="hidden sm:flex flex-col justify-center">
+              <span className="font-black text-[18px] leading-none tracking-tight text-black uppercase">Maqjeez</span>
+              <span className="text-[8px] font-bold uppercase tracking-[0.2em] text-black/60 leading-none mt-0.5">Premium POS</span>
+            </div>
           </Link>
 
           <nav
@@ -130,15 +128,14 @@ export default function Navbar({
             aria-label="Principal"
           >
             {links.map(({ href, label, icon: Icon, badge, badgeColor }) => {
-              const active = pathname === href;
+              const active = pathname === href || (href !== "/" && pathname.startsWith(href));
               return (
                 <Link
                   key={href}
                   href={href}
-                  style={active ? activeStyle : undefined}
                   className={linkClass(active)}
                 >
-                  <Icon className="h-4 w-4 shrink-0" />
+                  <Icon className={`h-4 w-4 shrink-0 ${active ? "text-brand-yellow" : ""}`} />
                   <span>{label}</span>
                   {badge > 0 && (
                     <span
@@ -158,7 +155,7 @@ export default function Navbar({
                 className={`relative flex shrink-0 items-center gap-2 whitespace-nowrap rounded-xl px-2.5 py-2 text-xs font-semibold transition-colors sm:px-3 sm:text-sm ${
                   notificationCount > 0
                     ? "bg-green-200/40 text-green-800 hover:bg-green-200/60"
-                    : "text-[#1E3A8A] hover:bg-[#E09A00]/40"
+                    : "text-black/70 hover:text-black hover:bg-black/5"
                 }`}
               >
                 <MessageCircle className="h-4 w-4 shrink-0" />
@@ -175,8 +172,8 @@ export default function Navbar({
               href="/tareas"
               className={`relative flex shrink-0 items-center gap-2 whitespace-nowrap rounded-xl px-2.5 py-2 text-xs font-semibold transition-colors sm:px-3 sm:text-sm ${
                 pathname === "/tareas"
-                  ? "bg-[#1E3A8A]/90 text-white hover:bg-[#1E3A8A]"
-                  : "text-[#1E3A8A] hover:bg-[#E09A00]/40"
+                  ? "bg-brand-panel text-white hover:bg-brand-panel"
+                  : "text-black/70 hover:text-black hover:bg-black/5"
               }`}
             >
               <CheckCircle className="h-4 w-4 shrink-0" />
@@ -211,9 +208,9 @@ export default function Navbar({
         </div>
 
         {/* ── Fila 2: relojes y contadores (toda la barra inferior del header) ── */}
-        <div className="no-scrollbar flex flex-nowrap items-center justify-center gap-2 overflow-x-auto border-t border-[#E09A00]/45 bg-[#E09A00]/20 px-1 py-2 sm:flex-wrap sm:px-2">
+        <div className="no-scrollbar flex flex-nowrap items-center justify-center gap-2 overflow-x-auto border-t border-brand-yellowDark/45 bg-brand-yellowDark/20 px-1 py-2 sm:flex-wrap sm:px-2">
           <div
-            className="flex shrink-0 items-center gap-1.5 rounded-lg border border-[#1E3A8A]/25 bg-gradient-to-br from-white/95 to-white/90 px-2.5 py-1.5 shadow-sm"
+            className="flex shrink-0 items-center gap-1.5 rounded-lg border border-brand-navy/25 bg-gradient-to-br from-white/95 to-white/90 px-2.5 py-1.5 shadow-sm"
             title="Hora Argentina"
           >
             <Clock className="h-4 w-4 shrink-0 text-[#1E3A8A]" />
@@ -229,7 +226,7 @@ export default function Navbar({
                   ? "animate-pulse border-red-700 bg-red-600 text-white"
                   : "border-orange-400 bg-gradient-to-br from-orange-100 to-orange-50 text-black"
               }`}
-              title="Próxima alarma Flex y cuenta regresiva"
+              title="Próxima alarma Flex"
             >
               <Timer className="h-4 w-4 shrink-0" />
               <span className={flexUrgent ? "text-white" : "text-orange-800"}>FLEX</span>
@@ -249,7 +246,7 @@ export default function Navbar({
                   ? "animate-pulse border-red-700 bg-red-600 text-white"
                   : "border-blue-400 bg-gradient-to-br from-blue-100 to-blue-50 text-black"
               }`}
-              title="Próxima alarma Correo y cuenta regresiva"
+              title="Próxima alarma Correo"
             >
               <Timer className="h-4 w-4 shrink-0" />
               <span className={`shrink-0 ${correoUrgent ? "text-white" : "text-blue-800"}`}>CORREO</span>
@@ -264,10 +261,10 @@ export default function Navbar({
 
           <Link
             href="/configuracion/alarmas"
-            className="flex shrink-0 rounded-lg bg-[#1E3A8A]/15 p-2 transition-colors hover:bg-[#1E3A8A]/25"
+            className="flex shrink-0 rounded-lg bg-brand-navy/15 p-2 transition-colors hover:bg-brand-navy/25"
             title="Configurar alarmas"
           >
-            <Settings className="h-4 w-4 text-[#1E3A8A]" />
+            <Settings className="h-4 w-4 text-brand-navy" />
           </Link>
 
           <button

@@ -11,6 +11,7 @@ import {
   ShoppingCart,
   CheckCircle,
   BookOpen,
+  Mail,
 } from "lucide-react";
 
 interface Props {
@@ -18,8 +19,8 @@ interface Props {
   onOpenNotifications?: () => void;
 }
 
-const ACCENT = "#FF5722";
-const ACCENT_GLOW = "rgba(255, 87, 34, 0.45)";
+const ACCENT = "#FFC107";
+const ACCENT_GLOW = "rgba(255, 193, 7, 0.45)";
 
 export default function BottomNav(_props: Props) {
   const pathname = usePathname();
@@ -33,6 +34,7 @@ export default function BottomNav(_props: Props) {
     { href: "/flex", label: "Flex", icon: Truck },
     { href: "/estadisticas", label: "Stats", icon: BarChart2 },
     { href: "/agenda", label: "Agenda", icon: Users },
+    { href: "/correo", label: "Correo", icon: Mail },
   ];
 
   return (

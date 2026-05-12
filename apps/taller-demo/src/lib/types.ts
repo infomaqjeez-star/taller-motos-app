@@ -354,3 +354,16 @@ export interface Tarea {
   vista: boolean; // Si el empleado ya vio la tarea
   prioridad: "baja" | "media" | "alta";
 }
+
+// ─── Correo Argentino - Despachos ─────────────────────────────
+
+export interface CorreoDespacho {
+  id: string;
+  fecha: string;
+  archivo_url: string | null;
+  archivo_tipo: "imagen" | "pdf" | null;
+  notas: string;
+  cantidad_envios: number;
+  created_at: string;
+  updated_at: string;
+}
