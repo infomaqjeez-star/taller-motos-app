@@ -175,7 +175,6 @@ export async function POST(request: NextRequest) {
               sku: item.sku,
               cantidad: item.cantidad,
               precio_unit: item.precioUnit,
-              subtotal: item.subtotal,
             });
           }
         }
@@ -222,7 +221,6 @@ export async function POST(request: NextRequest) {
             sku: item.sku || "",
             cantidad: item.cantidad,
             precio_unit: item.precioUnit,
-            subtotal: item.subtotal,
           }));
 
           const { error: itemsError } = await supabase
