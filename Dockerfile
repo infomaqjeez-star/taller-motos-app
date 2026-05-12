@@ -46,9 +46,10 @@ RUN adduser --system --uid 1001 nextjs
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Crear carpeta public si no existe
+# Crear carpeta public (sin catalogo - imagenes en Supabase Storage)
 RUN mkdir -p public
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+RUN rm -rf public/catalogo
 
 USER nextjs
 
