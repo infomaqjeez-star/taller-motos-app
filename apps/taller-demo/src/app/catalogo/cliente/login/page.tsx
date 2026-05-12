@@ -20,7 +20,10 @@ export default function ClienteLoginPage() {
   const [nombre, setNombre] = useState("");
   const [email, setEmail] = useState("");
   const [telefono, setTelefono] = useState("");
+  const [dni, setDni] = useState("");
   const [password, setPassword] = useState("");
+  const [vendedores, setVendedores] = useState<{ id: string; nombre: string; codigo_referido: string }[]>([]);
+  const [vendedorSeleccionado, setVendedorSeleccionado] = useState("");
 
   const [refInfo, setRefInfo] = useState<{ codigo: string; nombre: string; vendedor_id: string } | null>(null);
 
@@ -30,7 +33,15 @@ export default function ClienteLoginPage() {
     const vendedor_id = localStorage.getItem("ref_vendedor_id");
     if (codigo && refNombre && vendedor_id) {
       setRefInfo({ codigo, nombre: refNombre, vendedor_id });
+      setVendedorSeleccionado(vendedor_id);
     }
+    // Cargar lista de vendedores activos
+    fetch("/api/vendedor/public?lista=1")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.vendedores) setVendedores(data.vendedores);
+      })
+      .catch(() => {});
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -45,8 +56,9 @@ export default function ClienteLoginPage() {
           nombre,
           email,
           telefono,
+          dni,
           password,
-          vendedor_referente_id: refInfo?.vendedor_id,
+          vendedor_referente_id: vendedorSeleccionado || refInfo?.vendedor_id || undefined,
         });
       }
       router.push("/catalogo");
@@ -364,6 +376,49 @@ export default function ClienteLoginPage() {
                     onFocus={(e) => (e.currentTarget.style.borderColor = "#f97316")}
                     onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(71,85,105,0.5)")}
                   />
+                </div>
+              </div>
+
+              {/* DNI (solo register) */}
+              <div
+                className="overflow-hidden transition-all duration-300"
+                style={{ maxHeight: tab === "register" ? "80px" : "0", opacity: tab === "register" ? 1 : 0 }}
+              >
+                <div className="relative group">
+                  <User className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 group-focus-within:text-orange-400 transition-colors" />
+                  <input
+                    type="text"
+                    value={dni}
+                    onChange={(e) => setDni(e.target.value)}
+                    placeholder="DNI (Opcional)"
+                    className="w-full py-3.5 pl-12 pr-4 text-sm text-white placeholder-slate-500 rounded-xl outline-none transition-all"
+                    style={{ background: "rgba(2,6,23,0.5)", border: "1px solid rgba(71,85,105,0.5)" }}
+                    onFocus={(e) => (e.currentTarget.style.borderColor = "#f97316")}
+                    onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(71,85,105,0.5)")}
+                  />
+                </div>
+              </div>
+
+              {/* Selector de vendedor (solo register) */}
+              <div
+                className="overflow-hidden transition-all duration-300"
+                style={{ maxHeight: tab === "register" ? "80px" : "0", opacity: tab === "register" ? 1 : 0 }}
+              >
+                <div className="relative">
+                  <Store className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                  <select
+                    value={vendedorSeleccionado}
+                    onChange={(e) => setVendedorSeleccionado(e.target.value)}
+                    className="w-full py-3.5 pl-12 pr-4 text-sm text-white rounded-xl outline-none transition-all appearance-none"
+                    style={{ background: "rgba(2,6,23,0.5)", border: "1px solid rgba(71,85,105,0.5)" }}
+                  >
+                    <option value="" className="bg-slate-900 text-slate-400">Elegir un vendedor (opcional)</option>
+                    {vendedores.map((v) => (
+                      <option key={v.id} value={v.id} className="bg-slate-900">
+                        {v.nombre} ({v.codigo_referido})
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 

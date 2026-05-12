@@ -20,6 +20,7 @@ import {
   Clock,
   AlertTriangle,
   Info,
+  Store,
 } from "lucide-react";
 
 function fmtMoney(n: number) {
@@ -353,6 +354,35 @@ export default function CheckoutPage() {
           </div>
         </div>
       </div>
+
+      {/* Banner: beneficios de tener vendedor (solo invitados) */}
+      {!numeroCliente && (
+        <div className="mt-4 rounded-xl border border-purple-500/20 bg-purple-500/5 p-4">
+          <div className="flex items-start gap-3">
+            <Store className="mt-0.5 h-5 w-5 shrink-0 text-purple-400" />
+            <div>
+              <p className="text-sm font-bold text-purple-400">
+                ¿Tenés un vendedor de confianza?
+              </p>
+              <p className="mt-1 text-xs text-gray-400">
+                Comprar con un vendedor asignado te da acceso a descuentos exclusivos, seguimiento personalizado y prioridad en envíos.
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <span className="rounded-full border border-purple-500/20 bg-purple-500/10 px-2 py-0.5 text-[10px] text-purple-300">Descuentos extra</span>
+                <span className="rounded-full border border-purple-500/20 bg-purple-500/10 px-2 py-0.5 text-[10px] text-purple-300">Seguimiento personalizado</span>
+                <span className="rounded-full border border-purple-500/20 bg-purple-500/10 px-2 py-0.5 text-[10px] text-purple-300">Prioridad en envíos</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => router.push("/catalogo/cliente/login")}
+                className="mt-2 text-xs font-bold text-purple-400 hover:text-purple-300 underline"
+              >
+                Registrate o ingresá para elegir tu vendedor →
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Formulario */}
       <form onSubmit={handleSubmit} className="mt-6 space-y-5">

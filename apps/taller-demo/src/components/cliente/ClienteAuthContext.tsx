@@ -16,7 +16,7 @@ interface ClienteAuthContextValue {
   cliente: Cliente | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (data: { nombre: string; email: string; telefono?: string; password: string; vendedor_referente_id?: string }) => Promise<void>;
+  register: (data: { nombre: string; email: string; telefono?: string; dni?: string; password: string; vendedor_referente_id?: string }) => Promise<void>;
   logout: () => void;
 }
 

@@ -40,6 +40,8 @@ export default function VendedorDashboardPage() {
   const [resumen, setResumen] = useState<Resumen | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [notificaciones, setNotificaciones] = useState<any[]>([]);
+  const [notifOpen, setNotifOpen] = useState(false);
 
   useEffect(() => {
     if (authLoading) return;
@@ -48,6 +50,7 @@ export default function VendedorDashboardPage() {
       return;
     }
     cargarPedidos();
+    cargarNotificaciones();
   }, [vendedor, authLoading, router]);
 
   const cargarPedidos = async () => {
@@ -64,6 +67,33 @@ export default function VendedorDashboardPage() {
       console.error(e);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const cargarNotificaciones = async () => {
+    const token = localStorage.getItem("vendedor_token");
+    if (!token) return;
+    try {
+      const res = await fetch("/api/notificaciones", {
+        headers: { "x-vendedor-token": token },
+      });
+      const data = await res.json();
+      setNotificaciones(data.notificaciones || []);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const marcarNotifLeida = async (id: string) => {
+    try {
+      await fetch("/api/notificaciones", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      setNotificaciones((prev) => prev.filter((n) => n.id !== id));
+    } catch (e) {
+      console.error(e);
     }
   };
 
@@ -154,6 +184,53 @@ export default function VendedorDashboardPage() {
           >
             <Store className="h-4 w-4" /> Catálogo
           </button>
+
+          {/* Notificaciones */}
+          <div className="relative">
+            <button
+              onClick={() => setNotifOpen(!notifOpen)}
+              className="relative flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-sm font-semibold transition-colors text-slate-200"
+            >
+              <Megaphone className="h-4 w-4" />
+              {notificaciones.length > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center">
+                  {notificaciones.length}
+                </span>
+              )}
+            </button>
+            {notifOpen && (
+              <div className="absolute right-0 mt-2 w-80 rounded-xl border border-slate-700 bg-[#1a1a1a] shadow-xl z-50 overflow-hidden">
+                <div className="p-3 border-b border-slate-700 flex justify-between items-center">
+                  <span className="text-sm font-bold text-white">Notificaciones</span>
+                  <span className="text-xs text-slate-500">{notificaciones.length} sin leer</span>
+                </div>
+                <div className="max-h-64 overflow-y-auto">
+                  {notificaciones.length === 0 ? (
+                    <p className="p-4 text-xs text-slate-500 text-center">No hay notificaciones</p>
+                  ) : (
+                    notificaciones.map((n) => (
+                      <div key={n.id} className="p-3 border-b border-slate-800 hover:bg-slate-800/50">
+                        <div className="flex justify-between items-start">
+                          <p className="text-xs font-bold text-white">{n.titulo}</p>
+                          <button
+                            onClick={() => marcarNotifLeida(n.id)}
+                            className="text-[10px] text-slate-500 hover:text-white"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                        <p className="text-[10px] text-slate-400 mt-1">{n.mensaje}</p>
+                        <p className="text-[10px] text-slate-600 mt-1">
+                          {new Date(n.created_at).toLocaleString("es-AR")}
+                        </p>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
           <button
             onClick={logout}
             className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-sm font-semibold transition-colors text-slate-200"

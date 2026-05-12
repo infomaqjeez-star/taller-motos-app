@@ -6,11 +6,29 @@ export const dynamic = "force-dynamic";
 export async function GET(req: NextRequest) {
   try {
     const codigo = req.nextUrl.searchParams.get("codigo");
+    const lista = req.nextUrl.searchParams.get("lista");
+
+    const supabase = getSupabaseServer();
+
+    // Si piden lista completa de vendedores activos
+    if (lista) {
+      const { data: vendedores, error } = await supabase
+        .from("vendedores")
+        .select("id, nombre, codigo_referido, comision_pct, nivel_vendedor")
+        .eq("estado", "activo")
+        .order("nombre");
+
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+      return NextResponse.json({ vendedores: vendedores || [] });
+    }
+
+    // Buscar por codigo de referido
     if (!codigo) {
       return NextResponse.json({ error: "Código requerido" }, { status: 400 });
     }
 
-    const supabase = getSupabaseServer();
     const { data: vendedor, error } = await supabase
       .from("vendedores")
       .select("id, nombre, codigo_referido, comision_pct")

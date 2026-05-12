@@ -44,6 +44,7 @@ import {
   Wallet,
   Star,
   AlertTriangle,
+  Megaphone,
 } from "lucide-react";
 
 interface Pedido {
@@ -192,6 +193,8 @@ function AdminPedidosContent() {
   const [dashboardError, setDashboardError] = useState<string | null>(null);
   const [guardandoGerente, setGuardandoGerente] = useState<string | null>(null);
   const [asignandoGerenteId, setAsignandoGerenteId] = useState<Record<string, string>>({});
+  const [notificaciones, setNotificaciones] = useState<any[]>([]);
+  const [notifOpen, setNotifOpen] = useState(false);
 
   useEffect(() => {
     if (authLoading) return;
@@ -202,7 +205,35 @@ function AdminPedidosContent() {
     cargarPedidos();
     cargarDashboard();
     cargarVendedores();
+    cargarNotificaciones();
   }, [admin, authLoading, router]);
+
+  const cargarNotificaciones = async () => {
+    try {
+      const token = localStorage.getItem("admin_catalogo_session");
+      const parsed = token ? JSON.parse(token) : null;
+      const res = await fetch("/api/notificaciones", {
+        headers: parsed?.token ? { Authorization: `Bearer ${parsed.token}` } : {},
+      });
+      const data = await res.json();
+      setNotificaciones(data.notificaciones || []);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const marcarNotifLeida = async (id: string) => {
+    try {
+      await fetch("/api/notificaciones", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      setNotificaciones((prev) => prev.filter((n) => n.id !== id));
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const cargarVendedores = async () => {
     try {
@@ -464,6 +495,52 @@ function AdminPedidosContent() {
               <p className="text-sm text-gray-500 mt-1">Admin: {admin.nombre} ({admin.email})</p>
             </div>
             <div className="flex gap-3">
+              {/* Notificaciones */}
+              <div className="relative">
+                <button
+                  onClick={() => setNotifOpen(!notifOpen)}
+                  className="relative flex items-center gap-2 px-4 py-2 rounded-md border border-gray-700 text-gray-300 hover:bg-gray-800 transition-colors text-sm"
+                >
+                  <Megaphone className="h-4 w-4" />
+                  {notificaciones.length > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center">
+                      {notificaciones.length}
+                    </span>
+                  )}
+                </button>
+                {notifOpen && (
+                  <div className="absolute right-0 mt-2 w-80 rounded-xl border border-gray-700 bg-[#1a1a1a] shadow-xl z-50 overflow-hidden">
+                    <div className="p-3 border-b border-gray-700 flex justify-between items-center">
+                      <span className="text-sm font-bold text-white">Notificaciones</span>
+                      <span className="text-xs text-gray-500">{notificaciones.length} sin leer</span>
+                    </div>
+                    <div className="max-h-64 overflow-y-auto">
+                      {notificaciones.length === 0 ? (
+                        <p className="p-4 text-xs text-gray-500 text-center">No hay notificaciones</p>
+                      ) : (
+                        notificaciones.map((n) => (
+                          <div key={n.id} className="p-3 border-b border-gray-800 hover:bg-gray-800/50">
+                            <div className="flex justify-between items-start">
+                              <p className="text-xs font-bold text-white">{n.titulo}</p>
+                              <button
+                                onClick={() => marcarNotifLeida(n.id)}
+                                className="text-[10px] text-gray-500 hover:text-white"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                            <p className="text-[10px] text-gray-400 mt-1">{n.mensaje}</p>
+                            <p className="text-[10px] text-gray-600 mt-1">
+                              {new Date(n.created_at).toLocaleString("es-AR")}
+                            </p>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <button
                 onClick={() => router.push("/catalogo/admin/seguridad")}
                 className="flex items-center gap-2 px-4 py-2 rounded-md border border-gray-700 text-gray-300 hover:bg-gray-800 transition-colors text-sm"
@@ -1443,16 +1520,13 @@ function AdminPedidosContent() {
                   key={e}
                   onClick={() => {
                     const now = new Date().toISOString();
-                    const estadoFechaMap: Record<string, keyof Pedido> = {
-                      confirmado: "fecha_confirmado",
-                      pagado: "fecha_pagado",
-                      enviado: "fecha_enviado",
-                      entregado: "fecha_entregado",
-                      cancelado: "fecha_cancelado",
-                    };
-                    const update: Partial<Pedido> = { estado: e, updated_at: now };
-                    if (estadoFechaMap[e]) update[estadoFechaMap[e]] = now;
-                    setSelected({ ...selected, ...update } as Pedido);
+                    const update: any = { estado: e, updated_at: now };
+                    if (e === "confirmado") update.fecha_confirmado = now;
+                    else if (e === "pagado") update.fecha_pagado = now;
+                    else if (e === "enviado") update.fecha_enviado = now;
+                    else if (e === "entregado") update.fecha_entregado = now;
+                    else if (e === "cancelado") update.fecha_cancelado = now;
+                    setSelected({ ...selected, ...update });
                     actualizarEstado(selected.id, e);
                   }}
                   disabled={selected.estado === e}
