@@ -210,7 +210,7 @@ function VentaCard({
   const cancelada = venta.status === "cancelada";
 
   return (
-    <div className={`glass-panel-aaa rounded-2xl p-4 ${cancelada ? "border border-red-500/30 opacity-60" : "border border-white/10"}`}>
+    <div className={`glass-panel-aaa rounded-2xl p-4 border border-white/[0.06] ${cancelada ? "border border-red-500/30 opacity-60" : "border border-white/10"}`}>
       <div className="flex items-center gap-3 cursor-pointer" onClick={() => setOpen(o => !o)}>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
@@ -348,7 +348,7 @@ function EditVentaModal({
           {/* Vendedor */}
           <div>
             <label className="label">Vendedor</label>
-            <input className="input" value={vendedor} onChange={e => setVendedor(e.target.value)} />
+            <input className="input-aaa w-full rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500" value={vendedor} onChange={e => setVendedor(e.target.value)} />
           </div>
 
           {/* Método de pago */}
@@ -417,7 +417,7 @@ function MetricCard({ label, value, sub, color }: {
   label: string; value: string; sub?: string; color: string;
 }) {
   return (
-    <div className="glass-panel-aaa rounded-2xl p-4">
+    <div className="glass-panel-aaa rounded-2xl p-4 border border-white/[0.06]" style={{ backdropFilter: "blur(12px)" }}>
       <p className="text-xs text-gray-500 font-semibold uppercase tracking-wide">{label}</p>
       <p className="text-2xl font-black mt-1" style={{ color, textShadow: `0 0 10px ${color}70` }}>
         {value}
@@ -584,7 +584,7 @@ export default function VentasPage() {
 
       {/* ── Tabs ── */}
       <div
-        className="sticky z-30 border-b border-white/10 bg-[rgba(18,18,18,0.92)] backdrop-blur-md [html.light_&]:border-gray-200 [html.light_&]:bg-[rgba(255,255,255,0.92)]"
+        className="sticky z-30 border-b border-white/[0.06] backdrop-blur-xl" style={{ background: "rgba(9,9,11,0.85)" }}
         style={{ top: "var(--maqjeez-header-height, 7rem)" }}
       >
         <div className="mx-auto flex max-w-5xl px-4 sm:px-5 lg:px-6">
@@ -608,7 +608,7 @@ export default function VentasPage() {
         </div>
       </div>
 
-      <main className="app-main space-y-6">
+      <main className="app-main space-y-6" style={{ background: "radial-gradient(ellipse at top, #0f0f12 0%, #09090b 60%)", minHeight: "calc(100vh - var(--maqjeez-header-height, 7rem))" }}>
 
         {/* ══════════════════ NUEVA VENTA ══════════════════ */}
         {tab === "nueva" && (
@@ -619,8 +619,8 @@ export default function VentasPage() {
               onClientDataChange={setClientData}
             />
 
-            <div className="glass-panel-aaa rounded-2xl p-4">
-              <h2 className="text-base font-bold text-gray-200 mb-4 flex items-center gap-2">
+            <div className="glass-panel-aaa rounded-2xl p-4 border border-[#FDB71A]/20" style={{ background: "linear-gradient(145deg, rgba(24,24,27,0.9), rgba(18,18,20,0.95))", backdropFilter: "blur(16px)" }}>
+              <h2 className="text-base font-bold text-gray-100 mb-4 flex items-center gap-2">
                 <ShoppingCart className="w-5 h-5 text-[#FDB71A]" />
                 Detalle de productos
               </h2>
@@ -655,7 +655,7 @@ export default function VentasPage() {
             </div>
 
             {/* Método de pago + vendedor */}
-            <div className="glass-panel-aaa rounded-2xl p-4 space-y-4">
+            <div className="glass-panel-aaa rounded-2xl p-4 space-y-4 border border-[#00E5FF]/15" style={{ background: "linear-gradient(145deg, rgba(24,24,27,0.9), rgba(18,18,20,0.95))", backdropFilter: "blur(16px)" }}>
               <div>
                 <label className="label">Forma de Pago</label>
                 <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mt-1">
@@ -684,22 +684,22 @@ export default function VentasPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="label">Vendedor</label>
-                  <input className="input" value={vendedor} onChange={e => setVendedor(e.target.value)} placeholder="Nombre del vendedor" />
+                  <input className="input-aaa w-full rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500" value={vendedor} onChange={e => setVendedor(e.target.value)} placeholder="Nombre del vendedor" />
                 </div>
                 <div>
                   <label className="label">Notas (opcional)</label>
-                  <input className="input" value={notas} onChange={e => setNotas(e.target.value)} placeholder="Ej: cliente frecuente" />
+                  <input className="input-aaa w-full rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500" value={notas} onChange={e => setNotas(e.target.value)} placeholder="Ej: cliente frecuente" />
                 </div>
               </div>
             </div>
 
             {/* Total + Guardar */}
-            <div className="glass-panel-aaa rounded-2xl p-4 border border-green-500/20">
+            <div className="glass-panel-aaa rounded-2xl p-4 border border-[#39FF14]/30" style={{ background: "linear-gradient(135deg, rgba(57,255,20,0.08), rgba(24,24,27,0.95))", boxShadow: "0 0 30px -5px rgba(57,255,20,0.15), inset 0 1px 0 0 rgba(255,255,255,0.05)" }}>
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs text-gray-500 font-semibold uppercase">Total de la venta</p>
                   <p className="text-4xl font-black text-[#39FF14]"
-                    style={{ textShadow: "0 0 12px rgba(57,255,20,0.60)" }}>
+                    style={{ textShadow: "0 0 20px rgba(57,255,20,0.80), 0 0 40px rgba(57,255,20,0.30)" }}>
                     {fmt(total)}
                   </p>
                   <p className="text-xs text-gray-600 mt-0.5">
@@ -709,7 +709,7 @@ export default function VentasPage() {
                 <button
                   onClick={handleGuardarVenta}
                   disabled={saving || total === 0}
-                  className="btn-primary px-8 disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="px-8 py-3 rounded-2xl font-black text-sm flex items-center justify-center gap-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed" style={{ background: "linear-gradient(135deg, #FF5722, #FF8A50)", boxShadow: "0 0 24px -4px rgba(255,87,34,0.50)", color: "#fff" }}
                 >
                   {saving ? (
                     <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -727,7 +727,7 @@ export default function VentasPage() {
         {tab === "movimientos" && (
           <div className="space-y-4">
             {/* Resumen del día */}
-            <div className="glass-panel-aaa rounded-2xl p-4 border border-brand-accent/20">
+            <div className="glass-panel-aaa rounded-2xl p-4 border border-[#FDB71A]/25" style={{ background: "linear-gradient(145deg, rgba(253,183,26,0.06), rgba(24,24,27,0.95))", backdropFilter: "blur(16px)" }}>
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs text-gray-500 font-semibold uppercase flex items-center gap-1">
@@ -748,11 +748,11 @@ export default function VentasPage() {
             </div>
 
             {loadingHoy ? (
-              <div className="glass-panel-aaa rounded-2xl p-4 flex items-center justify-center py-12">
+              <div className="glass-panel-aaa rounded-2xl p-4 border border-white/[0.06] flex items-center justify-center py-12">
                 <span className="w-8 h-8 border-4 border-[#FDB71A] border-t-transparent rounded-full animate-spin" />
               </div>
             ) : ventasHoy.length === 0 ? (
-              <div className="glass-panel-aaa rounded-2xl p-4 flex flex-col items-center py-14 text-center">
+              <div className="glass-panel-aaa rounded-2xl p-4 border border-white/[0.06] flex flex-col items-center py-14 text-center">
                 <ShoppingCart className="w-10 h-10 text-gray-700 mb-3" />
                 <p className="text-gray-400 font-semibold">No hay ventas registradas hoy</p>
                 <p className="text-gray-600 text-sm mt-1">Las ventas que registres aparecerán aquí</p>
@@ -775,7 +775,7 @@ export default function VentasPage() {
         {tab === "estadisticas" && (
           <div className="space-y-4">
             {/* Selector de rango */}
-            <div className="glass-panel-aaa rounded-2xl p-4">
+            <div className="glass-panel-aaa rounded-2xl p-4 border border-white/[0.06]" style={{ backdropFilter: "blur(16px)" }}>
               <div className="flex gap-2 flex-wrap">
                 {([
                   { id: "hoy",    label: "Hoy" },
@@ -815,7 +815,7 @@ export default function VentasPage() {
             </div>
 
             {loadingStats ? (
-              <div className="glass-panel-aaa rounded-2xl p-4 flex items-center justify-center py-12">
+              <div className="glass-panel-aaa rounded-2xl p-4 border border-white/[0.06] flex items-center justify-center py-12">
                 <span className="w-8 h-8 border-4 border-[#00E5FF] border-t-transparent rounded-full animate-spin" />
               </div>
             ) : stats ? (
@@ -848,8 +848,8 @@ export default function VentasPage() {
 
                 {/* Gráfico de barras */}
                 {chartFormatted.length > 0 && (
-                  <div className="glass-panel-aaa rounded-2xl p-4">
-                    <h3 className="text-sm font-bold text-gray-300 mb-4 flex items-center gap-2">
+                  <div className="glass-panel-aaa rounded-2xl p-4 border border-white/[0.06]" style={{ backdropFilter: "blur(16px)" }}>
+                    <h3 className="text-sm font-bold text-gray-200 mb-4 flex items-center gap-2">
                       <BarChart2 className="w-4 h-4 text-[#FDB71A]" />
                       Facturación por día
                     </h3>
@@ -874,8 +874,8 @@ export default function VentasPage() {
 
                 {/* Top 5 productos */}
                 {topProd.length > 0 && (
-                  <div className="glass-panel-aaa rounded-2xl p-4">
-                    <h3 className="text-sm font-bold text-gray-300 mb-3 flex items-center gap-2">
+                  <div className="glass-panel-aaa rounded-2xl p-4 border border-white/[0.06]" style={{ backdropFilter: "blur(16px)" }}>
+                    <h3 className="text-sm font-bold text-gray-200 mb-3 flex items-center gap-2">
                       <Package className="w-4 h-4 text-[#00E5FF]" />
                       Top 5 productos más vendidos
                     </h3>
@@ -911,7 +911,7 @@ export default function VentasPage() {
                 {/* Distribución por método de pago */}
               </>
             ) : (
-              <div className="glass-panel-aaa rounded-2xl p-4 flex flex-col items-center py-14 text-center">
+              <div className="glass-panel-aaa rounded-2xl p-4 border border-white/[0.06] flex flex-col items-center py-14 text-center">
                 <CreditCard className="w-10 h-10 text-gray-700 mb-3" />
                 <p className="text-gray-400 font-semibold">Seleccioná un rango y cargá las estadísticas</p>
               </div>
