@@ -170,7 +170,6 @@ export async function POST(request: NextRequest) {
               sku: item.sku,
               cantidad: item.cantidad,
               precio_unit: item.precioUnit,
-              warranty_days: item.warrantyDays ?? null,
             });
           }
         }
@@ -217,7 +216,6 @@ export async function POST(request: NextRequest) {
             sku: item.sku || "",
             cantidad: item.cantidad,
             precio_unit: item.precioUnit,
-            warranty_days: item.warrantyDays ?? null,
           }));
 
           const { error: itemsError } = await supabase
