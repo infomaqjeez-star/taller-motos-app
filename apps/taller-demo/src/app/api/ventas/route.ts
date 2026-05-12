@@ -2,13 +2,12 @@ import { createClient } from "@supabase/supabase-js";
 import { randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
-
-const supabase = createClient(
-  supabaseUrl || "https://placeholder.supabase.co",
-  supabaseServiceKey || "placeholder-key"
-);
+function getSupabase() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) throw new Error("Supabase no configurado");
+  return createClient(url, key);
+}
 
 // GET /api/ventas - Listar ventas
 export async function GET(request: NextRequest) {
@@ -18,13 +17,9 @@ export async function GET(request: NextRequest) {
     const desde = searchParams.get("desde");
     const hasta = searchParams.get("hasta");
     const fecha = searchParams.get("fecha");
-
-    if (!supabaseUrl || !supabaseServiceKey) {
-      return NextResponse.json(
-        { error: "Supabase no configurado correctamente" },
-        { status: 500 }
-      );
-    }
+    let supabase: ReturnType<typeof getSupabase>;
+    try { supabase = getSupabase(); }
+    catch { return NextResponse.json({ error: "Supabase no configurado correctamente" }, { status: 500 }); }
 
     let result: any;
 
@@ -131,12 +126,9 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { action, venta, id } = body;
 
-    if (!supabaseUrl || !supabaseServiceKey) {
-      return NextResponse.json(
-        { error: "Supabase no configurado correctamente" },
-        { status: 500 }
-      );
-    }
+    let supabase: ReturnType<typeof getSupabase>;
+    try { supabase = getSupabase(); }
+    catch { return NextResponse.json({ error: "Supabase no configurado correctamente" }, { status: 500 }); }
 
     let result: any;
 
@@ -158,21 +150,17 @@ export async function POST(request: NextRequest) {
 
         // Actualizar items si se proporcionan
         if (items && Array.isArray(items)) {
-          // Eliminar items antiguos
           await supabase.from("ventas_items").delete().eq("venta_id", ventaId);
-          
-          // Insertar nuevos items
-          for (const item of items) {
-            await supabase.from("ventas_items").insert({
-              id: randomUUID(),
-              venta_id: ventaId,
-              producto: item.producto,
-              sku: item.sku,
-              cantidad: item.cantidad,
-              precio_unit: item.precioUnit,
-              warranty_days: item.warrantyDays ?? null,
-            });
-          }
+          const newItems = items.map((item: any) => ({
+            id: randomUUID(),
+            venta_id: ventaId,
+            producto: item.producto,
+            sku: item.sku || "",
+            cantidad: item.cantidad,
+            precio_unit: item.precioUnit,
+            warranty_days: item.warrantyDays ?? null,
+          }));
+          await supabase.from("ventas_items").insert(newItems);
         }
         break;
       }
