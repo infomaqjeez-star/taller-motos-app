@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/components/catalogo/CartContext";
+import { useClienteAuth } from "@/components/cliente/ClienteAuthContext";
 import { generarMensajeWhatsApp, abrirWhatsApp } from "@/lib/pedidoWhatsApp";
 import {
   ShoppingBag,
@@ -28,10 +29,12 @@ function fmtMoney(n: number) {
 export default function CheckoutPage() {
   const router = useRouter();
   const { items, totals, clearCart } = useCart();
+  const { cliente } = useClienteAuth();
 
   const [form, setForm] = useState({
     nombre: "",
     dni: "",
+    email: "",
     direccion: "",
     entreCalles: "",
     localidad: "",
@@ -42,6 +45,9 @@ export default function CheckoutPage() {
     notas: "",
     comprobante: "" as string,
   });
+
+  const [pedidosAnteriores, setPedidosAnteriores] = useState<any[]>([]);
+  const [buscandoPedidos, setBuscandoPedidos] = useState(false);
 
   const [numeroCliente, setNumeroCliente] = useState<string | null>(null);
   const [enviado, setEnviado] = useState(false);
@@ -55,6 +61,48 @@ export default function CheckoutPage() {
     const stored = localStorage.getItem("cliente_numero");
     if (stored) setNumeroCliente(stored);
   }, []);
+
+  // Prellenar datos del cliente logueado
+  useEffect(() => {
+    if (cliente) {
+      setForm((prev) => ({
+        ...prev,
+        nombre: cliente.nombre || prev.nombre,
+        email: cliente.email || prev.email,
+      }));
+    }
+  }, [cliente]);
+
+  // Buscar pedidos anteriores cuando cambian DNI, email o teléfono
+  useEffect(() => {
+    const dni = form.dni.trim();
+    const email = form.email.trim();
+    const telefono = form.telefono.trim();
+
+    if (!dni && !email && !telefono) {
+      setPedidosAnteriores([]);
+      return;
+    }
+
+    const timeout = setTimeout(async () => {
+      setBuscandoPedidos(true);
+      try {
+        const params = new URLSearchParams();
+        if (dni) params.append("dni", dni);
+        if (email) params.append("email", email);
+        if (telefono) params.append("telefono", telefono);
+        const res = await fetch(`/api/pedidos/catalogo/buscar?${params.toString()}`);
+        const data = await res.json();
+        setPedidosAnteriores(data.pedidos || []);
+      } catch (e) {
+        console.error("Error buscando pedidos:", e);
+      } finally {
+        setBuscandoPedidos(false);
+      }
+    }, 600);
+
+    return () => clearTimeout(timeout);
+  }, [form.dni, form.email, form.telefono]);
 
   if (items.length === 0 && !enviado) {
     return (
@@ -141,6 +189,7 @@ export default function CheckoutPage() {
           datos_cliente: {
             nombre: form.nombre,
             dni: form.dni,
+            email: form.email,
             direccion: form.direccion,
             entreCalles: form.entreCalles,
             localidad: form.localidad,
@@ -335,6 +384,17 @@ export default function CheckoutPage() {
               />
             </div>
             <div>
+              <label className="mb-1 block text-xs font-medium text-gray-400">Email *</label>
+              <input
+                required
+                type="email"
+                className="input input-sm w-full"
+                value={form.email}
+                onChange={(e) => update("email", e.target.value)}
+                placeholder="Ej: juan@email.com"
+              />
+            </div>
+            <div>
               <label className="mb-1 block text-xs font-medium text-gray-400">Teléfono *</label>
               <input
                 required
@@ -347,6 +407,56 @@ export default function CheckoutPage() {
             </div>
           </div>
         </section>
+
+        {/* Pedidos anteriores */}
+        {pedidosAnteriores.length > 0 && (
+          <section className="rounded-xl border border-[#FDB71A]/20 bg-[#FDB71A]/5 p-4 space-y-3">
+            <h2 className="flex items-center gap-2 text-sm font-bold text-[#FDB71A]">
+              <Package className="h-4 w-4" />
+              Pedidos anteriores ({pedidosAnteriores.length})
+            </h2>
+            <div className="space-y-2 max-h-48 overflow-y-auto">
+              {pedidosAnteriores.map((p) => (
+                <div
+                  key={p.id}
+                  className="rounded-lg border border-white/5 bg-white/[0.03] p-3 text-sm"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-xs text-blue-400">#{p.id.slice(0, 8)}</span>
+                    <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border ${
+                      p.estado === "pendiente" ? "border-yellow-500/30 bg-yellow-500/10 text-yellow-400" :
+                      p.estado === "confirmado" ? "border-blue-500/30 bg-blue-500/10 text-blue-400" :
+                      p.estado === "pagado" ? "border-green-500/30 bg-green-500/10 text-green-400" :
+                      p.estado === "enviado" ? "border-purple-500/30 bg-purple-500/10 text-purple-400" :
+                      p.estado === "entregado" ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400" :
+                      "border-red-500/30 bg-red-500/10 text-red-400"
+                    }`}>
+                      {p.estado}
+                    </span>
+                  </div>
+                  <div className="mt-1 text-xs text-gray-400">
+                    {p.items?.slice(0, 2).map((item: any, i: number) => (
+                      <span key={i} className="mr-2">{item.cantidad}x {item.nombre}</span>
+                    ))}
+                    {p.items?.length > 2 && <span className="text-gray-600">+{p.items.length - 2} más</span>}
+                  </div>
+                  <div className="mt-1 flex items-center justify-between">
+                    <span className="text-xs text-gray-500">
+                      {new Date(p.created_at).toLocaleDateString("es-AR")}
+                    </span>
+                    <span className="text-sm font-bold text-[#FF5722]">{fmtMoney(p.total)}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+        {buscandoPedidos && (
+          <div className="flex items-center gap-2 text-xs text-gray-500">
+            <div className="h-3 w-3 animate-spin rounded-full border border-gray-500 border-t-transparent" />
+            Buscando pedidos anteriores…
+          </div>
+        )}
 
         {/* Dirección */}
         <section className="rounded-xl border border-white/10 bg-white/[0.03] p-4 space-y-3">
