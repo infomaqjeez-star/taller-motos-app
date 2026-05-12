@@ -1,7 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase-server";
+import { jwtVerify } from "jose";
+
+const ADMIN_JWT_SECRET = new TextEncoder().encode(
+  process.env.ADMIN_JWT_SECRET || "maqjeez-admin-secret-key-2026"
+);
+
+async function verifyAdmin(req: NextRequest) {
+  const auth = req.headers.get("Authorization");
+  if (!auth?.startsWith("Bearer ")) return null;
+  try {
+    const { payload } = await jwtVerify(auth.slice(7), ADMIN_JWT_SECRET, { clockTolerance: 60 });
+    return payload;
+  } catch {
+    return null;
+  }
+}
 
 export async function GET(req: NextRequest) {
+  const admin = await verifyAdmin(req);
+  if (!admin) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+
   try {
     const supabase = getSupabaseAdmin();
 
