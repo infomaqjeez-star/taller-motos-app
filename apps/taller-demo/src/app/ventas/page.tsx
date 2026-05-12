@@ -210,7 +210,7 @@ function VentaCard({
   const cancelada = venta.status === "cancelada";
 
   return (
-    <div className={`card border ${cancelada ? "border-red-500/30 opacity-60" : "border-white/10"}`}>
+    <div className={`glass-panel-aaa rounded-2xl p-4 ${cancelada ? "border border-red-500/30 opacity-60" : "border border-white/10"}`}>
       <div className="flex items-center gap-3 cursor-pointer" onClick={() => setOpen(o => !o)}>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
@@ -417,7 +417,7 @@ function MetricCard({ label, value, sub, color }: {
   label: string; value: string; sub?: string; color: string;
 }) {
   return (
-    <div className="card border border-white/10">
+    <div className="glass-panel-aaa rounded-2xl p-4">
       <p className="text-xs text-gray-500 font-semibold uppercase tracking-wide">{label}</p>
       <p className="text-2xl font-black mt-1" style={{ color, textShadow: `0 0 10px ${color}70` }}>
         {value}
@@ -619,7 +619,7 @@ export default function VentasPage() {
               onClientDataChange={setClientData}
             />
 
-            <div className="card border border-white/10">
+            <div className="glass-panel-aaa rounded-2xl p-4">
               <h2 className="text-base font-bold text-gray-200 mb-4 flex items-center gap-2">
                 <ShoppingCart className="w-5 h-5 text-[#FDB71A]" />
                 Detalle de productos
@@ -655,7 +655,7 @@ export default function VentasPage() {
             </div>
 
             {/* Método de pago + vendedor */}
-            <div className="card border border-white/10 space-y-4">
+            <div className="glass-panel-aaa rounded-2xl p-4 space-y-4">
               <div>
                 <label className="label">Forma de Pago</label>
                 <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mt-1">
@@ -694,8 +694,7 @@ export default function VentasPage() {
             </div>
 
             {/* Total + Guardar */}
-            <div className="card border border-[#39FF14]/40"
-              style={{ background: "rgba(57,255,20,0.05)", boxShadow: "0 0 20px rgba(57,255,20,0.10)" }}>
+            <div className="glass-panel-aaa rounded-2xl p-4 border border-green-500/20">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs text-gray-500 font-semibold uppercase">Total de la venta</p>
@@ -728,8 +727,7 @@ export default function VentasPage() {
         {tab === "movimientos" && (
           <div className="space-y-4">
             {/* Resumen del día */}
-            <div className="card border border-[#FDB71A]/30"
-              style={{ background: "rgba(253,183,26,0.05)" }}>
+            <div className="glass-panel-aaa rounded-2xl p-4 border border-brand-accent/20">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs text-gray-500 font-semibold uppercase flex items-center gap-1">
@@ -750,11 +748,11 @@ export default function VentasPage() {
             </div>
 
             {loadingHoy ? (
-              <div className="card flex items-center justify-center py-12">
+              <div className="glass-panel-aaa rounded-2xl p-4 flex items-center justify-center py-12">
                 <span className="w-8 h-8 border-4 border-[#FDB71A] border-t-transparent rounded-full animate-spin" />
               </div>
             ) : ventasHoy.length === 0 ? (
-              <div className="card flex flex-col items-center py-14 text-center">
+              <div className="glass-panel-aaa rounded-2xl p-4 flex flex-col items-center py-14 text-center">
                 <ShoppingCart className="w-10 h-10 text-gray-700 mb-3" />
                 <p className="text-gray-400 font-semibold">No hay ventas registradas hoy</p>
                 <p className="text-gray-600 text-sm mt-1">Las ventas que registres aparecerán aquí</p>
@@ -777,7 +775,7 @@ export default function VentasPage() {
         {tab === "estadisticas" && (
           <div className="space-y-4">
             {/* Selector de rango */}
-            <div className="card border border-white/10">
+            <div className="glass-panel-aaa rounded-2xl p-4">
               <div className="flex gap-2 flex-wrap">
                 {([
                   { id: "hoy",    label: "Hoy" },
@@ -817,7 +815,7 @@ export default function VentasPage() {
             </div>
 
             {loadingStats ? (
-              <div className="card flex items-center justify-center py-12">
+              <div className="glass-panel-aaa rounded-2xl p-4 flex items-center justify-center py-12">
                 <span className="w-8 h-8 border-4 border-[#00E5FF] border-t-transparent rounded-full animate-spin" />
               </div>
             ) : stats ? (
@@ -850,7 +848,7 @@ export default function VentasPage() {
 
                 {/* Gráfico de barras */}
                 {chartFormatted.length > 0 && (
-                  <div className="card border border-white/10">
+                  <div className="glass-panel-aaa rounded-2xl p-4">
                     <h3 className="text-sm font-bold text-gray-300 mb-4 flex items-center gap-2">
                       <BarChart2 className="w-4 h-4 text-[#FDB71A]" />
                       Facturación por día
@@ -876,7 +874,7 @@ export default function VentasPage() {
 
                 {/* Top 5 productos */}
                 {topProd.length > 0 && (
-                  <div className="card border border-white/10">
+                  <div className="glass-panel-aaa rounded-2xl p-4">
                     <h3 className="text-sm font-bold text-gray-300 mb-3 flex items-center gap-2">
                       <Package className="w-4 h-4 text-[#00E5FF]" />
                       Top 5 productos más vendidos
@@ -913,7 +911,7 @@ export default function VentasPage() {
                 {/* Distribución por método de pago */}
               </>
             ) : (
-              <div className="card flex flex-col items-center py-14 text-center">
+              <div className="glass-panel-aaa rounded-2xl p-4 flex flex-col items-center py-14 text-center">
                 <CreditCard className="w-10 h-10 text-gray-700 mb-3" />
                 <p className="text-gray-400 font-semibold">Seleccioná un rango y cargá las estadísticas</p>
               </div>
