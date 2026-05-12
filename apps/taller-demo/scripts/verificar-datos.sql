@@ -1,7 +1,22 @@
 -- VERIFICAR SI EXISTEN DATOS EN LAS TABLAS
 -- Ejecutar esto en Supabase SQL Editor para verificar si hay datos
 
--- 1. Ver todos los vendedores
+-- ============================================================
+-- 0. PRIMERO: ver qué columnas existen en cada tabla
+-- ============================================================
+SELECT '=== COLUMNAS DE TABLAS ===' as tabla;
+SELECT 
+  table_name,
+  column_name,
+  data_type
+FROM information_schema.columns
+WHERE table_schema = 'public'
+AND table_name IN ('vendedores', 'clientes_catalogo', 'pedidos_catalogo')
+ORDER BY table_name, ordinal_position;
+
+-- ============================================================
+-- 1. VENDEDORES
+-- ============================================================
 SELECT '=== VENDEDORES ===' as tabla;
 SELECT 
   id,
@@ -13,7 +28,6 @@ SELECT
   estado,
   es_gerente,
   lider_id,
-  total_vendido,
   created_at
 FROM vendedores
 ORDER BY created_at DESC;
@@ -24,7 +38,9 @@ SELECT COUNT(*) as total_vendedores FROM vendedores;
 SELECT COUNT(*) as vendedores_activos FROM vendedores WHERE estado = 'activo';
 SELECT COUNT(*) as gerentes FROM vendedores WHERE es_gerente = true;
 
--- 3. Ver todos los clientes
+-- ============================================================
+-- 3. CLIENTES
+-- ============================================================
 SELECT '=== CLIENTES ===' as tabla;
 SELECT 
   id,
@@ -43,7 +59,9 @@ LIMIT 50;
 SELECT '=== TOTAL CLIENTES ===' as tabla;
 SELECT COUNT(*) as total_clientes FROM clientes_catalogo;
 
--- 5. Ver pedidos con vendedores
+-- ============================================================
+-- 5. PEDIDOS
+-- ============================================================
 SELECT '=== PEDIDOS CON VENDEDORES ===' as tabla;
 SELECT 
   p.id,
@@ -58,11 +76,13 @@ WHERE p.vendedor_id IS NOT NULL
 ORDER BY p.created_at DESC
 LIMIT 20;
 
--- 6. Pedidos sin vendedor
+-- Pedidos sin vendedor
 SELECT '=== PEDIDOS SIN VENDEDOR ===' as tabla;
 SELECT COUNT(*) as pedidos_sin_vendedor FROM pedidos_catalogo WHERE vendedor_id IS NULL;
 
--- 7. Ver jerarquía de gerentes y vendedores
+-- ============================================================
+-- 6. JERARQUÍA
+-- ============================================================
 SELECT '=== JERARQUIA ===' as tabla;
 SELECT 
   v.id,
@@ -75,7 +95,9 @@ FROM vendedores v
 LEFT JOIN vendedores g ON v.lider_id = g.id
 ORDER BY v.es_gerente DESC, v.nombre;
 
--- 8. Verificar si hay tabla vacía o no existe
+-- ============================================================
+-- 7. VERIFICACIÓN GENERAL
+-- ============================================================
 SELECT '=== VERIFICACION DE TABLAS ===' as tabla;
 SELECT 
   schemaname,
