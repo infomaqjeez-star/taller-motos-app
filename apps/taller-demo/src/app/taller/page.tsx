@@ -24,31 +24,43 @@ import NotificationsPanel from "@/components/NotificationsPanel";
 import TemplateManager from "@/components/TemplateManager";
 import BottomNav from "@/components/BottomNav";
 
-/* ── Tarjeta de estado con glow neón ── */
+/* ── Tarjeta de estado AAA ── */
 function StatCard({
   label,
   value,
   icon: Icon,
-  cardClass,
-  iconColor,
-  valueColor,
+  accentColor,
 }: {
   label: string;
   value: number;
   icon: React.ElementType;
-  cardClass: string;
-  iconColor: string;
-  valueColor: string;
+  accentColor: string;
 }) {
   return (
-    <div className={cardClass}>
-      <div className="flex items-center gap-3">
-        <Icon className={`w-7 h-7 flex-shrink-0 ${iconColor}`} />
-        <div>
-          <p className={`text-3xl font-black leading-tight ${valueColor}`}>{value}</p>
-          <p className="text-xs text-gray-400 font-semibold mt-0.5">{label}</p>
+    <div
+      className="rounded-xl p-5 relative overflow-hidden group cursor-pointer transition-all duration-200"
+      style={{
+        background: "#18181b",
+        border: "1px solid rgba(255,255,255,0.08)",
+        boxShadow: "0 4px 24px -4px rgba(0,0,0,0.5), inset 0 1px 0 0 rgba(255,255,255,0.05)",
+      }}
+      onMouseEnter={(e) => {
+        (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)";
+        (e.currentTarget as HTMLElement).style.borderColor = accentColor + "66";
+      }}
+      onMouseLeave={(e) => {
+        (e.currentTarget as HTMLElement).style.transform = "translateY(0)";
+        (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.08)";
+      }}
+    >
+      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ background: `linear-gradient(to bottom right, ${accentColor}0D, transparent)` }} />
+      <div className="flex items-start justify-between mb-4 relative z-10">
+        <div className="w-8 h-8 rounded flex items-center justify-center" style={{ background: "#27272a", border: "1px solid rgba(255,255,255,0.08)" }}>
+          <Icon className="w-4 h-4" style={{ color: accentColor }} />
         </div>
+        <span className="text-xs font-medium uppercase tracking-wider" style={{ color: "#a1a1aa" }}>{label}</span>
       </div>
+      <div className="font-mono text-3xl font-bold text-white relative z-10">{value}</div>
     </div>
   );
 }
@@ -152,43 +164,16 @@ export default function DashboardPage() {
         onOpenNotifications={() => setShowNotifications(true)}
       />
 
-      <main className="app-main space-y-6">
+      <main className="flex-1 overflow-y-auto p-6 md:p-8" style={{ background: "#09090b" }}>
+        <div className="max-w-7xl mx-auto flex flex-col gap-8 pb-12 relative z-10">
 
-        {/* ── Tarjetas de estado neón ── */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <StatCard
-            label="Activas"
-            value={activeOrders.length}
-            icon={Wrench}
-            cardClass="card-neon-orange"
-            iconColor="text-orange-neon"
-            valueColor="text-orange-neon"
-          />
-          <StatCard
-            label="En Reparación"
-            value={inRepairOrders.length}
-            icon={Clock}
-            cardClass="card-neon-cyan"
-            iconColor="text-cyan"
-            valueColor="text-cyan"
-          />
-          <StatCard
-            label="Listas para Retiro"
-            value={readyOrders.length}
-            icon={CheckSquare}
-            cardClass="card-neon-green"
-            iconColor="text-neon"
-            valueColor="text-neon"
-          />
-          <StatCard
-            label="Esp. Repuesto"
-            value={waitingPartsOrders.length}
-            icon={Package}
-            cardClass="card-neon-gold"
-            iconColor="text-gold"
-            valueColor="text-gold"
-          />
-        </div>
+          {/* ── KPIs estilo AAA ── */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <StatCard label="Activas" value={activeOrders.length} icon={Wrench} accentColor="#ef4444" />
+            <StatCard label="En Reparación" value={inRepairOrders.length} icon={Clock} accentColor="#3b82f6" />
+            <StatCard label="Retiro" value={readyOrders.length} icon={CheckSquare} accentColor="#10b981" />
+            <StatCard label="Repuestos" value={waitingPartsOrders.length} icon={Package} accentColor="#f59e0b" />
+          </div>
 
         <Link
           href="/catalogo"
@@ -211,109 +196,57 @@ export default function DashboardPage() {
 
         {/* ── Alerta 90 días ── */}
         {overdueCount > 0 && (
-          <div className="card-alert flex items-start gap-3">
-            <AlertTriangle className="w-6 h-6 text-red-400 flex-shrink-0 mt-0.5" />
+          <div className="rounded-xl p-4 flex items-start gap-3" style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.25)" }}>
+            <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
             <div>
-              <p className="text-red-300 font-bold text-base">
-                {overdueCount} equipo{overdueCount > 1 ? "s" : ""} con más de 90 días esperando retiro
-              </p>
-              <p className="text-red-400/70 text-sm mt-0.5">
-                Contactá al cliente para coordinar la devolución o el abandono del equipo.
-              </p>
-              <button
-                onClick={() => setFilters({ ...filters, overdueOnly: true })}
-                className="mt-2 text-sm text-red-300 underline underline-offset-2 hover:text-red-200"
-              >
-                Ver solo esas órdenes →
-              </button>
+              <p className="text-red-300 font-bold text-sm">{overdueCount} equipo{overdueCount > 1 ? "s" : ""} con más de 90 días esperando retiro</p>
+              <button onClick={() => setFilters({ ...filters, overdueOnly: true })} className="mt-1 text-xs text-red-300 hover:text-red-200 underline underline-offset-2">Ver solo esas órdenes →</button>
             </div>
           </div>
         )}
 
         {/* ── Filtros + Exportar + Plantillas ── */}
-        <div className="space-y-3">
-          <FiltersBar
-            filters={filters}
-            onChange={setFilters}
-            totalCount={orders.length}
-            filteredCount={filtered.length}
-          />
-          <div className="flex flex-wrap gap-2">
-            {filtered.length > 0 && (
-              <>
-                <button
-                  onClick={() => exportOrdersToExcel(filtered)}
-                  className="btn-secondary flex-1 sm:flex-none"
-                >
-                  <FileSpreadsheet className="w-5 h-5 text-green-400" />
-                  Excel
-                  <span className="text-gray-500 text-sm font-normal">({filtered.length})</span>
-                </button>
-                <button
-                  onClick={() => {
-                    const label =
-                      filters.motorType !== "all" ? (MOTOR_TYPE_LABELS[filters.motorType] ?? filters.motorType)
-                      : filters.status !== "all" ? `Estado: ${filters.status}`
-                      : filters.overdueOnly ? "Más de 90 días"
-                      : "Todas las órdenes";
-                    exportOrdersReportPDF(filtered, label);
-                  }}
-                  className="btn-secondary flex-1 sm:flex-none"
-                >
-                  <FileText className="w-5 h-5 text-red-400" />
-                  PDF
-                  <span className="text-gray-500 text-sm font-normal">({filtered.length})</span>
-                </button>
-              </>
-            )}
-            <button
-              onClick={() => setShowTemplates(true)}
-              className="btn-secondary flex-1 sm:flex-none"
-            >
-              <MessageCircle className="w-5 h-5 text-green-400" />
-              <span className="hidden sm:inline">Plantillas WA</span>
-              <span className="sm:hidden">Plantillas</span>
-            </button>
-          </div>
+        <FiltersBar filters={filters} onChange={setFilters} totalCount={orders.length} filteredCount={filtered.length} />
+        <div className="flex flex-wrap gap-2">
+          {filtered.length > 0 && (
+            <>
+              <button onClick={() => exportOrdersToExcel(filtered)} className="px-3 py-1.5 rounded-md text-xs font-medium flex items-center gap-2 transition-colors" style={{ background: "#111113", border: "1px solid rgba(255,255,255,0.08)", color: "#9ca3af" }}>
+                <FileSpreadsheet className="w-3 h-3 text-green-400" /> Excel <span className="text-gray-500">({filtered.length})</span>
+              </button>
+              <button onClick={() => { const label = filters.motorType !== "all" ? (MOTOR_TYPE_LABELS[filters.motorType] ?? filters.motorType) : filters.status !== "all" ? `Estado: ${filters.status}` : filters.overdueOnly ? "Más de 90 días" : "Todas las órdenes"; exportOrdersReportPDF(filtered, label); }} className="px-3 py-1.5 rounded-md text-xs font-medium flex items-center gap-2 transition-colors" style={{ background: "#111113", border: "1px solid rgba(255,255,255,0.08)", color: "#9ca3af" }}>
+                <FileText className="w-3 h-3 text-red-400" /> PDF <span className="text-gray-500">({filtered.length})</span>
+              </button>
+            </>
+          )}
+          <button onClick={() => setShowTemplates(true)} className="px-3 py-1.5 rounded-md text-xs font-medium flex items-center gap-2 transition-colors" style={{ background: "#111113", border: "1px solid rgba(255,255,255,0.08)", color: "#9ca3af" }}>
+            <MessageCircle className="w-3 h-3 text-green-400" /> Plantillas
+          </button>
         </div>
 
         {/* ── Lista de órdenes ── */}
-        <div className="space-y-3">
+        <div className="flex flex-col gap-4">
           {loading ? (
-            <div className="card flex flex-col items-center py-16 text-center">
+            <div className="flex flex-col items-center py-16 text-center" style={{ background: "#18181b", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "0.75rem" }}>
               <div className="w-10 h-10 border-4 border-[#FF5722] border-t-transparent rounded-full animate-spin mb-4" />
               <p className="text-gray-400 font-semibold">Cargando órdenes...</p>
             </div>
           ) : filtered.length === 0 ? (
-            <div className="card flex flex-col items-center justify-center py-16 text-center gap-4">
-              <div className="w-16 h-16 rounded-full flex items-center justify-center"
-                style={{ background: "rgba(255,87,34,0.12)", border: "2px solid rgba(255,87,34,0.40)" }}>
+            <div className="flex flex-col items-center justify-center py-16 text-center gap-4" style={{ background: "#18181b", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "0.75rem" }}>
+              <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ background: "rgba(255,87,34,0.12)", border: "2px solid rgba(255,87,34,0.40)" }}>
                 <Wrench className="w-8 h-8 text-orange-neon" />
               </div>
               <div>
-                <p className="text-gray-300 font-bold text-lg">
-                  {orders.length === 0
-                    ? "No hay órdenes de trabajo todavía"
-                    : "No se encontraron órdenes con esos filtros"}
-                </p>
-                <p className="text-gray-600 text-sm mt-1">
-                  {orders.length === 0
-                    ? "Tocá el botón naranja para ingresar tu primer equipo"
-                    : "Probá ajustar los filtros"}
-                </p>
+                <p className="text-gray-300 font-bold text-lg">{orders.length === 0 ? "No hay órdenes de trabajo todavía" : "No se encontraron órdenes con esos filtros"}</p>
+                <p className="text-gray-600 text-sm mt-1">{orders.length === 0 ? "Tocá el botón naranja para ingresar tu primer equipo" : "Probá ajustar los filtros"}</p>
               </div>
             </div>
           ) : (
             filtered.map((order) => (
-              <OrderCard
-                key={order.id}
-                order={order}
-                onEdit={handleEdit}
-                onDelete={remove}
-              />
+              <OrderCard key={order.id} order={order} onEdit={handleEdit} onDelete={remove} />
             ))
           )}
         </div>
+      </div>
       </main>
 
       {/* ── FAB — Nueva orden (Naranja Maqjeez con glow) ── */}

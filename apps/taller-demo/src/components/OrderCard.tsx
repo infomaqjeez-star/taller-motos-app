@@ -73,185 +73,87 @@ export default function OrderCard({ order, onEdit, onDelete }: OrderCardProps) {
     }
   };
 
+  const statusBorderColor = overdue
+    ? "rgba(239,68,68,0.8)"
+    : currentOrder.status === "en_reparacion"
+    ? "rgba(59,130,246,0.8)"
+    : currentOrder.status === "listo_para_retiro"
+    ? "rgba(16,185,129,0.8)"
+    : currentOrder.status === "esperando_repuesto"
+    ? "rgba(245,158,11,0.8)"
+    : "rgba(239,68,68,0.6)";
+
   return (
     <>
       <div
-        className={`rounded-2xl border transition-all duration-200 overflow-hidden
-          ${overdue
-            ? "bg-red-950/60 border-red-600 shadow-red-900/30 shadow-lg"
-            : "bg-gray-900 border-gray-700"
-          }`}
+        className="rounded-xl p-5 flex flex-col md:flex-row gap-6 relative group transition-all duration-200 overflow-hidden"
+        style={{
+          background: "#18181b",
+          border: "1px solid rgba(255,255,255,0.08)",
+          boxShadow: "0 4px 24px -4px rgba(0,0,0,0.5), inset 0 1px 0 0 rgba(255,255,255,0.05)",
+          borderLeft: `3px solid ${statusBorderColor}`,
+        }}
       >
         {/* Alerta 90 días */}
         {overdue && waitingDays !== null && (
-          <div className="bg-red-600 px-4 py-2 flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 text-white flex-shrink-0" />
-            <span className="text-white text-sm font-bold">
-              ALERTA: {waitingDays} días esperando retiro
-            </span>
+          <div className="absolute top-0 left-0 right-0 px-4 py-1.5 flex items-center gap-2" style={{ background: "rgba(239,68,68,0.9)" }}>
+            <AlertTriangle className="w-3 h-3 text-white flex-shrink-0" />
+            <span className="text-white text-xs font-bold">ALERTA: {waitingDays} días esperando retiro</span>
           </div>
         )}
 
-        <div className="p-4 space-y-3">
-
-          {/* ── Fila 1: Badges ── */}
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span
-              className="text-xs font-black px-2 py-0.5 rounded-lg border bg-orange-500/20 text-orange-300 border-orange-500/40"
-            >
-              {MOTOR_TYPE_LABELS[currentOrder.motorType as keyof typeof MOTOR_TYPE_LABELS]
-                ?? currentOrder.motorType}
-              {currentOrder.motorType === "otros" && (currentOrder as WorkOrder & { machineTypeOther?: string }).machineTypeOther
-                ? `: ${(currentOrder as WorkOrder & { machineTypeOther?: string }).machineTypeOther}`
-                : ""}
+        {/* Columna Izquierda: Info Principal */}
+        <div className="flex-1 flex flex-col pl-2" style={{ paddingTop: overdue ? "2rem" : "0" }}>
+          <div className="flex items-center gap-2 mb-2 flex-wrap">
+            <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border" style={{ background: "rgba(255,255,255,0.03)", borderColor: "rgba(255,255,255,0.08)", color: "#a1a1aa" }}>
+              {MOTOR_TYPE_LABELS[currentOrder.motorType as keyof typeof MOTOR_TYPE_LABELS] ?? currentOrder.motorType}
+              {currentOrder.motorType === "otros" && (currentOrder as WorkOrder & { machineTypeOther?: string }).machineTypeOther ? `: ${(currentOrder as WorkOrder & { machineTypeOther?: string }).machineTypeOther}` : ""}
             </span>
-            {currentOrder.extraMachines && currentOrder.extraMachines.length > 0 && (
-              <span className="text-xs font-black px-2 py-0.5 rounded-lg border bg-green-500/20 text-green-400 border-green-500/40">
-                +{currentOrder.extraMachines.length} maq.
-              </span>
-            )}
-            <span className={`badge ${REPAIR_STATUS_COLORS[currentOrder.status]}`}>
+            <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-white text-black">
               {REPAIR_STATUS_LABELS[currentOrder.status]}
             </span>
             {currentOrder.budgetAccepted && (
-              <span className="badge bg-green-900/50 text-green-400 border-green-600">
-                <CheckCircle className="w-3 h-3" /> Presup. OK
+              <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border border-green-600 text-green-400" style={{ background: "rgba(16,185,129,0.1)" }}>
+                <CheckCircle className="w-3 h-3 inline mr-1" />Presup. OK
               </span>
             )}
             {(currentOrder.photoUrls?.length ?? 0) > 0 && (
-              <span className="badge bg-purple-900/50 text-purple-400 border-purple-600">
-                <Camera className="w-3 h-3" /> {currentOrder.photoUrls.length}
+              <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border border-purple-600 text-purple-400" style={{ background: "rgba(168,85,247,0.1)" }}>
+                <Camera className="w-3 h-3 inline mr-1" />{currentOrder.photoUrls.length}
               </span>
             )}
-          </div>
-
-          {/* ── Fila 2: Nombre + acciones principales ── */}
-          <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <h3 className="text-white font-bold text-lg leading-tight truncate">
-                {currentOrder.clientName}
-              </h3>
-              <p className="text-gray-400 text-sm truncate">
-                {currentOrder.brand} {currentOrder.model}
-              </p>
-            </div>
-
-            {/* Acciones primarias — siempre visibles */}
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <a
-                href={waUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn btn-whatsapp btn-sm px-3 rounded-xl"
-                title="WhatsApp"
-              >
-                <MessageCircle className="w-4 h-4" />
-                <span className="hidden sm:inline text-sm">WA</span>
-              </a>
-              <button
-                onClick={() => onEdit(currentOrder)}
-                className="btn btn-secondary btn-sm px-3 rounded-xl"
-                title="Editar"
-              >
-                <Edit2 className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-
-          {/* ── Fila 3: Info rápida ── */}
-          <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
-            <span className="flex items-center gap-1 text-gray-400">
-              <Calendar className="w-3.5 h-3.5 text-gray-500" />
-              <span className="text-gray-200">{formatDate(currentOrder.entryDate)}</span>
-            </span>
-            {currentOrder.budget !== null && (
-              <span className="flex items-center gap-1 text-gray-400">
-                <DollarSign className="w-3.5 h-3.5 text-gray-500" />
-                <span className="text-gray-200 font-semibold">{formatCurrency(currentOrder.budget)}</span>
-              </span>
-            )}
-            {currentOrder.estimatedDays !== null && (
-              <span className="flex items-center gap-1 text-gray-400">
-                <Clock className="w-3.5 h-3.5 text-gray-500" />
-                {currentOrder.estimatedDays}d est.
-              </span>
-            )}
-            <span className={`flex items-center gap-1 ${NOTIFICATION_COLORS[currentOrder.clientNotification] ?? "text-gray-400"}`}>
-              <Phone className="w-3.5 h-3.5" />
+            <span className={`ml-auto flex items-center gap-1.5 text-[11px] font-medium px-2 py-0.5 rounded border ${
+              currentOrder.clientNotification === "pendiente_de_aviso"
+                ? "text-yellow-400 bg-yellow-400/10 border-yellow-400/20"
+                : currentOrder.clientNotification === "avisado"
+                ? "text-green-400 bg-green-400/10 border-green-400/20"
+                : "text-red-400 bg-red-400/10 border-red-400/20"
+            }`}>
+              <Phone className="w-3 h-3" />
               {CLIENT_NOTIFICATION_LABELS[currentOrder.clientNotification]}
             </span>
           </div>
 
-          {/* ── Fila 4: Acciones secundarias ── */}
-          <div className="flex flex-wrap gap-2 pt-1 border-t border-gray-700/60">
-            <button
-              onClick={() => setShowBudget(true)}
-              className="btn btn-sm flex-1 rounded-xl bg-orange-500/20 text-orange-300 hover:bg-orange-500/40 border border-orange-500/40 font-bold"
-              title="Generar Presupuesto PNG"
-            >
-              <ImageIcon className="w-4 h-4" />
-              <span className="text-xs">Presupuesto</span>
-            </button>
-            <button
-              onClick={() => setShowPayment(true)}
-              className="btn btn-sm flex-1 min-w-[44px] max-w-[80px] rounded-xl bg-green-900/30 text-green-400 hover:bg-green-900/50 border border-green-700/50"
-              title="Pagos"
-            >
-              <DollarSign className="w-4 h-4" />
-              <span className="hidden sm:inline text-xs">Pagos</span>
-            </button>
-            <button
-              onClick={() => setShowPrint(true)}
-              className="btn btn-sm flex-1 min-w-[44px] max-w-[80px] rounded-xl bg-gray-800 text-blue-400 hover:bg-blue-900/30 border border-gray-700"
-              title="Imprimir"
-            >
-              <Printer className="w-4 h-4" />
-              <span className="hidden sm:inline text-xs">Imprimir</span>
-            </button>
-            <button
-              onClick={() => setShowHistory(true)}
-              className="btn btn-sm flex-1 min-w-[44px] max-w-[80px] rounded-xl bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-700"
-              title="Historial"
-            >
-              <User className="w-4 h-4" />
-              <span className="hidden sm:inline text-xs">Historial</span>
-            </button>
-            <button
-              onClick={() => setShowPhotos(true)}
-              className="btn btn-sm flex-1 min-w-[44px] max-w-[80px] rounded-xl bg-gray-800 text-purple-400 hover:bg-purple-900/30 border border-gray-700"
-              title="Fotos"
-            >
-              <Camera className="w-4 h-4" />
-              <span className="hidden sm:inline text-xs">Fotos</span>
-            </button>
-            <button
-              onClick={() => exportOrderDetailPDF(currentOrder)}
-              className="btn btn-sm flex-1 min-w-[44px] max-w-[80px] rounded-xl bg-gray-800 text-red-400 hover:bg-red-900/30 border border-gray-700"
-              title="PDF"
-            >
-              <FileText className="w-4 h-4" />
-              <span className="hidden sm:inline text-xs">PDF</span>
-            </button>
-            <button
-              onClick={handleDelete}
-              className="btn btn-sm flex-1 min-w-[44px] max-w-[80px] rounded-xl bg-gray-800 text-gray-500 hover:text-red-400 hover:bg-red-900/30 border border-gray-700"
-              title="Eliminar"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
+          <h2 className="text-lg font-bold text-white tracking-tight">{currentOrder.clientName}</h2>
+          <div className="flex items-center gap-3 text-sm mt-1">
+            <span className="text-gray-400 font-medium">{currentOrder.brand} {currentOrder.model}</span>
+            <span className="text-white/10">•</span>
+            <div className="flex items-center gap-1.5 text-gray-500">
+              <Calendar className="w-3 h-3" />
+              <span className="font-mono text-xs">{formatDate(currentOrder.entryDate)}</span>
+            </div>
           </div>
 
-          {/* ── Expandir detalle ── */}
           <button
             onClick={() => setExpanded(!expanded)}
-            className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-300 transition-colors"
+            className="mt-4 text-xs font-medium text-gray-500 hover:text-white transition-colors flex items-center gap-1 w-max"
           >
-            {expanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+            {expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
             {expanded ? "Ver menos" : "Ver detalle"}
           </button>
 
           {expanded && (
-            <div className="pt-2 border-t border-gray-700/60 space-y-2">
+            <div className="mt-3 pt-3 space-y-2" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
               <div>
                 <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Fallas reportadas</span>
                 <p className="text-gray-300 text-sm mt-0.5 whitespace-pre-wrap">{currentOrder.reportedIssues}</p>
@@ -262,30 +164,84 @@ export default function OrderCard({ order, onEdit, onDelete }: OrderCardProps) {
                   <p className="text-gray-300 text-sm mt-0.5 whitespace-pre-wrap">{currentOrder.internalNotes}</p>
                 </div>
               )}
+              {currentOrder.budget !== null && (
+                <p className="text-xs text-gray-500">Presupuesto: <span className="text-gray-200 font-semibold">{formatCurrency(currentOrder.budget)}</span></p>
+              )}
               {currentOrder.completionDate && (
-                <p className="text-xs text-gray-500">
-                  Listo: <span className="text-gray-300">{formatDate(currentOrder.completionDate)}</span>
-                </p>
+                <p className="text-xs text-gray-500">Listo: <span className="text-gray-300">{formatDate(currentOrder.completionDate)}</span></p>
               )}
               {currentOrder.deliveryDate && (
-                <p className="text-xs text-gray-500">
-                  Entregado: <span className="text-gray-300">{formatDate(currentOrder.deliveryDate)}</span>
-                </p>
+                <p className="text-xs text-gray-500">Entregado: <span className="text-gray-300">{formatDate(currentOrder.deliveryDate)}</span></p>
               )}
               {(currentOrder.photoUrls?.length ?? 0) > 0 && (
-                <div>
-                  <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Fotos</span>
-                  <div className="flex gap-2 mt-1 overflow-x-auto pb-1">
-                    {currentOrder.photoUrls.map((url, i) => (
-                      <img key={i} src={url} alt={`Foto ${i + 1}`}
-                        className="h-16 w-16 object-cover rounded-lg border border-gray-700 flex-shrink-0" />
-                    ))}
-                  </div>
+                <div className="flex gap-2 mt-1 overflow-x-auto pb-1">
+                  {currentOrder.photoUrls.map((url, i) => (
+                    <img key={i} src={url} alt={`Foto ${i + 1}`} className="h-16 w-16 object-cover rounded-lg border border-gray-700 flex-shrink-0" />
+                  ))}
                 </div>
               )}
               <p className="text-xs text-gray-600">ID: {currentOrder.id}</p>
             </div>
           )}
+        </div>
+
+        {/* Columna Derecha: Acciones */}
+        <div className="flex flex-col justify-between gap-3 md:w-[320px] shrink-0 border-t md:border-t-0 md:border-l border-white/[0.06] pt-4 md:pt-0 md:pl-6">
+          <div className="flex gap-2">
+            <a
+              href={waUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 text-white px-3 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2"
+              style={{
+                background: "linear-gradient(to bottom, #25D366, #1da851)",
+                boxShadow: "0 2px 8px -2px rgba(0,0,0,0.8), inset 0 1px 0 0 rgba(255,255,255,0.1)",
+              }}
+              title="WhatsApp"
+            >
+              <MessageCircle className="w-4 h-4" /> Notificar
+            </a>
+            <button
+              onClick={() => onEdit(currentOrder)}
+              className="w-9 h-9 rounded-lg flex items-center justify-center transition-colors"
+              style={{ background: "#27272a", border: "1px solid rgba(255,255,255,0.08)" }}
+              title="Editar"
+            >
+              <Edit2 className="w-4 h-4 text-gray-400" />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={() => setShowBudget(true)}
+              className="px-2 py-1.5 rounded-md text-[11px] font-semibold transition-colors flex items-center justify-center gap-1.5"
+              style={{ background: "linear-gradient(to bottom, #27272a, #18181b)", border: "1px solid rgba(255,255,255,0.08)", color: "#FACC15" }}
+            >
+              <ImageIcon className="w-3 h-3" /> Presupuesto
+            </button>
+            <button
+              onClick={() => setShowPayment(true)}
+              className="px-2 py-1.5 rounded-md text-[11px] font-medium transition-colors flex items-center justify-center gap-1.5"
+              style={{ background: "#27272a", border: "1px solid rgba(255,255,255,0.08)", color: "#fff" }}
+            >
+              <DollarSign className="w-3 h-3 text-green-400" /> Pagos
+            </button>
+            <button
+              onClick={() => setShowPrint(true)}
+              className="px-2 py-1.5 rounded-md text-[11px] font-medium transition-colors flex items-center justify-center gap-1.5"
+              style={{ background: "#27272a", border: "1px solid rgba(255,255,255,0.08)", color: "#fff" }}
+            >
+              <Printer className="w-3 h-3 text-gray-400" /> Imprimir
+            </button>
+            <button
+              onClick={handleDelete}
+              className="px-2 py-1.5 rounded-md text-[11px] font-medium transition-colors flex items-center justify-center gap-1.5"
+              style={{ background: "#27272a", border: "1px solid rgba(255,255,255,0.08)", color: "#fff" }}
+              title="Eliminar"
+            >
+              <Trash2 className="w-3 h-3 text-red-400 opacity-70" /> Borrar
+            </button>
+          </div>
         </div>
       </div>
 
