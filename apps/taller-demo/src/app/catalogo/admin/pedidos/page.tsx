@@ -225,15 +225,25 @@ function AdminPedidosContent() {
 
   const marcarNotifLeida = async (id: string) => {
     try {
+      const token = localStorage.getItem("admin_catalogo_session");
+      const parsed = token ? JSON.parse(token) : null;
       await fetch("/api/notificaciones", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(parsed?.token ? { Authorization: `Bearer ${parsed.token}` } : {}),
+        },
         body: JSON.stringify({ id }),
       });
       setNotificaciones((prev) => prev.filter((n) => n.id !== id));
     } catch (e) {
       console.error(e);
     }
+  };
+
+  const marcarTodasLeidas = async () => {
+    const ids = notificaciones.map((n) => n.id);
+    for (const id of ids) await marcarNotifLeida(id);
   };
 
   const cargarVendedores = async () => {
@@ -512,30 +522,56 @@ function AdminPedidosContent() {
                 {notifOpen && (
                   <div className="absolute right-0 mt-2 w-80 rounded-xl border border-gray-700 bg-[#1a1a1a] shadow-xl z-50 overflow-hidden">
                     <div className="p-3 border-b border-gray-700 flex justify-between items-center">
-                      <span className="text-sm font-bold text-white">Notificaciones</span>
-                      <span className="text-xs text-gray-500">{notificaciones.length} sin leer</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-white">Notificaciones</span>
+                        {notificaciones.length > 0 && (
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-red-500/20 text-red-400 border border-red-500/30">{notificaciones.length}</span>
+                        )}
+                      </div>
+                      {notificaciones.length > 0 && (
+                        <button onClick={marcarTodasLeidas} className="text-[10px] text-gray-500 hover:text-orange-400 transition-colors">
+                          Limpiar todo
+                        </button>
+                      )}
                     </div>
-                    <div className="max-h-64 overflow-y-auto">
+                    <div className="max-h-80 overflow-y-auto divide-y divide-gray-800">
                       {notificaciones.length === 0 ? (
-                        <p className="p-4 text-xs text-gray-500 text-center">No hay notificaciones</p>
+                        <div className="p-6 text-center">
+                          <p className="text-xs text-gray-500">No hay notificaciones</p>
+                        </div>
                       ) : (
-                        notificaciones.map((n) => (
-                          <div key={n.id} className="p-3 border-b border-gray-800 hover:bg-gray-800/50">
-                            <div className="flex justify-between items-start">
-                              <p className="text-xs font-bold text-white">{n.titulo}</p>
-                              <button
-                                onClick={() => marcarNotifLeida(n.id)}
-                                className="text-[10px] text-gray-500 hover:text-white"
-                              >
-                                ✕
-                              </button>
+                        notificaciones.map((n) => {
+                          const tipoIcono: Record<string, { icon: string; color: string }> = {
+                            nuevo_pedido:   { icon: "🛒", color: "text-orange-400" },
+                            nuevo_cliente:  { icon: "👤", color: "text-blue-400" },
+                            nuevo_vendedor: { icon: "🤝", color: "text-green-400" },
+                            cambio_vendedor:{ icon: "🔄", color: "text-purple-400" },
+                            error:          { icon: "⚠️", color: "text-red-400" },
+                          };
+                          const cfg = tipoIcono[n.tipo] || { icon: "🔔", color: "text-gray-400" };
+                          return (
+                            <div key={n.id} className="p-3 hover:bg-gray-800/40 transition-colors">
+                              <div className="flex items-start gap-2">
+                                <span className="text-base leading-none mt-0.5 shrink-0">{cfg.icon}</span>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex justify-between items-start gap-1">
+                                    <p className={`text-xs font-bold truncate ${cfg.color}`}>{n.titulo}</p>
+                                    <button
+                                      onClick={() => marcarNotifLeida(n.id)}
+                                      className="shrink-0 text-gray-600 hover:text-white transition-colors text-xs leading-none"
+                                    >
+                                      ✕
+                                    </button>
+                                  </div>
+                                  <p className="text-[10px] text-gray-300 mt-0.5 leading-relaxed">{n.mensaje}</p>
+                                  <p className="text-[10px] text-gray-600 mt-1">
+                                    {new Date(n.created_at).toLocaleString("es-AR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                                  </p>
+                                </div>
+                              </div>
                             </div>
-                            <p className="text-[10px] text-gray-400 mt-1">{n.mensaje}</p>
-                            <p className="text-[10px] text-gray-600 mt-1">
-                              {new Date(n.created_at).toLocaleString("es-AR")}
-                            </p>
-                          </div>
-                        ))
+                          );
+                        })
                       )}
                     </div>
                   </div>

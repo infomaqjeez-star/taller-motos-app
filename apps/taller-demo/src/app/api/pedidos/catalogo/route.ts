@@ -123,6 +123,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
+    // Notificar al admin del nuevo pedido
+    const clienteNombre = datos_cliente?.nombre || "Cliente anónimo";
+    const formaPago = datos_cliente?.formaPago || "—";
+    const totalFmt = "$" + (total || 0).toLocaleString("es-AR", { maximumFractionDigits: 0 });
+    await supabase.from("notificaciones").insert({
+      tipo: "nuevo_pedido",
+      titulo: "Nuevo pedido recibido",
+      mensaje: `${clienteNombre} realizó un pedido de ${totalFmt} (${formaPago})${finalVendedorId ? " — con vendedor asignado" : ""}`,
+      destinatario_rol: "admin",
+      metadata: { pedido_id: pedido.id, total, forma_pago: formaPago, vendedor_id: finalVendedorId },
+    });
+
     return NextResponse.json({ pedido });
   } catch (err) {
     console.error("pedidos/catalogo error:", err);

@@ -72,6 +72,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
+    // Notificar al admin
+    await supabase.from("notificaciones").insert({
+      tipo: "nuevo_vendedor",
+      titulo: "Nuevo vendedor registrado",
+      mensaje: `${vendedor.nombre} (${vendedor.email}) se registró como vendedor. Código: ${vendedor.codigo_referido}`,
+      destinatario_rol: "admin",
+      metadata: { vendedor_id: vendedor.id, email: vendedor.email, codigo: vendedor.codigo_referido },
+    });
+
     return NextResponse.json({ vendedor });
   } catch (err) {
     console.error("vendedor/register error:", err);

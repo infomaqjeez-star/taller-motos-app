@@ -86,7 +86,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Notificar al vendedor si se le asigno un cliente
+    // Siempre notificar al admin del nuevo cliente
     if (vendedor_referente_id) {
       const { data: vendedor } = await supabase.from("vendedores").select("nombre").eq("id", vendedor_referente_id).single();
       // Notificar al vendedor
@@ -98,13 +98,20 @@ export async function POST(req: NextRequest) {
         destinatario_id: vendedor_referente_id,
         metadata: { cliente_id: cliente.id, pedidos_asociados: pedidosAsociados },
       });
-      // Notificar al admin
       await supabase.from("notificaciones").insert({
         tipo: "nuevo_cliente",
         titulo: "Nuevo cliente con vendedor",
-        mensaje: `${cliente.nombre} se registró con vendedor ${vendedor?.nombre || vendedor_referente_id}.`,
+        mensaje: `${cliente.nombre} (${cliente.email}) se registró con vendedor ${vendedor?.nombre || vendedor_referente_id}.`,
         destinatario_rol: "admin",
-        metadata: { cliente_id: cliente.id, vendedor_id: vendedor_referente_id },
+        metadata: { cliente_id: cliente.id, vendedor_id: vendedor_referente_id, pedidos_asociados: pedidosAsociados.length },
+      });
+    } else {
+      await supabase.from("notificaciones").insert({
+        tipo: "nuevo_cliente",
+        titulo: "Nuevo cliente registrado",
+        mensaje: `${cliente.nombre} (${cliente.email}) se registró sin vendedor referente.`,
+        destinatario_rol: "admin",
+        metadata: { cliente_id: cliente.id, pedidos_asociados: pedidosAsociados.length },
       });
     }
 
