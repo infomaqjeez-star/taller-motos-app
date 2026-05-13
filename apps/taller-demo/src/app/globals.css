@@ -223,6 +223,23 @@
   color: #ffffff;
 }
 
+/* ── Login Card: mobile-first sin backdrop-filter (GPU killer en mobile) ── */
+.login-card {
+  background: rgba(10, 18, 38, 0.97);
+  border-top: 1px solid rgba(255,255,255,0.10);
+  border-left: 1px solid rgba(255,255,255,0.07);
+  border-right: 1px solid rgba(255,255,255,0.04);
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  box-shadow: 0 20px 40px -12px rgba(0,0,0,0.8);
+}
+@media (min-width: 640px) {
+  .login-card {
+    background: linear-gradient(135deg, rgba(15,23,42,0.75) 0%, rgba(15,23,42,0.35) 100%);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+}
+
 /* ── Product Card: CSS hover (no JS, mejor performance) ── */
 .product-card {
   background: linear-gradient(145deg, rgba(15,23,42,0.9) 0%, rgba(15,23,42,0.4) 100%);

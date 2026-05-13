@@ -81,45 +81,15 @@ export default function ClienteLoginPage() {
       className="min-h-screen flex flex-col lg:flex-row relative overflow-x-hidden"
       style={{ background: "#020617", color: "#e2e8f0" }}
     >
-      {/* ── ORBES ANIMADOS DE FONDO ── */}
+      {/* ── ORBES ANIMADOS (solo desktop) ── */}
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-        <div
-          className="absolute rounded-full"
-          style={{
-            top: "10%", left: "20%", width: 380, height: 380,
-            background: "rgba(249,115,22,0.18)",
-            filter: "blur(120px)",
-            animation: "blob 7s infinite",
-          }}
-        />
-        <div
-          className="absolute rounded-full"
-          style={{
-            top: "20%", right: "20%", width: 380, height: 380,
-            background: "rgba(59,130,246,0.15)",
-            filter: "blur(120px)",
-            animation: "blob 7s infinite 2s",
-          }}
-        />
-        <div
-          className="absolute rounded-full"
-          style={{
-            bottom: "-10%", left: "40%", width: 380, height: 380,
-            background: "rgba(16,185,129,0.15)",
-            filter: "blur(120px)",
-            animation: "blob 7s infinite 4s",
-          }}
-        />
+        <div className="absolute rounded-full orb-desktop" style={{ top: "10%", left: "20%", width: 380, height: 380, background: "rgba(249,115,22,0.18)", filter: "blur(100px)", animation: "blob 7s infinite" }} />
+        <div className="absolute rounded-full orb-desktop" style={{ top: "20%", right: "20%", width: 380, height: 380, background: "rgba(59,130,246,0.15)", filter: "blur(100px)", animation: "blob 7s infinite 2s" }} />
+        <div className="absolute rounded-full orb-desktop" style={{ bottom: "-10%", left: "40%", width: 380, height: 380, background: "rgba(16,185,129,0.15)", filter: "blur(100px)", animation: "blob 7s infinite 4s" }} />
         <style>{`
-          @keyframes blob {
-            0%   { transform: translate(0px, 0px) scale(1); }
-            33%  { transform: translate(30px, -50px) scale(1.1); }
-            66%  { transform: translate(-20px, 20px) scale(0.9); }
-            100% { transform: translate(0px, 0px) scale(1); }
-          }
-          @media (prefers-reduced-motion: reduce) {
-            .orb-anim { animation: none !important; }
-          }
+          @keyframes blob{0%{transform:translate(0px,0px) scale(1)}33%{transform:translate(30px,-50px) scale(1.1)}66%{transform:translate(-20px,20px) scale(0.9)}100%{transform:translate(0px,0px) scale(1)}}
+          @media (max-width: 1023px) { .orb-desktop { display: none !important; } }
+          @media (prefers-reduced-motion: reduce) { .orb-desktop { animation: none !important; } }
         `}</style>
       </div>
 
@@ -225,26 +195,14 @@ export default function ClienteLoginPage() {
             <div className="hidden lg:block" />
             <div
               className="flex items-center gap-1.5 text-xs text-slate-500 px-2.5 py-1 rounded-full"
-              style={{ background: "rgba(15,23,42,0.6)", border: "1px solid #1e293b", backdropFilter: "blur(8px)" }}
+              style={{ background: "rgba(15,23,42,0.8)", border: "1px solid #1e293b" }}
             >
               <Lock className="h-3 w-3" /> Seguro
             </div>
           </div>
 
           {/* TARJETA GLASSMORPHISM */}
-          <div
-            className="rounded-[1.5rem] sm:rounded-[2rem] p-5 sm:p-8 md:p-10 relative overflow-hidden"
-            style={{
-              background: "linear-gradient(135deg, rgba(15,23,42,0.75) 0%, rgba(15,23,42,0.35) 100%)",
-              backdropFilter: "blur(20px)",
-              WebkitBackdropFilter: "blur(20px)",
-              borderTop: "1px solid rgba(255,255,255,0.14)",
-              borderLeft: "1px solid rgba(255,255,255,0.1)",
-              borderRight: "1px solid rgba(255,255,255,0.05)",
-              borderBottom: "1px solid rgba(255,255,255,0.05)",
-              boxShadow: "0 25px 50px -12px rgba(0,0,0,0.7)",
-            }}
-          >
+          <div className="rounded-[1.5rem] sm:rounded-[2rem] p-5 sm:p-8 md:p-10 relative overflow-hidden login-card">
             {/* Brillo superior interno */}
             <div
               className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-px pointer-events-none"
