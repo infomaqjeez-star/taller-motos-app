@@ -384,7 +384,8 @@ export default function ClienteDashboardPage() {
                   {pedidos.map((p) => {
                     const nroOrden = numeroOrden(p.id, p.created_at);
                     const estado = ESTADO_CONFIG[p.estado] || ESTADO_CONFIG["pendiente"];
-                    const esPago = p.datos_cliente?.formaPago === "Transferencia";
+                    const formaPago: string = p.datos_cliente?.formaPago || "";
+                    const requiereComprobante = ["Transferencia", "Mercado Pago", "Depósito"].some(m => formaPago.toLowerCase().includes(m.toLowerCase())) || true;
                     const comprobante = p.datos_cliente?.comprobante;
                     const isExpanded = expandedOrder === p.id;
 
@@ -404,7 +405,7 @@ export default function ClienteDashboardPage() {
                               <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${estado.color}`}>
                                 {estado.icon} {estado.label}
                               </span>
-                              {esPago && !comprobante && (
+                              {requiereComprobante && !comprobante && (
                                 <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border text-yellow-400 bg-yellow-400/10 border-yellow-400/30">
                                   <AlertTriangle className="h-3 w-3" /> Sin comprobante
                                 </span>
@@ -459,11 +460,13 @@ export default function ClienteDashboardPage() {
                               </div>
                             </div>
 
-                            {esPago && (
+                            {requiereComprobante && (
                               <div className="rounded-xl p-4 space-y-3" style={{ background: "rgba(59,130,246,0.06)", border: "1px solid rgba(59,130,246,0.2)" }}>
                                 <div className="flex items-center gap-2">
                                   <Banknote className="h-4 w-4 text-blue-400" />
-                                  <p className="text-sm font-bold text-blue-300">Comprobante de Transferencia</p>
+                                  <p className="text-sm font-bold text-blue-300">
+                                    {formaPago ? `Comprobante · ${formaPago}` : "Comprobante de pago"}
+                                  </p>
                                 </div>
                                 {comprobante ? (
                                   <div className="space-y-2">
