@@ -59,6 +59,19 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
+  // Verificar que el caller sea admin o vendedor válido
+  const authHeader = req.headers.get("Authorization");
+  const vendedorHeader = req.headers.get("x-vendedor-token");
+  let authorized = false;
+
+  if (authHeader?.startsWith("Bearer ")) {
+    try { await jwtVerify(authHeader.slice(7), ADMIN_JWT_SECRET, { clockTolerance: 60 }); authorized = true; } catch {}
+  }
+  if (!authorized && vendedorHeader) {
+    try { await jwtVerify(vendedorHeader, VENDEDOR_JWT_SECRET, { clockTolerance: 60 }); authorized = true; } catch {}
+  }
+  if (!authorized) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+
   try {
     const { id } = await req.json();
     if (!id) return NextResponse.json({ error: "ID requerido" }, { status: 400 });

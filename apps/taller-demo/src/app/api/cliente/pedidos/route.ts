@@ -28,8 +28,13 @@ export async function GET(req: NextRequest) {
       .order("created_at", { ascending: false })
       .limit(50);
 
-    // Si no trae por cliente_id, traer por email del token
-    if (error || !pedidos?.length) {
+    // Error real de DB: retornar 500
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    // Si no hay resultados por cliente_id, intentar por email como fallback
+    if (!pedidos?.length) {
       const { data: clienteData } = await supabase
         .from("clientes_catalogo")
         .select("email")
@@ -46,10 +51,6 @@ export async function GET(req: NextRequest) {
 
         return NextResponse.json({ pedidos: pedidosByEmail || [] });
       }
-    }
-
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
     return NextResponse.json({ pedidos: pedidos || [] });

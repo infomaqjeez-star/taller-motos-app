@@ -109,11 +109,23 @@ function saveCartToStorage(items: CartItem[]) {
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>(getCartFromStorage);
   const [isOpen, setIsOpen] = useState(false);
+  const [discounts, setDiscounts] = useState(() => getDiscountsFromStorage());
 
   // Persistir carrito en localStorage
   useEffect(() => {
     saveCartToStorage(items);
   }, [items]);
+
+  // Recalcular descuentos cuando cambia el auth (login/logout)
+  useEffect(() => {
+    const refresh = () => setDiscounts(getDiscountsFromStorage());
+    window.addEventListener("storage", refresh);
+    window.addEventListener("cliente-auth-changed", refresh);
+    return () => {
+      window.removeEventListener("storage", refresh);
+      window.removeEventListener("cliente-auth-changed", refresh);
+    };
+  }, []);
 
   const addItem = useCallback((newItem: Omit<CartItem, "cantidad"> & { cantidad?: number }) => {
     const qty = Math.max(1, newItem.cantidad || 1);
@@ -147,9 +159,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const totals = useMemo(() => {
-    const { cliente, vendedor } = getDiscountsFromStorage();
-    return calcularTotales(items, cliente, vendedor);
-  }, [items]);
+    return calcularTotales(items, discounts.cliente, discounts.vendedor);
+  }, [items, discounts]);
   const itemCount = useMemo(() => items.reduce((sum, i) => sum + i.cantidad, 0), [items]);
 
   return (

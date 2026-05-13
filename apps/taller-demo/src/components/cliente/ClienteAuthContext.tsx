@@ -50,6 +50,7 @@ export function ClienteAuthProvider({ children }: { children: React.ReactNode })
     if (!res.ok) throw new Error(data.error || "Error al iniciar sesión");
     localStorage.setItem("cliente_token", data.token);
     setCliente(data.cliente);
+    window.dispatchEvent(new Event("cliente-auth-changed"));
   };
 
   const register = async (data: { nombre: string; email: string; telefono?: string; dni?: string; password: string; vendedor_referente_id?: string }) => {
@@ -62,11 +63,13 @@ export function ClienteAuthProvider({ children }: { children: React.ReactNode })
     if (!res.ok) throw new Error(json.error || "Error al registrarse");
     localStorage.setItem("cliente_token", json.token);
     setCliente(json.cliente);
+    window.dispatchEvent(new Event("cliente-auth-changed"));
   };
 
   const logout = () => {
     localStorage.removeItem("cliente_token");
     setCliente(null);
+    window.dispatchEvent(new Event("cliente-auth-changed"));
   };
 
   return (

@@ -18,6 +18,9 @@ async function verifyAdmin(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
+  const admin = await verifyAdmin(req);
+  if (!admin) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+
   try {
     const supabase = getSupabaseAdmin();
 

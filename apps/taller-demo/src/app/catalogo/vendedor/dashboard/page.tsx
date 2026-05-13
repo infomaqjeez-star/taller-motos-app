@@ -85,10 +85,11 @@ export default function VendedorDashboardPage() {
   };
 
   const marcarNotifLeida = async (id: string) => {
+    const token = localStorage.getItem("vendedor_token");
     try {
       await fetch("/api/notificaciones", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(token ? { "x-vendedor-token": token } : {}) },
         body: JSON.stringify({ id }),
       });
       setNotificaciones((prev) => prev.filter((n) => n.id !== id));

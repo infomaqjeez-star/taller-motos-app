@@ -193,11 +193,12 @@ export default function CheckoutPage() {
     }
 
     // Si hay comprobante, subirlo primero
+    let uploadedUrl = comprobanteUrl;
     if (comprobanteFile && !comprobanteUrl) {
       setUploadingComprobante(true);
-      const url = await uploadComprobante(comprobanteFile);
-      setComprobanteUrl(url);
-      update("comprobante", url);
+      uploadedUrl = await uploadComprobante(comprobanteFile);
+      setComprobanteUrl(uploadedUrl);
+      update("comprobante", uploadedUrl);
       setUploadingComprobante(false);
     }
 
@@ -258,7 +259,7 @@ export default function CheckoutPage() {
             telefono: form.telefono,
             formaPago: form.formaPago,
             notas: form.notas,
-            comprobante: comprobanteUrl || form.comprobante,
+            comprobante: uploadedUrl || form.comprobante,
             numeroCliente: numeroCliente,
           },
           subtotal: totals.subtotal,
