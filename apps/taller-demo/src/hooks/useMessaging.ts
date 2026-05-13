@@ -4,36 +4,16 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { MessageTaller } from "@/lib/types";
 import { mensajesDb } from "@/lib/db";
 
-// ── Sonido estilo MSN (ding) generado con Web Audio API ──────
+// ── Sonido MSN Messenger real (archivo MP3) ───────────────────
 function playMSNDing() {
   try {
-    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-
-    // Nota 1: ding principal (si♭ agudo)
-    const osc1 = ctx.createOscillator();
-    const gain1 = ctx.createGain();
-    osc1.connect(gain1);
-    gain1.connect(ctx.destination);
-    osc1.frequency.setValueAtTime(880, ctx.currentTime);
-    osc1.frequency.exponentialRampToValueAtTime(1100, ctx.currentTime + 0.05);
-    gain1.gain.setValueAtTime(0.4, ctx.currentTime);
-    gain1.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
-    osc1.start(ctx.currentTime);
-    osc1.stop(ctx.currentTime + 0.4);
-
-    // Nota 2: eco suave
-    const osc2 = ctx.createOscillator();
-    const gain2 = ctx.createGain();
-    osc2.connect(gain2);
-    gain2.connect(ctx.destination);
-    osc2.frequency.setValueAtTime(660, ctx.currentTime + 0.12);
-    gain2.gain.setValueAtTime(0, ctx.currentTime);
-    gain2.gain.setValueAtTime(0.25, ctx.currentTime + 0.12);
-    gain2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.55);
-    osc2.start(ctx.currentTime + 0.12);
-    osc2.stop(ctx.currentTime + 0.55);
+    const audio = new Audio("/msn-sound.mp3");
+    audio.volume = 0.8;
+    audio.play().catch(() => {
+      // Browser bloqueó autoplay sin interacción previa — ignorar silenciosamente
+    });
   } catch {
-    // El browser puede bloquear AudioContext sin interacción del usuario
+    // Fallback silencioso
   }
 }
 
