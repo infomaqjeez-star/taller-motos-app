@@ -124,11 +124,12 @@ export default function ClienteDashboardPage() {
     (cliente as any)?.vendedor_referente || null
   );
   const [showCambiarVendedor, setShowCambiarVendedor] = useState(false);
-  const [vendedores, setVendedores] = useState<{ id: string; nombre: string; codigo_referido: string }[]>([]);
-  const [loadingVendedores, setLoadingVendedores] = useState(false);
-  const [vendedorBusqueda, setVendedorBusqueda] = useState("");
+  const [codigoInput, setCodigoInput] = useState("");
+  const [codigoStatus, setCodigoStatus] = useState<"idle" | "checking" | "found" | "error">("idle");
+  const [vendedorEncontrado, setVendedorEncontrado] = useState<{ id: string; nombre: string; codigo_referido: string } | null>(null);
   const [cambiandoVendedor, setCambiandoVendedor] = useState(false);
   const [vendedorMsg, setVendedorMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const codigoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (cliente && (cliente as any).vendedor_referente) {
@@ -136,14 +137,26 @@ export default function ClienteDashboardPage() {
     }
   }, [cliente]);
 
-  const cargarVendedores = async () => {
-    setLoadingVendedores(true);
-    try {
-      const res = await fetch("/api/vendedor/public?lista=1");
-      const data = await res.json();
-      setVendedores(data.vendedores || []);
-    } catch {}
-    finally { setLoadingVendedores(false); }
+  const handleCodigoChange = (val: string) => {
+    setCodigoInput(val);
+    setVendedorEncontrado(null);
+    setVendedorMsg(null);
+    if (codigoTimer.current) clearTimeout(codigoTimer.current);
+    const code = val.trim().toUpperCase();
+    if (!code || code.length < 3) { setCodigoStatus("idle"); return; }
+    setCodigoStatus("checking");
+    codigoTimer.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/vendedor/public?codigo=${code}`);
+        const data = await res.json();
+        if (data.vendedor) {
+          setVendedorEncontrado(data.vendedor);
+          setCodigoStatus("found");
+        } else {
+          setCodigoStatus("error");
+        }
+      } catch { setCodigoStatus("error"); }
+    }, 500);
   };
 
   const handleCambiarVendedor = async (vendedorId: string) => {
@@ -160,8 +173,8 @@ export default function ClienteDashboardPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Error al cambiar vendedor");
       setVendedorReferente(data.vendedor);
-      setVendedorMsg({ ok: true, text: `¡Listo! Ahora ${data.vendedor.nombre} es tu vendedor referente.` });
-      setTimeout(() => { setShowCambiarVendedor(false); setVendedorMsg(null); }, 2500);
+      setVendedorMsg({ ok: true, text: `¡Listo! ${data.vendedor.nombre} es ahora tu vendedor referente.` });
+      setTimeout(() => { setShowCambiarVendedor(false); setVendedorMsg(null); setCodigoInput(""); setCodigoStatus("idle"); setVendedorEncontrado(null); }, 2200);
     } catch (err: any) {
       setVendedorMsg({ ok: false, text: err.message });
     } finally {
@@ -297,51 +310,70 @@ export default function ClienteDashboardPage() {
             </div>
 
             {/* ── Mi Vendedor Referente ── */}
-            <div className="rounded-2xl p-5" style={glassPanelStyle}>
-              <div className="flex items-center justify-between mb-4">
+            <div className="rounded-2xl overflow-hidden" style={{ background: "linear-gradient(145deg, rgba(0,255,102,0.04) 0%, rgba(10,11,16,0.95) 100%)", border: "1px solid rgba(0,255,102,0.12)" }}>
+              {/* Header */}
+              <div className="flex items-center justify-between px-4 pt-4 pb-3" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
-                    <Users className="h-4 w-4 text-gray-400" />
+                  <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: "rgba(0,255,102,0.1)", border: "1px solid rgba(0,255,102,0.2)" }}>
+                    <Users className="h-3.5 w-3.5" style={{ color: "#00FF66" }} />
                   </div>
-                  <p className="text-sm font-black text-white">Vendedor Referente</p>
+                  <p className="text-sm font-black text-white">Mi Vendedor Referente</p>
                 </div>
                 <button
-                  onClick={() => { setShowCambiarVendedor(true); if (vendedores.length === 0) cargarVendedores(); }}
-                  className="text-[10px] font-bold px-2.5 py-1 rounded-lg transition-colors"
-                  style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#94a3b8" }}>
+                  onClick={() => { setShowCambiarVendedor(true); setCodigoInput(""); setCodigoStatus("idle"); setVendedorEncontrado(null); setVendedorMsg(null); }}
+                  className="text-[11px] font-bold px-3 py-1.5 rounded-lg transition-all"
+                  style={{ background: "rgba(0,255,102,0.08)", border: "1px solid rgba(0,255,102,0.2)", color: "#00FF66" }}>
                   {vendedorReferente ? "Cambiar" : "Elegir"}
                 </button>
               </div>
 
-              {vendedorReferente ? (
-                <div className="flex items-center gap-3 p-3 rounded-xl" style={{ background: "rgba(0,255,102,0.04)", border: "1px solid rgba(0,255,102,0.15)" }}>
-                  <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 font-black text-sm" style={{ background: "rgba(0,255,102,0.1)", color: "#00FF66", border: "1px solid rgba(0,255,102,0.25)" }}>
-                    {vendedorReferente.nombre.charAt(0).toUpperCase()}
+              {/* Body */}
+              <div className="px-4 py-4">
+                {vendedorReferente ? (
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-full flex items-center justify-center shrink-0 font-black text-base" style={{ background: "rgba(0,255,102,0.12)", color: "#00FF66", border: "2px solid rgba(0,255,102,0.3)" }}>
+                      {vendedorReferente.nombre.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-black text-white">{vendedorReferente.nombre}</p>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded" style={{ background: "rgba(0,255,102,0.08)", color: "#00FF66", border: "1px solid rgba(0,255,102,0.2)" }}>{vendedorReferente.codigo_referido}</span>
+                        <span className="text-[10px] text-gray-500">· Tu vendedor asignado</span>
+                      </div>
+                    </div>
+                    <UserCheck className="h-5 w-5 shrink-0" style={{ color: "#00FF66" }} />
                   </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-black text-white truncate">{vendedorReferente.nombre}</p>
-                    <p className="text-[10px] font-mono mt-0.5" style={{ color: "#00FF66" }}>{vendedorReferente.codigo_referido}</p>
+                ) : (
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-full flex items-center justify-center shrink-0" style={{ background: "rgba(255,255,255,0.04)", border: "1px dashed rgba(255,255,255,0.12)" }}>
+                      <Users className="h-5 w-5 text-gray-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-gray-400">Sin vendedor asignado</p>
+                      <p className="text-[11px] text-gray-600 mt-0.5">Tenés un código de referido? ¡Ingresálo y obtené beneficios!</p>
+                    </div>
                   </div>
-                  <UserCheck className="h-4 w-4 shrink-0 ml-auto" style={{ color: "#00FF66" }} />
-                </div>
-              ) : (
-                <div className="text-center py-4">
-                  <p className="text-xs text-gray-500 mb-1">Sin vendedor asignado</p>
-                  <p className="text-[10px] text-gray-600">Elegí uno para obtener un <span className="text-white font-bold">3% adicional</span> de descuento</p>
-                </div>
-              )}
+                )}
+              </div>
             </div>
 
-            {/* Modal elegir/cambiar vendedor */}
+            {/* Modal elegir/cambiar vendedor por código */}
             {showCambiarVendedor && (
               <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
-                style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(6px)" }}
-                onClick={(e) => { if (e.target === e.currentTarget) setShowCambiarVendedor(false); }}>
-                <div className="w-full max-w-sm rounded-2xl p-5 space-y-4" style={{ background: "#0a0b10", border: "1px solid rgba(255,255,255,0.08)", boxShadow: "0 25px 50px rgba(0,0,0,0.8)" }}>
+                style={{ background: "rgba(0,0,0,0.8)", backdropFilter: "blur(8px)" }}
+                onClick={(e) => { if (e.target === e.currentTarget) { setShowCambiarVendedor(false); } }}>
+                <div className="w-full max-w-sm rounded-2xl p-5 space-y-4" style={{ background: "#0a0b10", border: "1px solid rgba(255,255,255,0.08)", boxShadow: "0 25px 60px rgba(0,0,0,0.9)" }}>
+
+                  {/* Header */}
                   <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-black text-white text-base">{vendedorReferente ? "Cambiar vendedor" : "Elegir vendedor"}</p>
-                      <p className="text-[10px] text-gray-500 mt-0.5">Tu vendedor obtiene comisión por tus compras</p>
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "rgba(0,255,102,0.1)", border: "1px solid rgba(0,255,102,0.2)" }}>
+                        <Users className="h-4 w-4" style={{ color: "#00FF66" }} />
+                      </div>
+                      <div>
+                        <p className="font-black text-white text-sm">{vendedorReferente ? "Cambiar vendedor" : "Elegir vendedor"}</p>
+                        <p className="text-[10px] text-gray-500 mt-0.5">Ingresá el código de tu vendedor</p>
+                      </div>
                     </div>
                     <button onClick={() => { setShowCambiarVendedor(false); setVendedorMsg(null); }}
                       className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-white transition-colors"
@@ -350,70 +382,78 @@ export default function ClienteDashboardPage() {
                     </button>
                   </div>
 
-                  {/* Buscador */}
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-500" />
-                    <input
-                      value={vendedorBusqueda}
-                      onChange={(e) => setVendedorBusqueda(e.target.value)}
-                      placeholder="Buscar por nombre o código…"
-                      className="w-full pl-9 pr-3 py-2.5 rounded-xl text-sm text-white placeholder-gray-600 outline-none"
-                      style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
-                    />
+                  {/* Input código */}
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2">Código del vendedor</label>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-500" />
+                      <input
+                        value={codigoInput}
+                        onChange={(e) => handleCodigoChange(e.target.value)}
+                        placeholder="Ej: MAQ123"
+                        maxLength={20}
+                        className="w-full pl-9 pr-10 py-3 rounded-xl text-sm font-mono font-bold text-white placeholder-gray-600 outline-none uppercase"
+                        style={{
+                          background: "rgba(255,255,255,0.04)",
+                          border: `1px solid ${codigoStatus === "found" ? "rgba(0,255,102,0.4)" : codigoStatus === "error" ? "rgba(239,68,68,0.4)" : "rgba(255,255,255,0.08)"}`,
+                          letterSpacing: "0.08em",
+                        }}
+                        autoFocus
+                      />
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                        {codigoStatus === "checking" && <Loader2 className="h-4 w-4 animate-spin text-gray-500" />}
+                        {codigoStatus === "found" && <CheckCircle className="h-4 w-4" style={{ color: "#00FF66" }} />}
+                        {codigoStatus === "error" && <AlertTriangle className="h-4 w-4 text-red-400" />}
+                      </div>
+                    </div>
+                    {codigoStatus === "error" && (
+                      <p className="text-[10px] text-red-400 mt-1.5 pl-1">Código no válido o vendedor inactivo</p>
+                    )}
                   </div>
 
+                  {/* Preview vendedor encontrado */}
+                  {codigoStatus === "found" && vendedorEncontrado && (
+                    <div className="rounded-xl p-3 flex items-center gap-3" style={{ background: "rgba(0,255,102,0.06)", border: "1px solid rgba(0,255,102,0.2)" }}>
+                      <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 font-black text-base" style={{ background: "rgba(0,255,102,0.12)", color: "#00FF66", border: "1px solid rgba(0,255,102,0.25)" }}>
+                        {vendedorEncontrado.nombre.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-black text-white">{vendedorEncontrado.nombre}</p>
+                        <p className="text-[10px] font-mono mt-0.5" style={{ color: "#00FF66" }}>{vendedorEncontrado.codigo_referido}</p>
+                      </div>
+                      <CheckCircle className="h-4 w-4 shrink-0" style={{ color: "#00FF66" }} />
+                    </div>
+                  )}
+
+                  {/* Mensaje resultado */}
                   {vendedorMsg && (
-                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold"
-                      style={{ background: vendedorMsg.ok ? "rgba(0,255,102,0.08)" : "rgba(255,94,58,0.08)", border: `1px solid ${vendedorMsg.ok ? "rgba(0,255,102,0.2)" : "rgba(255,94,58,0.2)"}`, color: vendedorMsg.ok ? "#00FF66" : "#FF5E3A" }}>
+                    <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-semibold"
+                      style={{ background: vendedorMsg.ok ? "rgba(0,255,102,0.08)" : "rgba(239,68,68,0.08)", border: `1px solid ${vendedorMsg.ok ? "rgba(0,255,102,0.2)" : "rgba(239,68,68,0.2)"}`, color: vendedorMsg.ok ? "#00FF66" : "#f87171" }}>
                       {vendedorMsg.ok ? <CheckCircle className="h-3.5 w-3.5 shrink-0" /> : <AlertTriangle className="h-3.5 w-3.5 shrink-0" />}
                       {vendedorMsg.text}
                     </div>
                   )}
 
-                  <div className="max-h-64 overflow-y-auto space-y-2 pr-1">
-                    {loadingVendedores ? (
-                      <div className="flex justify-center py-8">
-                        <Loader2 className="h-5 w-5 animate-spin text-gray-500" />
-                      </div>
+                  {/* Botón confirmar */}
+                  <button
+                    onClick={() => vendedorEncontrado && handleCambiarVendedor(vendedorEncontrado.id)}
+                    disabled={codigoStatus !== "found" || cambiandoVendedor || (vendedorReferente?.id === vendedorEncontrado?.id)}
+                    className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-extrabold text-sm transition-all disabled:opacity-40"
+                    style={{ background: "#00FF66", color: "#000" }}>
+                    {cambiandoVendedor ? (
+                      <><Loader2 className="h-4 w-4 animate-spin" /> Guardando…</>
+                    ) : vendedorReferente?.id === vendedorEncontrado?.id ? (
+                      "Ya es tu vendedor actual"
                     ) : (
-                      vendedores
-                        .filter(v => !vendedorBusqueda ||
-                          v.nombre.toLowerCase().includes(vendedorBusqueda.toLowerCase()) ||
-                          v.codigo_referido.toLowerCase().includes(vendedorBusqueda.toLowerCase())
-                        )
-                        .map((v) => {
-                          const esActual = vendedorReferente?.id === v.id;
-                          return (
-                            <button key={v.id} onClick={() => !esActual && handleCambiarVendedor(v.id)}
-                              disabled={cambiandoVendedor || esActual}
-                              className="w-full flex items-center gap-3 p-3 rounded-xl text-left transition-all disabled:cursor-default"
-                              style={{
-                                background: esActual ? "rgba(0,255,102,0.06)" : "rgba(255,255,255,0.03)",
-                                border: `1px solid ${esActual ? "rgba(0,255,102,0.2)" : "rgba(255,255,255,0.06)"}`,
-                              }}>
-                              <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 font-black text-sm"
-                                style={{ background: esActual ? "rgba(0,255,102,0.1)" : "rgba(255,255,255,0.06)", color: esActual ? "#00FF66" : "#94a3b8" }}>
-                                {v.nombre.charAt(0).toUpperCase()}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-bold text-white truncate">{v.nombre}</p>
-                                <p className="text-[10px] font-mono" style={{ color: esActual ? "#00FF66" : "#64748b" }}>{v.codigo_referido}</p>
-                              </div>
-                              {esActual ? (
-                                <UserCheck className="h-4 w-4 shrink-0" style={{ color: "#00FF66" }} />
-                              ) : cambiandoVendedor ? (
-                                <Loader2 className="h-4 w-4 shrink-0 animate-spin text-gray-500" />
-                              ) : (
-                                <ChevronRight className="h-4 w-4 shrink-0 text-gray-600" />
-                              )}
-                            </button>
-                          );
-                        })
+                      vendedorReferente ? "Confirmar cambio" : "Confirmar vendedor"
                     )}
-                    {!loadingVendedores && vendedores.filter(v => !vendedorBusqueda || v.nombre.toLowerCase().includes(vendedorBusqueda.toLowerCase()) || v.codigo_referido.toLowerCase().includes(vendedorBusqueda.toLowerCase())).length === 0 && (
-                      <p className="text-center text-xs text-gray-600 py-6">No se encontraron vendedores</p>
-                    )}
-                  </div>
+                  </button>
+
+                  {vendedorReferente && (
+                    <p className="text-center text-[10px] text-gray-600">
+                      Vendedor actual: <span className="text-gray-400 font-semibold">{vendedorReferente.nombre}</span>
+                    </p>
+                  )}
                 </div>
               </div>
             )}
