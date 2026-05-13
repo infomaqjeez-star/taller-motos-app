@@ -5,7 +5,7 @@ import { randomBytes } from "crypto";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev";
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://maqjeez.netlify.app";
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://appjeezpro.store";
 
 export async function POST(req: NextRequest) {
   try {
