@@ -9,52 +9,56 @@ let msnAudio: HTMLAudioElement | null = null;
 
 function playMSNDing() {
   try {
-    // Si ya está sonando, no volver a reproducir
     if (msnAudio && !msnAudio.paused) return;
     if (!msnAudio) {
       msnAudio = new Audio("/msn-sound.mp3");
       msnAudio.volume = 0.8;
     }
     msnAudio.currentTime = 0;
-    msnAudio.play().catch(() => {
-      // Browser bloqueó autoplay sin interacción previa
+    msnAudio.play().catch(() => {});
+  } catch {}
+}
+
+// ── Notificar via Service Worker (funciona en TODAS las pestañas) ────────────
+function notifyViaSW(autor: string, contenido: string) {
+  if (typeof window === "undefined") return;
+  if ("serviceWorker" in navigator && navigator.serviceWorker.controller) {
+    navigator.serviceWorker.controller.postMessage({
+      type: "MSN_NEW_MESSAGE",
+      autor,
+      contenido,
     });
-  } catch {
-    // Fallback silencioso
+  } else {
+    // Fallback: notificación directa si el SW aún no está listo
+    if (Notification.permission === "granted") {
+      const n = new Notification(`💬 ${autor} — Taller Maqjeez`, {
+        body: contenido,
+        icon: "/favicon.ico",
+        tag: "msn-taller",
+        silent: false,
+      });
+      n.onclick = () => { window.focus(); n.close(); };
+    }
   }
 }
 
-// ── Notificación nativa del browser (suena aunque esté en segundo plano) ────
-function showBrowserNotification(autor: string, contenido: string) {
-  if (typeof window === "undefined") return;
+// ── Registrar Service Worker ──────────────────────────────────
+function registerSW() {
+  if (typeof window === "undefined" || !("serviceWorker" in navigator)) return;
+  navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch(() => {});
 
-  const opts: NotificationOptions = {
-    body: contenido,
-    icon: "/favicon.ico",
-    tag: "msn-taller",
-    silent: false,          // el OS reproduce su propio sonido de notificación
-    requireInteraction: false,
-  };
-
-  const doNotify = () => {
-    const n = new Notification(`💬 ${autor} — Taller Maqjeez`, opts);
-    // Al hacer click en la notificación: enfocar la pestaña
-    n.onclick = () => { window.focus(); n.close(); };
-  };
-
-  if (Notification.permission === "granted") {
-    doNotify();
-  } else if (Notification.permission !== "denied") {
-    Notification.requestPermission().then((perm) => {
-      if (perm === "granted") doNotify();
-    });
-  }
+  // Escuchar mensajes del SW para reproducir sonido en esta pestaña
+  navigator.serviceWorker.addEventListener("message", (event) => {
+    if (event.data?.type === "MSN_PLAY_SOUND") {
+      playMSNDing();
+    }
+  });
 }
 
 export function useMessaging() {
   const [messages, setMessages] = useState<MessageTaller[]>([]);
   const [loading, setLoading] = useState(true);
-  const [newMessageAlert, setNewMessageAlert] = useState(false); // para animar el botón
+  const [newMessageAlert, setNewMessageAlert] = useState(false);
   const prevIdsRef = useRef<Set<string>>(new Set());
   const originalTitleRef = useRef<string>("");
   const blinkIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -99,7 +103,7 @@ export function useMessaging() {
           playMSNDing();
           setNewMessageAlert(true);
           setTimeout(() => setNewMessageAlert(false), 1500);
-          showBrowserNotification(
+          notifyViaSW(
             nuevos[0].autor,
             nuevos.length > 1
               ? `${nuevos.length} mensajes nuevos`
@@ -120,9 +124,11 @@ export function useMessaging() {
   }, [startBlink]);
 
   useEffect(() => {
-    // Pedir permiso de notificaciones al montar
-    if (typeof window !== "undefined" && Notification.permission === "default") {
-      Notification.requestPermission();
+    if (typeof window !== "undefined") {
+      // Registrar Service Worker
+      registerSW();
+      // Pedir permiso de notificaciones
+      if (Notification.permission === "default") Notification.requestPermission();
     }
     refresh();
     const interval = setInterval(refresh, 3000);
