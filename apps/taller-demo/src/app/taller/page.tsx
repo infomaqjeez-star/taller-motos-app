@@ -295,7 +295,7 @@ export default function DashboardPage() {
       {/* ── Botón Mensajería del Taller (estilo MSN) ── */}
       <button
         onClick={() => setShowMessenger(true)}
-        className="fixed bottom-[100px] sm:bottom-20 left-4 sm:left-6 z-[55]
+        className="fixed bottom-[160px] sm:bottom-[80px] right-4 sm:right-6 z-[55]
                    flex items-center justify-center gap-2 relative
                    h-14 w-14 sm:h-12 sm:w-auto sm:px-5
                    rounded-full sm:rounded-2xl"
