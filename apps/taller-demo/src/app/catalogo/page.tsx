@@ -346,6 +346,14 @@ function CatalogoContent() {
 
           {/* Acciones */}
           <div className="flex items-center gap-2">
+            {clienteLogueado && (
+              <Link
+                href="/catalogo/cliente/dashboard"
+                className="bg-blue-900/40 hover:bg-blue-900/60 text-blue-400 border border-blue-800/50 px-4 py-2 rounded-lg text-sm font-bold transition-colors flex items-center gap-2"
+              >
+                <User className="h-4 w-4" /> Mi cuenta
+              </Link>
+            )}
             <Link
               href="/catalogo/promo"
               className="bg-slate-800 hover:bg-slate-700 text-orange-400 border border-slate-700 px-4 py-2 rounded-lg text-sm font-bold transition-colors flex items-center gap-2"
