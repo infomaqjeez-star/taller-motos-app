@@ -137,12 +137,15 @@ export default function ClienteLoginPage() {
         @keyframes marquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
         @keyframes fadeUp{0%{opacity:0;transform:translateY(20px)}100%{opacity:1;transform:translateY(0)}}
         @keyframes slideUp{0%{opacity:0;transform:translateY(14px)}100%{opacity:1;transform:translateY(0)}}
+        @keyframes shimmer{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
         .anim-fade-up{animation:fadeUp 0.7s cubic-bezier(0.16,1,0.3,1) forwards}
         .anim-slide-up{animation:slideUp 0.4s cubic-bezier(0.16,1,0.3,1) forwards}
+        .shimmer-btn:hover .shimmer-layer{animation:shimmer 0.8s ease forwards}
         @media(max-width:1023px){.orb-dsk{display:none!important}}
         @media(prefers-reduced-motion:reduce){.orb-dsk,.tkr{animation:none!important}}
         .role-c{background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);transition:all 0.3s}
         .role-c.sel{background:linear-gradient(135deg,rgba(255,94,58,0.06),transparent);border-color:#FF5E3A;box-shadow:0 0 0 1px #FF5E3A,0 10px 30px -10px rgba(255,94,58,0.15)}
+        .login-card{background:rgba(10,11,16,0.6);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.06);box-shadow:0 25px 50px -12px rgba(0,0,0,0.8),inset 0 1px 0 rgba(255,255,255,0.05)}
       `}</style>
 
       {/* Mesh */}
@@ -153,7 +156,7 @@ export default function ClienteLoginPage() {
       <div className="orb-dsk fixed bottom-0 right-1/4 w-80 h-80 rounded-full pointer-events-none" style={{ background: "rgba(0,255,102,0.05)", filter: "blur(80px)", animation: "blob 10s infinite 2s", mixBlendMode: "screen" }} />
 
       {/* Ticker */}
-      <div className="relative z-50 overflow-hidden border-b" style={{ background: "#FF5E3A", borderColor: "rgba(255,94,58,0.4)" }}>
+      <div className="relative z-50 overflow-hidden border-b" style={{ background: "#FF5E3A", borderColor: "rgba(255,94,58,0.4)", boxShadow: "0 0 20px rgba(255,94,58,0.2)" }}>
         <div className="tkr flex whitespace-nowrap py-1.5" style={{ animation: "marquee 28s linear infinite" }}>
           {[...TICKER_ITEMS, ...TICKER_ITEMS].map((item, i) => (
             <span key={i} className="inline-flex items-center px-6 text-[11px] sm:text-xs font-black text-white uppercase tracking-wide gap-2">
@@ -170,46 +173,54 @@ export default function ClienteLoginPage() {
           <div className="max-w-xl opacity-0 anim-fade-up" style={{ animationDelay: "0.1s" }}>
 
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-8" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
-              <span className="relative flex h-2.5 w-2.5">
+              <span className="relative flex h-3 w-3">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: "#FF5E3A" }} />
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5" style={{ background: "#FF5E3A" }} />
+                <span className="relative inline-flex rounded-full h-3 w-3" style={{ background: "#FF5E3A" }} />
               </span>
               <span className="text-[10px] font-bold uppercase tracking-widest text-gray-300">Catálogo B2B MaqJeez</span>
             </div>
 
-            <h1 className="text-5xl xl:text-6xl font-black leading-tight mb-5 tracking-tight">
+            <h1 className="text-5xl xl:text-7xl font-black leading-[1.1] mb-5 tracking-tight">
               El motor de tu<br />
-              <span className="text-transparent bg-clip-text" style={{ backgroundImage: "linear-gradient(to right, #fff, rgba(255,255,255,0.4))" }}>negocio.</span>
+              <span className="text-transparent bg-clip-text" style={{ backgroundImage: "linear-gradient(to right, #fff, #e5e7eb, #9ca3af)" }}>negocio.</span>
             </h1>
-            <p className="text-gray-400 text-lg leading-relaxed mb-10">
-              Repuestos para moto-implementos con <strong className="text-white">precios exclusivos</strong> y 3% OFF fijo desde el primer pedido.
+            <p className="text-gray-400 text-lg leading-relaxed mb-10 font-medium">
+              Repuestos con <strong className="text-white">precios corporativos</strong> y 3% OFF fijo. Los números hablan por sí solos.
             </p>
 
             <div className="grid grid-cols-2 gap-4">
-              <div className="p-5 rounded-2xl" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
+              <div className="p-5 rounded-2xl relative overflow-hidden group" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                <div className="absolute inset-0 transition-opacity duration-500 opacity-0 group-hover:opacity-100" style={{ background: "rgba(255,94,58,0.04)" }} />
                 <div className="flex items-center gap-2 mb-2">
                   <div className="w-2 h-2 rounded-full" style={{ background: "#FF5E3A", boxShadow: "0 0 8px #FF5E3A" }} />
                   <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Clientes</p>
                 </div>
-                <p className="text-3xl font-black">{empresas.toLocaleString("es-AR")}</p>
-                <p className="text-xs font-semibold mt-1" style={{ color: "#FF5E3A" }}>↑ Clientes activos hoy</p>
+                <p className="text-2xl sm:text-3xl font-black">{empresas.toLocaleString("es-AR")}</p>
+                <p className="text-xs font-semibold mt-1 flex items-center gap-1" style={{ color: "#FF5E3A" }}>
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 10l7-7m0 0l7 7m-7-7v18" /></svg>
+                  Clientes activos hoy
+                </p>
               </div>
 
-              <div className="p-5 rounded-2xl" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
+              <div className="p-5 rounded-2xl relative overflow-hidden group" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                <div className="absolute inset-0 transition-opacity duration-500 opacity-0 group-hover:opacity-100" style={{ background: "rgba(0,255,102,0.04)" }} />
                 <div className="flex items-center gap-2 mb-2">
                   <div className="w-2 h-2 rounded-full" style={{ background: "#00FF66", boxShadow: "0 0 8px #00FF66" }} />
                   <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Descuento</p>
                 </div>
-                <p className="text-3xl font-black">3%</p>
-                <p className="text-xs font-semibold mt-1" style={{ color: "#00FF66" }}>↑ OFF fijo siempre</p>
+                <p className="text-2xl sm:text-3xl font-black">3%</p>
+                <p className="text-xs font-semibold mt-1 flex items-center gap-1" style={{ color: "#00FF66" }}>
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 10l7-7m0 0l7 7m-7-7v18" /></svg>
+                  OFF fijo siempre
+                </p>
               </div>
 
-              <div className="col-span-2 p-5 rounded-2xl relative overflow-hidden" style={{ background: "linear-gradient(135deg,rgba(10,11,16,0.9),rgba(3,3,5,0.9))", border: "1px solid rgba(255,94,58,0.2)" }}>
-                <div className="absolute right-0 top-0 w-28 h-28 rounded-full" style={{ background: "rgba(255,94,58,0.08)", filter: "blur(30px)" }} />
+              <div className="col-span-2 p-5 sm:p-6 rounded-2xl relative overflow-hidden group" style={{ background: "linear-gradient(135deg,rgba(10,11,16,0.9),rgba(3,3,5,0.9))", border: "1px solid rgba(255,94,58,0.2)" }}>
+                <div className="absolute right-0 top-0 w-32 h-32 rounded-full transition-all duration-700" style={{ background: "rgba(255,94,58,0.08)", filter: "blur(40px)" }} />
                 <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2">Ahorro generado para compradores</p>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-3xl font-extrabold" style={{ color: "#FF5E3A" }}>$</span>
-                  <span className="text-4xl font-black">{ahorro.toLocaleString("es-AR")}</span>
+                <div className="flex items-baseline gap-1 sm:gap-2">
+                  <span className="text-3xl sm:text-4xl font-extrabold" style={{ color: "#FF5E3A" }}>$</span>
+                  <span className="text-4xl sm:text-5xl font-black tracking-tight">{ahorro.toLocaleString("es-AR")}</span>
                 </div>
               </div>
             </div>
@@ -238,8 +249,8 @@ export default function ClienteLoginPage() {
                 <h2 className="text-2xl sm:text-3xl font-black mb-1.5">
                   {!showForm ? "Únete al ecosistema" : tab === "login" ? "Bienvenido de nuevo" : "Crear cuenta"}
                 </h2>
-                <p className="text-sm text-gray-400">
-                  {!showForm ? "¿Cómo usarás la plataforma?" : tab === "login" ? "Ingresá a tu cuenta para continuar." : <>Registrate y obtené <strong style={{ color: "#FF5E3A" }}>3% OFF</strong> fijo en todas tus compras.</>}
+                <p className="text-sm text-gray-400 font-medium">
+                  {!showForm ? "Paso 1 de 3 — ¿Cómo usarás la plataforma?" : tab === "login" ? "Ingresá a tu cuenta para continuar." : <>Registrate y obtené <strong style={{ color: "#FF5E3A" }}>3% OFF</strong> fijo en todas tus compras.</>}
                 </p>
               </div>
 
@@ -387,11 +398,15 @@ export default function ClienteLoginPage() {
                     )}
 
                     <button type="submit" disabled={loading}
-                      className="w-full font-extrabold py-4 px-4 rounded-xl transition-all active:scale-[0.98] flex items-center justify-center gap-2 mt-1 disabled:opacity-50 text-base"
+                      className="shimmer-btn relative overflow-hidden w-full font-extrabold py-4 px-4 rounded-xl transition-all active:scale-[0.98] flex items-center justify-center gap-2 mt-1 disabled:opacity-50 text-base group"
                       style={{ background: "#fff", color: "#000" }}>
-                      {loading
-                        ? <><Loader2 className="h-4 w-4 animate-spin" /> {tab === "login" ? "Ingresando…" : "Registrando…"}</>
-                        : <>{tab === "login" ? "Comenzar ahora" : "Crear cuenta"} <ChevronRight className="h-4 w-4" /></>}
+                      <span className="relative z-10 flex items-center gap-2">
+                        {loading
+                          ? <><Loader2 className="h-4 w-4 animate-spin" /> {tab === "login" ? "Ingresando…" : "Registrando…"}</>
+                          : <>{tab === "login" ? "Comenzar ahora" : "Crear cuenta"} <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg></>
+                        }
+                      </span>
+                      <div className="shimmer-layer absolute inset-0 -translate-x-full" style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)" }} />
                     </button>
                   </form>
 
