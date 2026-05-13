@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import {
-  X, Send, MailOpen, Mail, Trash2, User, Volume2, MessageCircle,
+  X, Send, MailOpen, Mail, Trash2, User, Volume2, MessageCircle, Pencil, Check,
 } from "lucide-react";
 import { MessageTaller } from "@/lib/types";
 
@@ -109,6 +109,27 @@ function formatDate(ts: string) {
   return d.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit" });
 }
 
+// ── Generar ID único de dispositivo y nombre automático ──────
+function getDeviceIdentity(): { deviceId: string; nombre: string } {
+  if (typeof window === "undefined") return { deviceId: "dev-0", nombre: "Técnico" };
+  let deviceId = localStorage.getItem("taller_device_id");
+  if (!deviceId) {
+    // Generar ID único basado en timestamp + random
+    deviceId = "dev-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    localStorage.setItem("taller_device_id", deviceId);
+  }
+  // Nombre guardado o auto-asignado según el sufijo del deviceId
+  let nombre = localStorage.getItem("taller_nombre");
+  if (!nombre) {
+    // Asignar nombre automático legible basado en el ID
+    const names = ["Técnico","Mecánico","Jefe","Recepción","Depósito","Taller","Turno A","Turno B"];
+    const idx = parseInt(deviceId.slice(-2), 36) % names.length;
+    nombre = names[idx];
+    localStorage.setItem("taller_nombre", nombre);
+  }
+  return { deviceId, nombre };
+}
+
 export default function MessengerPanel({
   open,
   onClose,
@@ -118,21 +139,34 @@ export default function MessengerPanel({
   onMarkAllRead,
   onDelete,
 }: MessengerPanelProps) {
-  const [autor, setAutor] = useState(() => {
-    if (typeof window !== "undefined") return localStorage.getItem("taller_nombre") || "Técnico";
-    return "Técnico";
-  });
+  const [autor, setAutor] = useState(() => getDeviceIdentity().nombre);
+  const [deviceId] = useState(() => getDeviceIdentity().deviceId);
+  const [editingName, setEditingName] = useState(false);
+  const [tempName, setTempName] = useState("");
   const [texto, setTexto] = useState("");
   const [showEmojis, setShowEmojis] = useState(false);
   const [minimized, setMinimized] = useState(false);
   const [maximized, setMaximized] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const nameInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Guardar nombre de usuario en localStorage
   const handleAutorChange = (v: string) => {
     setAutor(v);
     if (typeof window !== "undefined") localStorage.setItem("taller_nombre", v);
+  };
+
+  const startEditName = () => {
+    setTempName(autor);
+    setEditingName(true);
+    setTimeout(() => nameInputRef.current?.select(), 50);
+  };
+
+  const confirmEditName = () => {
+    const name = tempName.trim() || autor;
+    handleAutorChange(name);
+    setEditingName(false);
   };
 
   // Scroll al final cuando abre o llega mensaje nuevo
@@ -269,8 +303,29 @@ export default function MessengerPanel({
           <span className="text-[11px] text-gray-400 ml-1">&lt;taller@maqjeez.com&gt;</span>
           <div className="ml-auto flex items-center gap-1">
             <User className="w-3 h-3 text-gray-400"/>
-            <input type="text" value={autor} onChange={e=>handleAutorChange(e.target.value)}
-              className="text-[11px] font-bold text-blue-700 bg-transparent outline-none border-b border-blue-300 w-20" placeholder="Tu nombre"/>
+            {editingName ? (
+              <>
+                <input
+                  ref={nameInputRef}
+                  type="text"
+                  value={tempName}
+                  onChange={e => setTempName(e.target.value)}
+                  onKeyDown={e => { if (e.key === "Enter") confirmEditName(); if (e.key === "Escape") setEditingName(false); }}
+                  className="text-[11px] font-bold text-blue-700 bg-white outline-none border border-blue-400 rounded px-1 w-24"
+                  autoFocus
+                />
+                <button onClick={confirmEditName} className="hover:text-green-600" title="Confirmar">
+                  <Check className="w-3 h-3 text-green-600"/>
+                </button>
+              </>
+            ) : (
+              <>
+                <span className="text-[11px] font-bold text-blue-700">{autor}</span>
+                <button onClick={startEditName} className="hover:text-blue-800 ml-0.5" title="Cambiar nombre">
+                  <Pencil className="w-3 h-3 text-blue-400 hover:text-blue-700"/>
+                </button>
+              </>
+            )}
           </div>
         </div>
 
@@ -402,6 +457,7 @@ export default function MessengerPanel({
           </span>
           <User className="w-3 h-3 text-blue-500"/>
           <span className="text-[10px] font-bold text-blue-700">{autor}</span>
+          <span className="text-[9px] text-gray-400 font-mono">#{deviceId.slice(-4)}</span>
         </div>
         </>)}
       </div>
