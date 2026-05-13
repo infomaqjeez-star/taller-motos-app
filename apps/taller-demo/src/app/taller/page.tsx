@@ -295,19 +295,12 @@ export default function DashboardPage() {
       {/* ── Botón Mensajería del Taller (estilo MSN) ── */}
       <button
         onClick={() => setShowMessenger(true)}
-        className="flex items-center justify-center gap-2 rounded-2xl"
+        className="fixed bottom-[88px] sm:bottom-6 left-4 sm:left-6 rounded-2xl
+                   h-14 w-14 sm:h-auto sm:w-auto sm:px-6 z-[55]
+                   flex items-center justify-center gap-2"
         style={{
-          position: "fixed",
-          bottom: "88px",
-          left: "16px",
-          zIndex: 55,
-          height: "56px",
-          minWidth: "56px",
-          paddingLeft: "16px",
-          paddingRight: "16px",
           background: "linear-gradient(135deg, #2563eb, #7c3aed)",
-          border: "2px solid rgba(139,92,246,0.6)",
-          boxShadow: "0 4px 24px -4px rgba(59,130,246,0.6)",
+          boxShadow: "0 4px 24px -4px rgba(59,130,246,0.6), 0 0 0 1px rgba(139,92,246,0.3)",
           animation: newMessageAlert ? "msnBounce 0.4s ease 3" : "none",
         }}
         aria-label="Mensajería del taller"

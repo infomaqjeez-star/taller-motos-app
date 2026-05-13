@@ -44,6 +44,20 @@ const config: Config = {
       },
     },
   },
+  safelist: [
+    "bottom-[88px]",
+    "sm:bottom-6",
+    "left-4",
+    "sm:left-6",
+    "right-4",
+    "sm:right-6",
+    "z-[55]",
+    "h-14",
+    "w-14",
+    "sm:h-auto",
+    "sm:w-auto",
+    "sm:px-6",
+  ],
   plugins: [],
 };
 
