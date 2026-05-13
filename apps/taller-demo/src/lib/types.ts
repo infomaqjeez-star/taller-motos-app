@@ -145,6 +145,14 @@ export const CLIENT_NOTIFICATION_LABELS: Record<ClientNotification, string> = {
   sin_respuesta: "Sin Respuesta",
 };
 
+export interface MessageTaller {
+  id: string;
+  autor: string;
+  contenido: string;
+  leido: boolean;
+  createdAt: string;
+}
+
 export interface AgendaCliente {
   id: string;
   nombre: string;

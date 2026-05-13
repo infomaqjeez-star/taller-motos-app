@@ -2,7 +2,7 @@
 // CAPA DE DATOS — API Routes server-side (Railway + Supabase)
 // ============================================================
 
-import { WorkOrder, StockItem, PartToOrder, Pago, PlantillaWhatsApp, AgendaCliente, HistorialReparacion, FlexEnvio, VentaRepuesto, VentaItem, VentasStats, VentasPorDia, TopProducto, Tarea, CorreoDespacho } from "./types";
+import { WorkOrder, StockItem, PartToOrder, Pago, PlantillaWhatsApp, AgendaCliente, HistorialReparacion, FlexEnvio, VentaRepuesto, VentaItem, VentasStats, VentasPorDia, TopProducto, Tarea, CorreoDespacho, MessageTaller } from "./types";
 
 // ─── Helper genérico para llamar a /api/db ────────────────────
 
@@ -789,5 +789,39 @@ export const correoDb = {
       body: JSON.stringify({ action: "delete", id }),
     });
     if (!res.ok) { const e = await res.json(); throw new Error(e.error ?? "Error al eliminar despacho"); }
+  },
+};
+
+// ─── Mensajería Instantánea del Taller ───────────────────────
+
+function toMessage(r: Record<string, unknown>): MessageTaller {
+  return {
+    id:         r.id as string,
+    autor:      r.autor as string,
+    contenido:  r.contenido as string,
+    leido:      r.leido as boolean,
+    createdAt:  r.created_at as string,
+  };
+}
+
+export const mensajesDb = {
+  async getAll(): Promise<MessageTaller[]> {
+    const { data } = await dbCall({
+      action: "select", table: "mensajes_taller",
+      order: { col: "created_at", asc: false },
+    });
+    return ((data as Record<string, unknown>[]) ?? []).map(toMessage);
+  },
+
+  async create(msg: Omit<MessageTaller, "id" | "createdAt" | "leido">): Promise<void> {
+    await dbCall({ action: "insert", table: "mensajes_taller", data: { autor: msg.autor, contenido: msg.contenido } });
+  },
+
+  async marcarLeido(id: string): Promise<void> {
+    await dbCall({ action: "update", table: "mensajes_taller", data: { leido: true }, id });
+  },
+
+  async delete(id: string): Promise<void> {
+    await dbCall({ action: "delete", table: "mensajes_taller", id });
   },
 };

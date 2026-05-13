@@ -5,12 +5,13 @@ import Link from "next/link";
 import {
   Plus, Wrench, AlertTriangle, Package, CheckSquare, Clock,
   FileSpreadsheet, FileText, CheckCircle, MessageCircle, Trophy, Medal,
-  BookOpen, ChevronRight, Phone,
+  BookOpen, ChevronRight, Phone, Mail,
 } from "lucide-react";
 import { WorkOrder, MOTOR_TYPE_LABELS, CLIENT_NOTIFICATION_LABELS, ClientNotification } from "@/lib/types";
 import { useOrders } from "@/hooks/useOrders";
 import { useInventory } from "@/hooks/useInventory";
 import { useNotifications } from "@/hooks/useNotifications";
+import { useMessaging } from "@/hooks/useMessaging";
 import { generateId } from "@/lib/utils";
 import { exportOrdersToExcel } from "@/lib/exportExcel";
 import { exportOrdersReportPDF } from "@/lib/exportPDF";
@@ -22,6 +23,7 @@ import OrderCard from "@/components/OrderCard";
 import OrderForm from "@/components/OrderForm";
 import NotificationsPanel from "@/components/NotificationsPanel";
 import TemplateManager from "@/components/TemplateManager";
+import MessengerPanel from "@/components/MessengerPanel";
 import BottomNav from "@/components/BottomNav";
 
 /* ── Tarjeta de estado AAA ── */
@@ -105,7 +107,10 @@ export default function DashboardPage() {
   const [editingOrder, setEditingOrder] = useState<WorkOrder | null>(null);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
+  const [showMessenger, setShowMessenger] = useState(false);
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
+
+  const { messages, unreadCount, send, markAllAsRead, remove: removeMsg } = useMessaging();
 
   const showToast = (msg: string, type: "success" | "error" = "success") => {
     setToast({ msg, type });
@@ -286,6 +291,45 @@ export default function DashboardPage() {
         <Plus className="w-6 h-6 flex-shrink-0" />
         <span className="hidden sm:inline text-base font-bold">Nueva Orden</span>
       </button>
+
+      {/* ── Botón Mensajería del Taller (opuesto al FAB) ── */}
+      <button
+        onClick={() => setShowMessenger(true)}
+        className="fixed bottom-[88px] sm:bottom-6 left-4 sm:left-6 z-40
+                   flex items-center justify-center h-14 w-14 sm:h-auto sm:w-auto sm:px-5
+                   rounded-2xl transition-all duration-200 hover:scale-105"
+        style={{
+          background: unreadCount > 0
+            ? "linear-gradient(135deg, #3b82f6, #8b5cf6)"
+            : "#18181b",
+          border: "1px solid rgba(255,255,255,0.08)",
+          boxShadow: unreadCount > 0
+            ? "0 4px 24px -4px rgba(59,130,246,0.4)"
+            : "0 4px 24px -4px rgba(0,0,0,0.5)",
+        }}
+        aria-label="Mensajería del taller"
+        title="Mensajería del taller"
+      >
+        <Mail className="w-5 h-5 flex-shrink-0" style={{ color: unreadCount > 0 ? "#fff" : "#9ca3af" }} />
+        <span className="hidden sm:inline text-sm font-bold ml-2" style={{ color: unreadCount > 0 ? "#fff" : "#9ca3af" }}>
+          Chat
+        </span>
+        {unreadCount > 0 && (
+          <span className="absolute -top-1.5 -right-1.5 min-w-[20px] h-5 px-1 rounded-full bg-red-500 text-white text-[10px] font-black flex items-center justify-center border-2 border-[#09090b]">
+            {unreadCount}
+          </span>
+        )}
+      </button>
+
+      <MessengerPanel
+        open={showMessenger}
+        onClose={() => setShowMessenger(false)}
+        messages={messages}
+        unreadCount={unreadCount}
+        onSend={send}
+        onMarkAllRead={markAllAsRead}
+        onDelete={removeMsg}
+      />
 
       {showForm && (
         <OrderForm
