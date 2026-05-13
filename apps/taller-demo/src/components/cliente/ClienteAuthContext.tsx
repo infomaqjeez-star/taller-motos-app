@@ -52,7 +52,7 @@ export function ClienteAuthProvider({ children }: { children: React.ReactNode })
     setCliente(data.cliente);
   };
 
-  const register = async (data: { nombre: string; email: string; telefono?: string; password: string }) => {
+  const register = async (data: { nombre: string; email: string; telefono?: string; dni?: string; password: string; vendedor_referente_id?: string }) => {
     const res = await fetch("/api/cliente/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },

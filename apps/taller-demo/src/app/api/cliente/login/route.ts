@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
 
     const { data: cliente, error } = await supabase
       .from("clientes_catalogo")
-      .select("id, nombre, email, password_hash, codigo_referido, descuento_cliente_pct, estado")
+      .select("id, nombre, email, password_hash, codigo_referido, descuento_cliente_pct, estado, vendedor_referente_id")
       .eq("email", email.trim().toLowerCase())
       .single();
 
@@ -52,6 +52,7 @@ export async function POST(req: NextRequest) {
         email: cliente.email,
         codigo_referido: cliente.codigo_referido,
         descuento_cliente_pct: cliente.descuento_cliente_pct,
+        vendedor_referente_id: cliente.vendedor_referente_id || null,
       },
     });
   } catch (err) {

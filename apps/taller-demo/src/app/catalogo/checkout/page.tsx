@@ -201,18 +201,23 @@ export default function CheckoutPage() {
       setUploadingComprobante(false);
     }
 
-    // Obtener vendedor referido del localStorage
-    const vendedorId = localStorage.getItem("ref_vendedor_id");
+    // Obtener vendedor referido: primero localStorage, si no hay usar el del cliente logueado
+    const vendedorIdLS = localStorage.getItem("ref_vendedor_id");
+    const vendedorIdCliente = cliente?.vendedor_referente_id || null;
+    const vendedorId = vendedorIdLS || vendedorIdCliente;
     let comisionMonto = 0;
     let comisionPct = 0;
 
     // Si hay vendedor, calcular comisión según su nivel
     if (vendedorId) {
       try {
-        const res = await fetch(`/api/vendedor/public?codigo=${encodeURIComponent(localStorage.getItem("ref_codigo") || "")}`);
+        const refCodigo = localStorage.getItem("ref_codigo");
+        const url = refCodigo
+          ? `/api/vendedor/public?codigo=${encodeURIComponent(refCodigo)}`
+          : `/api/vendedor/public?id=${encodeURIComponent(vendedorId)}`;
+        const res = await fetch(url);
         const data = await res.json();
         if (data.vendedor) {
-          // Comisión según nivel: nuevo/junior 10%, senior/senior_pro 12%, master 15%
           const nivel = data.vendedor.nivel_vendedor || "nuevo";
           const pctMap: Record<string, number> = {
             nuevo: 10,
@@ -220,12 +225,12 @@ export default function CheckoutPage() {
             senior: 12,
             senior_pro: 12,
             master: 15,
+            gerente: 15,
           };
           comisionPct = pctMap[nivel] || 10;
           comisionMonto = Math.round((totals.subtotal * comisionPct) / 100);
         }
       } catch {
-        // fallback 10%
         comisionMonto = Math.round((totals.subtotal * 10) / 100);
       }
     }

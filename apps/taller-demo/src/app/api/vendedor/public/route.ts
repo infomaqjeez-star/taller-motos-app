@@ -7,6 +7,7 @@ export async function GET(req: NextRequest) {
   try {
     const codigo = req.nextUrl.searchParams.get("codigo");
     const lista = req.nextUrl.searchParams.get("lista");
+    const id = req.nextUrl.searchParams.get("id");
 
     const supabase = getSupabaseServer();
 
@@ -24,6 +25,21 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ vendedores: vendedores || [] });
     }
 
+    // Buscar por ID (fallback cuando no hay código en localStorage)
+    if (id) {
+      const { data: vendedor, error } = await supabase
+        .from("vendedores")
+        .select("id, nombre, codigo_referido, comision_pct, nivel_vendedor")
+        .eq("id", id)
+        .eq("estado", "activo")
+        .single();
+
+      if (error || !vendedor) {
+        return NextResponse.json({ error: "Vendedor no encontrado" }, { status: 404 });
+      }
+      return NextResponse.json({ vendedor });
+    }
+
     // Buscar por codigo de referido
     if (!codigo) {
       return NextResponse.json({ error: "Código requerido" }, { status: 400 });
@@ -31,7 +47,7 @@ export async function GET(req: NextRequest) {
 
     const { data: vendedor, error } = await supabase
       .from("vendedores")
-      .select("id, nombre, codigo_referido, comision_pct")
+      .select("id, nombre, codigo_referido, comision_pct, nivel_vendedor")
       .eq("codigo_referido", codigo)
       .eq("estado", "activo")
       .single();
