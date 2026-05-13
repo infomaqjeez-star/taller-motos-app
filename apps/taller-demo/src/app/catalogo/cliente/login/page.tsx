@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useClienteAuth } from "@/components/cliente/ClienteAuthContext";
 import {
   ArrowLeft, User, Mail, Phone, Lock, Loader2,
   Eye, EyeOff, Store, ChevronRight,
-  ShoppingBag, TrendingUp,
+  ShoppingBag, TrendingUp, CheckCircle, XCircle,
 } from "lucide-react";
 
 function useCounter(target: number, duration: number, delay: number) {
@@ -53,9 +53,12 @@ export default function ClienteLoginPage() {
   const [telefono, setTelefono] = useState("");
   const [dni, setDni] = useState("");
   const [password, setPassword] = useState("");
-  const [vendedores, setVendedores] = useState<{ id: string; nombre: string; codigo_referido: string }[]>([]);
   const [vendedorSeleccionado, setVendedorSeleccionado] = useState("");
   const [refInfo, setRefInfo] = useState<{ codigo: string; nombre: string; vendedor_id: string } | null>(null);
+  const [codigoManual, setCodigoManual] = useState("");
+  const [codigoStatus, setCodigoStatus] = useState<"idle" | "checking" | "ok" | "error">("idle");
+  const [codigoNombre, setCodigoNombre] = useState("");
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const ahorro = useCounter(3210500, 3500, 700);
   const empresas = useCounter(387, 2000, 400);
@@ -68,14 +71,37 @@ export default function ClienteLoginPage() {
       setRefInfo({ codigo, nombre: refNombre, vendedor_id });
       setVendedorSeleccionado(vendedor_id);
     }
-    fetch("/api/vendedor/public?lista=1")
-      .then((r) => r.json())
-      .then((data) => { if (data.vendedores) setVendedores(data.vendedores); })
-      .catch(() => {});
     const t = setTimeout(() => setShowToast(true), 4000);
     const t2 = setTimeout(() => setShowToast(false), 8500);
     return () => { clearTimeout(t); clearTimeout(t2); };
   }, []);
+
+  const handleCodigoManual = (val: string) => {
+    const upper = val.toUpperCase().trim();
+    setCodigoManual(upper);
+    setCodigoStatus("idle");
+    setCodigoNombre("");
+    if (!upper) { setVendedorSeleccionado(refInfo?.vendedor_id || ""); return; }
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    setCodigoStatus("checking");
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/vendedor/public?codigo=${encodeURIComponent(upper)}`);
+        const data = await res.json();
+        if (data.vendedor) {
+          setCodigoStatus("ok");
+          setCodigoNombre(data.vendedor.nombre);
+          setVendedorSeleccionado(data.vendedor.id);
+        } else {
+          setCodigoStatus("error");
+          setVendedorSeleccionado("");
+        }
+      } catch {
+        setCodigoStatus("error");
+        setVendedorSeleccionado("");
+      }
+    }, 500);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -306,17 +332,43 @@ export default function ClienteLoginPage() {
                           <User className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 group-focus-within:text-orange-400 transition-colors" />
                           <input type="text" value={dni} onChange={(e) => setDni(e.target.value)} placeholder="DNI (opcional)" className={inputCls} style={inputStyle} onFocus={onFocusIn} onBlur={onFocusOut} />
                         </div>
-                        <div className="relative">
-                          <Store className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
-                          <select value={vendedorSeleccionado} onChange={(e) => setVendedorSeleccionado(e.target.value)}
-                            className="w-full py-3.5 pl-12 pr-4 text-sm text-white rounded-xl outline-none transition-colors appearance-none"
-                            style={inputStyle} onFocus={onFocusIn} onBlur={onFocusOut}>
-                            <option value="" className="bg-slate-900 text-slate-400">Vendedor referente (opcional)</option>
-                            {vendedores.map((v) => (
-                              <option key={v.id} value={v.id} className="bg-slate-900">{v.nombre} ({v.codigo_referido})</option>
-                            ))}
-                          </select>
-                        </div>
+                        {/* Código de vendedor referente */}
+                        {refInfo ? (
+                          <div className="flex items-center gap-2 px-4 py-3 rounded-xl" style={{ background: "rgba(255,94,58,0.06)", border: "1px solid rgba(255,94,58,0.25)" }}>
+                            <CheckCircle className="h-4 w-4 shrink-0" style={{ color: "#FF5E3A" }} />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs text-gray-400">Referido por</p>
+                              <p className="text-sm font-bold text-white truncate">{refInfo.nombre} <span className="font-mono text-xs" style={{ color: "#FF5E3A" }}>({refInfo.codigo})</span></p>
+                            </div>
+                            <button type="button" onClick={() => { setRefInfo(null); setVendedorSeleccionado(""); localStorage.removeItem("ref_codigo"); localStorage.removeItem("ref_nombre"); localStorage.removeItem("ref_vendedor_id"); }} className="text-gray-600 hover:text-gray-300 transition-colors text-xs">✕</button>
+                          </div>
+                        ) : (
+                          <div>
+                            <div className="relative group">
+                              <Store className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 group-focus-within:text-orange-400 transition-colors" />
+                              <input
+                                type="text"
+                                value={codigoManual}
+                                onChange={(e) => handleCodigoManual(e.target.value)}
+                                placeholder="Código de vendedor (opcional)"
+                                className={`${inputCls} pr-10`}
+                                style={{ ...inputStyle, borderColor: codigoStatus === "ok" ? "rgba(34,197,94,0.6)" : codigoStatus === "error" ? "rgba(239,68,68,0.5)" : undefined }}
+                                maxLength={20}
+                              />
+                              <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                                {codigoStatus === "checking" && <Loader2 className="h-4 w-4 animate-spin text-gray-500" />}
+                                {codigoStatus === "ok" && <CheckCircle className="h-4 w-4" style={{ color: "#22c55e" }} />}
+                                {codigoStatus === "error" && <XCircle className="h-4 w-4 text-red-400" />}
+                              </div>
+                            </div>
+                            {codigoStatus === "ok" && (
+                              <p className="mt-1.5 text-xs pl-1 font-semibold" style={{ color: "#22c55e" }}>✓ Vendedor encontrado: <span className="text-white">{codigoNombre}</span></p>
+                            )}
+                            {codigoStatus === "error" && (
+                              <p className="mt-1.5 text-xs pl-1 text-red-400">Código no válido o vendedor inactivo</p>
+                            )}
+                          </div>
+                        )}
                       </>
                     )}
 
