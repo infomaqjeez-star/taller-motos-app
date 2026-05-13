@@ -6,9 +6,22 @@ import {
 } from "lucide-react";
 import { MessageTaller } from "@/lib/types";
 
-// ── Sonidos MSN con Web Audio API ────────────────────────────
+// ── Sonidos MSN ───────────────────────────────────────────────
 function playSound(type: string) {
   try {
+    if (type === "nudge") {
+      // Archivo real "Sobreviviste al zumbido" — cortado a 2 segundos
+      const audio = new Audio("/msn-nudge.mp3");
+      audio.volume = 0.9;
+      audio.play().catch(() => {});
+      setTimeout(() => {
+        audio.pause();
+        audio.currentTime = 0;
+      }, 2000);
+      return;
+    }
+
+    // Resto de sonidos con Web Audio API
     const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
     const sounds: Record<string, () => void> = {
       ding: () => {
@@ -20,20 +33,7 @@ function playSound(type: string) {
         g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
         o.start(); o.stop(ctx.currentTime + 0.5);
       },
-      nudge: () => {
-        // Vibración rápida: 3 beeps cortos
-        [0, 0.12, 0.24].forEach(offset => {
-          const o = ctx.createOscillator(), g = ctx.createGain();
-          o.connect(g); g.connect(ctx.destination);
-          o.frequency.value = 660;
-          g.gain.setValueAtTime(0.3, ctx.currentTime + offset);
-          g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + offset + 0.08);
-          o.start(ctx.currentTime + offset);
-          o.stop(ctx.currentTime + offset + 0.08);
-        });
-      },
       online: () => {
-        // Sonido "usuario conectado" - dos notas ascendentes
         [[523, 0], [659, 0.15], [784, 0.30]].forEach(([freq, offset]) => {
           const o = ctx.createOscillator(), g = ctx.createGain();
           o.connect(g); g.connect(ctx.destination);
