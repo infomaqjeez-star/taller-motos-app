@@ -9,6 +9,7 @@ import {
   Eye, EyeOff, Store, ChevronRight,
   ShoppingBag, TrendingUp, CheckCircle, XCircle,
 } from "lucide-react";
+import ForgotPasswordModal from "@/components/auth/ForgotPasswordModal";
 
 function useCounter(target: number, duration: number, delay: number) {
   const [val, setVal] = useState(0);
@@ -47,6 +48,7 @@ export default function ClienteLoginPage() {
   const [error, setError] = useState("");
   const [showPass, setShowPass] = useState(false);
   const [showToast, setShowToast] = useState(false);
+  const [showForgot, setShowForgot] = useState(false);
 
   const [nombre, setNombre] = useState("");
   const [email, setEmail] = useState("");
@@ -393,9 +395,11 @@ export default function ClienteLoginPage() {
 
                     {tab === "login" && (
                       <div className="text-right -mt-1">
-                        <button type="button" className="text-xs font-semibold transition-colors" style={{ color: "#FF5E3A" }}>¿Olvidaste tu contraseña?</button>
+                        <button type="button" onClick={() => setShowForgot(true)} className="text-xs font-semibold transition-colors" style={{ color: "#FF5E3A" }}>¿Olvidaste tu contraseña?</button>
                       </div>
                     )}
+
+                    {showForgot && <ForgotPasswordModal rol="cliente" onClose={() => setShowForgot(false)} />}
 
                     <button type="submit" disabled={loading}
                       className="shimmer-btn relative overflow-hidden w-full font-extrabold py-4 px-4 rounded-xl transition-all active:scale-[0.98] flex items-center justify-center gap-2 mt-1 disabled:opacity-50 text-base group"

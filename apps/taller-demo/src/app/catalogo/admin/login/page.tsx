@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAdminAuth } from "@/components/admin/AdminAuthContext";
 import { Shield, ArrowLeft, Eye, EyeOff, Lock } from "lucide-react";
+import ForgotPasswordModal from "@/components/auth/ForgotPasswordModal";
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -15,6 +16,7 @@ export default function AdminLoginPage() {
   const [tempToken, setTempToken] = useState("");
   const [form, setForm] = useState({ email: "", password: "" });
   const [code, setCode] = useState("");
+  const [showForgot, setShowForgot] = useState(false);
 
   // Si ya está logueado, redirigir directo al panel
   if (!authLoading && admin) {
@@ -116,6 +118,12 @@ export default function AdminLoginPage() {
             </div>
           </div>
 
+          <div className="text-right -mt-1">
+            <button type="button" onClick={() => setShowForgot(true)} className="text-xs font-semibold text-gray-500 hover:text-orange-400 transition-colors">
+              ¿Olvidaste tu contraseña?
+            </button>
+          </div>
+
           <button
             type="submit"
             disabled={loading}
@@ -169,6 +177,8 @@ export default function AdminLoginPage() {
           </button>
         </form>
       )}
+
+      {showForgot && <ForgotPasswordModal rol="admin" onClose={() => setShowForgot(false)} />}
     </main>
   );
 }
