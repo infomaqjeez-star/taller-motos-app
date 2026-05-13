@@ -311,9 +311,9 @@ function CatalogoContent() {
               </span>
             )}
             {clienteLogueado ? (
-              <span className="bg-blue-900/30 text-blue-400 border border-blue-800/50 px-3 py-1.5 rounded-full flex items-center gap-1">
+              <Link href="/catalogo/cliente/dashboard" className="bg-blue-900/30 text-blue-400 border border-blue-800/50 px-3 py-1.5 rounded-full flex items-center gap-1 hover:bg-blue-900/50 transition-colors">
                 <User className="h-3.5 w-3.5" /> {clienteLogueado.nombre} (-3%)
-              </span>
+              </Link>
             ) : (
               <Link href="/catalogo/cliente/login" className="bg-blue-900/30 text-blue-400 border border-blue-800/50 px-3 py-1.5 rounded-full flex items-center gap-1 hover:bg-blue-900/50 transition-colors">
                 <User className="h-3.5 w-3.5" /> Cliente (-3%)
