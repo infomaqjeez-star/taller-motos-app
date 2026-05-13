@@ -144,6 +144,11 @@ export default function MessengerPanel({
   const [avatar, setAvatar] = useState<string | null>(() =>
     typeof window !== "undefined" ? localStorage.getItem("taller_avatar") : null
   );
+  const [, setLastActivity] = useState<number>(() => {
+    if (typeof window === "undefined") return Date.now();
+    return parseInt(localStorage.getItem("taller_last_activity") || String(Date.now()));
+  });
+  const [isAway, setIsAway] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [tempName, setTempName] = useState("");
   const [texto, setTexto] = useState("");
@@ -172,6 +177,25 @@ export default function MessengerPanel({
     handleAutorChange(name);
     setEditingName(false);
   };
+
+  // Actualizar actividad al enviar mensaje
+  const updateActivity = () => {
+    const now = Date.now();
+    setLastActivity(now);
+    setIsAway(false);
+    localStorage.setItem("taller_last_activity", String(now));
+  };
+
+  // Chequear ausencia cada minuto
+  useEffect(() => {
+    const check = () => {
+      const stored = parseInt(localStorage.getItem("taller_last_activity") || String(Date.now()));
+      setIsAway(Date.now() - stored > 60 * 60 * 1000); // 1 hora
+    };
+    check();
+    const interval = setInterval(check, 60_000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -204,6 +228,7 @@ export default function MessengerPanel({
     if (!texto.trim()) return;
     onSend(autor.trim() || "Técnico", texto.trim());
     setTexto("");
+    updateActivity();
   };
 
   const insertEmoji = (emoji: string) => {
@@ -407,10 +432,20 @@ export default function MessengerPanel({
             <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
             <p className="text-[9px] text-blue-700 font-bold text-center truncate w-full px-1">{autor}</p>
             <div className="w-full rounded flex items-center justify-center gap-1 py-0.5"
-              style={{ background: "#d1fae5", border: "1px solid #6ee7b7" }}>
-              <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block"/>
-              <span className="text-[9px] text-green-700 font-bold">En línea</span>
+              style={{
+                background: isAway ? "#fef3c7" : "#d1fae5",
+                border: isAway ? "1px solid #fcd34d" : "1px solid #6ee7b7",
+              }}>
+              <span className={`w-1.5 h-1.5 rounded-full inline-block ${isAway ? "bg-yellow-400" : "bg-green-500"}`}/>
+              <span className={`text-[9px] font-bold ${isAway ? "text-yellow-700" : "text-green-700"}`}>
+                {isAway ? "Ausente" : "En línea"}
+              </span>
             </div>
+            {isAway && (
+              <span className="text-[8px] text-yellow-600 text-center leading-tight">
+                +1h sin actividad
+              </span>
+            )}
           </div>
         </div>
 
