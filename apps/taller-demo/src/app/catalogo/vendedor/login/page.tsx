@@ -1,14 +1,41 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useVendedorAuth } from "@/components/vendedor/VendedorAuthContext";
 import {
-  ArrowLeft, Store, Eye, EyeOff, Wrench, TrendingUp,
-  ShoppingBag, ChevronRight, Lock, Loader2, User, Mail, Phone,
-  DollarSign, BarChart2,
+  ArrowLeft, Eye, EyeOff, ChevronRight, Lock, Loader2,
+  User, Mail, Phone, Store, ShoppingBag, TrendingUp,
 } from "lucide-react";
+
+function useCounter(target: number, duration: number, delay: number) {
+  const [val, setVal] = useState(0);
+  useEffect(() => {
+    const t = setTimeout(() => {
+      let start: number | null = null;
+      const step = (ts: number) => {
+        if (!start) start = ts;
+        const p = Math.min((ts - start) / duration, 1);
+        const ease = 1 - Math.pow(2, -10 * p);
+        setVal(Math.floor(ease * target));
+        if (p < 1) requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+    }, delay);
+    return () => clearTimeout(t);
+  }, [target, duration, delay]);
+  return val;
+}
+
+const TICKER_ITEMS = [
+  "⚡ Taller Gómez ahorró $120.000 en su última compra",
+  "💸 Juan M. acaba de generar $45.500 en comisiones",
+  "🚀 Valeria R. alcanzó el nivel Socio Platino",
+  "🔥 Nuevo lote de repuestos con 15% OFF extra",
+  "💸 Comisiones pagadas hoy: +$245.000",
+  "⚡ Carlos desde Córdoba retiró sus comisiones",
+];
 
 export default function VendedorLoginPage() {
   const router = useRouter();
@@ -18,6 +45,16 @@ export default function VendedorLoginPage() {
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showToast, setShowToast] = useState(false);
+
+  const comisiones = useCounter(1845300, 3000, 600);
+  const vendedores = useCounter(214, 2000, 400);
+
+  useEffect(() => {
+    const t = setTimeout(() => setShowToast(true), 4000);
+    const t2 = setTimeout(() => setShowToast(false), 8500);
+    return () => { clearTimeout(t); clearTimeout(t2); };
+  }, []);
 
   const [form, setForm] = useState({
     nombre: "", email: "", telefono: "", dni_cuit: "", password: "", confirmPassword: "",
@@ -55,257 +92,268 @@ export default function VendedorLoginPage() {
     }
   };
 
+  const inputCls = "w-full py-3.5 pl-12 pr-4 text-sm text-white placeholder-slate-500 rounded-xl outline-none transition-colors";
+  const inputStyle = { background: "rgba(5,10,25,0.8)", border: "1px solid rgba(71,85,105,0.4)" };
+  const onFocus = (e: React.FocusEvent<HTMLInputElement>) => (e.currentTarget.style.borderColor = "#10b981");
+  const onBlur  = (e: React.FocusEvent<HTMLInputElement>) => (e.currentTarget.style.borderColor = "rgba(71,85,105,0.4)");
+
   return (
-    <div
-      className="min-h-screen flex flex-col lg:flex-row relative overflow-x-hidden"
-      style={{ background: "#020617", color: "#e2e8f0" }}
-    >
-      {/* ── ORBES ANIMADOS (solo desktop, muy costosos en mobile) ── */}
-      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden orbs-container">
-        <div className="absolute rounded-full orb-desktop" style={{ top: "10%", left: "20%", width: 380, height: 380, background: "rgba(16,185,129,0.15)", filter: "blur(100px)", animation: "blob 7s infinite" }} />
-        <div className="absolute rounded-full orb-desktop" style={{ top: "20%", right: "20%", width: 380, height: 380, background: "rgba(249,115,22,0.12)", filter: "blur(100px)", animation: "blob 7s infinite 2s" }} />
-        <div className="absolute rounded-full orb-desktop" style={{ bottom: "-10%", left: "40%", width: 380, height: 380, background: "rgba(59,130,246,0.12)", filter: "blur(100px)", animation: "blob 7s infinite 4s" }} />
-        <style>{`
-          @keyframes blob{0%{transform:translate(0px,0px) scale(1)}33%{transform:translate(30px,-50px) scale(1.1)}66%{transform:translate(-20px,20px) scale(0.9)}100%{transform:translate(0px,0px) scale(1)}}
-          @media (max-width: 1023px) { .orb-desktop { display: none !important; } }
-          @media (prefers-reduced-motion: reduce) { .orb-desktop { animation: none !important; } }
-        `}</style>
-      </div>
+    <div className="min-h-screen flex flex-col relative" style={{ background: "#030305", color: "#fff" }}>
+      <style>{`
+        @keyframes blob{0%{transform:translate(0,0) scale(1)}33%{transform:translate(30px,-50px) scale(1.1)}66%{transform:translate(-20px,20px) scale(0.9)}100%{transform:translate(0,0) scale(1)}}
+        @keyframes marquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+        @keyframes fadeUp{0%{opacity:0;transform:translateY(20px)}100%{opacity:1;transform:translateY(0)}}
+        @keyframes slideUp{0%{opacity:0;transform:translateY(16px)}100%{opacity:1;transform:translateY(0)}}
+        .anim-fade-up{animation:fadeUp 0.7s cubic-bezier(0.16,1,0.3,1) forwards}
+        .anim-slide-up{animation:slideUp 0.5s cubic-bezier(0.16,1,0.3,1) forwards}
+        @media(max-width:1023px){.orb-dsk{display:none!important}}
+        @media(prefers-reduced-motion:reduce){.orb-dsk,.ticker-inner{animation:none!important}}
+        .role-card{background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);transition:all 0.3s cubic-bezier(0.16,1,0.3,1)}
+        .role-card.sel-green{background:linear-gradient(135deg,rgba(0,255,102,0.06),transparent);border-color:#00FF66;box-shadow:0 0 0 1px #00FF66,0 10px 30px -10px rgba(0,255,102,0.15)}
+        .role-card.sel-orange{background:linear-gradient(135deg,rgba(255,94,58,0.06),transparent);border-color:#FF5E3A;box-shadow:0 0 0 1px #FF5E3A,0 10px 30px -10px rgba(255,94,58,0.15)}
+      `}</style>
 
-      {/* ══ COLUMNA IZQUIERDA (desktop) ══ */}
-      <div
-        className="hidden lg:flex lg:w-5/12 xl:w-1/2 relative flex-col justify-between p-12 overflow-hidden z-10"
-        style={{ background: "rgba(2,6,23,0.7)", borderRight: "1px solid rgba(255,255,255,0.06)" }}
-      >
-        <div className="relative z-10">
-          <Link href="/catalogo" className="inline-flex items-center gap-2 text-slate-400 hover:text-white transition-colors text-sm font-semibold mb-12">
-            <ArrowLeft className="h-4 w-4" /> Volver al catálogo
-          </Link>
-          <div className="flex items-center gap-3 mb-8">
-            <div className="p-3 rounded-xl" style={{ background: "linear-gradient(to bottom right, #10b981, #059669)", boxShadow: "0 8px 20px rgba(16,185,129,0.2)" }}>
-              <Wrench className="h-6 w-6 text-white" />
-            </div>
-            <h1 className="text-4xl font-black text-white tracking-tighter">MAQ<span style={{ color: "#f97316" }}>JEEZ</span></h1>
-          </div>
-          <h2 className="text-3xl xl:text-4xl font-bold text-white leading-tight mb-4">
-            Vendé más, ganá más con cada pedido.
-          </h2>
-          <p className="text-slate-300 text-lg max-w-md">
-            Sumáte a la red de vendedores de MaqJeez y comenzá a generar ingresos compartiendo tu link de referido.
-          </p>
-        </div>
+      {/* Mesh bg */}
+      <div className="fixed inset-0 pointer-events-none z-0" style={{ background: "radial-gradient(at 0% 0%, rgba(0,255,102,0.06) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(249,115,22,0.04) 0px, transparent 50%)" }} />
 
-        <div className="relative z-10 space-y-4">
-          {[
-            { icon: <DollarSign className="h-5 w-5 text-emerald-400" />, bg: "rgba(16,185,129,0.15)", border: "rgba(16,185,129,0.25)", title: "Comisiones 10–15%", desc: "Ganás una comisión por cada pedido generado a través de tu link. Cuanto más vendés, más ganás." },
-            { icon: <BarChart2 className="h-5 w-5 text-blue-400" />, bg: "rgba(59,130,246,0.15)", border: "rgba(59,130,246,0.25)", title: "Panel de ventas propio", desc: "Seguí tus ventas, comisiones pendientes y pagadas en tiempo real desde tu dashboard." },
-          ].map((b) => (
-            <div key={b.title} className="flex items-start gap-4 p-5 rounded-2xl" style={{ background: "rgba(15,23,42,0.5)", border: "1px solid rgba(255,255,255,0.07)", backdropFilter: "blur(8px)" }}>
-              <div className="p-2.5 rounded-lg shrink-0" style={{ background: b.bg, border: `1px solid ${b.border}` }}>{b.icon}</div>
-              <div>
-                <h3 className="text-white font-bold mb-1">{b.title}</h3>
-                <p className="text-slate-400 text-sm">{b.desc}</p>
-              </div>
-            </div>
+      {/* Orbes solo desktop */}
+      <div className="orb-dsk fixed top-0 left-1/4 w-80 h-80 rounded-full pointer-events-none" style={{ background: "rgba(0,255,102,0.08)", filter: "blur(80px)", animation: "blob 10s infinite", mixBlendMode: "screen" }} />
+      <div className="orb-dsk fixed bottom-0 right-1/4 w-80 h-80 rounded-full pointer-events-none" style={{ background: "rgba(249,115,22,0.07)", filter: "blur(80px)", animation: "blob 10s infinite 2s", mixBlendMode: "screen" }} />
+
+      {/* ── TICKER ── */}
+      <div className="relative z-50 overflow-hidden border-b" style={{ background: "#00FF66", borderColor: "rgba(0,255,102,0.4)" }}>
+        <div className="ticker-inner flex whitespace-nowrap py-1.5" style={{ animation: "marquee 30s linear infinite" }}>
+          {[...TICKER_ITEMS, ...TICKER_ITEMS].map((item, i) => (
+            <span key={i} className="inline-flex items-center px-6 text-[11px] sm:text-xs font-black text-black uppercase tracking-wide gap-2">
+              {item} <span className="w-1 h-1 rounded-full bg-black/30 inline-block" />
+            </span>
           ))}
         </div>
-
-        <div className="relative z-10 text-xs text-slate-500 font-medium">
-          &copy; 2026 MaqJeez. Todos los derechos reservados.<br />Carlos Spegazzini, Buenos Aires, Argentina.
-        </div>
       </div>
 
-      {/* ══ COLUMNA DERECHA: FORMULARIO ══ */}
-      <div className="w-full lg:w-7/12 xl:w-1/2 flex items-center justify-center px-4 sm:px-8 lg:px-12 relative z-10 py-8 sm:py-10">
-        <div className="w-full max-w-[440px]">
+      {/* ── BODY ── */}
+      <div className="flex-1 flex flex-col lg:flex-row relative z-10">
 
-          {/* Badge seguridad + back mobile */}
-          <div className="mb-6 flex justify-between items-center">
-            <Link href="/catalogo" className="lg:hidden inline-flex items-center gap-2 text-sm font-semibold text-slate-400 hover:text-white transition-colors">
-              <ArrowLeft className="h-4 w-4" /> Catálogo
-            </Link>
-            <div className="hidden lg:block" />
-            <div className="flex items-center gap-1.5 text-xs text-slate-500 px-2.5 py-1 rounded-full" style={{ background: "rgba(15,23,42,0.8)", border: "1px solid #1e293b" }}>
-              <Lock className="h-3 w-3" /> Seguro
+        {/* ══ LEFT: stats ══ */}
+        <div className="hidden lg:flex lg:w-5/12 xl:w-1/2 flex-col justify-center p-12 xl:p-20 border-r" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+          <div className="max-w-xl opacity-0 anim-fade-up" style={{ animationDelay: "0.1s" }}>
+
+            {/* Live badge */}
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-8" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: "#00FF66" }} />
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5" style={{ background: "#00FF66" }} />
+              </span>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-gray-300">Red de mayor crecimiento</span>
             </div>
-          </div>
 
-          {/* TARJETA GLASSMORPHISM */}
-          <div
-            className="rounded-[1.5rem] sm:rounded-[2rem] p-5 sm:p-8 md:p-10 relative overflow-hidden login-card"
-          >
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-px pointer-events-none" style={{ background: "linear-gradient(to right, transparent, rgba(255,255,255,0.18), transparent)" }} />
+            <h1 className="text-5xl xl:text-6xl font-black leading-tight mb-5 tracking-tight">
+              Vendé más,<br />
+              <span className="text-transparent bg-clip-text" style={{ backgroundImage: "linear-gradient(to right, #fff, rgba(255,255,255,0.5))" }}>ganá más.</span>
+            </h1>
+            <p className="text-gray-400 text-lg leading-relaxed mb-10">
+              Compartí tu link y <strong className="text-white">cobrá comisiones reales</strong> por cada venta. Los números hablan solos.
+            </p>
 
-            {/* Título */}
-            <div className="text-center mb-6 sm:mb-8">
-              <div className="flex justify-center mb-4">
-                <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ background: "linear-gradient(to bottom right, #10b981, #059669)", boxShadow: "0 8px 20px rgba(16,185,129,0.3)" }}>
-                  <TrendingUp className="h-6 w-6 text-white" />
+            {/* Stats grid */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-5 rounded-2xl" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-2 h-2 rounded-full" style={{ background: "#00FF66", boxShadow: "0 0 8px #00FF66" }} />
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Vendedores</p>
+                </div>
+                <p className="text-3xl font-black">{vendedores.toLocaleString("es-AR")}</p>
+                <p className="text-xs font-semibold mt-1" style={{ color: "#00FF66" }}>↑ +28 este mes</p>
+              </div>
+
+              <div className="p-5 rounded-2xl" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-2 h-2 rounded-full" style={{ background: "#FF5E3A", boxShadow: "0 0 8px #FF5E3A" }} />
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Compradores</p>
+                </div>
+                <p className="text-3xl font-black">387</p>
+                <p className="text-xs font-semibold mt-1" style={{ color: "#FF5E3A" }}>↑ Activos hoy</p>
+              </div>
+
+              <div className="col-span-2 p-5 rounded-2xl relative overflow-hidden" style={{ background: "linear-gradient(135deg,rgba(10,11,16,0.9),rgba(3,3,5,0.9))", border: "1px solid rgba(0,255,102,0.2)" }}>
+                <div className="absolute right-0 top-0 w-28 h-28 rounded-full" style={{ background: "rgba(0,255,102,0.08)", filter: "blur(30px)" }} />
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2">Comisiones pagadas a la red</p>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-3xl font-extrabold" style={{ color: "#00FF66" }}>$</span>
+                  <span className="text-4xl font-black">{comisiones.toLocaleString("es-AR")}</span>
                 </div>
               </div>
-              <h1 className="text-2xl font-black text-white tracking-tight mb-2">
-                {roleStep === null ? "Crear cuenta" : isRegister ? "Registro vendedor" : "Bienvenido de nuevo"}
-              </h1>
-              <p className="text-sm text-slate-400 leading-relaxed">
-                {roleStep === null
-                  ? "Primer paso — elegí tu rol"
-                  : isRegister
-                  ? <>Registrate y comenzá a <strong className="text-emerald-400">ganar comisiones</strong> hoy.</>
-                  : "Ingresá a tu cuenta de vendedor."}
-              </p>
             </div>
 
-            {/* ── SELECTOR DE ROL ── */}
-            {roleStep === null && (
-              <div className="space-y-3 mb-3">
-                <button type="button" onClick={() => router.push("/catalogo/cliente/login")}
-                  className="w-full flex items-center gap-3 sm:gap-4 rounded-2xl p-4 text-left active:scale-[0.98] transition-all"
-                  style={{ background: "linear-gradient(135deg, rgba(249,115,22,0.12), rgba(249,115,22,0.06))", border: "2px solid rgba(249,115,22,0.5)" }}>
-                  <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(249,115,22,0.2)", border: "1px solid rgba(249,115,22,0.4)" }}>
-                    <ShoppingBag className="h-5 w-5 sm:h-6 sm:w-6 text-orange-400" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-black text-white text-sm sm:text-base">SOY COMPRADOR</p>
-                    <p className="text-xs text-slate-400 mt-0.5 leading-tight">Quiero comprar repuestos y accesorios con descuentos exclusivos</p>
-                    <div className="flex flex-wrap gap-1.5 mt-2">
-                      <span className="text-[10px] px-2 py-0.5 rounded-full font-bold" style={{ background: "rgba(249,115,22,0.15)", color: "#fb923c", border: "1px solid rgba(249,115,22,0.3)" }}>3% OFF siempre</span>
-                      <span className="text-[10px] px-2 py-0.5 rounded-full font-bold" style={{ background: "rgba(249,115,22,0.15)", color: "#fb923c", border: "1px solid rgba(249,115,22,0.3)" }}>Historial de pedidos</span>
-                    </div>
-                  </div>
-                  <ChevronRight className="h-5 w-5 text-orange-400 shrink-0" />
-                </button>
+            <p className="text-xs text-gray-600 mt-8">&copy; 2026 MaqJeez · Carlos Spegazzini, Buenos Aires</p>
+          </div>
+        </div>
 
-                <button type="button" onClick={() => { setRoleStep("vendedor"); setIsRegister(true); }}
-                  className="w-full flex items-center gap-3 sm:gap-4 rounded-2xl p-4 text-left active:scale-[0.98] transition-all"
-                  style={{ background: "linear-gradient(135deg, rgba(16,185,129,0.12), rgba(16,185,129,0.06))", border: "2px solid rgba(16,185,129,0.4)" }}>
-                  <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(16,185,129,0.2)", border: "1px solid rgba(16,185,129,0.4)" }}>
-                    <TrendingUp className="h-5 w-5 sm:h-6 sm:w-6 text-emerald-400" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-black text-white text-sm sm:text-base">SOY VENDEDOR</p>
-                    <p className="text-xs text-slate-400 mt-0.5 leading-tight">Quiero vender y ganar comisiones por cada pedido que genere</p>
-                    <div className="flex flex-wrap gap-1.5 mt-2">
-                      <span className="text-[10px] px-2 py-0.5 rounded-full font-bold" style={{ background: "rgba(16,185,129,0.15)", color: "#34d399", border: "1px solid rgba(16,185,129,0.3)" }}>Comisiones 10-15%</span>
-                      <span className="text-[10px] px-2 py-0.5 rounded-full font-bold" style={{ background: "rgba(16,185,129,0.15)", color: "#34d399", border: "1px solid rgba(16,185,129,0.3)" }}>Panel de ventas</span>
-                    </div>
-                  </div>
-                  <ChevronRight className="h-5 w-5 text-emerald-400 shrink-0" />
-                </button>
+        {/* ══ RIGHT: form ══ */}
+        <div className="w-full lg:w-7/12 xl:w-1/2 flex items-center justify-center px-4 sm:px-8 lg:px-12 py-8 sm:py-10">
+          <div className="w-full max-w-[500px]">
 
-                <p className="text-center text-xs text-slate-500 pt-1">
-                  ¿Ya tenés cuenta?{" "}
-                  <button type="button" onClick={() => { setRoleStep("vendedor"); setIsRegister(false); }} className="text-emerald-400 font-bold hover:underline">Iniciá sesión</button>
+            {/* Mobile back */}
+            <div className="flex items-center justify-between mb-5 lg:hidden">
+              <Link href="/catalogo" className="inline-flex items-center gap-1.5 text-sm font-semibold text-gray-400 hover:text-white transition-colors">
+                <ArrowLeft className="h-4 w-4" /> Catálogo
+              </Link>
+              <span className="text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "#6b7280" }}>
+                🔒 Seguro
+              </span>
+            </div>
+
+            {/* Tarjeta */}
+            <div className="login-card rounded-[1.75rem] sm:rounded-[2rem] p-6 sm:p-10 relative overflow-hidden opacity-0 anim-fade-up" style={{ animationDelay: "0.25s" }}>
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-2/3 h-px pointer-events-none" style={{ background: "linear-gradient(to right, transparent, rgba(255,255,255,0.12), transparent)" }} />
+
+              {/* Header */}
+              <div className="text-center mb-7">
+                <h2 className="text-2xl sm:text-3xl font-black mb-1.5">
+                  {roleStep === null ? "Únete al ecosistema" : isRegister ? "Crear cuenta vendedor" : "Bienvenido de nuevo"}
+                </h2>
+                <p className="text-sm text-gray-400">
+                  {roleStep === null ? "¿Cómo usarás la plataforma?" : isRegister ? <>Registrate y empezá a <strong className="text-emerald-400">ganar hoy</strong></> : "Ingresá a tu cuenta de vendedor"}
                 </p>
               </div>
-            )}
 
-            {/* ── FORMULARIO ── */}
-            {roleStep === "vendedor" && (<>
-              {/* Botón cambiar rol */}
-              <button type="button" onClick={() => setRoleStep(null)} className="mb-4 flex items-center gap-1 text-xs text-slate-400 hover:text-white transition-colors">
-                <ArrowLeft className="h-3.5 w-3.5" /> Cambiar rol
-              </button>
+              {/* ── SELECTOR DE ROL ── */}
+              {roleStep === null && (
+                <div className="space-y-3 mb-2">
+                  {/* VENDEDOR */}
+                  <button type="button" onClick={() => { setRoleStep("vendedor"); setIsRegister(true); }}
+                    className="role-card sel-green w-full rounded-xl sm:rounded-2xl p-4 sm:p-5 flex items-start gap-4 text-left active:scale-[0.98] transition-transform relative overflow-hidden">
+                    <div className="absolute top-0 right-0 text-[9px] font-black px-3 py-1 rounded-bl-xl rounded-tr-2xl uppercase tracking-wider" style={{ background: "#00FF66", color: "#000" }}>
+                      <span className="inline-block w-1.5 h-1.5 rounded-full bg-black animate-pulse mr-1" />Monetizá hoy
+                    </div>
+                    <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center shrink-0 transition-all" style={{ background: "rgba(0,255,102,0.1)", border: "1px solid rgba(0,255,102,0.2)", color: "#00FF66" }}>
+                      <TrendingUp className="h-5 w-5 sm:h-6 sm:w-6" />
+                    </div>
+                    <div className="flex-1 min-w-0 pt-0.5">
+                      <p className="font-black text-white text-sm sm:text-base mb-0.5">Quiero Vender y Ganar</p>
+                      <p className="text-xs text-gray-400 leading-snug mb-2.5">Compartí tu link y recibí comisiones en efectivo por cada venta.</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        <span className="text-[10px] px-2 py-0.5 rounded-md font-bold" style={{ background: "rgba(0,255,102,0.08)", color: "#00FF66", border: "1px solid rgba(0,255,102,0.2)" }}>Comisiones 10–15%</span>
+                        <span className="text-[10px] px-2 py-0.5 rounded-md font-bold" style={{ background: "rgba(0,255,102,0.08)", color: "#00FF66", border: "1px solid rgba(0,255,102,0.2)" }}>Panel de ventas</span>
+                      </div>
+                    </div>
+                    <ChevronRight className="h-5 w-5 shrink-0 mt-1 text-emerald-400" />
+                  </button>
 
-              {/* Toggle Ingresar / Registrarse */}
-              <div className="p-1.5 rounded-xl flex mb-5 sm:mb-6 relative" style={{ background: "rgba(2,6,23,0.6)", border: "1px solid rgba(30,41,59,0.8)", backdropFilter: "blur(8px)" }}>
-                <div className="absolute top-1.5 bottom-1.5 rounded-lg transition-all duration-300 ease-out" style={{ width: "calc(50% - 6px)", background: "#1e293b", border: "1px solid rgba(100,116,139,0.4)", left: !isRegister ? "6px" : "calc(50%)", boxShadow: "0 2px 8px rgba(0,0,0,0.4)" }} />
-                <button type="button" onClick={() => switchTab(false)} className="w-1/2 py-2 text-sm font-bold relative z-10 transition-colors" style={{ color: !isRegister ? "#fff" : "#94a3b8" }}>Ingresar</button>
-                <button type="button" onClick={() => switchTab(true)} className="w-1/2 py-2 text-sm font-bold relative z-10 transition-colors" style={{ color: isRegister ? "#fff" : "#94a3b8" }}>Registrarse</button>
-              </div>
+                  {/* COMPRADOR */}
+                  <button type="button" onClick={() => router.push("/catalogo/cliente/login")}
+                    className="role-card w-full rounded-xl sm:rounded-2xl p-4 sm:p-5 flex items-start gap-4 text-left active:scale-[0.98] transition-transform">
+                    <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center shrink-0 transition-all" style={{ background: "rgba(255,94,58,0.08)", border: "1px solid rgba(255,94,58,0.15)", color: "#FF5E3A" }}>
+                      <ShoppingBag className="h-5 w-5 sm:h-6 sm:w-6" />
+                    </div>
+                    <div className="flex-1 min-w-0 pt-0.5">
+                      <p className="font-black text-white text-sm sm:text-base mb-0.5">Soy Comprador B2B</p>
+                      <p className="text-xs text-gray-400 leading-snug mb-2.5">Adquirí repuestos para tu maquinaria con precios corporativos.</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        <span className="text-[10px] px-2 py-0.5 rounded-md font-bold" style={{ background: "rgba(255,94,58,0.08)", color: "#FF5E3A", border: "1px solid rgba(255,94,58,0.2)" }}>3% OFF siempre</span>
+                        <span className="text-[10px] px-2 py-0.5 rounded-md font-bold" style={{ background: "rgba(255,94,58,0.08)", color: "#FF5E3A", border: "1px solid rgba(255,94,58,0.2)" }}>Descuentos exclusivos</span>
+                      </div>
+                    </div>
+                    <ChevronRight className="h-5 w-5 shrink-0 mt-1 text-orange-400" />
+                  </button>
 
-              {error && (
-                <p className="mb-4 px-3 py-2 rounded-lg text-sm text-red-400" style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)" }}>{error}</p>
+                  <p className="text-center text-xs text-gray-500 pt-1">
+                    ¿Ya tenés cuenta?{" "}
+                    <button type="button" onClick={() => { setRoleStep("vendedor"); setIsRegister(false); }} className="font-bold hover:underline" style={{ color: "#00FF66" }}>
+                      Iniciá sesión
+                    </button>
+                  </p>
+                </div>
               )}
 
-              <form onSubmit={handleSubmit} className="space-y-4">
-                {/* Nombre */}
-                <div className="overflow-hidden transition-all duration-300" style={{ maxHeight: isRegister ? "80px" : "0", opacity: isRegister ? 1 : 0 }}>
-                  <div className="relative group">
-                    <User className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 group-focus-within:text-emerald-400 transition-colors" />
-                    <input type="text" value={form.nombre} onChange={(e) => update("nombre", e.target.value)} required={isRegister} placeholder="Nombre completo"
-                      className="w-full py-3.5 pl-12 pr-4 text-sm text-white placeholder-slate-500 rounded-xl outline-none transition-all"
-                      style={{ background: "rgba(2,6,23,0.5)", border: "1px solid rgba(71,85,105,0.5)" }}
-                      onFocus={(e) => (e.currentTarget.style.borderColor = "#10b981")}
-                      onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(71,85,105,0.5)")} />
-                  </div>
-                </div>
-
-                {/* Email */}
-                <div className="relative group">
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 group-focus-within:text-emerald-400 transition-colors" />
-                  <input type="email" value={form.email} onChange={(e) => update("email", e.target.value)} required placeholder="Correo electrónico"
-                    className="w-full py-3.5 pl-12 pr-4 text-sm text-white placeholder-slate-500 rounded-xl outline-none transition-all"
-                    style={{ background: "rgba(2,6,23,0.5)", border: "1px solid rgba(71,85,105,0.5)" }}
-                    onFocus={(e) => (e.currentTarget.style.borderColor = "#10b981")}
-                    onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(71,85,105,0.5)")} />
-                </div>
-
-                {/* Teléfono */}
-                <div className="overflow-hidden transition-all duration-300" style={{ maxHeight: isRegister ? "80px" : "0", opacity: isRegister ? 1 : 0 }}>
-                  <div className="relative group">
-                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 group-focus-within:text-emerald-400 transition-colors" />
-                    <input type="tel" value={form.telefono} onChange={(e) => update("telefono", e.target.value)} placeholder="Teléfono (Opcional)"
-                      className="w-full py-3.5 pl-12 pr-4 text-sm text-white placeholder-slate-500 rounded-xl outline-none transition-all"
-                      style={{ background: "rgba(2,6,23,0.5)", border: "1px solid rgba(71,85,105,0.5)" }}
-                      onFocus={(e) => (e.currentTarget.style.borderColor = "#10b981")}
-                      onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(71,85,105,0.5)")} />
-                  </div>
-                </div>
-
-                {/* DNI/CUIT */}
-                <div className="overflow-hidden transition-all duration-300" style={{ maxHeight: isRegister ? "90px" : "0", opacity: isRegister ? 1 : 0 }}>
-                  <div className="relative group">
-                    <Store className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 group-focus-within:text-emerald-400 transition-colors" />
-                    <input type="text" value={form.dni_cuit} onChange={(e) => update("dni_cuit", e.target.value)} required={isRegister} placeholder="DNI o CUIT"
-                      className="w-full py-3.5 pl-12 pr-4 text-sm text-white placeholder-slate-500 rounded-xl outline-none transition-all"
-                      style={{ background: "rgba(2,6,23,0.5)", border: "1px solid rgba(71,85,105,0.5)" }}
-                      onFocus={(e) => (e.currentTarget.style.borderColor = "#10b981")}
-                      onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(71,85,105,0.5)")} />
-                  </div>
-                  <p className="mt-1 text-[10px] text-slate-600 pl-1">No podés registrar el mismo DNI/CUIT en otra cuenta de vendedor.</p>
-                </div>
-
-                {/* Contraseña */}
-                <div className="relative group">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 group-focus-within:text-emerald-400 transition-colors" />
-                  <input type={showPass ? "text" : "password"} value={form.password} onChange={(e) => update("password", e.target.value)} required placeholder="Contraseña"
-                    className="w-full py-3.5 pl-12 pr-12 text-sm text-white placeholder-slate-500 rounded-xl outline-none transition-all"
-                    style={{ background: "rgba(2,6,23,0.5)", border: "1px solid rgba(71,85,105,0.5)" }}
-                    onFocus={(e) => (e.currentTarget.style.borderColor = "#10b981")}
-                    onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(71,85,105,0.5)")} />
-                  <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors">
-                    {showPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              {/* ── FORMULARIO ── */}
+              {roleStep === "vendedor" && (
+                <div className="anim-slide-up">
+                  <button type="button" onClick={() => setRoleStep(null)} className="mb-4 flex items-center gap-1 text-xs text-gray-400 hover:text-white transition-colors">
+                    <ArrowLeft className="h-3.5 w-3.5" /> Cambiar rol
                   </button>
-                </div>
 
-                {/* Confirmar contraseña */}
-                <div className="overflow-hidden transition-all duration-300" style={{ maxHeight: isRegister ? "80px" : "0", opacity: isRegister ? 1 : 0 }}>
-                  <div className="relative group">
-                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 group-focus-within:text-emerald-400 transition-colors" />
-                    <input type="password" value={form.confirmPassword} onChange={(e) => update("confirmPassword", e.target.value)} required={isRegister} placeholder="Repetí la contraseña"
-                      className="w-full py-3.5 pl-12 pr-4 text-sm text-white placeholder-slate-500 rounded-xl outline-none transition-all"
-                      style={{ background: "rgba(2,6,23,0.5)", border: "1px solid rgba(71,85,105,0.5)" }}
-                      onFocus={(e) => (e.currentTarget.style.borderColor = "#10b981")}
-                      onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(71,85,105,0.5)")} />
+                  {/* Toggle */}
+                  <div className="flex p-1.5 rounded-xl mb-5 relative" style={{ background: "rgba(5,10,25,0.8)", border: "1px solid rgba(30,41,59,0.8)" }}>
+                    <div className="absolute top-1.5 bottom-1.5 rounded-lg transition-all duration-300" style={{ width: "calc(50% - 6px)", background: "#0f172a", border: "1px solid rgba(100,116,139,0.3)", left: !isRegister ? "6px" : "calc(50%)" }} />
+                    <button type="button" onClick={() => switchTab(false)} className="w-1/2 py-2 text-sm font-bold relative z-10 transition-colors" style={{ color: !isRegister ? "#fff" : "#64748b" }}>Ingresar</button>
+                    <button type="button" onClick={() => switchTab(true)} className="w-1/2 py-2 text-sm font-bold relative z-10 transition-colors" style={{ color: isRegister ? "#fff" : "#64748b" }}>Registrarse</button>
                   </div>
+
+                  {error && (
+                    <p className="mb-4 px-3 py-2 rounded-lg text-sm text-red-400" style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.25)" }}>{error}</p>
+                  )}
+
+                  <form onSubmit={handleSubmit} className="space-y-3">
+                    {isRegister && (
+                      <div className="relative group">
+                        <User className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 group-focus-within:text-emerald-400 transition-colors" />
+                        <input type="text" value={form.nombre} onChange={(e) => update("nombre", e.target.value)} required placeholder="Nombre completo" className={inputCls} style={inputStyle} onFocus={onFocus} onBlur={onBlur} />
+                      </div>
+                    )}
+
+                    <div className="relative group">
+                      <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 group-focus-within:text-emerald-400 transition-colors" />
+                      <input type="email" value={form.email} onChange={(e) => update("email", e.target.value)} required placeholder="Correo electrónico" className={inputCls} style={inputStyle} onFocus={onFocus} onBlur={onBlur} />
+                    </div>
+
+                    {isRegister && (
+                      <div className="relative group">
+                        <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 group-focus-within:text-emerald-400 transition-colors" />
+                        <input type="tel" value={form.telefono} onChange={(e) => update("telefono", e.target.value)} placeholder="Teléfono (opcional)" className={inputCls} style={inputStyle} onFocus={onFocus} onBlur={onBlur} />
+                      </div>
+                    )}
+
+                    {isRegister && (
+                      <div className="relative group">
+                        <Store className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 group-focus-within:text-emerald-400 transition-colors" />
+                        <input type="text" value={form.dni_cuit} onChange={(e) => update("dni_cuit", e.target.value)} required placeholder="DNI o CUIT" className={inputCls} style={inputStyle} onFocus={onFocus} onBlur={onBlur} />
+                      </div>
+                    )}
+
+                    <div className="relative group">
+                      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 group-focus-within:text-emerald-400 transition-colors" />
+                      <input type={showPass ? "text" : "password"} value={form.password} onChange={(e) => update("password", e.target.value)} required placeholder="Contraseña" className={`${inputCls} pr-12`} style={inputStyle} onFocus={onFocus} onBlur={onBlur} />
+                      <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors">
+                        {showPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+
+                    {isRegister && (
+                      <div className="relative group">
+                        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 group-focus-within:text-emerald-400 transition-colors" />
+                        <input type="password" value={form.confirmPassword} onChange={(e) => update("confirmPassword", e.target.value)} required placeholder="Repetí la contraseña" className={inputCls} style={inputStyle} onFocus={onFocus} onBlur={onBlur} />
+                      </div>
+                    )}
+
+                    <button type="submit" disabled={loading}
+                      className="w-full font-extrabold py-4 px-4 rounded-xl transition-all active:scale-[0.98] flex items-center justify-center gap-2 mt-1 disabled:opacity-50 text-base"
+                      style={{ background: "#fff", color: "#000" }}>
+                      {loading
+                        ? <><Loader2 className="h-4 w-4 animate-spin" /> {isRegister ? "Registrando…" : "Ingresando…"}</>
+                        : <>{isRegister ? "Crear cuenta" : "Comenzar ahora"} <ChevronRight className="h-4 w-4" /></>}
+                    </button>
+                  </form>
                 </div>
+              )}
 
-                {/* Submit */}
-                <button type="submit" disabled={loading}
-                  className="w-full font-bold py-4 sm:py-3.5 px-4 rounded-xl transition-all flex items-center justify-center gap-2 mt-2 disabled:opacity-50 text-base sm:text-sm"
-                  style={{ background: "linear-gradient(to right, #10b981, #059669)", color: "#fff", boxShadow: "0 10px 20px -10px rgba(16,185,129,0.5)", border: "1px solid rgba(16,185,129,0.4)" }}
-                  onMouseEnter={(e) => !loading && ((e.currentTarget as HTMLElement).style.transform = "translateY(-1px)")}
-                  onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.transform = "translateY(0)")}>
-                  {loading
-                    ? <><Loader2 className="h-4 w-4 animate-spin" /> {isRegister ? "Registrando…" : "Ingresando…"}</>
-                    : <>{isRegister ? "Crear cuenta" : "Ingresar"} <ChevronRight className="h-4 w-4" /></>}
-                </button>
-              </form>
-            </>)}
-
+            </div>
           </div>
         </div>
       </div>
+
+      {/* ── TOAST FOMO ── */}
+      {showToast && (
+        <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 flex items-center gap-3 rounded-2xl px-4 py-3 z-50 anim-slide-up max-w-[calc(100vw-2rem)] sm:max-w-xs" style={{ background: "rgba(10,11,16,0.95)", border: "1px solid rgba(255,255,255,0.1)", boxShadow: "0 20px 40px rgba(0,0,0,0.6)" }}>
+          <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ background: "rgba(0,255,102,0.15)", border: "1px solid rgba(0,255,102,0.3)" }}>
+            <span className="text-base">💸</span>
+          </div>
+          <div>
+            <p className="text-sm font-semibold">Carlos desde <span className="text-gray-400 font-normal">Córdoba</span></p>
+            <p className="text-xs font-bold" style={{ color: "#00FF66" }}>Retiró sus comisiones con éxito</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
