@@ -208,7 +208,7 @@ export default function ClienteLoginPage() {
       {/* ══════════════════════════════════
           COLUMNA DERECHA: FORMULARIO
       ══════════════════════════════════ */}
-      <div className="w-full lg:w-7/12 xl:w-1/2 flex items-center justify-center p-4 sm:p-12 relative z-10 py-10">
+      <div className="w-full lg:w-7/12 xl:w-1/2 flex items-center justify-center px-4 sm:px-8 lg:px-12 relative z-10 py-8 sm:py-10">
         <div className="w-full max-w-[440px]">
 
           {/* Badge seguridad + back mobile */}
@@ -230,7 +230,7 @@ export default function ClienteLoginPage() {
 
           {/* TARJETA GLASSMORPHISM */}
           <div
-            className="rounded-[2rem] p-8 md:p-10 relative overflow-hidden"
+            className="rounded-[1.5rem] sm:rounded-[2rem] p-5 sm:p-8 md:p-10 relative overflow-hidden"
             style={{
               background: "linear-gradient(135deg, rgba(15,23,42,0.75) 0%, rgba(15,23,42,0.35) 100%)",
               backdropFilter: "blur(20px)",
@@ -249,7 +249,7 @@ export default function ClienteLoginPage() {
             />
 
             {/* Título */}
-            <div className="text-center mb-8">
+            <div className="text-center mb-6 sm:mb-8">
               <div className="flex justify-center mb-4">
                 <div
                   className="w-12 h-12 rounded-2xl flex items-center justify-center"
@@ -273,7 +273,7 @@ export default function ClienteLoginPage() {
 
             {/* ── SELECTOR DE ROL (solo al registrarse, antes del form) ── */}
             {tab === "register" && roleStep === null && (
-              <div className="space-y-3 mb-6">
+              <div className="space-y-3 mb-5">
                 <p className="text-center text-sm font-bold text-white mb-4">
                   ¿Cómo querés usar MaqJeez?
                   <span className="block text-xs font-normal text-slate-400 mt-1">Este es el primer paso — elegí tu rol</span>
@@ -283,19 +283,19 @@ export default function ClienteLoginPage() {
                 <button
                   type="button"
                   onClick={() => setRoleStep("comprador")}
-                  className="w-full flex items-center gap-4 rounded-2xl p-4 text-left transition-all hover:scale-[1.01]"
+                  className="w-full flex items-center gap-3 sm:gap-4 rounded-2xl p-4 sm:p-4 text-left active:scale-[0.98] transition-all"
                   style={{
                     background: "linear-gradient(135deg, rgba(249,115,22,0.12), rgba(249,115,22,0.06))",
                     border: "2px solid rgba(249,115,22,0.5)",
                   }}
                 >
-                  <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
+                  <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center shrink-0"
                     style={{ background: "rgba(249,115,22,0.2)", border: "1px solid rgba(249,115,22,0.4)" }}>
-                    <ShoppingBag className="h-6 w-6 text-orange-400" />
+                    <ShoppingBag className="h-5 w-5 sm:h-6 sm:w-6 text-orange-400" />
                   </div>
-                  <div className="flex-1">
-                    <p className="font-black text-white text-base">SOY COMPRADOR</p>
-                    <p className="text-xs text-slate-400 mt-0.5">Quiero comprar repuestos y accesorios con descuentos exclusivos</p>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-black text-white text-sm sm:text-base">SOY COMPRADOR</p>
+                    <p className="text-xs text-slate-400 mt-0.5 leading-tight">Quiero comprar repuestos y accesorios con descuentos exclusivos</p>
                     <div className="flex flex-wrap gap-1.5 mt-2">
                       <span className="text-[10px] px-2 py-0.5 rounded-full font-bold" style={{ background: "rgba(249,115,22,0.15)", color: "#fb923c", border: "1px solid rgba(249,115,22,0.3)" }}>3% OFF siempre</span>
                       <span className="text-[10px] px-2 py-0.5 rounded-full font-bold" style={{ background: "rgba(249,115,22,0.15)", color: "#fb923c", border: "1px solid rgba(249,115,22,0.3)" }}>Historial de pedidos</span>
@@ -308,19 +308,19 @@ export default function ClienteLoginPage() {
                 <button
                   type="button"
                   onClick={() => router.push("/catalogo/vendedor/login")}
-                  className="w-full flex items-center gap-4 rounded-2xl p-4 text-left transition-all hover:scale-[1.01]"
+                  className="w-full flex items-center gap-3 sm:gap-4 rounded-2xl p-4 text-left active:scale-[0.98] transition-all"
                   style={{
                     background: "linear-gradient(135deg, rgba(16,185,129,0.12), rgba(16,185,129,0.06))",
                     border: "2px solid rgba(16,185,129,0.4)",
                   }}
                 >
-                  <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
+                  <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center shrink-0"
                     style={{ background: "rgba(16,185,129,0.2)", border: "1px solid rgba(16,185,129,0.4)" }}>
-                    <TrendingUp className="h-6 w-6 text-emerald-400" />
+                    <TrendingUp className="h-5 w-5 sm:h-6 sm:w-6 text-emerald-400" />
                   </div>
-                  <div className="flex-1">
-                    <p className="font-black text-white text-base">SOY VENDEDOR</p>
-                    <p className="text-xs text-slate-400 mt-0.5">Quiero vender y ganar comisiones por cada pedido que genere</p>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-black text-white text-sm sm:text-base">SOY VENDEDOR</p>
+                    <p className="text-xs text-slate-400 mt-0.5 leading-tight">Quiero vender y ganar comisiones por cada pedido que genere</p>
                     <div className="flex flex-wrap gap-1.5 mt-2">
                       <span className="text-[10px] px-2 py-0.5 rounded-full font-bold" style={{ background: "rgba(16,185,129,0.15)", color: "#34d399", border: "1px solid rgba(16,185,129,0.3)" }}>Comisiones 10-15%</span>
                       <span className="text-[10px] px-2 py-0.5 rounded-full font-bold" style={{ background: "rgba(16,185,129,0.15)", color: "#34d399", border: "1px solid rgba(16,185,129,0.3)" }}>Panel de ventas</span>
@@ -353,7 +353,7 @@ export default function ClienteLoginPage() {
             {/* Toggle animado */}
             {(tab === "login" || roleStep === "comprador") && (<>
             <div
-              className="p-1.5 rounded-xl flex mb-8 relative"
+              className="p-1.5 rounded-xl flex mb-6 sm:mb-8 relative"
               style={{
                 background: "rgba(2,6,23,0.6)",
                 border: "1px solid rgba(30,41,59,0.8)",
@@ -540,7 +540,7 @@ export default function ClienteLoginPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full font-bold py-3.5 px-4 rounded-xl transition-all flex items-center justify-center gap-2 mt-2 disabled:opacity-50"
+                className="w-full font-bold py-4 sm:py-3.5 px-4 rounded-xl transition-all flex items-center justify-center gap-2 mt-2 disabled:opacity-50 text-base sm:text-sm"
                 style={{
                   background: "linear-gradient(to right, #f97316, #fb923c)",
                   color: "#fff",
@@ -559,7 +559,7 @@ export default function ClienteLoginPage() {
             </form>
 
             {/* Separador */}
-            <div className="mt-8 relative flex items-center justify-center">
+            <div className="mt-6 sm:mt-8 relative flex items-center justify-center">
               <div className="absolute w-full border-t" style={{ borderColor: "rgba(71,85,105,0.4)" }} />
               <div className="relative px-3 text-xs font-medium text-slate-500" style={{ background: "transparent" }}>
                 O continuar con
@@ -569,7 +569,7 @@ export default function ClienteLoginPage() {
             {/* Google */}
             <button
               type="button"
-              className="mt-6 w-full font-semibold py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-3 text-slate-300"
+              className="mt-4 sm:mt-6 w-full font-semibold py-4 sm:py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-3 text-slate-300"
               style={{ background: "rgba(15,23,42,0.5)", border: "1px solid rgba(71,85,105,0.5)" }}
               onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "rgba(30,41,59,0.8)")}
               onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "rgba(15,23,42,0.5)")}

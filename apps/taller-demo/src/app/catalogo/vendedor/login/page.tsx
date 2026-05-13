@@ -112,7 +112,7 @@ export default function VendedorLoginPage() {
       </div>
 
       {/* ══ COLUMNA DERECHA: FORMULARIO ══ */}
-      <div className="w-full lg:w-7/12 xl:w-1/2 flex items-center justify-center p-4 sm:p-12 relative z-10 py-10">
+      <div className="w-full lg:w-7/12 xl:w-1/2 flex items-center justify-center px-4 sm:px-8 lg:px-12 relative z-10 py-8 sm:py-10">
         <div className="w-full max-w-[440px]">
 
           {/* Badge seguridad + back mobile */}
@@ -128,7 +128,7 @@ export default function VendedorLoginPage() {
 
           {/* TARJETA GLASSMORPHISM */}
           <div
-            className="rounded-[2rem] p-8 md:p-10 relative overflow-hidden"
+            className="rounded-[1.5rem] sm:rounded-[2rem] p-5 sm:p-8 md:p-10 relative overflow-hidden"
             style={{
               background: "linear-gradient(135deg, rgba(15,23,42,0.75) 0%, rgba(15,23,42,0.35) 100%)",
               backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)",
@@ -140,7 +140,7 @@ export default function VendedorLoginPage() {
             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-px pointer-events-none" style={{ background: "linear-gradient(to right, transparent, rgba(255,255,255,0.18), transparent)" }} />
 
             {/* Título */}
-            <div className="text-center mb-8">
+            <div className="text-center mb-6 sm:mb-8">
               <div className="flex justify-center mb-4">
                 <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ background: "linear-gradient(to bottom right, #10b981, #059669)", boxShadow: "0 8px 20px rgba(16,185,129,0.3)" }}>
                   <TrendingUp className="h-6 w-6 text-white" />
@@ -160,16 +160,16 @@ export default function VendedorLoginPage() {
 
             {/* ── SELECTOR DE ROL ── */}
             {roleStep === null && (
-              <div className="space-y-3 mb-2">
+              <div className="space-y-3 mb-3">
                 <button type="button" onClick={() => router.push("/catalogo/cliente/login")}
-                  className="w-full flex items-center gap-4 rounded-2xl p-4 text-left transition-all hover:scale-[1.01]"
+                  className="w-full flex items-center gap-3 sm:gap-4 rounded-2xl p-4 text-left active:scale-[0.98] transition-all"
                   style={{ background: "linear-gradient(135deg, rgba(249,115,22,0.12), rgba(249,115,22,0.06))", border: "2px solid rgba(249,115,22,0.5)" }}>
-                  <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(249,115,22,0.2)", border: "1px solid rgba(249,115,22,0.4)" }}>
-                    <ShoppingBag className="h-6 w-6 text-orange-400" />
+                  <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(249,115,22,0.2)", border: "1px solid rgba(249,115,22,0.4)" }}>
+                    <ShoppingBag className="h-5 w-5 sm:h-6 sm:w-6 text-orange-400" />
                   </div>
-                  <div className="flex-1">
-                    <p className="font-black text-white text-base">SOY COMPRADOR</p>
-                    <p className="text-xs text-slate-400 mt-0.5">Quiero comprar repuestos y accesorios con descuentos exclusivos</p>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-black text-white text-sm sm:text-base">SOY COMPRADOR</p>
+                    <p className="text-xs text-slate-400 mt-0.5 leading-tight">Quiero comprar repuestos y accesorios con descuentos exclusivos</p>
                     <div className="flex flex-wrap gap-1.5 mt-2">
                       <span className="text-[10px] px-2 py-0.5 rounded-full font-bold" style={{ background: "rgba(249,115,22,0.15)", color: "#fb923c", border: "1px solid rgba(249,115,22,0.3)" }}>3% OFF siempre</span>
                       <span className="text-[10px] px-2 py-0.5 rounded-full font-bold" style={{ background: "rgba(249,115,22,0.15)", color: "#fb923c", border: "1px solid rgba(249,115,22,0.3)" }}>Historial de pedidos</span>
@@ -179,14 +179,14 @@ export default function VendedorLoginPage() {
                 </button>
 
                 <button type="button" onClick={() => { setRoleStep("vendedor"); setIsRegister(true); }}
-                  className="w-full flex items-center gap-4 rounded-2xl p-4 text-left transition-all hover:scale-[1.01]"
+                  className="w-full flex items-center gap-3 sm:gap-4 rounded-2xl p-4 text-left active:scale-[0.98] transition-all"
                   style={{ background: "linear-gradient(135deg, rgba(16,185,129,0.12), rgba(16,185,129,0.06))", border: "2px solid rgba(16,185,129,0.4)" }}>
-                  <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(16,185,129,0.2)", border: "1px solid rgba(16,185,129,0.4)" }}>
-                    <TrendingUp className="h-6 w-6 text-emerald-400" />
+                  <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(16,185,129,0.2)", border: "1px solid rgba(16,185,129,0.4)" }}>
+                    <TrendingUp className="h-5 w-5 sm:h-6 sm:w-6 text-emerald-400" />
                   </div>
-                  <div className="flex-1">
-                    <p className="font-black text-white text-base">SOY VENDEDOR</p>
-                    <p className="text-xs text-slate-400 mt-0.5">Quiero vender y ganar comisiones por cada pedido que genere</p>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-black text-white text-sm sm:text-base">SOY VENDEDOR</p>
+                    <p className="text-xs text-slate-400 mt-0.5 leading-tight">Quiero vender y ganar comisiones por cada pedido que genere</p>
                     <div className="flex flex-wrap gap-1.5 mt-2">
                       <span className="text-[10px] px-2 py-0.5 rounded-full font-bold" style={{ background: "rgba(16,185,129,0.15)", color: "#34d399", border: "1px solid rgba(16,185,129,0.3)" }}>Comisiones 10-15%</span>
                       <span className="text-[10px] px-2 py-0.5 rounded-full font-bold" style={{ background: "rgba(16,185,129,0.15)", color: "#34d399", border: "1px solid rgba(16,185,129,0.3)" }}>Panel de ventas</span>
@@ -210,7 +210,7 @@ export default function VendedorLoginPage() {
               </button>
 
               {/* Toggle Ingresar / Registrarse */}
-              <div className="p-1.5 rounded-xl flex mb-6 relative" style={{ background: "rgba(2,6,23,0.6)", border: "1px solid rgba(30,41,59,0.8)", backdropFilter: "blur(8px)" }}>
+              <div className="p-1.5 rounded-xl flex mb-5 sm:mb-6 relative" style={{ background: "rgba(2,6,23,0.6)", border: "1px solid rgba(30,41,59,0.8)", backdropFilter: "blur(8px)" }}>
                 <div className="absolute top-1.5 bottom-1.5 rounded-lg transition-all duration-300 ease-out" style={{ width: "calc(50% - 6px)", background: "#1e293b", border: "1px solid rgba(100,116,139,0.4)", left: !isRegister ? "6px" : "calc(50%)", boxShadow: "0 2px 8px rgba(0,0,0,0.4)" }} />
                 <button type="button" onClick={() => switchTab(false)} className="w-1/2 py-2 text-sm font-bold relative z-10 transition-colors" style={{ color: !isRegister ? "#fff" : "#94a3b8" }}>Ingresar</button>
                 <button type="button" onClick={() => switchTab(true)} className="w-1/2 py-2 text-sm font-bold relative z-10 transition-colors" style={{ color: isRegister ? "#fff" : "#94a3b8" }}>Registrarse</button>
@@ -295,7 +295,7 @@ export default function VendedorLoginPage() {
 
                 {/* Submit */}
                 <button type="submit" disabled={loading}
-                  className="w-full font-bold py-3.5 px-4 rounded-xl transition-all flex items-center justify-center gap-2 mt-2 disabled:opacity-50"
+                  className="w-full font-bold py-4 sm:py-3.5 px-4 rounded-xl transition-all flex items-center justify-center gap-2 mt-2 disabled:opacity-50 text-base sm:text-sm"
                   style={{ background: "linear-gradient(to right, #10b981, #059669)", color: "#fff", boxShadow: "0 10px 20px -10px rgba(16,185,129,0.5)", border: "1px solid rgba(16,185,129,0.4)" }}
                   onMouseEnter={(e) => !loading && ((e.currentTarget as HTMLElement).style.transform = "translateY(-1px)")}
                   onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.transform = "translateY(0)")}>
