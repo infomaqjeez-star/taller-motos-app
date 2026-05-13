@@ -65,11 +65,12 @@ export default function CheckoutPage() {
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
   const DATOS_TRANSFERENCIA = {
-    banco: "Banco Provincia de Buenos Aires",
-    titular: "MaqJeez S.R.L.",
-    cbu: "0140999801234567890123",
-    alias: "MAQJEEZ.PAGOS",
-    cuit: "30-71234567-8",
+    banco: "Banco Francés (BBVA)",
+    tipoCuenta: "Caja de Ahorro en $",
+    cbu: "0170142140000008408477",
+    alias: "MAQJEEZ06",
+    numeroCuenta: "142-84084/7",
+    sucursal: "Rafael Ramos Mejia 173",
   };
 
   const copyToClipboard = (text: string, field: string) => {
@@ -646,10 +647,10 @@ export default function CheckoutPage() {
               </div>
               {[
                 { label: "Banco", value: DATOS_TRANSFERENCIA.banco, key: "banco" },
-                { label: "Titular", value: DATOS_TRANSFERENCIA.titular, key: "titular" },
+                { label: "Tipo de cuenta", value: DATOS_TRANSFERENCIA.tipoCuenta, key: "tipo" },
+                { label: "N° de cuenta", value: DATOS_TRANSFERENCIA.numeroCuenta, key: "nrocta" },
                 { label: "CBU", value: DATOS_TRANSFERENCIA.cbu, key: "cbu" },
                 { label: "Alias", value: DATOS_TRANSFERENCIA.alias, key: "alias" },
-                { label: "CUIT", value: DATOS_TRANSFERENCIA.cuit, key: "cuit" },
               ].map(({ label, value, key }) => (
                 <div key={key} className="flex items-center justify-between gap-2 rounded-lg bg-white/5 px-3 py-2">
                   <div>
@@ -797,10 +798,10 @@ export default function CheckoutPage() {
             <div className="space-y-2">
               {[
                 { label: "Banco", value: DATOS_TRANSFERENCIA.banco, key: "mbanco" },
-                { label: "Titular", value: DATOS_TRANSFERENCIA.titular, key: "mtitular" },
+                { label: "Tipo de cuenta", value: DATOS_TRANSFERENCIA.tipoCuenta, key: "mtipo" },
+                { label: "N° de cuenta", value: DATOS_TRANSFERENCIA.numeroCuenta, key: "mnrocta" },
                 { label: "CBU", value: DATOS_TRANSFERENCIA.cbu, key: "mcbu" },
                 { label: "Alias", value: DATOS_TRANSFERENCIA.alias, key: "malias" },
-                { label: "CUIT", value: DATOS_TRANSFERENCIA.cuit, key: "mcuit" },
               ].map(({ label, value, key }) => (
                 <div key={key} className="flex items-center justify-between gap-2 rounded-lg bg-white/5 px-3 py-2">
                   <div>
