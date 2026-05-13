@@ -24,25 +24,29 @@ function playMSNDing() {
   }
 }
 
-// ── Notificación nativa del browser ─────────────────────────
+// ── Notificación nativa del browser (suena aunque esté en segundo plano) ────
 function showBrowserNotification(autor: string, contenido: string) {
   if (typeof window === "undefined") return;
+
+  const opts: NotificationOptions = {
+    body: contenido,
+    icon: "/favicon.ico",
+    tag: "msn-taller",
+    silent: false,          // el OS reproduce su propio sonido de notificación
+    requireInteraction: false,
+  };
+
+  const doNotify = () => {
+    const n = new Notification(`💬 ${autor} — Taller Maqjeez`, opts);
+    // Al hacer click en la notificación: enfocar la pestaña
+    n.onclick = () => { window.focus(); n.close(); };
+  };
+
   if (Notification.permission === "granted") {
-    new Notification(`💬 ${autor} — Taller`, {
-      body: contenido,
-      icon: "/favicon.ico",
-      tag: "msn-taller",
-      requireInteraction: false,
-    });
+    doNotify();
   } else if (Notification.permission !== "denied") {
     Notification.requestPermission().then((perm) => {
-      if (perm === "granted") {
-        new Notification(`💬 ${autor} — Taller`, {
-          body: contenido,
-          icon: "/favicon.ico",
-          tag: "msn-taller",
-        });
-      }
+      if (perm === "granted") doNotify();
     });
   }
 }

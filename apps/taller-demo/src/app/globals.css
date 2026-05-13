@@ -138,6 +138,13 @@
     box-shadow: 0 0 16px 2px rgba(30,58,138,0.40);
     @apply btn hover:brightness-125 active:brightness-90;
   }
+  /* Chat MSN — mismo tamaño que btn-primary pero azul/violeta */
+  .btn-chat {
+    background: linear-gradient(135deg, #2563eb, #7c3aed);
+    color: #fff;
+    box-shadow: 0 0 20px 2px rgba(99,102,241,0.40);
+    @apply btn hover:brightness-110 active:brightness-90;
+  }
 
   /* ── Inputs ── */
   .input {
