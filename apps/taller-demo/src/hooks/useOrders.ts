@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { WorkOrder, RepairStatus, MotorType } from "@/lib/types";
+import { WorkOrder, RepairStatus, MotorType, ClientNotification } from "@/lib/types";
 import { ordersDb } from "@/lib/db";
 import { isOverdue90Days } from "@/lib/utils";
 
@@ -10,6 +10,7 @@ export interface OrderFilters {
   status: RepairStatus | "all";
   search: string;
   overdueOnly: boolean;
+  clientNotification: ClientNotification | "all";
 }
 
 export function useOrders() {
@@ -20,6 +21,7 @@ export function useOrders() {
     status: "all",
     search: "",
     overdueOnly: false,
+    clientNotification: "all",
   });
 
   const refresh = useCallback(async () => {
@@ -68,6 +70,7 @@ export function useOrders() {
     if (filters.status === "all" && o.status === "entregado") return false;
     if (filters.status !== "all" && o.status !== filters.status) return false;
     if (filters.overdueOnly && !isOverdue90Days(o)) return false;
+    if (filters.clientNotification !== "all" && o.clientNotification !== filters.clientNotification) return false;
     if (filters.search) {
       const q = filters.search.toLowerCase();
       return (

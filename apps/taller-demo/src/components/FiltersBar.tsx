@@ -34,10 +34,11 @@ export default function FiltersBar({ filters, onChange, totalCount, filteredCoun
     filters.motorType !== "all" ||
     filters.status !== "all" ||
     filters.search !== "" ||
-    filters.overdueOnly;
+    filters.overdueOnly ||
+    filters.clientNotification !== "all";
 
   const reset = () =>
-    onChange({ motorType: "all", status: "all", search: "", overdueOnly: false });
+    onChange({ motorType: "all", status: "all", search: "", overdueOnly: false, clientNotification: "all" });
 
   return (
     <div className="flex flex-col gap-4">

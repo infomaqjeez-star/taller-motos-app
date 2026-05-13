@@ -5,9 +5,9 @@ import Link from "next/link";
 import {
   Plus, Wrench, AlertTriangle, Package, CheckSquare, Clock,
   FileSpreadsheet, FileText, CheckCircle, MessageCircle, Trophy, Medal,
-  BookOpen, ChevronRight,
+  BookOpen, ChevronRight, Phone,
 } from "lucide-react";
-import { WorkOrder, MOTOR_TYPE_LABELS } from "@/lib/types";
+import { WorkOrder, MOTOR_TYPE_LABELS, CLIENT_NOTIFICATION_LABELS, ClientNotification } from "@/lib/types";
 import { useOrders } from "@/hooks/useOrders";
 import { useInventory } from "@/hooks/useInventory";
 import { useNotifications } from "@/hooks/useNotifications";
@@ -221,6 +221,32 @@ export default function DashboardPage() {
           <button onClick={() => setShowTemplates(true)} className="px-3 py-1.5 rounded-md text-xs font-medium flex items-center gap-2 transition-colors" style={{ background: "#111113", border: "1px solid rgba(255,255,255,0.08)", color: "#9ca3af" }}>
             <MessageCircle className="w-3 h-3 text-green-400" /> Plantillas
           </button>
+          <div className="w-px h-6 bg-white/10 mx-1" />
+          {/* ── Filtros rápidos por estado de notificación ── */}
+          {([
+            { key: "pendiente_de_aviso", color: "#eab308", label: CLIENT_NOTIFICATION_LABELS.pendiente_de_aviso },
+            { key: "avisado", color: "#22c55e", label: CLIENT_NOTIFICATION_LABELS.avisado },
+            { key: "sin_respuesta", color: "#ef4444", label: CLIENT_NOTIFICATION_LABELS.sin_respuesta },
+          ] as { key: ClientNotification; color: string; label: string }[]).map((notif) => {
+            const count = orders.filter((o) => o.clientNotification === notif.key).length;
+            const active = filters.clientNotification === notif.key;
+            return (
+              <button
+                key={notif.key}
+                onClick={() => setFilters({ ...filters, clientNotification: active ? "all" : notif.key })}
+                className="px-3 py-1.5 rounded-md text-xs font-medium flex items-center gap-2 transition-all border"
+                style={{
+                  background: active ? `${notif.color}15` : "#111113",
+                  borderColor: active ? `${notif.color}60` : "rgba(255,255,255,0.08)",
+                  color: active ? notif.color : "#9ca3af",
+                }}
+                title={`${notif.label} (${count})`}
+              >
+                <Phone className="w-3 h-3" style={{ color: active ? notif.color : "#9ca3af" }} />
+                {notif.label} <span className="font-mono" style={{ color: active ? notif.color : "#6b7280" }}>{count}</span>
+              </button>
+            );
+          })}
         </div>
 
         {/* ── Lista de órdenes ── */}
