@@ -308,10 +308,26 @@ export default function DashboardPage() {
         aria-label="Mensajería del taller"
         title="Chat del taller"
       >
-        <MessageCircle
-          className="w-6 h-6 flex-shrink-0 text-white"
-          style={{ filter: newMessageAlert ? "drop-shadow(0 0 8px #fff)" : "none" }}
-        />
+        {/* Ícono dos muñequitos estilo MSN Messenger */}
+        <svg
+          width="28" height="28" viewBox="0 0 48 48" fill="none"
+          style={{ filter: newMessageAlert ? "drop-shadow(0 0 8px #fff)" : "none", flexShrink: 0 }}
+        >
+          {/* Muñequito verde (fondo) */}
+          <ellipse cx="17" cy="13" rx="5.5" ry="6" fill="#4ade80" />
+          <ellipse cx="17" cy="13" rx="4" ry="4.5" fill="#86efac" />
+          <path d="M8 34c0-6 4-10 9-10s9 4 9 10" fill="#4ade80"/>
+          <path d="M9 34c0-5.5 3.5-9 8-9s8 3.5 8 9" fill="#86efac" opacity="0.6"/>
+          {/* Brillo muñequito verde */}
+          <ellipse cx="15" cy="10.5" rx="2" ry="1.5" fill="white" opacity="0.5" transform="rotate(-20 15 10.5)" />
+          {/* Muñequito azul (frente) */}
+          <ellipse cx="27" cy="15" rx="6.5" ry="7" fill="#38bdf8" />
+          <ellipse cx="27" cy="15" rx="4.5" ry="5" fill="#7dd3fc" />
+          <path d="M17 38c0-7 4.5-12 10-12s10 5 10 12" fill="#38bdf8"/>
+          <path d="M18 38c0-6.5 4-10.5 9-10.5s9 4 9 10.5" fill="#7dd3fc" opacity="0.6"/>
+          {/* Brillo muñequito azul */}
+          <ellipse cx="24.5" cy="12" rx="2.5" ry="1.8" fill="white" opacity="0.55" transform="rotate(-20 24.5 12)" />
+        </svg>
         <span className="hidden sm:inline text-sm font-bold text-white">
           Chat
         </span>
