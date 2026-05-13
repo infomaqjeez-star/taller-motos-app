@@ -37,7 +37,9 @@ export const supabase: SupabaseClient = createBrowserClient(
   key || "placeholder-key",
   {
     auth: {
-      flowType: "implicit",
+      flowType: "pkce",
+      persistSession: true,
+      detectSessionInUrl: true,
     },
     realtime: {
       params: {
