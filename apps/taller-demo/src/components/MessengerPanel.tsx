@@ -170,25 +170,25 @@ export default function MessengerPanel({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-end justify-start p-0 pointer-events-none"
-      style={{ paddingBottom: "88px", paddingLeft: "16px" }}>
+    <>
       {/* ── Ventana MSN Messenger 7 ── */}
       <div
         className="pointer-events-auto flex flex-col overflow-hidden"
         style={{
-          width: maximized ? "100vw" : "min(520px, calc(100vw - 16px))",
-          height: maximized ? "100vh" : "min(600px, 80vh)",
-          maxWidth: maximized ? "100vw" : undefined,
-          position: maximized ? "fixed" : undefined,
-          inset: maximized ? 0 : undefined,
-          margin: maximized ? 0 : undefined,
+          position: "fixed",
+          bottom: maximized ? 0 : "160px",
+          left: maximized ? 0 : "16px",
+          top: maximized ? 0 : undefined,
+          right: maximized ? 0 : undefined,
+          width: maximized ? "100vw" : "min(520px, calc(100vw - 32px))",
+          height: maximized ? "100vh" : "min(580px, calc(100vh - 180px))",
           background: "#ecf3fb",
           border: "2px solid #4a7db5",
           borderRadius: maximized ? 0 : "4px 4px 2px 2px",
           boxShadow: "3px 3px 12px rgba(0,0,0,0.45)",
           fontFamily: "Tahoma, Arial, sans-serif",
           fontSize: "11px",
-          zIndex: maximized ? 9999 : undefined,
+          zIndex: 9998,
         }}
       >
         {/* ── Barra de título Windows XP ── */}
@@ -405,6 +405,6 @@ export default function MessengerPanel({
         </div>
         </>)}
       </div>
-    </div>
+    </>
   );
 }
