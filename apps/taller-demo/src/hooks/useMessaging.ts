@@ -1,31 +1,152 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { MessageTaller } from "@/lib/types";
 import { mensajesDb } from "@/lib/db";
+
+// ── Sonido estilo MSN (ding) generado con Web Audio API ──────
+function playMSNDing() {
+  try {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+
+    // Nota 1: ding principal (si♭ agudo)
+    const osc1 = ctx.createOscillator();
+    const gain1 = ctx.createGain();
+    osc1.connect(gain1);
+    gain1.connect(ctx.destination);
+    osc1.frequency.setValueAtTime(880, ctx.currentTime);
+    osc1.frequency.exponentialRampToValueAtTime(1100, ctx.currentTime + 0.05);
+    gain1.gain.setValueAtTime(0.4, ctx.currentTime);
+    gain1.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+    osc1.start(ctx.currentTime);
+    osc1.stop(ctx.currentTime + 0.4);
+
+    // Nota 2: eco suave
+    const osc2 = ctx.createOscillator();
+    const gain2 = ctx.createGain();
+    osc2.connect(gain2);
+    gain2.connect(ctx.destination);
+    osc2.frequency.setValueAtTime(660, ctx.currentTime + 0.12);
+    gain2.gain.setValueAtTime(0, ctx.currentTime);
+    gain2.gain.setValueAtTime(0.25, ctx.currentTime + 0.12);
+    gain2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.55);
+    osc2.start(ctx.currentTime + 0.12);
+    osc2.stop(ctx.currentTime + 0.55);
+  } catch {
+    // El browser puede bloquear AudioContext sin interacción del usuario
+  }
+}
+
+// ── Notificación nativa del browser ─────────────────────────
+function showBrowserNotification(autor: string, contenido: string) {
+  if (typeof window === "undefined") return;
+  if (Notification.permission === "granted") {
+    new Notification(`💬 ${autor} — Taller`, {
+      body: contenido,
+      icon: "/favicon.ico",
+      tag: "msn-taller",
+      requireInteraction: false,
+    });
+  } else if (Notification.permission !== "denied") {
+    Notification.requestPermission().then((perm) => {
+      if (perm === "granted") {
+        new Notification(`💬 ${autor} — Taller`, {
+          body: contenido,
+          icon: "/favicon.ico",
+          tag: "msn-taller",
+        });
+      }
+    });
+  }
+}
 
 export function useMessaging() {
   const [messages, setMessages] = useState<MessageTaller[]>([]);
   const [loading, setLoading] = useState(true);
+  const [newMessageAlert, setNewMessageAlert] = useState(false); // para animar el botón
+  const prevIdsRef = useRef<Set<string>>(new Set());
+  const originalTitleRef = useRef<string>("");
+  const blinkIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // ── Parpadeo del título de la pestaña ────────────────────
+  const startBlink = useCallback((count: number) => {
+    if (typeof window === "undefined") return;
+    if (blinkIntervalRef.current) return; // ya está parpadeando
+    originalTitleRef.current = document.title;
+    let visible = true;
+    blinkIntervalRef.current = setInterval(() => {
+      document.title = visible
+        ? `(${count}) 💬 Mensaje nuevo — Taller`
+        : originalTitleRef.current;
+      visible = !visible;
+    }, 1000);
+  }, []);
+
+  const stopBlink = useCallback(() => {
+    if (blinkIntervalRef.current) {
+      clearInterval(blinkIntervalRef.current);
+      blinkIntervalRef.current = null;
+    }
+    if (originalTitleRef.current) {
+      document.title = originalTitleRef.current;
+    }
+  }, []);
 
   const refresh = useCallback(async () => {
     try {
       const data = await mensajesDb.getAll();
+
+      // Detectar IDs nuevas respecto al estado anterior
+      const currentIds = new Set(data.map((m) => m.id));
+      const isFirstLoad = prevIdsRef.current.size === 0;
+
+      if (!isFirstLoad) {
+        const nuevos = data.filter(
+          (m) => !prevIdsRef.current.has(m.id) && !m.leido
+        );
+        if (nuevos.length > 0) {
+          playMSNDing();
+          setNewMessageAlert(true);
+          setTimeout(() => setNewMessageAlert(false), 1500);
+          showBrowserNotification(
+            nuevos[0].autor,
+            nuevos.length > 1
+              ? `${nuevos.length} mensajes nuevos`
+              : nuevos[0].contenido
+          );
+          const unreadAfter = data.filter((m) => !m.leido).length;
+          startBlink(unreadAfter);
+        }
+      }
+
+      prevIdsRef.current = currentIds;
       setMessages(data);
     } catch (e) {
       console.error("Error cargando mensajes:", e);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [startBlink]);
 
   useEffect(() => {
+    // Pedir permiso de notificaciones al montar
+    if (typeof window !== "undefined" && Notification.permission === "default") {
+      Notification.requestPermission();
+    }
     refresh();
-    const interval = setInterval(refresh, 3000); // polling cada 3 segundos
-    return () => clearInterval(interval);
-  }, [refresh]);
+    const interval = setInterval(refresh, 3000);
+    return () => {
+      clearInterval(interval);
+      stopBlink();
+    };
+  }, [refresh, stopBlink]);
 
   const unreadCount = messages.filter((m) => !m.leido).length;
+
+  // Detener parpadeo si no quedan no leídos
+  useEffect(() => {
+    if (unreadCount === 0) stopBlink();
+  }, [unreadCount, stopBlink]);
 
   const send = useCallback(
     async (autor: string, contenido: string) => {
@@ -49,7 +170,8 @@ export function useMessaging() {
     const unread = messages.filter((m) => !m.leido);
     await Promise.all(unread.map((m) => mensajesDb.marcarLeido(m.id)));
     setMessages((prev) => prev.map((m) => ({ ...m, leido: true })));
-  }, [messages]);
+    stopBlink();
+  }, [messages, stopBlink]);
 
   const remove = useCallback(
     async (id: string) => {
@@ -59,5 +181,5 @@ export function useMessaging() {
     []
   );
 
-  return { messages, loading, unreadCount, send, markAsRead, markAllAsRead, remove, refresh };
+  return { messages, loading, unreadCount, newMessageAlert, send, markAsRead, markAllAsRead, remove, refresh };
 }

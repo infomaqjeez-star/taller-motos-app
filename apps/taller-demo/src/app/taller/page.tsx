@@ -110,7 +110,7 @@ export default function DashboardPage() {
   const [showMessenger, setShowMessenger] = useState(false);
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
 
-  const { messages, unreadCount, send, markAllAsRead, remove: removeMsg } = useMessaging();
+  const { messages, unreadCount, newMessageAlert, send, markAllAsRead, remove: removeMsg } = useMessaging();
 
   const showToast = (msg: string, type: "success" | "error" = "success") => {
     setToast({ msg, type });
@@ -292,14 +292,13 @@ export default function DashboardPage() {
         <span className="hidden sm:inline text-base font-bold">Nueva Orden</span>
       </button>
 
-      {/* ── Botón Mensajería del Taller (opuesto al FAB) ── */}
+      {/* ── Botón Mensajería del Taller (opuesto al FAB, estilo MSN) ── */}
       <button
         onClick={() => setShowMessenger(true)}
         className="fixed bottom-[88px] sm:bottom-6 left-4 sm:left-6 z-[55]
                    flex items-center justify-center
                    h-14 w-14 sm:h-12 sm:w-auto sm:px-5
-                   rounded-full sm:rounded-2xl
-                   transition-all duration-200 hover:scale-105"
+                   rounded-full sm:rounded-2xl relative"
         style={{
           background: unreadCount > 0
             ? "linear-gradient(135deg, #3b82f6, #8b5cf6)"
@@ -310,11 +309,19 @@ export default function DashboardPage() {
           boxShadow: unreadCount > 0
             ? "0 4px 24px -4px rgba(59,130,246,0.5)"
             : "0 4px 24px -4px rgba(0,0,0,0.6), inset 0 1px 0 0 rgba(255,255,255,0.05)",
+          animation: newMessageAlert ? "msnBounce 0.4s ease 3" : "none",
+          transition: "background 0.3s, box-shadow 0.3s",
         }}
         aria-label="Mensajería del taller"
         title="Mensajería del taller"
       >
-        <MessageCircle className="w-6 h-6 flex-shrink-0 text-blue-300" />
+        <MessageCircle
+          className="w-6 h-6 flex-shrink-0"
+          style={{
+            color: unreadCount > 0 ? "#fff" : "#93c5fd",
+            filter: newMessageAlert ? "drop-shadow(0 0 6px #fff)" : "none",
+          }}
+        />
         <span className="hidden sm:inline text-sm font-bold ml-2 text-blue-200">
           Chat
         </span>
@@ -324,6 +331,17 @@ export default function DashboardPage() {
           </span>
         )}
       </button>
+
+      {/* Keyframe para el rebote MSN inyectado inline */}
+      <style>{`
+        @keyframes msnBounce {
+          0%   { transform: translateY(0); }
+          25%  { transform: translateY(-14px); }
+          50%  { transform: translateY(0); }
+          75%  { transform: translateY(-7px); }
+          100% { transform: translateY(0); }
+        }
+      `}</style>
 
       <MessengerPanel
         open={showMessenger}
