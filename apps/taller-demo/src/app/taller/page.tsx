@@ -292,41 +292,31 @@ export default function DashboardPage() {
         <span className="hidden sm:inline text-base font-bold">Nueva Orden</span>
       </button>
 
-      {/* ── Botón Mensajería del Taller (opuesto al FAB, estilo MSN) ── */}
+      {/* ── Botón Mensajería del Taller (estilo MSN) ── */}
       <button
         onClick={() => setShowMessenger(true)}
-        className="fixed bottom-[88px] sm:bottom-6 left-4 sm:left-6 z-[55]
-                   flex items-center justify-center
+        className="fixed bottom-[100px] sm:bottom-20 left-4 sm:left-6 z-[55]
+                   flex items-center justify-center gap-2 relative
                    h-14 w-14 sm:h-12 sm:w-auto sm:px-5
-                   rounded-full sm:rounded-2xl relative"
+                   rounded-full sm:rounded-2xl"
         style={{
-          background: unreadCount > 0
-            ? "linear-gradient(135deg, #3b82f6, #8b5cf6)"
-            : "linear-gradient(135deg, #1e293b, #0f172a)",
-          border: unreadCount > 0
-            ? "1px solid rgba(139,92,246,0.5)"
-            : "1px solid rgba(59,130,246,0.3)",
-          boxShadow: unreadCount > 0
-            ? "0 4px 24px -4px rgba(59,130,246,0.5)"
-            : "0 4px 24px -4px rgba(0,0,0,0.6), inset 0 1px 0 0 rgba(255,255,255,0.05)",
+          background: "linear-gradient(135deg, #2563eb, #7c3aed)",
+          border: "2px solid rgba(139,92,246,0.6)",
+          boxShadow: "0 4px 24px -4px rgba(59,130,246,0.6), 0 0 0 1px rgba(255,255,255,0.05)",
           animation: newMessageAlert ? "msnBounce 0.4s ease 3" : "none",
-          transition: "background 0.3s, box-shadow 0.3s",
         }}
         aria-label="Mensajería del taller"
-        title="Mensajería del taller"
+        title="Chat del taller"
       >
         <MessageCircle
-          className="w-6 h-6 flex-shrink-0"
-          style={{
-            color: unreadCount > 0 ? "#fff" : "#93c5fd",
-            filter: newMessageAlert ? "drop-shadow(0 0 6px #fff)" : "none",
-          }}
+          className="w-6 h-6 flex-shrink-0 text-white"
+          style={{ filter: newMessageAlert ? "drop-shadow(0 0 8px #fff)" : "none" }}
         />
-        <span className="hidden sm:inline text-sm font-bold ml-2 text-blue-200">
+        <span className="hidden sm:inline text-sm font-bold text-white">
           Chat
         </span>
         {unreadCount > 0 && (
-          <span className="absolute -top-1.5 -right-1.5 min-w-[20px] h-5 px-1 rounded-full bg-red-500 text-white text-[10px] font-black flex items-center justify-center border-2 border-[#09090b] shadow-lg">
+          <span className="absolute -top-2 -right-2 min-w-[22px] h-[22px] px-1 rounded-full bg-red-500 text-white text-[11px] font-black flex items-center justify-center border-2 border-[#09090b] shadow-lg">
             {unreadCount}
           </span>
         )}
