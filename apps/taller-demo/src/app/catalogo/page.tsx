@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState, memo, useCallback, useRef } from "react";
 import Link from "next/link";
 import {
   BookOpen, Search, Tag, Plus, Minus, Users, X, Package, AlertCircle,
@@ -172,7 +172,10 @@ function CatalogoContent() {
   const [productos, setProductos] = useState<Producto[]>([]);
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
+  const [qInput, setQInput] = useState("");
   const [catId, setCatId] = useState<string | "todas">("todas");
+  const [visibleCount, setVisibleCount] = useState(60);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { addItem } = useCart();
   const { vendedor: vendedorLogueado } = useVendedorAuth();
   const { cliente: clienteLogueado, logout: logoutCliente } = useClienteAuth();
@@ -180,7 +183,8 @@ function CatalogoContent() {
 
   useEffect(() => {
     let ok = true;
-    fetch("/api/catalogo/productos")
+    // Intentar desde cache del browser primero
+    fetch("/api/catalogo/productos", { cache: "default" })
       .then((res) => res.json())
       .then(({ productos, error }) => {
         if (!ok) return;
@@ -194,6 +198,20 @@ function CatalogoContent() {
         setLoading(false);
       });
     return () => { ok = false; };
+  }, []);
+
+  const handleQInput = useCallback((val: string) => {
+    setQInput(val);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      setQ(val);
+      setVisibleCount(60);
+    }, 220);
+  }, []);
+
+  const handleCatChange = useCallback((id: string) => {
+    setCatId(id);
+    setVisibleCount(60);
   }, []);
 
   // Ordenar productos por categoria (Motosierras primero), luego por más vendidos, luego por SKU
@@ -221,7 +239,7 @@ function CatalogoContent() {
     });
   }, [productosOrdenados]);
 
-  const filtrados = useMemo(() => {
+  const filtradosTodos = useMemo(() => {
     const qq = q.trim().toLowerCase();
     if (!qq) {
       // Sin busqueda: mantener orden por categoria + SKU
@@ -264,12 +282,14 @@ function CatalogoContent() {
     return scored.map((s) => s.producto);
   }, [productosOrdenados, catId, q]);
 
+  const filtrados = useMemo(
+    () => filtradosTodos.slice(0, visibleCount),
+    [filtradosTodos, visibleCount]
+  );
+
   const porCategoria = useMemo(() => {
     const map = new Map<string, Producto[]>();
-    // Insertar en el orden de categorias (ya ordenadas) para preservar orden
-    for (const c of categorias) {
-      map.set(c.id, []);
-    }
+    for (const c of categorias) { map.set(c.id, []); }
     for (const p of filtrados) {
       const arr = map.get(p.category);
       if (arr) arr.push(p);
@@ -379,12 +399,12 @@ function CatalogoContent() {
             <input
               type="text"
               placeholder="Buscar por SKU, nombre o modelo de máquina..."
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
+              value={qInput}
+              onChange={(e) => handleQInput(e.target.value)}
               className="w-full bg-slate-950 border border-slate-700 text-white text-sm rounded-xl block pl-11 p-3.5 focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500 transition-all"
             />
           </div>
-          <DropdownCategorias catId={catId} onChange={setCatId} productos={productos} categorias={categorias} />
+          <DropdownCategorias catId={catId} onChange={handleCatChange} productos={productos} categorias={categorias} />
         </div>
 
         {/* Referral Banner */}
@@ -469,6 +489,19 @@ function CatalogoContent() {
           </section>
         )}
 
+        {/* CARGAR MÁS */}
+        {!loading && visibleCount < filtradosTodos.length && (
+          <div className="flex justify-center mt-8">
+            <button
+              onClick={() => setVisibleCount((v) => v + 60)}
+              className="px-6 py-3 rounded-xl font-bold text-sm text-white transition-colors"
+              style={{ background: "rgba(249,115,22,0.15)", border: "1px solid rgba(249,115,22,0.4)", color: "#fb923c" }}
+            >
+              Cargar más productos ({filtradosTodos.length - visibleCount} restantes)
+            </button>
+          </div>
+        )}
+
         <p className="text-center text-xs text-slate-600 mt-12">
           ¿Trabajás en el taller?{" "}
           <Link href="/login?next=/taller" className="text-orange-400 hover:underline underline-offset-2">Ingresá con Google</Link>
@@ -492,66 +525,45 @@ function ActionBtn({ icon, label, onClick }: { icon: React.ReactNode; label: str
   );
 }
 
-function ProductCard({ producto, addItem }: { producto: Producto; addItem: (item: Omit<CartItem, "cantidad"> & { cantidad?: number }) => void }) {
+const ProductCard = memo(function ProductCard({ producto, addItem }: { producto: Producto; addItem: (item: Omit<CartItem, "cantidad"> & { cantidad?: number }) => void }) {
   const [qty, setQty] = useState(1);
   const increase = () => setQty((q) => q + 1);
   const decrease = () => setQty((q) => Math.max(1, q - 1));
-  const handleAdd = () => {
+  const handleAdd = useCallback(() => {
     addItem({ sku: producto.sku, nombre: producto.name, precio: producto.catalog_price || 0, imagen: producto.image_url || "", cantidad: qty });
     setQty(1);
-  };
-
-  const hasImage = !!producto.image_url;
+  }, [addItem, producto, qty]);
 
   return (
-    <article
-      className="flex flex-col overflow-hidden rounded-2xl group"
-      style={{
-        background: "linear-gradient(145deg, rgba(15,23,42,0.9) 0%, rgba(15,23,42,0.4) 100%)",
-        border: "1px solid rgba(255,255,255,0.05)",
-        transition: "all 0.3s ease",
-      }}
-      onMouseEnter={(e) => {
-        (e.currentTarget as HTMLElement).style.borderColor = "rgba(249,115,22,0.5)";
-        (e.currentTarget as HTMLElement).style.transform = "translateY(-4px)";
-        (e.currentTarget as HTMLElement).style.boxShadow = "0 10px 25px -5px rgba(0,0,0,0.5), 0 8px 10px -6px rgba(249,115,22,0.1)";
-      }}
-      onMouseLeave={(e) => {
-        (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.05)";
-        (e.currentTarget as HTMLElement).style.transform = "translateY(0)";
-        (e.currentTarget as HTMLElement).style.boxShadow = "none";
-      }}
-    >
+    <article className="product-card flex flex-col overflow-hidden rounded-2xl group">
       {/* Image */}
-      <div className="bg-slate-50 h-32 sm:h-40 md:h-48 p-2 sm:p-3 md:p-4 relative flex items-center justify-center overflow-hidden">
-        <span
-          className="absolute top-2 left-2 sm:top-3 sm:left-3 text-white text-[10px] sm:text-xs font-bold font-mono px-1.5 sm:px-2 py-0.5 sm:py-1 rounded shadow-md border"
-          style={{ background: "rgba(15,23,42,0.9)", backdropFilter: "blur(4px)", borderColor: "#334155" }}
-        >
+      <div className="bg-slate-50 h-28 sm:h-40 md:h-48 p-2 sm:p-3 md:p-4 relative flex items-center justify-center overflow-hidden">
+        <span className="absolute top-2 left-2 text-white text-[9px] sm:text-xs font-bold font-mono px-1.5 py-0.5 rounded border z-10"
+          style={{ background: "rgba(15,23,42,0.9)", borderColor: "#334155" }}>
           {producto.sku}
         </span>
-        {hasImage ? (
+        {producto.image_url ? (
           <img
-            src={producto.image_url!}
+            src={producto.image_url}
             alt={producto.name}
-            className="max-h-full max-w-full object-contain group-hover:scale-110 transition-transform duration-500"
+            width={160} height={160}
+            className="max-h-full max-w-full object-contain group-hover:scale-110 transition-transform duration-300"
             loading="lazy"
+            decoding="async"
             onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
           />
         ) : (
-          <div className="w-32 h-32 bg-slate-300 rounded-full flex items-center justify-center shadow-inner">
-            <Tag className="h-12 w-12 text-slate-500" />
+          <div className="w-20 h-20 sm:w-28 sm:h-28 bg-slate-200 rounded-full flex items-center justify-center">
+            <Tag className="h-8 w-8 sm:h-10 sm:w-10 text-slate-400" />
           </div>
         )}
       </div>
 
       {/* Info */}
       <div className="p-2 sm:p-3 md:p-5 flex flex-col flex-grow">
-        <h3 className="text-slate-200 font-semibold text-[11px] sm:text-xs md:text-sm leading-tight min-h-[2rem] sm:min-h-[2.5rem] mb-1 sm:mb-2">{producto.name}</h3>
+        <h3 className="text-slate-200 font-semibold text-[11px] sm:text-xs md:text-sm leading-tight line-clamp-2 mb-1 sm:mb-2">{producto.name}</h3>
         <div className="mt-auto">
-          <p className="hidden sm:block text-xs text-slate-500 mb-0.5">Precio de referencia</p>
-          <div className="font-black text-lg sm:text-xl md:text-2xl tracking-tight mb-2 sm:mb-4" style={{ color: "#10b981" }}>{fmtPrecio(producto.catalog_price)}</div>
-
+          <div className="font-black text-base sm:text-xl md:text-2xl tracking-tight mb-2 sm:mb-3" style={{ color: "#10b981" }}>{fmtPrecio(producto.catalog_price)}</div>
           <div className="flex items-stretch gap-1 sm:gap-2">
             <div className="hidden sm:flex items-center bg-slate-950 rounded-xl border border-slate-700 overflow-hidden w-20 md:w-24 shrink-0">
               <button onClick={decrease} className="w-7 md:w-8 h-full flex justify-center items-center text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
@@ -564,8 +576,8 @@ function ProductCard({ producto, addItem }: { producto: Producto; addItem: (item
             </div>
             <button
               onClick={handleAdd}
-              className="flex-grow font-bold rounded-lg sm:rounded-xl shadow-lg transition-all flex items-center justify-center gap-1 text-white text-[10px] sm:text-xs md:text-sm py-2"
-              style={{ background: "#f97316", boxShadow: "0 10px 25px rgba(249,115,22,0.2)" }}
+              className="flex-grow font-bold rounded-lg sm:rounded-xl transition-all active:scale-95 flex items-center justify-center gap-1 text-white text-[10px] sm:text-xs md:text-sm py-2.5 sm:py-2"
+              style={{ background: "#f97316" }}
             >
               <Plus className="h-3 w-3 sm:hidden" />
               {qty > 1 ? `${qty}x` : ""} Agregar
@@ -575,4 +587,4 @@ function ProductCard({ producto, addItem }: { producto: Producto; addItem: (item
       </div>
     </article>
   );
-}
+});

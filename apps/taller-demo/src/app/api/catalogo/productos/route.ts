@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServer } from "@/lib/supabase-server";
 
 export const dynamic = "force-dynamic";
+export const revalidate = 300; // 5 min server-side cache
 
 export async function GET(_req: NextRequest) {
   try {
@@ -50,7 +51,14 @@ export async function GET(_req: NextRequest) {
       return (a.sku || "").localeCompare(b.sku || "", undefined, { numeric: true, sensitivity: "base" });
     });
 
-    return NextResponse.json({ productos: productosConVentas });
+    return NextResponse.json(
+      { productos: productosConVentas },
+      {
+        headers: {
+          "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
+        },
+      }
+    );
   } catch (err: any) {
     console.error("[catalogo/productos] error:", err);
     return NextResponse.json({ error: err.message }, { status: 500 });

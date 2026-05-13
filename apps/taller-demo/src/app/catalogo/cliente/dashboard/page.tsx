@@ -19,15 +19,13 @@ const DATOS_TRANSFERENCIA = {
   cuit: "20-31264840-8",
 };
 
-function fmtMoney(n: number) {
-  return "$" + n.toLocaleString("es-AR", { maximumFractionDigits: 0 });
-}
+const fmtMoney = (n: number) =>
+  "$" + n.toLocaleString("es-AR", { maximumFractionDigits: 0 });
 
-function fmtFecha(iso: string) {
-  return new Date(iso).toLocaleDateString("es-AR", {
-    day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
-  });
-}
+const fechaFormatter = new Intl.DateTimeFormat("es-AR", {
+  day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
+});
+const fmtFecha = (iso: string) => fechaFormatter.format(new Date(iso));
 
 function numeroOrden(id: string, created_at: string) {
   // Genera MQ-YYYYMMDD-XXXX donde XXXX son los últimos 4 chars del UUID
@@ -122,8 +120,14 @@ export default function ClienteDashboardPage() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: "#020617" }}>
-        <Loader2 className="h-8 w-8 text-orange-400 animate-spin" />
+      <div className="min-h-screen" style={{ background: "#020617" }}>
+        <div className="max-w-4xl mx-auto px-4 py-6 space-y-4 animate-pulse">
+          <div className="h-14 rounded-2xl bg-slate-800/60" />
+          <div className="h-48 rounded-2xl bg-slate-800/40" />
+          <div className="h-10 rounded-xl bg-slate-800/30" />
+          <div className="h-20 rounded-2xl bg-slate-800/40" />
+          <div className="h-20 rounded-2xl bg-slate-800/30" />
+        </div>
       </div>
     );
   }
