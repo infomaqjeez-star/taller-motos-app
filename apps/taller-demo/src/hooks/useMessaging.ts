@@ -16,6 +16,9 @@ function playMSNDing() {
     }
     msnAudio.currentTime = 0;
     msnAudio.play().catch(() => {});
+    setTimeout(() => {
+      if (msnAudio) { msnAudio.pause(); msnAudio.currentTime = 0; }
+    }, 3000);
   } catch {}
 }
 
