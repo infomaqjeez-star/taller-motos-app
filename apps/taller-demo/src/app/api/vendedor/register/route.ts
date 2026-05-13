@@ -16,39 +16,24 @@ export async function POST(req: NextRequest) {
     }
 
     const supabase = getSupabaseServer();
+    const emailNorm = email.trim().toLowerCase();
 
-    // Validar DNI/CUIT si se proporciona
-    if (dni_cuit) {
-      const { data: dupDni } = await supabase
-        .from("vendedores")
-        .select("id")
-        .eq("dni_cuit", dni_cuit.trim())
-        .single();
+    // Paralelizar las 3 validaciones en vez de hacerlas en serie
+    const [dniCheck, vendedorCheck, clienteCheck] = await Promise.all([
+      dni_cuit
+        ? supabase.from("vendedores").select("id").eq("dni_cuit", dni_cuit.trim()).maybeSingle()
+        : Promise.resolve({ data: null }),
+      supabase.from("vendedores").select("id").eq("email", emailNorm).maybeSingle(),
+      supabase.from("clientes_catalogo").select("id").eq("email", emailNorm).maybeSingle(),
+    ]);
 
-      if (dupDni) {
-        return NextResponse.json({ error: "El DNI/CUIT ya está registrado como vendedor" }, { status: 409 });
-      }
+    if (dniCheck.data) {
+      return NextResponse.json({ error: "El DNI/CUIT ya está registrado como vendedor" }, { status: 409 });
     }
-
-    // Verificar si email existe en vendedores
-    const { data: existenteVendedor } = await supabase
-      .from("vendedores")
-      .select("id")
-      .eq("email", email.trim().toLowerCase())
-      .single();
-
-    if (existenteVendedor) {
+    if (vendedorCheck.data) {
       return NextResponse.json({ error: "El email ya está registrado como vendedor" }, { status: 409 });
     }
-
-    // Verificar si email existe en clientes (no puede ser vendedor si es cliente)
-    const { data: existenteCliente } = await supabase
-      .from("clientes_catalogo")
-      .select("id")
-      .eq("email", email.trim().toLowerCase())
-      .single();
-
-    if (existenteCliente) {
+    if (clienteCheck.data) {
       return NextResponse.json({ error: "Este email ya está registrado como cliente. No podés ser vendedor con el mismo email." }, { status: 409 });
     }
 
@@ -66,7 +51,7 @@ export async function POST(req: NextRequest) {
       intentos++;
     }
 
-    const password_hash = await bcrypt.hash(password, 10);
+    const password_hash = await bcrypt.hash(password, 8);
 
     const { data: vendedor, error } = await supabase
       .from("vendedores")

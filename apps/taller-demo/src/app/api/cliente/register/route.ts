@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "El email ya está registrado" }, { status: 409 });
     }
 
-    const password_hash = await bcrypt.hash(password, 10);
+    const password_hash = await bcrypt.hash(password, 8);
     const codigo = "CLI" + Math.floor(1000 + Math.random() * 9000);
 
     const insertData: any = {
