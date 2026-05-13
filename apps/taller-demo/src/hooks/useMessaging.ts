@@ -18,7 +18,7 @@ function playMSNDing() {
     msnAudio.play().catch(() => {});
     setTimeout(() => {
       if (msnAudio) { msnAudio.pause(); msnAudio.currentTime = 0; }
-    }, 2000);
+    }, 1000);
   } catch {}
 }
 
@@ -103,7 +103,6 @@ export function useMessaging() {
           (m) => !prevIdsRef.current.has(m.id) && !m.leido
         );
         if (nuevos.length > 0) {
-          playMSNDing();
           setNewMessageAlert(true);
           setTimeout(() => setNewMessageAlert(false), 1500);
           notifyViaSW(
