@@ -153,6 +153,7 @@ export interface MessageTaller {
   createdAt: string;
   avatarUrl?: string | null;
   deviceId?: string | null;
+  userColor?: string | null;
 }
 
 export interface AgendaCliente {

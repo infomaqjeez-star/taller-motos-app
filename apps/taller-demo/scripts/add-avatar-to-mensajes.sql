@@ -3,4 +3,5 @@
 
 ALTER TABLE mensajes_taller
   ADD COLUMN IF NOT EXISTS avatar_url TEXT,
-  ADD COLUMN IF NOT EXISTS device_id TEXT;
+  ADD COLUMN IF NOT EXISTS device_id TEXT,
+  ADD COLUMN IF NOT EXISTS user_color TEXT;

@@ -803,6 +803,7 @@ function toMessage(r: Record<string, unknown>): MessageTaller {
     createdAt:  r.created_at as string,
     avatarUrl:  (r.avatar_url as string | null) ?? null,
     deviceId:   (r.device_id as string | null) ?? null,
+    userColor:  (r.user_color as string | null) ?? null,
   };
 }
 
@@ -819,6 +820,7 @@ export const mensajesDb = {
     const data: Record<string, unknown> = { autor: msg.autor, contenido: msg.contenido };
     if (msg.avatarUrl) data.avatar_url = msg.avatarUrl;
     if (msg.deviceId) data.device_id = msg.deviceId;
+    if (msg.userColor) data.user_color = msg.userColor;
     await dbCall({ action: "insert", table: "mensajes_taller", data });
   },
 

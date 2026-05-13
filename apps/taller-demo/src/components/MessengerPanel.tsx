@@ -91,7 +91,7 @@ interface MessengerPanelProps {
   onClose: () => void;
   messages: MessageTaller[];
   unreadCount: number;
-  onSend: (autor: string, contenido: string, avatarUrl?: string | null, deviceId?: string | null) => void;
+  onSend: (autor: string, contenido: string, avatarUrl?: string | null, deviceId?: string | null, userColor?: string | null) => void;
   onMarkAllRead: () => void;
   onDelete: (id: string) => void;
 }
@@ -109,9 +109,9 @@ function formatDate(ts: string) {
   return d.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit" });
 }
 
-// ── Color único y consistente por nombre de usuario ─────────
+// ── Paleta de colores elegibles para el chat ────────────────
 const USER_COLORS = [
-  "#1a56c4", // azul MSN clásico
+  "#1a56c4", // azul MSN
   "#b91c1c", // rojo
   "#15803d", // verde
   "#7c3aed", // violeta
@@ -119,15 +119,23 @@ const USER_COLORS = [
   "#0e7490", // cyan
   "#be185d", // rosa
   "#92400e", // marrón
-  "#1d4ed8", // azul índigo
-  "#065f46", // verde esmeralda
+  "#0369a1", // celeste
+  "#065f46", // esmeralda
+  "#4338ca", // índigo
+  "#b45309", // ámbar oscuro
 ];
 
-function getUserColor(name: string): string {
+const COLOR_STORAGE_KEY = "taller_user_color";
+
+function getSavedColor(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(COLOR_STORAGE_KEY);
+}
+
+function getColorForMessage(msg: { userColor?: string | null; autor: string }): string {
+  if (msg.userColor) return msg.userColor;
   let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  }
+  for (let i = 0; i < msg.autor.length; i++) hash = msg.autor.charCodeAt(i) + ((hash << 5) - hash);
   return USER_COLORS[Math.abs(hash) % USER_COLORS.length];
 }
 
@@ -163,6 +171,8 @@ export default function MessengerPanel({
 }: MessengerPanelProps) {
   const [autor, setAutor] = useState(() => getDeviceIdentity().nombre);
   const [deviceId] = useState(() => getDeviceIdentity().deviceId);
+  const [userColor, setUserColor] = useState<string>(() => getSavedColor() ?? USER_COLORS[0]);
+  const [showColorPicker, setShowColorPicker] = useState(false);
   const [avatar, setAvatar] = useState<string | null>(() =>
     typeof window !== "undefined" ? localStorage.getItem("taller_avatar") : null
   );
@@ -245,10 +255,24 @@ export default function MessengerPanel({
     }
   }, [open]);
 
+  // Colores tomados por OTROS dispositivos en los mensajes recientes
+  const takenColors = new Set(
+    messages
+      .filter((m) => m.deviceId && m.deviceId !== deviceId && m.userColor)
+      .map((m) => m.userColor as string)
+  );
+
+  const handleColorSelect = (color: string) => {
+    if (takenColors.has(color)) return;
+    setUserColor(color);
+    localStorage.setItem(COLOR_STORAGE_KEY, color);
+    setShowColorPicker(false);
+  };
+
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
     if (!texto.trim()) return;
-    onSend(autor.trim() || "Técnico", texto.trim(), avatar, deviceId);
+    onSend(autor.trim() || "Técnico", texto.trim(), avatar, deviceId, userColor);
     setTexto("");
     updateActivity();
   };
@@ -409,14 +433,14 @@ export default function MessengerPanel({
                   <div key={msg.id} className="group mb-2 flex gap-1.5">
                     {/* Mini avatar del autor */}
                     <div className="shrink-0 w-6 h-6 rounded overflow-hidden mt-0.5 flex items-center justify-center text-white text-[10px] font-bold"
-                      style={{ background: getUserColor(msg.autor), border: `1px solid ${getUserColor(msg.autor)}` }}>
+                      style={{ background: getColorForMessage(msg), border: `1px solid ${getColorForMessage(msg)}` }}>
                       {msg.avatarUrl
                         ? <img src={msg.avatarUrl} alt={msg.autor} className="w-full h-full object-cover" />
                         : msg.autor.charAt(0).toUpperCase()}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-baseline gap-1 flex-wrap">
-                        <span className="text-[11px] font-bold" style={{ color: getUserColor(msg.autor) }}>{msg.autor} dice:</span>
+                        <span className="text-[11px] font-bold" style={{ color: getColorForMessage(msg) }}>{msg.autor} dice:</span>
                         <span className="text-[10px] text-gray-400">({formatTime(msg.createdAt)})</span>
                         {isUnread && <span className="text-[9px] font-black text-orange-500 ml-1">●NUEVO</span>}
                         <button onClick={()=>onDelete(msg.id)} className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
@@ -461,7 +485,44 @@ export default function MessengerPanel({
               </div>
             </div>
             <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
-            <p className="text-[9px] text-blue-700 font-bold text-center truncate w-full px-1">{autor}</p>
+            <p className="text-[9px] font-bold text-center truncate w-full px-1" style={{ color: userColor }}>{autor}</p>
+            {/* Selector de color */}
+            <button
+              type="button"
+              onClick={() => setShowColorPicker(v => !v)}
+              className="w-full flex items-center justify-center gap-1 py-0.5 rounded text-[8px] font-bold hover:opacity-80 transition-opacity"
+              style={{ background: userColor, color: "#fff", border: `1px solid ${userColor}` }}
+              title="Cambiar color"
+            >
+              <span className="w-2 h-2 rounded-full bg-white/60 inline-block"/>
+              Mi color
+            </button>
+            {showColorPicker && (
+              <div className="w-full grid grid-cols-4 gap-0.5 p-0.5 rounded" style={{ background: "#c8dcf0" }}>
+                {USER_COLORS.map((c) => {
+                  const isMine = c === userColor;
+                  const isTaken = takenColors.has(c) && !isMine;
+                  return (
+                    <button
+                      key={c}
+                      type="button"
+                      title={isTaken ? "En uso" : c}
+                      onClick={() => handleColorSelect(c)}
+                      disabled={isTaken}
+                      className="w-full aspect-square rounded transition-transform"
+                      style={{
+                        background: c,
+                        opacity: isTaken ? 0.25 : 1,
+                        outline: isMine ? `2px solid #fff` : "none",
+                        outlineOffset: "1px",
+                        cursor: isTaken ? "not-allowed" : "pointer",
+                        transform: isMine ? "scale(1.2)" : "scale(1)",
+                      }}
+                    />
+                  );
+                })}
+              </div>
+            )}
             <div className="w-full rounded flex items-center justify-center gap-1 py-0.5"
               style={{
                 background: isAway ? "#fef3c7" : "#d1fae5",
