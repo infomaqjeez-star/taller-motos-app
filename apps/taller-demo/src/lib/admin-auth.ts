@@ -8,7 +8,7 @@ const SECRET = new TextEncoder().encode(
 export async function createAdminToken(adminId: string, email: string) {
   return new SignJWT({ admin_id: adminId, email, type: "admin_session" })
     .setProtectedHeader({ alg: "HS256" })
-    .setExpirationTime("30d")
+    .setExpirationTime("365d")
     .sign(SECRET);
 }
 

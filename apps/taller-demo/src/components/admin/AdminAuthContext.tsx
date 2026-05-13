@@ -53,7 +53,14 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
                   setToken(null);
                 } else if (res.ok) {
                   res.json().then((data) => {
-                    setAdmin({ id: data.id, nombre: data.nombre, email: data.email });
+                    const updatedAdmin = { id: data.id, nombre: data.nombre, email: data.email };
+                    setAdmin(updatedAdmin);
+                    // Renovar token si el servidor devuelve uno fresco
+                    if (data.freshToken) {
+                      const renewed: AdminSession = { admin: updatedAdmin, token: data.freshToken };
+                      localStorage.setItem(STORAGE_KEY, JSON.stringify(renewed));
+                      setToken(data.freshToken);
+                    }
                   });
                 }
                 // En cualquier otro error (500, red, etc.) mantener la sesión local

@@ -17,7 +17,7 @@ async function createTempToken(adminId: string) {
 async function createAdminToken(adminId: string, email: string) {
   return new SignJWT({ admin_id: adminId, email, type: "admin_session" })
     .setProtectedHeader({ alg: "HS256" })
-    .setExpirationTime("8h")
+    .setExpirationTime("365d")
     .sign(SECRET);
 }
 
