@@ -80,7 +80,7 @@ const MSN_EMOJIS = [
 ];
 
 const MSN_SOUNDS = [
-  { id: "nudge",  label: "Sacudida",  icon: "📳" },
+  { id: "nudge",  label: "Zumbido",   icon: "📳" },
   { id: "ding",   label: "Ding",      icon: "🔔" },
   { id: "online", label: "Conectado", icon: "🟢" },
   { id: "error",  label: "Error",     icon: "🔴" },

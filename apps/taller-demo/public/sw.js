@@ -29,8 +29,8 @@ self.addEventListener("message", (event) => {
   }
 
   if (type === "MSN_NUDGE") {
-    self.registration.showNotification(`📳 Nudge de ${autor} — Taller Maqjeez`, {
-      body: "¡Te enviaron una sacudida!",
+    self.registration.showNotification(`📳 Zumbido de ${autor} — Taller Maqjeez`, {
+      body: "¡Te enviaron un zumbido!",
       icon: "/favicon.ico",
       tag: "msn-taller-nudge",
       silent: false,
