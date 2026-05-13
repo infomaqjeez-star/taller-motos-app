@@ -195,6 +195,7 @@ function AdminPedidosContent() {
   const [asignandoGerenteId, setAsignandoGerenteId] = useState<Record<string, string>>({});
   const [notificaciones, setNotificaciones] = useState<any[]>([]);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [busquedaCliente, setBusquedaCliente] = useState("");
 
   useEffect(() => {
     if (authLoading) return;
@@ -1187,40 +1188,187 @@ function AdminPedidosContent() {
       )}
 
       {/* === CLIENTES === */}
-      {vistaActiva === "clientes" && (
-        <div className="mt-4 space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              <Users className="h-5 w-5 text-[#FF5722]" />
-              Clientes ({clientes.length})
-            </h2>
-            <button onClick={exportarClientes} className="flex items-center gap-1 rounded-lg border border-white/10 px-3 py-1.5 text-xs text-gray-400 hover:text-white hover:bg-white/5">
-              <Download className="h-3.5 w-3.5" /> Exportar CSV
-            </button>
+      {vistaActiva === "clientes" && (() => {
+        // ── Derivar clientes invitados de pedidos ──
+        type ClienteUnificado = {
+          key: string;
+          nombre: string;
+          email: string;
+          telefono: string;
+          dni: string;
+          tipo: "registrado" | "invitado";
+          created_at: string;
+          pedidosCount: number;
+          totalComprado: number;
+          ultimoPedido: string;
+          vendedor?: string;
+        };
+
+        // Mapa para deduplicar: clave = dni || tel || email
+        const mapaClientes = new Map<string, ClienteUnificado>();
+
+        // 1. Registrados
+        clientes.forEach(c => {
+          const key = c.dni?.trim() || c.telefono?.trim() || c.email?.trim() || c.id;
+          if (!mapaClientes.has(key)) {
+            mapaClientes.set(key, {
+              key, nombre: c.nombre, email: c.email, telefono: c.telefono,
+              dni: c.dni, tipo: "registrado", created_at: c.created_at,
+              pedidosCount: 0, totalComprado: 0, ultimoPedido: c.created_at, vendedor: undefined,
+            });
+          }
+        });
+
+        // 2. Invitados de pedidos
+        pedidos.forEach(p => {
+          const dc = p.datos_cliente;
+          if (!dc) return;
+          const nombre = dc.nombre?.trim() || "";
+          const dni = dc.dni?.trim() || "";
+          const tel = dc.telefono?.trim() || "";
+          const email = "";
+          const key = dni || tel || nombre || p.id;
+          if (!key) return;
+          const vendNombre = p.vendedor?.nombre;
+          if (mapaClientes.has(key)) {
+            const ex = mapaClientes.get(key)!;
+            ex.pedidosCount += 1;
+            ex.totalComprado += p.estado !== "cancelado" ? (p.total || 0) : 0;
+            if (p.created_at > ex.ultimoPedido) ex.ultimoPedido = p.created_at;
+          } else {
+            mapaClientes.set(key, {
+              key, nombre: nombre || "-", email, telefono: tel,
+              dni, tipo: "invitado", created_at: p.created_at,
+              pedidosCount: 1,
+              totalComprado: p.estado !== "cancelado" ? (p.total || 0) : 0,
+              ultimoPedido: p.created_at,
+              vendedor: vendNombre,
+            });
+          }
+        });
+
+        // También sumar pedidos a registrados
+        pedidos.forEach(p => {
+          const dc = p.datos_cliente;
+          if (!dc) return;
+          const key = dc.dni?.trim() || dc.telefono?.trim() || dc.nombre?.trim() || "";
+          if (!key) return;
+          const ex = mapaClientes.get(key);
+          if (ex && ex.tipo === "registrado") {
+            ex.pedidosCount += 1;
+            ex.totalComprado += p.estado !== "cancelado" ? (p.total || 0) : 0;
+            if (p.created_at > ex.ultimoPedido) ex.ultimoPedido = p.created_at;
+            if (!ex.vendedor && p.vendedor?.nombre) ex.vendedor = p.vendedor.nombre;
+          }
+        });
+
+        const todos = Array.from(mapaClientes.values())
+          .sort((a, b) => b.ultimoPedido.localeCompare(a.ultimoPedido));
+
+        const q = busquedaCliente.toLowerCase().trim();
+        const filtrados = q
+          ? todos.filter(c =>
+              c.nombre.toLowerCase().includes(q) ||
+              c.dni.includes(q) ||
+              c.telefono.includes(q) ||
+              c.email.toLowerCase().includes(q)
+            )
+          : todos;
+
+        const totalRegistrados = todos.filter(c => c.tipo === "registrado").length;
+        const totalInvitados = todos.filter(c => c.tipo === "invitado").length;
+        const totalComprado = todos.reduce((s, c) => s + c.totalComprado, 0);
+
+        return (
+          <div className="mt-4 space-y-4">
+            {/* Header */}
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                <Users className="h-5 w-5 text-[#FF5722]" />
+                Clientes ({todos.length})
+              </h2>
+              <button onClick={exportarClientes} className="flex items-center gap-1 rounded-lg border border-white/10 px-3 py-1.5 text-xs text-gray-400 hover:text-white hover:bg-white/5">
+                <Download className="h-3.5 w-3.5" /> Exportar CSV
+              </button>
+            </div>
+
+            {/* Stats */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3 text-center">
+                <p className="text-2xl font-bold text-white">{todos.length}</p>
+                <p className="text-xs text-gray-400 mt-0.5">Total clientes</p>
+              </div>
+              <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-3 text-center">
+                <p className="text-2xl font-bold text-blue-400">{totalRegistrados}</p>
+                <p className="text-xs text-gray-400 mt-0.5">Registrados</p>
+              </div>
+              <div className="rounded-xl border border-orange-500/20 bg-orange-500/5 p-3 text-center">
+                <p className="text-2xl font-bold text-orange-400">{totalInvitados}</p>
+                <p className="text-xs text-gray-400 mt-0.5">Invitados</p>
+              </div>
+              <div className="rounded-xl border border-green-500/20 bg-green-500/5 p-3 text-center">
+                <p className="text-2xl font-bold text-green-400">{fmtMoney(totalComprado)}</p>
+                <p className="text-xs text-gray-400 mt-0.5">Total comprado</p>
+              </div>
+            </div>
+
+            {/* Búsqueda */}
+            <input
+              type="text"
+              placeholder="Buscar por nombre, DNI, teléfono o email..."
+              value={busquedaCliente}
+              onChange={e => setBusquedaCliente(e.target.value)}
+              className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-[#FF5722] placeholder-gray-600"
+            />
+
+            {/* Lista */}
+            {filtrados.length === 0 ? (
+              <div className="rounded-xl border border-white/10 bg-white/[0.03] p-8 text-center text-gray-400">
+                {busquedaCliente ? "Sin resultados para esa búsqueda." : "No hay clientes aún."}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {filtrados.map((c) => (
+                  <div key={c.key} className="rounded-xl border p-3 text-sm"
+                    style={{ borderColor: c.tipo === "registrado" ? "rgba(59,130,246,0.2)" : "rgba(249,115,22,0.2)",
+                             backgroundColor: c.tipo === "registrado" ? "rgba(59,130,246,0.03)" : "rgba(249,115,22,0.03)" }}>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0"
+                          style={{ background: c.tipo === "registrado" ? "#1e3a5f" : "#3d1f0a",
+                                   color: c.tipo === "registrado" ? "#60a5fa" : "#fb923c" }}>
+                          {(c.nombre || "?").charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <span className="text-white font-semibold">{c.nombre || "-"}</span>
+                          {c.vendedor && <span className="ml-2 text-[10px] text-purple-400">via {c.vendedor}</span>}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                          c.tipo === "registrado"
+                            ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
+                            : "bg-orange-500/20 text-orange-400 border border-orange-500/30"
+                        }`}>
+                          {c.tipo === "registrado" ? "✓ Registrado" : "👤 Invitado"}
+                        </span>
+                        <span className="text-xs text-gray-500">{new Date(c.ultimoPedido).toLocaleDateString("es-AR")}</span>
+                      </div>
+                    </div>
+                    <div className="mt-2 grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-1 text-xs text-gray-400">
+                      {c.dni && <span><span className="text-gray-600">DNI:</span> {c.dni}</span>}
+                      {c.telefono && <span><span className="text-gray-600">Tel:</span> {c.telefono}</span>}
+                      {c.email && <span><span className="text-gray-600">Email:</span> {c.email}</span>}
+                      <span><span className="text-gray-600">Pedidos:</span> <span className="text-white font-medium">{c.pedidosCount}</span></span>
+                      {c.totalComprado > 0 && <span><span className="text-gray-600">Comprado:</span> <span className="text-green-400 font-medium">{fmtMoney(c.totalComprado)}</span></span>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-          {clientes.length === 0 ? (
-            <div className="rounded-xl border border-white/10 bg-white/[0.03] p-8 text-center text-gray-400">
-              No hay clientes registrados.
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {clientes.map((c) => (
-                <div key={c.id} className="rounded-xl border border-white/10 bg-white/[0.03] p-3 text-sm">
-                  <div className="flex items-center justify-between">
-                    <span className="text-white font-semibold">{c.nombre || "-"}</span>
-                    <span className="text-xs text-gray-400">{new Date(c.created_at).toLocaleDateString("es-AR")}</span>
-                  </div>
-                  <div className="mt-1 flex items-center gap-3 text-xs text-gray-400">
-                    <span>{c.email || "-"}</span>
-                    <span>{c.telefono || "-"}</span>
-                    <span>DNI: {c.dni || "-"}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+        );
+      })()}
 
       {/* === PRECIOS === */}
       {vistaActiva === "precios" && (
