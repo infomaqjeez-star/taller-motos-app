@@ -295,27 +295,31 @@ export default function DashboardPage() {
       {/* ── Botón Mensajería del Taller (opuesto al FAB) ── */}
       <button
         onClick={() => setShowMessenger(true)}
-        className="fixed bottom-[88px] sm:bottom-6 left-4 sm:left-6 z-40
-                   flex items-center justify-center h-14 w-14 sm:h-auto sm:w-auto sm:px-5
-                   rounded-2xl transition-all duration-200 hover:scale-105"
+        className="fixed bottom-[88px] sm:bottom-6 left-4 sm:left-6 z-[55]
+                   flex items-center justify-center
+                   h-14 w-14 sm:h-12 sm:w-auto sm:px-5
+                   rounded-full sm:rounded-2xl
+                   transition-all duration-200 hover:scale-105"
         style={{
           background: unreadCount > 0
             ? "linear-gradient(135deg, #3b82f6, #8b5cf6)"
-            : "#18181b",
-          border: "1px solid rgba(255,255,255,0.08)",
+            : "linear-gradient(135deg, #1e293b, #0f172a)",
+          border: unreadCount > 0
+            ? "1px solid rgba(139,92,246,0.5)"
+            : "1px solid rgba(59,130,246,0.3)",
           boxShadow: unreadCount > 0
-            ? "0 4px 24px -4px rgba(59,130,246,0.4)"
-            : "0 4px 24px -4px rgba(0,0,0,0.5)",
+            ? "0 4px 24px -4px rgba(59,130,246,0.5)"
+            : "0 4px 24px -4px rgba(0,0,0,0.6), inset 0 1px 0 0 rgba(255,255,255,0.05)",
         }}
         aria-label="Mensajería del taller"
         title="Mensajería del taller"
       >
-        <Mail className="w-5 h-5 flex-shrink-0" style={{ color: unreadCount > 0 ? "#fff" : "#9ca3af" }} />
-        <span className="hidden sm:inline text-sm font-bold ml-2" style={{ color: unreadCount > 0 ? "#fff" : "#9ca3af" }}>
+        <MessageCircle className="w-6 h-6 flex-shrink-0 text-blue-300" />
+        <span className="hidden sm:inline text-sm font-bold ml-2 text-blue-200">
           Chat
         </span>
         {unreadCount > 0 && (
-          <span className="absolute -top-1.5 -right-1.5 min-w-[20px] h-5 px-1 rounded-full bg-red-500 text-white text-[10px] font-black flex items-center justify-center border-2 border-[#09090b]">
+          <span className="absolute -top-1.5 -right-1.5 min-w-[20px] h-5 px-1 rounded-full bg-red-500 text-white text-[10px] font-black flex items-center justify-center border-2 border-[#09090b] shadow-lg">
             {unreadCount}
           </span>
         )}
