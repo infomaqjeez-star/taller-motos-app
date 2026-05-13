@@ -7,12 +7,14 @@ import { useClienteAuth } from "@/components/cliente/ClienteAuthContext";
 import {
   ArrowLeft, User, Mail, Phone, Lock, Loader2,
   Eye, EyeOff, Wrench, Tag, Clock, Store, ChevronRight,
+  ShoppingBag, TrendingUp,
 } from "lucide-react";
 
 export default function ClienteLoginPage() {
   const router = useRouter();
   const { login, register } = useClienteAuth();
   const [tab, setTab] = useState<"login" | "register">("register");
+  const [roleStep, setRoleStep] = useState<null | "comprador" | "vendedor">(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showPass, setShowPass] = useState(false);
@@ -269,7 +271,87 @@ export default function ClienteLoginPage() {
               </p>
             </div>
 
+            {/* ── SELECTOR DE ROL (solo al registrarse, antes del form) ── */}
+            {tab === "register" && roleStep === null && (
+              <div className="space-y-3 mb-6">
+                <p className="text-center text-sm font-bold text-white mb-4">
+                  ¿Cómo querés usar MaqJeez?
+                  <span className="block text-xs font-normal text-slate-400 mt-1">Este es el primer paso — elegí tu rol</span>
+                </p>
+
+                {/* Comprador */}
+                <button
+                  type="button"
+                  onClick={() => setRoleStep("comprador")}
+                  className="w-full flex items-center gap-4 rounded-2xl p-4 text-left transition-all hover:scale-[1.01]"
+                  style={{
+                    background: "linear-gradient(135deg, rgba(249,115,22,0.12), rgba(249,115,22,0.06))",
+                    border: "2px solid rgba(249,115,22,0.5)",
+                  }}
+                >
+                  <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
+                    style={{ background: "rgba(249,115,22,0.2)", border: "1px solid rgba(249,115,22,0.4)" }}>
+                    <ShoppingBag className="h-6 w-6 text-orange-400" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-black text-white text-base">SOY COMPRADOR</p>
+                    <p className="text-xs text-slate-400 mt-0.5">Quiero comprar repuestos y accesorios con descuentos exclusivos</p>
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      <span className="text-[10px] px-2 py-0.5 rounded-full font-bold" style={{ background: "rgba(249,115,22,0.15)", color: "#fb923c", border: "1px solid rgba(249,115,22,0.3)" }}>3% OFF siempre</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full font-bold" style={{ background: "rgba(249,115,22,0.15)", color: "#fb923c", border: "1px solid rgba(249,115,22,0.3)" }}>Historial de pedidos</span>
+                    </div>
+                  </div>
+                  <ChevronRight className="h-5 w-5 text-orange-400 shrink-0" />
+                </button>
+
+                {/* Vendedor */}
+                <button
+                  type="button"
+                  onClick={() => router.push("/catalogo/vendedor/login")}
+                  className="w-full flex items-center gap-4 rounded-2xl p-4 text-left transition-all hover:scale-[1.01]"
+                  style={{
+                    background: "linear-gradient(135deg, rgba(16,185,129,0.12), rgba(16,185,129,0.06))",
+                    border: "2px solid rgba(16,185,129,0.4)",
+                  }}
+                >
+                  <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
+                    style={{ background: "rgba(16,185,129,0.2)", border: "1px solid rgba(16,185,129,0.4)" }}>
+                    <TrendingUp className="h-6 w-6 text-emerald-400" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-black text-white text-base">SOY VENDEDOR</p>
+                    <p className="text-xs text-slate-400 mt-0.5">Quiero vender y ganar comisiones por cada pedido que genere</p>
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      <span className="text-[10px] px-2 py-0.5 rounded-full font-bold" style={{ background: "rgba(16,185,129,0.15)", color: "#34d399", border: "1px solid rgba(16,185,129,0.3)" }}>Comisiones 10-15%</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full font-bold" style={{ background: "rgba(16,185,129,0.15)", color: "#34d399", border: "1px solid rgba(16,185,129,0.3)" }}>Panel de ventas</span>
+                    </div>
+                  </div>
+                  <ChevronRight className="h-5 w-5 text-emerald-400 shrink-0" />
+                </button>
+
+                <p className="text-center text-xs text-slate-500 pt-1">
+                  ¿Ya tenés cuenta?{" "}
+                  <button type="button" onClick={() => switchTab("login")} className="text-orange-400 font-bold hover:underline">
+                    Iniciá sesión
+                  </button>
+                </p>
+              </div>
+            )}
+
+            {/* Toggle animado (solo si ya eligió rol o está en login) */}
+            {(tab === "login" || roleStep === "comprador") && (
+              <>
+              {tab === "register" && roleStep === "comprador" && (
+                <button type="button" onClick={() => setRoleStep(null)}
+                  className="mb-4 flex items-center gap-1 text-xs text-slate-400 hover:text-white transition-colors">
+                  <ArrowLeft className="h-3.5 w-3.5" /> Cambiar rol
+                </button>
+              )}
+            </>
+            )}
+
             {/* Toggle animado */}
+            {(tab === "login" || roleStep === "comprador") && (<>
             <div
               className="p-1.5 rounded-xl flex mb-8 relative"
               style={{
@@ -529,6 +611,7 @@ export default function ClienteLoginPage() {
                 </p>
               </div>
             )}
+            </>)}
 
           </div>
         </div>

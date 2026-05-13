@@ -21,6 +21,11 @@ import {
   AlertTriangle,
   Info,
   Store,
+  Copy,
+  CheckCircle,
+  Upload,
+  X,
+  Banknote,
 } from "lucide-react";
 
 function fmtMoney(n: number) {
@@ -53,6 +58,38 @@ export default function CheckoutPage() {
   const [numeroCliente, setNumeroCliente] = useState<string | null>(null);
   const [enviado, setEnviado] = useState(false);
   const [demorasOpen, setDemorasOpen] = useState(false);
+  const [comprobanteFile, setComprobanteFile] = useState<File | null>(null);
+  const [uploadingComprobante, setUploadingComprobante] = useState(false);
+  const [comprobanteUrl, setComprobanteUrl] = useState<string>("");
+  const [showTransferenciaModal, setShowTransferenciaModal] = useState(false);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  const DATOS_TRANSFERENCIA = {
+    banco: "Banco Provincia de Buenos Aires",
+    titular: "MaqJeez S.R.L.",
+    cbu: "0140999801234567890123",
+    alias: "MAQJEEZ.PAGOS",
+    cuit: "30-71234567-8",
+  };
+
+  const copyToClipboard = (text: string, field: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedField(field);
+      setTimeout(() => setCopiedField(null), 2000);
+    });
+  };
+
+  const uploadComprobante = async (file: File): Promise<string> => {
+    const formData = new FormData();
+    formData.append("file", file);
+    try {
+      const res = await fetch("/api/comprobante/upload", { method: "POST", body: formData });
+      const data = await res.json();
+      return data.url || file.name;
+    } catch {
+      return file.name;
+    }
+  };
 
   // Estado de entregas: 'normal' | 'demora'
   const estadoEntregas = "normal"; // Cambiar a "demora" cuando haya alta demanda
@@ -147,6 +184,21 @@ export default function CheckoutPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Si el pago es transferencia y no mostró el modal de datos aún, mostrarlo
+    if (form.formaPago === "Transferencia" && !showTransferenciaModal && !comprobanteFile) {
+      setShowTransferenciaModal(true);
+      return;
+    }
+
+    // Si hay comprobante, subirlo primero
+    if (comprobanteFile && !comprobanteUrl) {
+      setUploadingComprobante(true);
+      const url = await uploadComprobante(comprobanteFile);
+      setComprobanteUrl(url);
+      update("comprobante", url);
+      setUploadingComprobante(false);
+    }
+
     // Obtener vendedor referido del localStorage
     const vendedorId = localStorage.getItem("ref_vendedor_id");
     let comisionMonto = 0;
@@ -199,7 +251,7 @@ export default function CheckoutPage() {
             telefono: form.telefono,
             formaPago: form.formaPago,
             notas: form.notas,
-            comprobante: form.comprobante,
+            comprobante: comprobanteUrl || form.comprobante,
             numeroCliente: numeroCliente,
           },
           subtotal: totals.subtotal,
@@ -585,29 +637,65 @@ export default function CheckoutPage() {
             )}
           </div>
 
-          {/* Campo para comprobante de transferencia */}
+          {/* Datos bancarios + comprobante para Transferencia */}
           {form.formaPago === "Transferencia" && (
-            <div className="mt-3 rounded-lg border border-[#FDB71A]/20 bg-[#FDB71A]/5 p-3 space-y-2">
-              <p className="text-xs text-[#FDB71A] font-medium">
-                Adjuntá el comprobante de transferencia
-              </p>
-              <input
-                type="file"
-                accept="image/*,.pdf"
-                className="block w-full text-xs text-gray-400 file:mr-2 file:rounded-lg file:border-0 file:bg-[#FF5722] file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-white hover:file:bg-[#E64A19]"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) {
-                    // Guardar nombre del archivo como referencia
-                    update("comprobante", file.name);
-                  }
-                }}
-              />
-              {form.comprobante && (
-                <p className="text-xs text-[#39FF14]">
-                  Archivo seleccionado: {form.comprobante}
+            <div className="mt-3 rounded-xl border border-blue-500/30 bg-blue-500/5 p-4 space-y-3">
+              <div className="flex items-center gap-2 mb-1">
+                <Banknote className="h-4 w-4 text-blue-400" />
+                <p className="text-sm font-bold text-blue-300">Datos para la transferencia</p>
+              </div>
+              {[
+                { label: "Banco", value: DATOS_TRANSFERENCIA.banco, key: "banco" },
+                { label: "Titular", value: DATOS_TRANSFERENCIA.titular, key: "titular" },
+                { label: "CBU", value: DATOS_TRANSFERENCIA.cbu, key: "cbu" },
+                { label: "Alias", value: DATOS_TRANSFERENCIA.alias, key: "alias" },
+                { label: "CUIT", value: DATOS_TRANSFERENCIA.cuit, key: "cuit" },
+              ].map(({ label, value, key }) => (
+                <div key={key} className="flex items-center justify-between gap-2 rounded-lg bg-white/5 px-3 py-2">
+                  <div>
+                    <p className="text-[10px] text-gray-500 font-semibold uppercase">{label}</p>
+                    <p className="text-sm font-mono text-white font-bold">{value}</p>
+                  </div>
+                  <button type="button" onClick={() => copyToClipboard(value, key)}
+                    className="shrink-0 p-1.5 rounded-lg hover:bg-white/10 transition-colors"
+                    title="Copiar">
+                    {copiedField === key
+                      ? <CheckCircle className="h-4 w-4 text-[#39FF14]" />
+                      : <Copy className="h-4 w-4 text-gray-400" />}
+                  </button>
+                </div>
+              ))}
+
+              {/* Upload comprobante */}
+              <div className="pt-2 border-t border-white/10 space-y-2">
+                <p className="text-xs font-bold text-[#FDB71A] flex items-center gap-1.5">
+                  <Upload className="h-3.5 w-3.5" /> Subir comprobante de transferencia *
                 </p>
-              )}
+                <label className="flex flex-col items-center justify-center w-full h-24 rounded-xl border-2 border-dashed border-[#FDB71A]/40 bg-[#FDB71A]/5 cursor-pointer hover:border-[#FDB71A]/70 transition-colors">
+                  <input type="file" accept="image/*,.pdf" className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) { setComprobanteFile(file); update("comprobante", file.name); }
+                    }} />
+                  {comprobanteFile ? (
+                    <div className="flex items-center gap-2 text-center px-3">
+                      <CheckCircle className="h-5 w-5 text-[#39FF14] shrink-0" />
+                      <span className="text-xs text-[#39FF14] font-medium break-all">{comprobanteFile.name}</span>
+                    </div>
+                  ) : (
+                    <div className="text-center">
+                      <Upload className="h-5 w-5 text-gray-500 mx-auto mb-1" />
+                      <span className="text-xs text-gray-500">Tocá para adjuntar imagen o PDF</span>
+                    </div>
+                  )}
+                </label>
+                {comprobanteFile && (
+                  <button type="button" onClick={() => { setComprobanteFile(null); update("comprobante", ""); }}
+                    className="flex items-center gap-1 text-xs text-red-400 hover:text-red-300">
+                    <X className="h-3 w-3" /> Quitar archivo
+                  </button>
+                )}
+              </div>
             </div>
           )}
 
@@ -662,18 +750,81 @@ export default function CheckoutPage() {
           </div>
         </div>
 
+        {/* Alerta si es transferencia sin comprobante */}
+        {form.formaPago === "Transferencia" && !comprobanteFile && (
+          <div className="rounded-xl border border-yellow-500/30 bg-yellow-500/5 p-3 flex items-start gap-2">
+            <AlertTriangle className="h-4 w-4 text-yellow-400 shrink-0 mt-0.5" />
+            <p className="text-xs text-yellow-300">
+              <strong>Recordá adjuntar el comprobante</strong> de transferencia antes de enviar el pedido. Sin comprobante tu pedido quedará pendiente de verificación.
+            </p>
+          </div>
+        )}
+
         {/* Submit */}
         <button
           type="submit"
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#39FF14] px-6 py-4 text-lg font-black text-black hover:bg-[#32E612] transition-colors"
+          disabled={uploadingComprobante}
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#39FF14] px-6 py-4 text-lg font-black text-black hover:bg-[#32E612] transition-colors disabled:opacity-60"
         >
-          <Send className="h-5 w-5" />
-          Enviar pedido por WhatsApp
+          {uploadingComprobante ? (
+            <><div className="h-5 w-5 animate-spin rounded-full border-2 border-black border-t-transparent" /> Subiendo comprobante...</>
+          ) : (
+            <><Send className="h-5 w-5" /> Enviar pedido por WhatsApp</>
+          )}
         </button>
         <p className="text-center text-xs text-gray-500">
           El pedido se enviará por WhatsApp al 11-2181-6064
         </p>
       </form>
+
+      {/* Modal de datos de transferencia */}
+      {showTransferenciaModal && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
+          style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(4px)" }}>
+          <div className="w-full max-w-md rounded-2xl border border-blue-500/30 p-6 space-y-4"
+            style={{ background: "#0f1629" }}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Banknote className="h-5 w-5 text-blue-400" />
+                <h3 className="text-base font-bold text-white">Datos de transferencia</h3>
+              </div>
+              <button onClick={() => setShowTransferenciaModal(false)}
+                className="p-1 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <p className="text-xs text-gray-400">Realizá la transferencia por <strong className="text-[#FF5722]">{fmtMoney(totals.total)}</strong> a esta cuenta y luego adjuntá el comprobante.</p>
+            <div className="space-y-2">
+              {[
+                { label: "Banco", value: DATOS_TRANSFERENCIA.banco, key: "mbanco" },
+                { label: "Titular", value: DATOS_TRANSFERENCIA.titular, key: "mtitular" },
+                { label: "CBU", value: DATOS_TRANSFERENCIA.cbu, key: "mcbu" },
+                { label: "Alias", value: DATOS_TRANSFERENCIA.alias, key: "malias" },
+                { label: "CUIT", value: DATOS_TRANSFERENCIA.cuit, key: "mcuit" },
+              ].map(({ label, value, key }) => (
+                <div key={key} className="flex items-center justify-between gap-2 rounded-lg bg-white/5 px-3 py-2">
+                  <div>
+                    <p className="text-[10px] text-gray-500 font-semibold uppercase">{label}</p>
+                    <p className="text-sm font-mono text-white font-bold">{value}</p>
+                  </div>
+                  <button type="button" onClick={() => copyToClipboard(value, key)}
+                    className="shrink-0 p-1.5 rounded-lg hover:bg-white/10">
+                    {copiedField === key
+                      ? <CheckCircle className="h-4 w-4 text-[#39FF14]" />
+                      : <Copy className="h-4 w-4 text-gray-400" />}
+                  </button>
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={() => setShowTransferenciaModal(false)}
+              className="w-full rounded-xl bg-blue-600 py-3 font-bold text-white hover:bg-blue-500 transition-colors"
+            >
+              Ya lo sé, volver al formulario
+            </button>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

@@ -1805,10 +1805,39 @@ function AdminPedidosContent() {
                 <CreditCard className="h-4 w-4 text-[#FDB71A]" />
                 Pago
               </h3>
-              <div className="rounded-lg bg-white/5 p-3 text-sm space-y-1">
-                <p><span className="text-gray-500">Forma:</span> {selected.datos_cliente?.formaPago || "-"}</p>
-                {selected.datos_cliente?.comprobante && (
-                  <p><span className="text-gray-500">Comprobante:</span> <span className="text-[#39FF14]">{selected.datos_cliente.comprobante}</span></p>
+              <div className="rounded-lg bg-white/5 p-3 text-sm space-y-2">
+                <p><span className="text-gray-500">Forma:</span> <span className={selected.datos_cliente?.formaPago === "Transferencia" ? "text-blue-400 font-bold" : ""}>{selected.datos_cliente?.formaPago || "-"}</span></p>
+                {selected.datos_cliente?.comprobante && (() => {
+                  const comp = selected.datos_cliente.comprobante;
+                  const isUrl = comp.startsWith("http");
+                  const isImg = /\.(jpg|jpeg|png|webp|gif)$/i.test(comp);
+                  return (
+                    <div className="space-y-2">
+                      <p className="text-gray-500 text-xs font-semibold uppercase">Comprobante</p>
+                      {isUrl && isImg ? (
+                        <a href={comp} target="_blank" rel="noopener noreferrer">
+                          <img src={comp} alt="Comprobante" className="max-w-full max-h-48 rounded-lg border border-white/10 object-contain hover:opacity-90 transition-opacity" />
+                        </a>
+                      ) : isUrl ? (
+                        <a href={comp} target="_blank" rel="noopener noreferrer"
+                          className="flex items-center gap-2 rounded-lg border border-[#39FF14]/30 bg-[#39FF14]/5 px-3 py-2 text-[#39FF14] hover:bg-[#39FF14]/10 transition-colors">
+                          <span className="text-xs font-bold">📎 Ver comprobante</span>
+                        </a>
+                      ) : (
+                        <span className="text-[#39FF14] text-xs">{comp}</span>
+                      )}
+                      {isUrl && (
+                        <p className="text-[10px] text-gray-600">
+                          {selected.datos_cliente?.formaPago === "Transferencia"
+                            ? "⚠️ Verificar transferencia antes de confirmar el pedido"
+                            : ""}
+                        </p>
+                      )}
+                    </div>
+                  );
+                })()}
+                {!selected.datos_cliente?.comprobante && selected.datos_cliente?.formaPago === "Transferencia" && (
+                  <p className="text-xs text-yellow-400 font-medium">⚠️ Sin comprobante adjunto</p>
                 )}
               </div>
             </section>
