@@ -4,8 +4,9 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { MessageTaller } from "@/lib/types";
 import { mensajesDb } from "@/lib/db";
 
-// ── Sonido MSN Messenger real (archivo MP3) ───────────────────
+// ── Sonidos MSN Messenger (archivos MP3) ───────────────
 let msnAudio: HTMLAudioElement | null = null;
+let nudgeAudio: HTMLAudioElement | null = null;
 
 function playMSNDing() {
   try {
@@ -19,6 +20,21 @@ function playMSNDing() {
     setTimeout(() => {
       if (msnAudio) { msnAudio.pause(); msnAudio.currentTime = 0; }
     }, 1000);
+  } catch {}
+}
+
+function playNudge() {
+  try {
+    if (nudgeAudio && !nudgeAudio.paused) return;
+    if (!nudgeAudio) {
+      nudgeAudio = new Audio("/msn-nudge.mp3");
+      nudgeAudio.volume = 0.8;
+    }
+    nudgeAudio.currentTime = 0;
+    nudgeAudio.play().catch(() => {});
+    setTimeout(() => {
+      if (nudgeAudio) { nudgeAudio.pause(); nudgeAudio.currentTime = 0; }
+    }, 2000);
   } catch {}
 }
 
@@ -53,7 +69,11 @@ function registerSW() {
   // Escuchar mensajes del SW para reproducir sonido en esta pestaña
   navigator.serviceWorker.addEventListener("message", (event) => {
     if (event.data?.type === "MSN_PLAY_SOUND") {
-      playMSNDing();
+      if (event.data.soundType === "nudge") {
+        playNudge();
+      } else {
+        playMSNDing();
+      }
     }
   });
 }

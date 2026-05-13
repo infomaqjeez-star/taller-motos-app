@@ -549,9 +549,9 @@ export default function MessengerPanel({
           <button type="button" onClick={()=>setShowEmojis(v=>!v)}
             className={`text-sm px-0.5 hover:scale-110 transition-transform rounded ${showEmojis?"bg-blue-200":""}`} title="Emoticones">😊</button>
           <div className="w-px h-3.5 bg-blue-300 mx-0.5"/>
-          <button onClick={()=>sendSound("nudge","Sacudida")}
+          <button onClick={()=>sendSound("nudge","Zumbido")}
             className="flex items-center gap-0.5 text-[10px] text-blue-800 hover:bg-blue-200 rounded px-1 py-0.5 font-bold">
-            <Volume2 className="w-3 h-3"/> Nudge
+            <Volume2 className="w-3 h-3"/> Zumbido
           </button>
           <div className="w-px h-3.5 bg-blue-300 mx-0.5"/>
           {MSN_SOUNDS.slice(1).map(s => (
@@ -580,7 +580,7 @@ export default function MessengerPanel({
             onKeyDown={e => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
-                if (texto.trim()) { onSend(autor.trim()||"Técnico", texto.trim()); setTexto(""); }
+                if (texto.trim()) { onSend(autor.trim()||"Técnico", texto.trim(), avatar, deviceId, userColor); setTexto(""); updateActivity(); }
               }
             }}
             placeholder="Escribí tu mensaje aquí..."
