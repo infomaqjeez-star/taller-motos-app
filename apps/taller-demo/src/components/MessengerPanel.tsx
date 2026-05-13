@@ -124,6 +124,8 @@ export default function MessengerPanel({
   });
   const [texto, setTexto] = useState("");
   const [showEmojis, setShowEmojis] = useState(false);
+  const [minimized, setMinimized] = useState(false);
+  const [maximized, setMaximized] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -171,15 +173,21 @@ export default function MessengerPanel({
     <div className="fixed inset-0 z-[60] flex items-end justify-end p-3 sm:p-5 pointer-events-none">
       {/* ── Ventana MSN Messenger 7 ── */}
       <div
-        className="w-full max-w-[520px] pointer-events-auto flex flex-col overflow-hidden"
+        className="pointer-events-auto flex flex-col overflow-hidden"
         style={{
-          height: "min(600px, 90vh)",
+          width: maximized ? "100vw" : "min(520px, 100vw)",
+          height: minimized ? "auto" : maximized ? "100vh" : "min(600px, 90vh)",
+          maxWidth: maximized ? "100vw" : undefined,
+          position: maximized ? "fixed" : undefined,
+          inset: maximized ? 0 : undefined,
+          margin: maximized ? 0 : undefined,
           background: "#ecf3fb",
           border: "2px solid #4a7db5",
-          borderRadius: "4px 4px 2px 2px",
+          borderRadius: maximized ? 0 : "4px 4px 2px 2px",
           boxShadow: "3px 3px 12px rgba(0,0,0,0.45)",
           fontFamily: "Tahoma, Arial, sans-serif",
           fontSize: "11px",
+          zIndex: maximized ? 9999 : undefined,
         }}
       >
         {/* ── Barra de título Windows XP ── */}
@@ -196,16 +204,27 @@ export default function MessengerPanel({
             {unreadCount > 0 && <span className="bg-yellow-300 text-black text-[9px] font-black px-1 rounded">{unreadCount} nuevo{unreadCount>1?"s":""}</span>}
           </div>
           <div className="flex gap-[2px]">
-            {["─","□"].map((c,i) => (
-              <div key={i} className="w-[16px] h-[13px] rounded-[2px] flex items-center justify-center text-white text-[9px] font-black cursor-pointer hover:brightness-110"
-                style={{ background: "linear-gradient(to bottom, #7ab3e0, #4a85c0)", border: "1px solid #2563a0", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.35)" }}
-              >{c}</div>
-            ))}
-            <div onClick={onClose} className="w-[16px] h-[13px] rounded-[2px] flex items-center justify-center text-white text-[9px] font-black cursor-pointer hover:brightness-110"
-              style={{ background: "linear-gradient(to bottom, #e87a7a, #c0392b)", border: "1px solid #8b1a1a", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.35)" }}>✕</div>
+            <div
+              onClick={() => { setMinimized(v => !v); setMaximized(false); }}
+              className="w-[16px] h-[13px] rounded-[2px] flex items-center justify-center text-white text-[9px] font-black cursor-pointer hover:brightness-125"
+              style={{ background: "linear-gradient(to bottom, #7ab3e0, #4a85c0)", border: "1px solid #2563a0", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.35)" }}
+              title="Minimizar"
+            >─</div>
+            <div
+              onClick={() => { setMaximized(v => !v); setMinimized(false); }}
+              className="w-[16px] h-[13px] rounded-[2px] flex items-center justify-center text-white text-[9px] font-black cursor-pointer hover:brightness-125"
+              style={{ background: "linear-gradient(to bottom, #7ab3e0, #4a85c0)", border: "1px solid #2563a0", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.35)" }}
+              title={maximized ? "Restaurar" : "Maximizar"}
+            >{maximized ? "❐" : "□"}</div>
+            <div onClick={onClose} className="w-[16px] h-[13px] rounded-[2px] flex items-center justify-center text-white text-[9px] font-black cursor-pointer hover:brightness-125"
+              style={{ background: "linear-gradient(to bottom, #e87a7a, #c0392b)", border: "1px solid #8b1a1a", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.35)" }}
+              title="Cerrar"
+            >✕</div>
           </div>
         </div>
 
+        {/* Contenido colapsable — oculto si minimizado */}
+        {!minimized && (<>
         {/* ── Barra de menú ── */}
         <div className="flex items-center gap-3 px-2 py-[2px] shrink-0"
           style={{ background: "#d6e8f8", borderBottom: "1px solid #b0c8e8" }}>
@@ -383,6 +402,7 @@ export default function MessengerPanel({
           <User className="w-3 h-3 text-blue-500"/>
           <span className="text-[10px] font-bold text-blue-700">{autor}</span>
         </div>
+        </>)}
       </div>
     </div>
   );
