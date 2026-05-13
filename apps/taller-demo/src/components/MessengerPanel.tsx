@@ -2,9 +2,89 @@
 
 import { useState, useRef, useEffect } from "react";
 import {
-  X, Send, MailOpen, Mail, Trash2, User, MessageCircle,
+  X, Send, MailOpen, Mail, Trash2, User, Volume2, MessageCircle,
 } from "lucide-react";
 import { MessageTaller } from "@/lib/types";
+
+// ── Sonidos MSN con Web Audio API ────────────────────────────
+function playSound(type: string) {
+  try {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const sounds: Record<string, () => void> = {
+      ding: () => {
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.connect(g); g.connect(ctx.destination);
+        o.frequency.setValueAtTime(880, ctx.currentTime);
+        o.frequency.exponentialRampToValueAtTime(1100, ctx.currentTime + 0.05);
+        g.gain.setValueAtTime(0.4, ctx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+        o.start(); o.stop(ctx.currentTime + 0.5);
+      },
+      nudge: () => {
+        // Vibración rápida: 3 beeps cortos
+        [0, 0.12, 0.24].forEach(offset => {
+          const o = ctx.createOscillator(), g = ctx.createGain();
+          o.connect(g); g.connect(ctx.destination);
+          o.frequency.value = 660;
+          g.gain.setValueAtTime(0.3, ctx.currentTime + offset);
+          g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + offset + 0.08);
+          o.start(ctx.currentTime + offset);
+          o.stop(ctx.currentTime + offset + 0.08);
+        });
+      },
+      online: () => {
+        // Sonido "usuario conectado" - dos notas ascendentes
+        [[523, 0], [659, 0.15], [784, 0.30]].forEach(([freq, offset]) => {
+          const o = ctx.createOscillator(), g = ctx.createGain();
+          o.connect(g); g.connect(ctx.destination);
+          o.frequency.value = freq as number;
+          g.gain.setValueAtTime(0.25, ctx.currentTime + (offset as number));
+          g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + (offset as number) + 0.2);
+          o.start(ctx.currentTime + (offset as number));
+          o.stop(ctx.currentTime + (offset as number) + 0.2);
+        });
+      },
+      error: () => {
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = "sawtooth";
+        o.connect(g); g.connect(ctx.destination);
+        o.frequency.setValueAtTime(220, ctx.currentTime);
+        o.frequency.exponentialRampToValueAtTime(110, ctx.currentTime + 0.3);
+        g.gain.setValueAtTime(0.2, ctx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+        o.start(); o.stop(ctx.currentTime + 0.3);
+      },
+    };
+    sounds[type]?.();
+  } catch {}
+}
+
+// ── Emojis MSN clásicos ───────────────────────────────────────
+const MSN_EMOJIS = [
+  { emoji: "😊", label: "Feliz" },
+  { emoji: "😢", label: "Triste" },
+  { emoji: "😉", label: "Guiño" },
+  { emoji: "😎", label: "Cool" },
+  { emoji: "😡", label: "Enojado" },
+  { emoji: "😮", label: "Sorpresa" },
+  { emoji: "😂", label: "Risa" },
+  { emoji: "❤️", label: "Amor" },
+  { emoji: "👍", label: "OK" },
+  { emoji: "👎", label: "No" },
+  { emoji: "🎉", label: "Fiesta" },
+  { emoji: "🔥", label: "Fuego" },
+  { emoji: "💪", label: "Fuerza" },
+  { emoji: "🙏", label: "Gracias" },
+  { emoji: "🤔", label: "Hmm" },
+  { emoji: "😴", label: "Dormido" },
+];
+
+const MSN_SOUNDS = [
+  { id: "nudge",  label: "Sacudida",  icon: "📳" },
+  { id: "ding",   label: "Ding",      icon: "🔔" },
+  { id: "online", label: "Conectado", icon: "🟢" },
+  { id: "error",  label: "Error",     icon: "🔴" },
+];
 
 interface MessengerPanelProps {
   open: boolean;
@@ -43,6 +123,8 @@ export default function MessengerPanel({
     return "Técnico";
   });
   const [texto, setTexto] = useState("");
+  const [showEmojis, setShowEmojis] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Guardar nombre de usuario en localStorage
@@ -70,6 +152,17 @@ export default function MessengerPanel({
     if (!texto.trim()) return;
     onSend(autor.trim() || "Técnico", texto.trim());
     setTexto("");
+  };
+
+  const insertEmoji = (emoji: string) => {
+    setTexto(prev => prev + emoji);
+    setShowEmojis(false);
+    inputRef.current?.focus();
+  };
+
+  const sendSound = (soundId: string, label: string) => {
+    playSound(soundId);
+    onSend(autor.trim() || "Técnico", `🔊 ${label}`);
   };
 
   if (!open) return null;
@@ -207,12 +300,59 @@ export default function MessengerPanel({
             />
           </div>
 
+          {/* Barra de sonidos MSN */}
+          <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
+            {MSN_SOUNDS.map((s) => (
+              <button
+                key={s.id}
+                type="button"
+                onClick={() => sendSound(s.id, s.label)}
+                className="flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium whitespace-nowrap transition-colors"
+                style={{ background: "#1a1a1f", border: "1px solid rgba(255,255,255,0.08)", color: "#9ca3af" }}
+                title={s.label}
+              >
+                <Volume2 className="w-2.5 h-2.5" />
+                {s.icon} {s.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Picker de emojis MSN */}
+          {showEmojis && (
+            <div
+              className="grid grid-cols-8 gap-1 p-2 rounded-lg"
+              style={{ background: "#1a1a1f", border: "1px solid rgba(255,255,255,0.08)" }}
+            >
+              {MSN_EMOJIS.map(({ emoji, label }) => (
+                <button
+                  key={emoji}
+                  type="button"
+                  onClick={() => insertEmoji(emoji)}
+                  className="text-xl hover:scale-125 transition-transform"
+                  title={label}
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
+          )}
+
           <form onSubmit={handleSend} className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setShowEmojis(v => !v)}
+              className="w-9 h-9 rounded-lg flex items-center justify-center text-lg shrink-0 transition-colors"
+              style={{ background: showEmojis ? "rgba(59,130,246,0.2)" : "#1a1a1f", border: "1px solid rgba(255,255,255,0.08)" }}
+              title="Emojis MSN"
+            >
+              😊
+            </button>
             <input
+              ref={inputRef}
               type="text"
               value={texto}
               onChange={(e) => setTexto(e.target.value)}
-              placeholder="Escribí un mensaje para el equipo..."
+              placeholder="Escribí un mensaje..."
               className="flex-1 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 outline-none transition-all"
               style={{
                 background: "#1a1a1f",
@@ -224,7 +364,7 @@ export default function MessengerPanel({
             <button
               type="submit"
               disabled={!texto.trim()}
-              className="w-10 h-10 rounded-lg flex items-center justify-center transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+              className="w-9 h-9 rounded-lg flex items-center justify-center transition-all disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
               style={{
                 background: texto.trim() ? "linear-gradient(135deg, #3b82f6, #8b5cf6)" : "#27272a",
                 boxShadow: texto.trim() ? "0 2px 12px -2px rgba(59,130,246,0.4)" : "none",
