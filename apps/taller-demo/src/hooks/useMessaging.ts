@@ -5,12 +5,19 @@ import { MessageTaller } from "@/lib/types";
 import { mensajesDb } from "@/lib/db";
 
 // ── Sonido MSN Messenger real (archivo MP3) ───────────────────
+let msnAudio: HTMLAudioElement | null = null;
+
 function playMSNDing() {
   try {
-    const audio = new Audio("/msn-sound.mp3");
-    audio.volume = 0.8;
-    audio.play().catch(() => {
-      // Browser bloqueó autoplay sin interacción previa — ignorar silenciosamente
+    // Si ya está sonando, no volver a reproducir
+    if (msnAudio && !msnAudio.paused) return;
+    if (!msnAudio) {
+      msnAudio = new Audio("/msn-sound.mp3");
+      msnAudio.volume = 0.8;
+    }
+    msnAudio.currentTime = 0;
+    msnAudio.play().catch(() => {
+      // Browser bloqueó autoplay sin interacción previa
     });
   } catch {
     // Fallback silencioso
