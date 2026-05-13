@@ -141,6 +141,9 @@ export default function MessengerPanel({
 }: MessengerPanelProps) {
   const [autor, setAutor] = useState(() => getDeviceIdentity().nombre);
   const [deviceId] = useState(() => getDeviceIdentity().deviceId);
+  const [avatar, setAvatar] = useState<string | null>(() =>
+    typeof window !== "undefined" ? localStorage.getItem("taller_avatar") : null
+  );
   const [editingName, setEditingName] = useState(false);
   const [tempName, setTempName] = useState("");
   const [texto, setTexto] = useState("");
@@ -149,6 +152,7 @@ export default function MessengerPanel({
   const [maximized, setMaximized] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Guardar nombre de usuario en localStorage
@@ -167,6 +171,18 @@ export default function MessengerPanel({
     const name = tempName.trim() || autor;
     handleAutorChange(name);
     setEditingName(false);
+  };
+
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const b64 = ev.target?.result as string;
+      setAvatar(b64);
+      localStorage.setItem("taller_avatar", b64);
+    };
+    reader.readAsDataURL(file);
   };
 
   // Scroll al final cuando abre o llega mensaje nuevo
@@ -359,30 +375,42 @@ export default function MessengerPanel({
             )}
           </div>
 
-          {/* Columna derecha: fotos/avatar */}
-          <div className="shrink-0 flex flex-col gap-1 p-1.5 overflow-y-auto"
+          {/* Columna derecha: avatar del usuario */}
+          <div className="shrink-0 flex flex-col items-center gap-1 p-1.5"
             style={{ width: "90px", background: "#dce9f5" }}>
-            {/* Avatar muñequito MSN */}
-            <div className="w-full aspect-square rounded flex items-center justify-center"
-              style={{ background: "linear-gradient(135deg, #bfdbfe, #dbeafe)", border: "1px solid #93c5fd" }}>
-              <svg width="56" height="56" viewBox="0 0 48 48" fill="none">
-                <ellipse cx="17" cy="13" rx="5.5" ry="6" fill="#4ade80"/>
-                <ellipse cx="17" cy="13" rx="4" ry="4.5" fill="#86efac"/>
-                <path d="M8 34c0-6 4-10 9-10s9 4 9 10" fill="#4ade80"/>
-                <ellipse cx="15" cy="10.5" rx="2" ry="1.5" fill="white" opacity="0.5" transform="rotate(-20 15 10.5)"/>
-                <ellipse cx="27" cy="15" rx="6.5" ry="7" fill="#38bdf8"/>
-                <ellipse cx="27" cy="15" rx="4.5" ry="5" fill="#7dd3fc"/>
-                <path d="M17 38c0-7 4.5-12 10-12s10 5 10 12" fill="#38bdf8"/>
-                <ellipse cx="24.5" cy="12" rx="2.5" ry="1.8" fill="white" opacity="0.55" transform="rotate(-20 24.5 12)"/>
-              </svg>
+            {/* Avatar clickeable para cambiar */}
+            <div
+              className="w-full aspect-square rounded overflow-hidden flex items-center justify-center cursor-pointer relative group"
+              style={{ border: "2px solid #93c5fd" }}
+              onClick={() => avatarInputRef.current?.click()}
+              title="Cambiar foto"
+            >
+              {avatar ? (
+                <img src={avatar} alt="avatar" className="w-full h-full object-cover" />
+              ) : (
+                <svg width="56" height="56" viewBox="0 0 48 48" fill="none">
+                  <ellipse cx="17" cy="13" rx="5.5" ry="6" fill="#4ade80"/>
+                  <ellipse cx="17" cy="13" rx="4" ry="4.5" fill="#86efac"/>
+                  <path d="M8 34c0-6 4-10 9-10s9 4 9 10" fill="#4ade80"/>
+                  <ellipse cx="15" cy="10.5" rx="2" ry="1.5" fill="white" opacity="0.5" transform="rotate(-20 15 10.5)"/>
+                  <ellipse cx="27" cy="15" rx="6.5" ry="7" fill="#38bdf8"/>
+                  <ellipse cx="27" cy="15" rx="4.5" ry="5" fill="#7dd3fc"/>
+                  <path d="M17 38c0-7 4.5-12 10-12s10 5 10 12" fill="#38bdf8"/>
+                  <ellipse cx="24.5" cy="12" rx="2.5" ry="1.8" fill="white" opacity="0.55" transform="rotate(-20 24.5 12)"/>
+                </svg>
+              )}
+              {/* Overlay al hover */}
+              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                <Pencil className="w-4 h-4 text-white" />
+              </div>
             </div>
-            <p className="text-[9px] text-blue-600 font-bold text-center">Taller Maqjeez</p>
-            {/* Segundo panel */}
-            <div className="w-full aspect-square rounded mt-1 flex items-center justify-center"
-              style={{ background: "linear-gradient(135deg, #d1fae5, #a7f3d0)", border: "1px solid #6ee7b7" }}>
-              <span className="text-3xl">🔧</span>
+            <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
+            <p className="text-[9px] text-blue-700 font-bold text-center truncate w-full px-1">{autor}</p>
+            <div className="w-full rounded flex items-center justify-center gap-1 py-0.5"
+              style={{ background: "#d1fae5", border: "1px solid #6ee7b7" }}>
+              <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block"/>
+              <span className="text-[9px] text-green-700 font-bold">En línea</span>
             </div>
-            <p className="text-[9px] text-green-700 font-bold text-center">En línea</p>
           </div>
         </div>
 
