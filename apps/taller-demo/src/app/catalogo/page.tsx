@@ -360,29 +360,31 @@ function CatalogoContent() {
             >
               <Megaphone className="h-4 w-4" /> Promocionar
             </Link>
-            <div className="relative flex items-center">
-              {vendedorLogueado ? (
+            {!clienteLogueado && (
+              <div className="relative flex items-center">
+                {vendedorLogueado ? (
+                  <Link
+                    href="/catalogo/vendedor/dashboard"
+                    className="bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 px-4 py-2 rounded-lg text-sm font-bold transition-colors flex items-center gap-2"
+                  >
+                    <Users className="h-4 w-4" /> Mi cuenta
+                  </Link>
+                ) : (
+                  <Link
+                    href="/catalogo/vendedor/login"
+                    className="bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-4 py-2 rounded-lg text-sm font-bold transition-colors flex items-center gap-2"
+                  >
+                    <Users className="h-4 w-4" /> Soy vendedor
+                  </Link>
+                )}
+                {/* Punto verde → acceso admin */}
                 <Link
-                  href="/catalogo/vendedor/dashboard"
-                  className="bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 px-4 py-2 rounded-lg text-sm font-bold transition-colors flex items-center gap-2"
-                >
-                  <Users className="h-4 w-4" /> Mi cuenta
-                </Link>
-              ) : (
-                <Link
-                  href="/catalogo/vendedor/login"
-                  className="bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-4 py-2 rounded-lg text-sm font-bold transition-colors flex items-center gap-2"
-                >
-                  <Users className="h-4 w-4" /> Soy vendedor
-                </Link>
-              )}
-              {/* Punto verde → acceso admin */}
-              <Link
-                href="/catalogo/admin/login"
-                title="Acceso Admin"
-                className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-green-500 border-2 border-slate-900 hover:bg-green-400 hover:scale-125 transition-all"
-              />
-            </div>
+                  href="/catalogo/admin/login"
+                  title="Acceso Admin"
+                  className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-green-500 border-2 border-slate-900 hover:bg-green-400 hover:scale-125 transition-all"
+                />
+              </div>
+            )}
           </div>
         </div>
       </nav>
