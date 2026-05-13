@@ -91,7 +91,7 @@ interface MessengerPanelProps {
   onClose: () => void;
   messages: MessageTaller[];
   unreadCount: number;
-  onSend: (autor: string, contenido: string) => void;
+  onSend: (autor: string, contenido: string, avatarUrl?: string | null, deviceId?: string | null) => void;
   onMarkAllRead: () => void;
   onDelete: (id: string) => void;
 }
@@ -248,7 +248,7 @@ export default function MessengerPanel({
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
     if (!texto.trim()) return;
-    onSend(autor.trim() || "Técnico", texto.trim());
+    onSend(autor.trim() || "Técnico", texto.trim(), avatar, deviceId);
     setTexto("");
     updateActivity();
   };
@@ -406,16 +406,25 @@ export default function MessengerPanel({
               [...messages].reverse().map((msg) => {
                 const isUnread = !msg.leido;
                 return (
-                  <div key={msg.id} className="group mb-2">
-                    <div className="flex items-baseline gap-1 flex-wrap">
-                      <span className="text-[11px] font-bold" style={{ color: getUserColor(msg.autor) }}>{msg.autor} dice:</span>
-                      <span className="text-[10px] text-gray-400">({formatTime(msg.createdAt)})</span>
-                      {isUnread && <span className="text-[9px] font-black text-orange-500 ml-1">●NUEVO</span>}
-                      <button onClick={()=>onDelete(msg.id)} className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Trash2 className="w-2.5 h-2.5 text-gray-300 hover:text-red-500"/>
-                      </button>
+                  <div key={msg.id} className="group mb-2 flex gap-1.5">
+                    {/* Mini avatar del autor */}
+                    <div className="shrink-0 w-6 h-6 rounded overflow-hidden mt-0.5 flex items-center justify-center text-white text-[10px] font-bold"
+                      style={{ background: getUserColor(msg.autor), border: `1px solid ${getUserColor(msg.autor)}` }}>
+                      {msg.avatarUrl
+                        ? <img src={msg.avatarUrl} alt={msg.autor} className="w-full h-full object-cover" />
+                        : msg.autor.charAt(0).toUpperCase()}
                     </div>
-                    <div className="text-[12px] text-gray-900 leading-snug pl-1">{msg.contenido}</div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-baseline gap-1 flex-wrap">
+                        <span className="text-[11px] font-bold" style={{ color: getUserColor(msg.autor) }}>{msg.autor} dice:</span>
+                        <span className="text-[10px] text-gray-400">({formatTime(msg.createdAt)})</span>
+                        {isUnread && <span className="text-[9px] font-black text-orange-500 ml-1">●NUEVO</span>}
+                        <button onClick={()=>onDelete(msg.id)} className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Trash2 className="w-2.5 h-2.5 text-gray-300 hover:text-red-500"/>
+                        </button>
+                      </div>
+                      <div className="text-[12px] text-gray-900 leading-snug">{msg.contenido}</div>
+                    </div>
                   </div>
                 );
               })

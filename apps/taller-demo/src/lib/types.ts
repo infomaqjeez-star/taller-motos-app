@@ -151,6 +151,8 @@ export interface MessageTaller {
   contenido: string;
   leido: boolean;
   createdAt: string;
+  avatarUrl?: string | null;
+  deviceId?: string | null;
 }
 
 export interface AgendaCliente {

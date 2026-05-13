@@ -149,8 +149,8 @@ export function useMessaging() {
   }, [unreadCount, stopBlink]);
 
   const send = useCallback(
-    async (autor: string, contenido: string) => {
-      await mensajesDb.create({ autor, contenido });
+    async (autor: string, contenido: string, avatarUrl?: string | null, deviceId?: string | null) => {
+      await mensajesDb.create({ autor, contenido, avatarUrl, deviceId });
       await refresh();
     },
     [refresh]

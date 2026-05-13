@@ -801,6 +801,8 @@ function toMessage(r: Record<string, unknown>): MessageTaller {
     contenido:  r.contenido as string,
     leido:      r.leido as boolean,
     createdAt:  r.created_at as string,
+    avatarUrl:  (r.avatar_url as string | null) ?? null,
+    deviceId:   (r.device_id as string | null) ?? null,
   };
 }
 
@@ -814,7 +816,10 @@ export const mensajesDb = {
   },
 
   async create(msg: Omit<MessageTaller, "id" | "createdAt" | "leido">): Promise<void> {
-    await dbCall({ action: "insert", table: "mensajes_taller", data: { autor: msg.autor, contenido: msg.contenido } });
+    const data: Record<string, unknown> = { autor: msg.autor, contenido: msg.contenido };
+    if (msg.avatarUrl) data.avatar_url = msg.avatarUrl;
+    if (msg.deviceId) data.device_id = msg.deviceId;
+    await dbCall({ action: "insert", table: "mensajes_taller", data });
   },
 
   async marcarLeido(id: string): Promise<void> {
