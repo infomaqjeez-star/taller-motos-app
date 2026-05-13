@@ -170,13 +170,14 @@ export default function MessengerPanel({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-end justify-end p-3 sm:p-5 pointer-events-none">
+    <div className="fixed inset-0 z-[60] flex items-end justify-start p-0 pointer-events-none"
+      style={{ paddingBottom: "88px", paddingLeft: "16px" }}>
       {/* ── Ventana MSN Messenger 7 ── */}
       <div
         className="pointer-events-auto flex flex-col overflow-hidden"
         style={{
-          width: maximized ? "100vw" : "min(520px, 100vw)",
-          height: minimized ? "auto" : maximized ? "100vh" : "min(600px, 90vh)",
+          width: maximized ? "100vw" : "min(520px, calc(100vw - 16px))",
+          height: maximized ? "100vh" : "min(600px, 80vh)",
           maxWidth: maximized ? "100vw" : undefined,
           position: maximized ? "fixed" : undefined,
           inset: maximized ? 0 : undefined,
@@ -205,10 +206,10 @@ export default function MessengerPanel({
           </div>
           <div className="flex gap-[2px]">
             <div
-              onClick={() => { setMinimized(v => !v); setMaximized(false); }}
+              onClick={() => { setMaximized(false); onClose(); }}
               className="w-[16px] h-[13px] rounded-[2px] flex items-center justify-center text-white text-[9px] font-black cursor-pointer hover:brightness-125"
               style={{ background: "linear-gradient(to bottom, #7ab3e0, #4a85c0)", border: "1px solid #2563a0", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.35)" }}
-              title="Minimizar"
+              title="Minimizar (volver al botón)"
             >─</div>
             <div
               onClick={() => { setMaximized(v => !v); setMinimized(false); }}
@@ -223,8 +224,8 @@ export default function MessengerPanel({
           </div>
         </div>
 
-        {/* Contenido colapsable — oculto si minimizado */}
-        {!minimized && (<>
+        {/* Contenido del panel */}
+        {(<>
         {/* ── Barra de menú ── */}
         <div className="flex items-center gap-3 px-2 py-[2px] shrink-0"
           style={{ background: "#d6e8f8", borderBottom: "1px solid #b0c8e8" }}>
