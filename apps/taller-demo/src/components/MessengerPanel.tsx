@@ -169,178 +169,194 @@ export default function MessengerPanel({
 
   return (
     <div className="fixed inset-0 z-[60] flex items-end justify-end p-4 sm:p-6 pointer-events-none">
-      {/* Ventana MSN */}
+      {/* ── Ventana MSN Messenger clásica ── */}
       <div
         className="w-full max-w-lg pointer-events-auto flex flex-col overflow-hidden"
         style={{
-          height: "min(620px, 85vh)",
-          background: "#0f0f12",
-          border: "1px solid rgba(59,130,246,0.25)",
-          borderRadius: "0.75rem",
-          boxShadow: "0 32px 80px -8px rgba(0,0,0,0.9), 0 0 0 1px rgba(59,130,246,0.1)",
+          height: "min(580px, 85vh)",
+          background: "#d4e0f0",
+          border: "2px solid #2152a3",
+          borderRadius: "6px",
+          boxShadow: "4px 4px 16px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.6)",
+          fontFamily: "Arial, Tahoma, sans-serif",
         }}
       >
-        {/* ── Barra de título estilo MSN (gradiente azul) ── */}
+        {/* ── Barra de título Windows XP ── */}
         <div
-          className="flex items-center justify-between px-3 py-2 shrink-0 select-none"
+          className="flex items-center justify-between px-2 py-1 shrink-0 select-none"
           style={{
-            background: "linear-gradient(to right, #1d4ed8, #3b82f6, #2563eb)",
-            borderBottom: "1px solid rgba(255,255,255,0.1)",
+            background: "linear-gradient(to bottom, #4a90d9, #1a5faa 40%, #1749a0)",
+            borderBottom: "1px solid #0f3a8a",
           }}
         >
-          <div className="flex items-center gap-2">
-            {/* Ícono dos muñequitos MSN pequeño */}
-            <svg width="20" height="20" viewBox="0 0 48 48" fill="none">
-              <ellipse cx="17" cy="13" rx="5.5" ry="6" fill="#4ade80" />
-              <ellipse cx="17" cy="13" rx="4" ry="4.5" fill="#86efac" />
+          <div className="flex items-center gap-1.5">
+            <svg width="16" height="16" viewBox="0 0 48 48" fill="none">
+              <ellipse cx="17" cy="13" rx="5.5" ry="6" fill="#4ade80"/>
+              <ellipse cx="17" cy="13" rx="4" ry="4.5" fill="#86efac"/>
               <path d="M8 34c0-6 4-10 9-10s9 4 9 10" fill="#4ade80"/>
-              <ellipse cx="15" cy="10.5" rx="2" ry="1.5" fill="white" opacity="0.5" transform="rotate(-20 15 10.5)" />
-              <ellipse cx="27" cy="15" rx="6.5" ry="7" fill="#bae6fd" />
-              <ellipse cx="27" cy="15" rx="4.5" ry="5" fill="#e0f2fe" />
+              <ellipse cx="15" cy="10.5" rx="2" ry="1.5" fill="white" opacity="0.5" transform="rotate(-20 15 10.5)"/>
+              <ellipse cx="27" cy="15" rx="6.5" ry="7" fill="#bae6fd"/>
+              <ellipse cx="27" cy="15" rx="4.5" ry="5" fill="#e0f2fe"/>
               <path d="M17 38c0-7 4.5-12 10-12s10 5 10 12" fill="#bae6fd"/>
-              <ellipse cx="24.5" cy="12" rx="2.5" ry="1.8" fill="white" opacity="0.6" transform="rotate(-20 24.5 12)" />
+              <ellipse cx="24.5" cy="12" rx="2.5" ry="1.8" fill="white" opacity="0.6" transform="rotate(-20 24.5 12)"/>
             </svg>
-            <span className="text-white text-xs font-bold tracking-wide">Mensajería del Taller</span>
+            <span className="text-white text-[11px] font-bold" style={{ textShadow: "0 1px 1px rgba(0,0,0,0.5)" }}>
+              Mensajería del Taller — MSN
+            </span>
             {unreadCount > 0 && (
-              <span className="bg-yellow-400 text-black text-[10px] font-black px-1.5 py-0.5 rounded-full">{unreadCount} nuevo{unreadCount > 1 ? "s" : ""}</span>
+              <span className="bg-yellow-300 text-black text-[9px] font-black px-1 py-0.5 rounded" style={{ border: "1px solid #ca8a04" }}>
+                {unreadCount} nuevo{unreadCount > 1 ? "s" : ""}
+              </span>
             )}
           </div>
-          <button
-            onClick={onClose}
-            className="w-5 h-5 rounded flex items-center justify-center text-white/80 hover:text-white hover:bg-white/20 transition-colors text-xs font-black"
-            title="Cerrar"
-          >
-            <X className="w-3.5 h-3.5" />
-          </button>
+          {/* Botones XP */}
+          <div className="flex gap-1">
+            <button
+              onClick={onClose}
+              className="w-[18px] h-[14px] rounded-sm flex items-center justify-center text-white text-[10px] font-black transition-all hover:brightness-110"
+              style={{ background: "linear-gradient(to bottom, #f87171, #dc2626)", border: "1px solid #991b1b", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.3)" }}
+              title="Cerrar"
+            >✕</button>
+          </div>
         </div>
 
-        {/* ── Zona superior: historial de mensajes (60%) ── */}
+        {/* ── Barra To: ── */}
         <div
-          ref={scrollRef}
-          className="overflow-y-auto p-3 space-y-1"
-          style={{
-            flex: "1 1 0",
-            minHeight: 0,
-            background: "#fafafa",
-            borderBottom: "3px solid #1d4ed8",
-          }}
+          className="flex items-center gap-2 px-2 py-1 shrink-0"
+          style={{ background: "#eef4fb", borderBottom: "1px solid #b8cfe8" }}
         >
-          {messages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-center gap-2 py-8">
-              <MailOpen className="w-8 h-8 text-blue-300" />
-              <p className="text-gray-400 text-sm">No hay mensajes todavía</p>
-            </div>
-          ) : (
-            [...messages].reverse().map((msg) => {
-              const isUnread = !msg.leido;
-              return (
-                <div key={msg.id} className="group">
-                  {/* Encabezado de mensaje estilo MSN */}
-                  <div className="flex items-baseline gap-1.5">
-                    <span
-                      className="text-[11px] font-bold"
-                      style={{ color: "#1d4ed8" }}
-                    >
-                      {msg.autor}
-                    </span>
-                    <span className="text-[10px] text-gray-400">
-                      {formatDate(msg.createdAt)} {formatTime(msg.createdAt)}
-                    </span>
-                    {isUnread && (
-                      <span className="text-[10px] font-bold text-orange-500 ml-1">● nuevo</span>
-                    )}
-                    <button
-                      onClick={() => onDelete(msg.id)}
-                      className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <Trash2 className="w-3 h-3 text-gray-300 hover:text-red-400" />
-                    </button>
-                  </div>
-                  {/* Texto del mensaje */}
-                  <div
-                    className="text-sm ml-0 pb-1.5"
-                    style={{
-                      color: "#111",
-                      borderBottom: "1px dashed #e5e7eb",
-                      paddingBottom: "6px",
-                      marginBottom: "2px",
-                    }}
-                  >
-                    {msg.contenido}
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </div>
-
-        {/* ── Zona inferior: área de escritura (40%) ── */}
-        <div
-          className="flex flex-col shrink-0"
-          style={{
-            height: "42%",
-            background: "#ffffff",
-            borderTop: "none",
-          }}
-        >
-          {/* Barra de herramientas MSN */}
-          <div
-            className="flex items-center gap-1 px-2 py-1.5 shrink-0"
-            style={{ background: "#dbeafe", borderBottom: "1px solid #bfdbfe" }}
-          >
-            {/* Nombre */}
-            <User className="w-3 h-3 text-blue-600" />
+          <span className="text-[11px] text-gray-600 font-bold">Para:</span>
+          <span className="text-[11px] text-blue-700 font-bold">Equipo del Taller</span>
+          <div className="ml-auto flex items-center gap-1">
+            <User className="w-3 h-3 text-gray-500" />
             <input
               type="text"
               value={autor}
               onChange={(e) => handleAutorChange(e.target.value)}
-              className="text-[11px] font-bold text-blue-700 bg-transparent outline-none w-20"
-              style={{ minWidth: 0 }}
+              className="text-[11px] text-blue-700 font-bold bg-transparent outline-none border-b border-blue-300"
+              placeholder="Tu nombre"
+              style={{ width: "80px" }}
             />
+          </div>
+        </div>
+
+        {/* ── Zona superior: mensajes (izq) + avatar (der) ── */}
+        <div className="flex shrink-0" style={{ height: "52%", borderBottom: "2px solid #5a8fd0" }}>
+          {/* Historial de mensajes */}
+          <div
+            ref={scrollRef}
+            className="flex-1 overflow-y-auto p-2"
+            style={{ background: "#ffffff", borderRight: "1px solid #b8cfe8" }}
+          >
+            {messages.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full gap-2">
+                <MailOpen className="w-7 h-7 text-blue-300" />
+                <p className="text-[11px] text-gray-400 text-center">No hay mensajes todavía.<br/>Escribí el primero.</p>
+              </div>
+            ) : (
+              [...messages].reverse().map((msg) => {
+                const isUnread = !msg.leido;
+                return (
+                  <div key={msg.id} className="group mb-1.5">
+                    <div className="flex items-baseline gap-1 flex-wrap">
+                      <span className="text-[11px] font-bold" style={{ color: "#1a56c4" }}>{msg.autor}</span>
+                      <span className="text-[10px] text-gray-400">dice ({formatTime(msg.createdAt)})</span>
+                      {isUnread && <span className="text-[9px] font-black text-orange-500">●NUEVO</span>}
+                      <button onClick={() => onDelete(msg.id)} className="ml-auto opacity-0 group-hover:opacity-100">
+                        <Trash2 className="w-2.5 h-2.5 text-gray-300 hover:text-red-500" />
+                      </button>
+                    </div>
+                    <div className="text-[12px] text-gray-800 pl-1 pb-1.5" style={{ borderBottom: "1px solid #e5e7eb" }}>
+                      {msg.contenido}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* Avatar / foto del taller */}
+          <div
+            className="shrink-0 flex flex-col items-center justify-start pt-3 gap-2"
+            style={{ width: "80px", background: "#eef4fb" }}
+          >
+            {/* Muñequito MSN grande */}
+            <div
+              className="w-16 h-16 rounded flex items-center justify-center"
+              style={{ background: "linear-gradient(135deg, #dbeafe, #eff6ff)", border: "1px solid #bfdbfe" }}
+            >
+              <svg width="52" height="52" viewBox="0 0 48 48" fill="none">
+                <ellipse cx="17" cy="13" rx="5.5" ry="6" fill="#4ade80"/>
+                <ellipse cx="17" cy="13" rx="4" ry="4.5" fill="#86efac"/>
+                <path d="M8 34c0-6 4-10 9-10s9 4 9 10" fill="#4ade80"/>
+                <ellipse cx="15" cy="10.5" rx="2" ry="1.5" fill="white" opacity="0.5" transform="rotate(-20 15 10.5)"/>
+                <ellipse cx="27" cy="15" rx="6.5" ry="7" fill="#38bdf8"/>
+                <ellipse cx="27" cy="15" rx="4.5" ry="5" fill="#7dd3fc"/>
+                <path d="M17 38c0-7 4.5-12 10-12s10 5 10 12" fill="#38bdf8"/>
+                <ellipse cx="24.5" cy="12" rx="2.5" ry="1.8" fill="white" opacity="0.55" transform="rotate(-20 24.5 12)"/>
+              </svg>
+            </div>
+            <span className="text-[9px] text-blue-600 font-bold text-center leading-tight">Taller<br/>Maqjeez</span>
+          </div>
+        </div>
+
+        {/* ── Zona inferior: escritura ── */}
+        <div className="flex flex-col flex-1 min-h-0" style={{ background: "#ffffff" }}>
+          {/* Toolbar estilo MSN */}
+          <div
+            className="flex items-center gap-0.5 px-2 py-1 shrink-0"
+            style={{ background: "#dbeafe", borderBottom: "1px solid #93c5fd" }}
+          >
+            {/* Formato texto */}
+            <button className="text-[13px] font-black text-blue-800 px-1 hover:bg-blue-200 rounded" title="Negrita">A</button>
             <div className="w-px h-4 bg-blue-300 mx-1" />
-            {/* Botón emojis */}
+            {/* Emojis */}
             <button
               type="button"
               onClick={() => setShowEmojis(v => !v)}
-              className="text-base hover:scale-110 transition-transform px-0.5"
-              title="Emojis"
+              className="text-sm px-0.5 hover:scale-110 transition-transform"
+              title="Emoticones"
             >😊</button>
+            {/* Voice Clip label */}
+            <button
+              onClick={() => sendSound("nudge", "Sacudida")}
+              className="flex items-center gap-0.5 text-[10px] text-blue-700 hover:bg-blue-200 rounded px-1 py-0.5 font-bold"
+              title="Nudge - Sacudir"
+            >
+              <Volume2 className="w-3 h-3" /> Nudge
+            </button>
             <div className="w-px h-4 bg-blue-300 mx-1" />
             {/* Sonidos */}
-            {MSN_SOUNDS.map((s) => (
+            {MSN_SOUNDS.slice(1).map((s) => (
               <button
                 key={s.id}
                 type="button"
                 onClick={() => sendSound(s.id, s.label)}
                 className="text-sm hover:scale-110 transition-transform px-0.5"
-                title={`${s.label} (reproduce sonido)`}
-              >
-                {s.icon}
-              </button>
+                title={s.label}
+              >{s.icon}</button>
             ))}
           </div>
 
-          {/* Picker emojis flotante */}
+          {/* Picker emojis */}
           {showEmojis && (
             <div
-              className="absolute bottom-[42%] left-0 right-0 mx-3 grid grid-cols-8 gap-1 p-2 rounded-t-lg z-10"
-              style={{ background: "#eff6ff", border: "1px solid #bfdbfe", borderBottom: "none" }}
+              className="shrink-0 grid grid-cols-8 gap-0.5 p-2"
+              style={{ background: "#eff6ff", borderBottom: "1px solid #bfdbfe" }}
             >
               {MSN_EMOJIS.map(({ emoji, label }) => (
                 <button
                   key={emoji}
                   type="button"
                   onClick={() => insertEmoji(emoji)}
-                  className="text-xl hover:scale-125 transition-transform"
+                  className="text-lg hover:scale-125 transition-transform text-center"
                   title={label}
-                >
-                  {emoji}
-                </button>
+                >{emoji}</button>
               ))}
             </div>
           )}
 
-          {/* Textarea de escritura */}
+          {/* Textarea */}
           <textarea
             ref={inputRef as any}
             value={texto}
@@ -348,23 +364,20 @@ export default function MessengerPanel({
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
-                if (texto.trim()) {
-                  onSend(autor.trim() || "Técnico", texto.trim());
-                  setTexto("");
-                }
+                if (texto.trim()) { onSend(autor.trim() || "Técnico", texto.trim()); setTexto(""); }
               }
             }}
-            placeholder="Escribí tu mensaje aquí... (Enter para enviar, Shift+Enter nueva línea)"
-            className="flex-1 resize-none px-3 py-2 text-sm text-gray-800 outline-none"
+            placeholder="Escribí tu mensaje aquí..."
+            className="flex-1 resize-none px-2 py-1.5 text-[13px] text-gray-800 outline-none min-h-0"
             style={{ background: "#ffffff", fontFamily: "Arial, sans-serif" }}
           />
 
-          {/* Footer con botón enviar */}
+          {/* Botón Enviar estilo XP */}
           <div
-            className="flex items-center justify-end gap-2 px-3 py-2 shrink-0"
-            style={{ background: "#eff6ff", borderTop: "1px solid #bfdbfe" }}
+            className="flex items-center justify-end px-2 py-1.5 gap-2 shrink-0"
+            style={{ background: "#dbeafe", borderTop: "1px solid #93c5fd" }}
           >
-            <span className="text-[10px] text-gray-400">Enter para enviar</span>
+            <span className="text-[10px] text-gray-500">Enter para enviar</span>
             <button
               type="button"
               disabled={!texto.trim()}
@@ -373,11 +386,12 @@ export default function MessengerPanel({
                 onSend(autor.trim() || "Técnico", texto.trim());
                 setTexto("");
               }}
-              className="flex items-center gap-1.5 px-4 py-1.5 rounded text-xs font-bold text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+              className="flex items-center gap-1 px-3 py-1 text-[11px] font-bold rounded transition-all disabled:opacity-40"
               style={{
-                background: texto.trim() ? "linear-gradient(to bottom, #3b82f6, #1d4ed8)" : "#93c5fd",
-                border: "1px solid #1e40af",
-                boxShadow: texto.trim() ? "0 1px 4px rgba(29,78,216,0.4)" : "none",
+                background: "linear-gradient(to bottom, #f0f7ff, #c8dff7)",
+                border: "1px solid #5a8fd0",
+                color: "#1a3a6e",
+                boxShadow: "inset 0 1px 0 rgba(255,255,255,0.8), 0 1px 2px rgba(0,0,0,0.2)",
               }}
             >
               <Send className="w-3 h-3" /> Enviar
