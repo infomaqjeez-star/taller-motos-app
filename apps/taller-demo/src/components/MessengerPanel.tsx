@@ -109,6 +109,28 @@ function formatDate(ts: string) {
   return d.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit" });
 }
 
+// ── Color único y consistente por nombre de usuario ─────────
+const USER_COLORS = [
+  "#1a56c4", // azul MSN clásico
+  "#b91c1c", // rojo
+  "#15803d", // verde
+  "#7c3aed", // violeta
+  "#c2410c", // naranja
+  "#0e7490", // cyan
+  "#be185d", // rosa
+  "#92400e", // marrón
+  "#1d4ed8", // azul índigo
+  "#065f46", // verde esmeralda
+];
+
+function getUserColor(name: string): string {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return USER_COLORS[Math.abs(hash) % USER_COLORS.length];
+}
+
 // ── Generar ID único de dispositivo y nombre automático ──────
 function getDeviceIdentity(): { deviceId: string; nombre: string } {
   if (typeof window === "undefined") return { deviceId: "dev-0", nombre: "Técnico" };
@@ -386,7 +408,7 @@ export default function MessengerPanel({
                 return (
                   <div key={msg.id} className="group mb-2">
                     <div className="flex items-baseline gap-1 flex-wrap">
-                      <span className="text-[11px] font-bold" style={{ color: "#1a56c4" }}>{msg.autor} dice:</span>
+                      <span className="text-[11px] font-bold" style={{ color: getUserColor(msg.autor) }}>{msg.autor} dice:</span>
                       <span className="text-[10px] text-gray-400">({formatTime(msg.createdAt)})</span>
                       {isUnread && <span className="text-[9px] font-black text-orange-500 ml-1">●NUEVO</span>}
                       <button onClick={()=>onDelete(msg.id)} className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
