@@ -28,37 +28,45 @@ export default function AdminLoginPage() {
     e.preventDefault();
     setLoading(true);
     setError("");
+    try {
+      const res = await login(form.email, form.password);
+      if (res.error) {
+        setError(res.error);
+        setLoading(false);
+        return;
+      }
 
-    const res = await login(form.email, form.password);
-    if (res.error) {
-      setError(res.error);
+      if (res.requires2FA && res.tempToken) {
+        setTempToken(res.tempToken);
+        setStep(2);
+        setLoading(false);
+        return;
+      }
+
+      router.push("/catalogo/admin/pedidos");
+    } catch (err: any) {
+      setError(err.message || "Error de red al iniciar sesión");
       setLoading(false);
-      return;
     }
-
-    if (res.requires2FA && res.tempToken) {
-      setTempToken(res.tempToken);
-      setStep(2);
-      setLoading(false);
-      return;
-    }
-
-    router.push("/catalogo/admin/pedidos");
   };
 
   const handleStep2 = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
+    try {
+      const res = await verify2FA(tempToken, code);
+      if (res.error) {
+        setError(res.error);
+        setLoading(false);
+        return;
+      }
 
-    const res = await verify2FA(tempToken, code);
-    if (res.error) {
-      setError(res.error);
+      router.push("/catalogo/admin/pedidos");
+    } catch (err: any) {
+      setError(err.message || "Error de red al verificar");
       setLoading(false);
-      return;
     }
-
-    router.push("/catalogo/admin/pedidos");
   };
 
   return (
