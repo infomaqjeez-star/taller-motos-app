@@ -7,18 +7,23 @@ import { useVendedorAuth } from "@/components/vendedor/VendedorAuthContext";
 import {
   Store, LogOut, Copy, Check, DollarSign, ShoppingBag, TrendingUp,
   ArrowLeft, Award, Timer, Star, Target, TrendingDown,
-  AlertTriangle, Megaphone, Info, Package, Globe, Clock
+  AlertTriangle, Megaphone, Info, Package, Globe, Clock, Users
 } from "lucide-react";
 
 interface Pedido {
   id: string;
   total: number;
   estado: string;
+  estado_pago?: string;
+  estado_envio?: string;
   comision_monto: number;
   comision_estado: string;
   created_at: string;
   fecha_limite_pago?: string | null;
   fecha_pago_comision?: string | null;
+  fecha_pago?: string | null;
+  fecha_despacho?: string | null;
+  fecha_entrega?: string | null;
   datos_cliente: { nombre?: string };
 }
 
@@ -185,6 +190,15 @@ export default function VendedorDashboardPage() {
           >
             <Store className="h-4 w-4" /> Catálogo
           </button>
+          {(vendedor as any).es_gerente && (
+            <button
+              onClick={() => router.push("/catalogo/vendedor/gerente")}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors text-white"
+              style={{ background: "rgba(249,115,22,0.15)", border: "1px solid rgba(249,115,22,0.35)", color: "#fb923c" }}
+            >
+              <Users className="h-4 w-4" /> Mi Equipo
+            </button>
+          )}
 
           {/* Notificaciones */}
           <div className="relative">
@@ -335,43 +349,93 @@ export default function VendedorDashboardPage() {
             </button>
           </div>
         ) : (
-          <div className="space-y-3">
-            {pedidos.map((p) => (
-              <div
-                key={p.id}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-white/5 px-4 py-3"
-                style={{ background: "rgba(255,255,255,0.02)" }}
-              >
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-slate-200">
-                    {p.datos_cliente?.nombre || "Cliente"}
-                  </p>
-                  <p className="text-xs text-slate-500">
-                    {new Date(p.created_at).toLocaleDateString("es-AR")} — {p.estado}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-bold text-white">{fmtMoney(p.total)}</p>
-                  {p.comision_estado === "pagada" ? (
-                    <p className="text-xs text-emerald-400">
-                      <Check className="inline h-3 w-3 mr-0.5" />
-                      Comisión pagada
-                      {p.fecha_pago_comision && ` - ${new Date(p.fecha_pago_comision).toLocaleDateString("es-AR")}`}
+          <div className="space-y-2">
+            {pedidos.map((p) => {
+              const diasRestantes = calcularDiasRestantes(p.fecha_limite_pago);
+              const comisionUrgente = p.comision_estado !== "pagada" && p.fecha_limite_pago && diasRestantes <= 3;
+              return (
+              <div key={p.id} className="rounded-xl overflow-hidden border border-white/5"
+                style={{ background: "rgba(255,255,255,0.02)" }}>
+                {/* Fila principal */}
+                <div className="flex flex-wrap items-center gap-3 px-4 py-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-slate-200 truncate">
+                      {p.datos_cliente?.nombre || "Cliente"}
                     </p>
-                  ) : (
-                    <div className="text-xs">
-                      <p className="text-amber-400">Comisión: {fmtMoney(p.comision_monto)}</p>
-                      {p.fecha_limite_pago && (
-                        <p className={calcularDiasRestantes(p.fecha_limite_pago) <= 3 ? "text-red-400" : "text-slate-500"}>
-                          <Timer className="inline h-3 w-3 mr-0.5" />
-                          {calcularDiasRestantes(p.fecha_limite_pago)} días para cobrar
-                        </p>
-                      )}
-                    </div>
-                  )}
+                    <p className="text-xs text-slate-600 mt-0.5">
+                      {new Date(p.created_at).toLocaleDateString("es-AR")}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {/* Estado pedido */}
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                      p.estado === "entregado" ? "text-emerald-400 bg-emerald-400/10 border-emerald-400/30" :
+                      p.estado === "enviado"   ? "text-blue-400 bg-blue-400/10 border-blue-400/30" :
+                      p.estado === "confirmado"|| p.estado === "pagado" ? "text-purple-400 bg-purple-400/10 border-purple-400/30" :
+                      p.estado === "cancelado" ? "text-red-400 bg-red-400/10 border-red-400/30" :
+                      "text-yellow-400 bg-yellow-400/10 border-yellow-400/30"
+                    }`}>
+                      {p.estado === "entregado" ? "✓ Entregado" :
+                       p.estado === "enviado"   ? "🚚 Enviado" :
+                       p.estado === "confirmado"? "✓ Confirmado" :
+                       p.estado === "pagado"    ? "💳 Pagado" :
+                       p.estado === "cancelado" ? "✕ Cancelado" : "⏳ Pendiente"}
+                    </span>
+                    {/* Estado pago */}
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                      p.estado_pago === "pagado" ? "text-emerald-400 bg-emerald-400/10 border-emerald-400/30" : "text-slate-500 bg-slate-500/10 border-slate-500/20"
+                    }`}>
+                      {p.estado_pago === "pagado" ? "💰 Pago ✓" : "💰 Sin pago"}
+                    </span>
+                    {/* Estado envío */}
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                      p.estado_envio === "entregado" ? "text-emerald-400 bg-emerald-400/10 border-emerald-400/30" :
+                      p.estado_envio === "enviado"   ? "text-blue-400 bg-blue-400/10 border-blue-400/30" :
+                      "text-slate-500 bg-slate-500/10 border-slate-500/20"
+                    }`}>
+                      {p.estado_envio === "entregado" ? "📦 Entregado" :
+                       p.estado_envio === "enviado"   ? "🚚 Despachado" : "📦 Sin despacho"}
+                    </span>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-sm font-black text-white">{fmtMoney(p.total)}</p>
+                  </div>
+                </div>
+
+                {/* Fila comisión */}
+                <div className={`flex items-center justify-between px-4 py-2 border-t ${comisionUrgente ? "border-red-500/20" : "border-white/[0.04]"}`}
+                  style={{ background: comisionUrgente ? "rgba(239,68,68,0.05)" : p.comision_estado === "pagada" ? "rgba(16,185,129,0.04)" : "rgba(245,158,11,0.04)" }}>
+                  <div className="flex items-center gap-2">
+                    <DollarSign className={`h-3.5 w-3.5 ${p.comision_estado === "pagada" ? "text-emerald-400" : comisionUrgente ? "text-red-400" : "text-amber-400"}`} />
+                    <span className="text-xs font-bold" style={{ color: p.comision_estado === "pagada" ? "#34d399" : comisionUrgente ? "#f87171" : "#fbbf24" }}>
+                      {p.comision_estado === "pagada"
+                        ? `Comisión pagada: ${fmtMoney(p.comision_monto)}`
+                        : `Comisión pendiente: ${fmtMoney(p.comision_monto)}`}
+                    </span>
+                  </div>
+                  <div className="text-right">
+                    {p.comision_estado === "pagada" && p.fecha_pago_comision && (
+                      <p className="text-[10px] text-slate-500">
+                        <Check className="inline h-3 w-3 mr-0.5" />
+                        {new Date(p.fecha_pago_comision).toLocaleDateString("es-AR")}
+                      </p>
+                    )}
+                    {p.comision_estado !== "pagada" && p.fecha_limite_pago && (
+                      <p className={`text-[10px] ${diasRestantes <= 3 ? "text-red-400 font-bold" : "text-slate-500"}`}>
+                        <Timer className="inline h-3 w-3 mr-0.5" />
+                        {diasRestantes > 0 ? `${diasRestantes}d para cobrar` : "Vencido"}
+                      </p>
+                    )}
+                    {p.fecha_despacho && (
+                      <p className="text-[10px] text-slate-600">
+                        Desp: {new Date(p.fecha_despacho).toLocaleDateString("es-AR")}
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </section>

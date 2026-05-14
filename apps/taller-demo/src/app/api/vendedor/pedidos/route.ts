@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
     const supabase = getSupabaseServer();
     const { data: pedidos, error } = await supabase
       .from("pedidos_catalogo")
-      .select("*")
+      .select("id, created_at, estado, estado_pago, estado_envio, total, comision_monto, comision_estado, comision_gerente_monto, datos_cliente, fecha_limite_pago, fecha_pago_comision, fecha_pago, fecha_despacho, fecha_entrega, vendedor_id, gerente_id")
       .eq("vendedor_id", vendedorId)
       .order("created_at", { ascending: false });
 

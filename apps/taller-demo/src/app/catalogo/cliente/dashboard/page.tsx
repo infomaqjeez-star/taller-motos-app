@@ -647,6 +647,84 @@ export default function ClienteDashboardPage() {
                               </button>
                             </div>
 
+                            {/* ── ESTADO DEL PEDIDO (transparencia) ── */}
+                            <div className="rounded-xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.07)" }}>
+                              <div className="px-3 py-2 flex items-center gap-1.5" style={{ background: "rgba(255,255,255,0.03)", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                                <Package className="h-3.5 w-3.5 text-gray-500" />
+                                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Estado del pedido</p>
+                              </div>
+                              <div className="grid grid-cols-3">
+                                {/* Estado general */}
+                                <div className="p-3 text-center" style={{ borderRight: "1px solid rgba(255,255,255,0.05)" }}>
+                                  <p className="text-[9px] text-gray-600 uppercase font-bold mb-1.5">Pedido</p>
+                                  <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${estado.color}`}>
+                                    {estado.icon} {estado.label}
+                                  </span>
+                                </div>
+                                {/* Estado pago */}
+                                <div className="p-3 text-center" style={{ borderRight: "1px solid rgba(255,255,255,0.05)" }}>
+                                  <p className="text-[9px] text-gray-600 uppercase font-bold mb-1.5">Pago</p>
+                                  {p.estado_pago === "pagado" ? (
+                                    <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border text-emerald-400 bg-emerald-400/10 border-emerald-400/30">
+                                      <CheckCircle className="h-2.5 w-2.5" /> Pagado
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border text-yellow-400 bg-yellow-400/10 border-yellow-400/30">
+                                      ⏳ Pendiente
+                                    </span>
+                                  )}
+                                  {p.fecha_pago && (
+                                    <p className="text-[9px] text-gray-600 mt-1">{new Date(p.fecha_pago).toLocaleDateString("es-AR")}</p>
+                                  )}
+                                </div>
+                                {/* Estado envío */}
+                                <div className="p-3 text-center">
+                                  <p className="text-[9px] text-gray-600 uppercase font-bold mb-1.5">Envío</p>
+                                  {p.estado_envio === "entregado" ? (
+                                    <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border text-emerald-400 bg-emerald-400/10 border-emerald-400/30">
+                                      ✓ Entregado
+                                    </span>
+                                  ) : p.estado_envio === "enviado" ? (
+                                    <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border text-blue-400 bg-blue-400/10 border-blue-400/30">
+                                      🚚 En camino
+                                    </span>
+                                  ) : p.estado === "confirmado" || p.estado === "pagado" ? (
+                                    <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border text-purple-400 bg-purple-400/10 border-purple-400/30">
+                                      📦 Preparando
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border text-gray-400 bg-gray-400/10 border-gray-400/30">
+                                      ⏳ Pendiente
+                                    </span>
+                                  )}
+                                  {p.fecha_despacho && (
+                                    <p className="text-[9px] text-gray-600 mt-1">Desp: {new Date(p.fecha_despacho).toLocaleDateString("es-AR")}</p>
+                                  )}
+                                </div>
+                              </div>
+                              {/* Tracking */}
+                              {p.tracking && (
+                                <div className="px-3 py-2 flex items-center gap-2" style={{ borderTop: "1px solid rgba(255,255,255,0.05)", background: "rgba(59,130,246,0.04)" }}>
+                                  <Package className="h-3 w-3 text-blue-400 shrink-0" />
+                                  <p className="text-[10px] text-gray-500">Tracking: <span className="text-blue-400 font-mono font-bold">{p.tracking}</span></p>
+                                  {p.medio_envio && <span className="text-[9px] text-gray-600 ml-auto">{p.medio_envio}</span>}
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Vendedor referente del pedido */}
+                            {p.vendedor && (
+                              <div className="rounded-xl p-3 flex items-center gap-2" style={{ background: "rgba(0,255,102,0.04)", border: "1px solid rgba(0,255,102,0.12)" }}>
+                                <div className="w-7 h-7 rounded-full flex items-center justify-center font-black text-xs shrink-0" style={{ background: "rgba(0,255,102,0.1)", color: "#00FF66" }}>
+                                  {p.vendedor.nombre?.charAt(0).toUpperCase()}
+                                </div>
+                                <div>
+                                  <p className="text-[10px] text-gray-500 uppercase font-bold">Vendedor</p>
+                                  <p className="text-xs font-bold text-white">{p.vendedor.nombre} <span className="font-mono text-[10px]" style={{ color: "#00FF66" }}>({p.vendedor.codigo_referido})</span></p>
+                                </div>
+                              </div>
+                            )}
+
                             {Array.isArray(p.items) && p.items.length > 0 && (
                               <div>
                                 <p className="text-xs text-slate-500 font-semibold uppercase tracking-wide mb-2">Productos</p>

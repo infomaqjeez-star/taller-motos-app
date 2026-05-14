@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
 
     const { data: pedidos, error } = await supabase
       .from("pedidos_catalogo")
-      .select("id, created_at, estado, total, subtotal, items, datos_cliente, comision_estado")
+      .select("id, created_at, estado, estado_pago, estado_envio, total, subtotal, items, datos_cliente, comision_estado, comision_monto, vendedor_id, fecha_pago, fecha_despacho, fecha_entrega, tracking, medio_envio, vendedor:vendedores(nombre, codigo_referido)")
       .eq("datos_cliente->>cliente_id", clienteId)
       .order("created_at", { ascending: false })
       .limit(50);
@@ -44,7 +44,7 @@ export async function GET(req: NextRequest) {
       if (clienteData?.email) {
         const { data: pedidosByEmail } = await supabase
           .from("pedidos_catalogo")
-          .select("id, created_at, estado, total, subtotal, items, datos_cliente, comision_estado")
+          .select("id, created_at, estado, estado_pago, estado_envio, total, subtotal, items, datos_cliente, comision_estado, comision_monto, vendedor_id, fecha_pago, fecha_despacho, fecha_entrega, tracking, medio_envio, vendedor:vendedores(nombre, codigo_referido)")
           .eq("datos_cliente->>email", clienteData.email)
           .order("created_at", { ascending: false })
           .limit(50);
