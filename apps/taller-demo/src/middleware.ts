@@ -6,6 +6,7 @@ function isPublicPath(pathname: string): boolean {
   if (pathname.startsWith("/catalogo")) return true;
   /* APIs públicas del catálogo (sin sesión Google) */
   if (pathname.startsWith("/api/catalogo")) return true;
+  if (pathname.startsWith("/api/admin")) return true;
   if (pathname.startsWith("/api/vendedor")) return true;
   if (pathname.startsWith("/api/cliente")) return true;
   if (pathname.startsWith("/api/pedidos")) return true;
