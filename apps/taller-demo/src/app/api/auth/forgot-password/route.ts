@@ -119,8 +119,7 @@ export async function POST(req: NextRequest) {
             <p style="color: #334155; font-size: 11px; margin: 0;">MaqJeez · Repuestos y equipos · soporte@maqjeez.com</p>
           </div>
         </div>
-      `,
-    });
+      `);
 
     return respuestaOk;
   } catch (err) {
