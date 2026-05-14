@@ -1,37 +1,51 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServer } from "@/lib/supabase-server";
 
-export const dynamic = "force-dynamic";
-export const revalidate = 300; // 5 min server-side cache
+export const revalidate = 300; // 5 min ISR
+
+// Cache en memoria para evitar golpear Supabase en cada request
+let cache: { data: any[]; ts: number } | null = null;
+const CACHE_TTL_MS = 300_000; // 5 minutos
 
 export async function GET(_req: NextRequest) {
   try {
-    const supabase = getSupabaseServer();
-
-    // 1) Productos activos del catálogo
-    const { data: productos, error: pError } = await supabase
-      .from("catalog_products")
-      .select("sku, name, catalog_price, image_url, category")
-      .eq("active", true);
-
-    if (pError) {
-      return NextResponse.json({ error: pError.message }, { status: 500 });
+    // 1) Devolver cache si está fresco
+    if (cache && Date.now() - cache.ts < CACHE_TTL_MS) {
+      return NextResponse.json(
+        { productos: cache.data },
+        {
+          headers: {
+            "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
+          },
+        }
+      );
     }
 
-    // 2) Ventas por SKU (solo ventas activas)
-    const { data: ventasItems, error: vError } = await supabase
-      .from("ventas_items")
-      .select("sku, cantidad, ventas_repuestos!inner(status)")
-      .eq("ventas_repuestos.status", "activa");
+    const supabase = getSupabaseServer();
 
-    if (vError) {
-      console.error("[catalogo/productos] error ventas:", vError);
-      // No fallamos, simplemente devolvemos productos sin orden de ventas
+    // 2) Paralelizar ambas queries
+    const [productosRes, ventasRes] = await Promise.all([
+      supabase
+        .from("catalog_products")
+        .select("sku, name, catalog_price, image_url, category")
+        .eq("active", true),
+      supabase
+        .from("ventas_items")
+        .select("sku, cantidad, ventas_repuestos!inner(status)")
+        .eq("ventas_repuestos.status", "activa"),
+    ]);
+
+    if (productosRes.error) {
+      return NextResponse.json({ error: productosRes.error.message }, { status: 500 });
+    }
+
+    if (ventasRes.error) {
+      console.error("[catalogo/productos] error ventas:", ventasRes.error);
     }
 
     // 3) Contar ventas por SKU
     const ventasPorSku: Record<string, number> = {};
-    ventasItems?.forEach((item: any) => {
+    ventasRes.data?.forEach((item: any) => {
       const sku = item.sku;
       if (sku && sku.trim() !== "") {
         ventasPorSku[sku] = (ventasPorSku[sku] || 0) + (item.cantidad || 1);
@@ -39,17 +53,20 @@ export async function GET(_req: NextRequest) {
     });
 
     // 4) Unir y ordenar: primero por ventas_count DESC, luego por SKU
-    const productosConVentas = (productos || []).map((p) => ({
+    const productosConVentas = (productosRes.data || []).map((p) => ({
       ...p,
       ventas_count: ventasPorSku[p.sku] || 0,
     }));
 
     productosConVentas.sort((a, b) => {
       if (b.ventas_count !== a.ventas_count) {
-        return b.ventas_count - a.ventas_count; // más vendidos primero
+        return b.ventas_count - a.ventas_count;
       }
       return (a.sku || "").localeCompare(b.sku || "", undefined, { numeric: true, sensitivity: "base" });
     });
+
+    // 5) Guardar en cache
+    cache = { data: productosConVentas, ts: Date.now() };
 
     return NextResponse.json(
       { productos: productosConVentas },

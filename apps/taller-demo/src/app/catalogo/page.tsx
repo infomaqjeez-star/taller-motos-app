@@ -305,8 +305,7 @@ function CatalogoContent() {
       <nav
         className="sticky top-0 z-50 px-4 md:px-8 py-4"
         style={{
-          background: "rgba(2,6,23,0.8)",
-          backdropFilter: "blur(12px)",
+          background: "#020617",
           borderBottom: "1px solid rgba(255,255,255,0.05)",
         }}
       >
