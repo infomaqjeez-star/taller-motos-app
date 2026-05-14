@@ -684,6 +684,85 @@ function AdminPedidosContent() {
             </div>
           </div>
 
+          {/* Estructura de Equipos — gerentes y sus vendedores */}
+          {vendedores.filter(v => v.es_gerente).length > 0 && (
+            <div className="rounded-xl border border-purple-500/20 shadow-lg overflow-hidden" style={{ backgroundColor: "#111827" }}>
+              <div className="px-5 py-3 border-b border-gray-800 flex items-center justify-between">
+                <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                  <Award className="h-4 w-4 text-purple-400" /> Estructura de Equipos
+                  <span className="text-[10px] font-normal text-gray-500 ml-1">
+                    {vendedores.filter(v => v.es_gerente).length} gerente{vendedores.filter(v => v.es_gerente).length !== 1 ? "s" : ""} ·{" "}
+                    {vendedores.filter(v => !v.es_gerente && v.lider_id).length} vendedor{vendedores.filter(v => !v.es_gerente && v.lider_id).length !== 1 ? "es" : ""} asignado{vendedores.filter(v => !v.es_gerente && v.lider_id).length !== 1 ? "s" : ""} ·{" "}
+                    {vendedores.filter(v => !v.es_gerente && !v.lider_id).length} sin gerente
+                  </span>
+                </h3>
+                <button onClick={() => cambiarVista("gerentes")} className="text-xs text-purple-400 hover:text-white transition">Ver detalle →</button>
+              </div>
+              <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {vendedores.filter(v => v.es_gerente).map(gerente => {
+                  const equipo = vendedores.filter(s => s.lider_id === gerente.id);
+                  const ventasEquipo = equipo.reduce((sum, s) =>
+                    sum + pedidos.filter(p => p.vendedor_id === s.id && p.estado !== "cancelado").reduce((ps, p) => ps + (p.total || 0), 0), 0);
+                  return (
+                    <div key={gerente.id} className="rounded-xl p-4 border border-purple-500/15" style={{ background: "rgba(88,28,135,0.08)" }}>
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="w-9 h-9 rounded-full bg-purple-900/50 border border-purple-500/30 flex items-center justify-center font-black text-purple-300 text-sm flex-shrink-0">
+                          {gerente.nombre.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-white font-bold text-sm truncate">{gerente.nombre}</p>
+                          <p className="text-[10px] text-gray-500 font-mono">{gerente.codigo_referido}</p>
+                        </div>
+                        <span className="ml-auto text-[10px] rounded-full border border-purple-500/30 bg-purple-500/10 px-2 py-0.5 text-purple-300 whitespace-nowrap">👑 Gerente</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                          <Users className="h-3.5 w-3.5 text-gray-500" />
+                          <span className="text-sm font-black text-white">{equipo.length}</span>
+                          <span className="text-xs text-gray-500">vendedor{equipo.length !== 1 ? "es" : ""}</span>
+                        </div>
+                        <span className="text-xs font-bold text-green-400">{fmtMoney(ventasEquipo)}</span>
+                      </div>
+                      {equipo.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-1">
+                          {equipo.map(s => (
+                            <span key={s.id} className="text-[10px] px-1.5 py-0.5 rounded bg-gray-800 text-gray-400 border border-gray-700">{s.nombre.split(" ")[0]}</span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+                {/* Vendedores sin gerente */}
+                {vendedores.filter(v => !v.es_gerente && !v.lider_id).length > 0 && (
+                  <div className="rounded-xl p-4 border border-gray-700/40" style={{ background: "rgba(255,255,255,0.02)" }}>
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-9 h-9 rounded-full bg-gray-800 border border-gray-700 flex items-center justify-center">
+                        <Users className="h-4 w-4 text-gray-500" />
+                      </div>
+                      <div>
+                        <p className="text-gray-400 font-bold text-sm">Sin gerente</p>
+                        <p className="text-[10px] text-gray-600">Vendedores independientes</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-sm font-black text-white">{vendedores.filter(v => !v.es_gerente && !v.lider_id).length}</span>
+                      <span className="text-xs text-gray-500">vendedor{vendedores.filter(v => !v.es_gerente && !v.lider_id).length !== 1 ? "es" : ""}</span>
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {vendedores.filter(v => !v.es_gerente && !v.lider_id).slice(0, 6).map(s => (
+                        <span key={s.id} className="text-[10px] px-1.5 py-0.5 rounded bg-gray-800 text-gray-400 border border-gray-700">{s.nombre.split(" ")[0]}</span>
+                      ))}
+                      {vendedores.filter(v => !v.es_gerente && !v.lider_id).length > 6 && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-800 text-gray-500 border border-gray-700">+{vendedores.filter(v => !v.es_gerente && !v.lider_id).length - 6} más</span>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Gráficos */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 rounded-xl p-6 border border-gray-800 shadow-lg" style={{ backgroundColor: "#111827" }}>
