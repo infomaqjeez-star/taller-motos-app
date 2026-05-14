@@ -9,16 +9,11 @@ export async function POST(req: NextRequest) {
   try {
     const supabase = getSupabaseServer();
 
-    // Verificar auth básica (opcional, para proteger el endpoint)
     const authHeader = req.headers.get("authorization");
     if (authHeader !== "Bearer maqjeez-import-2026") {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
 
-    // Limpiar tabla existente
-    await supabase.from("catalog_products").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-
-    // Leer el JSON de productos
     const jsonPath = path.join(process.cwd(), "data", "catalogo-products.json");
     if (!fs.existsSync(jsonPath)) {
       return NextResponse.json({ error: "No se encontró catalogo-products.json" }, { status: 404 });
@@ -32,19 +27,26 @@ export async function POST(req: NextRequest) {
       imagePath: string;
     }> = JSON.parse(raw);
 
-    // Insertar en batches de 50
     const BATCH = 50;
     let inserted = 0;
     let errors = 0;
 
     for (let i = 0; i < products.length; i += BATCH) {
-      const batch = products.slice(i, i + BATCH).map((p) => ({
-        sku: p.sku,
-        name: p.name,
-        catalog_price: 0,
-        category: p.category,
-        active: true,
-      }));
+      const batch = products.slice(i, i + BATCH).map((p) => {
+        const fileName = `catalog/${p.sku}.jpg`;
+        const { data: urlData } = supabase.storage
+          .from("catalog-images")
+          .getPublicUrl(fileName);
+
+        return {
+          sku: p.sku,
+          name: p.name,
+          catalog_price: 0,
+          category: p.category,
+          image_url: urlData?.publicUrl || null,
+          active: true,
+        };
+      });
 
       const { error } = await supabase
         .from("catalog_products")
