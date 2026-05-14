@@ -7,7 +7,8 @@ import { useVendedorAuth } from "@/components/vendedor/VendedorAuthContext";
 import {
   Store, LogOut, Copy, Check, DollarSign, ShoppingBag, TrendingUp,
   ArrowLeft, Award, Timer, Star, Target, TrendingDown,
-  AlertTriangle, Megaphone, Info, Package, Globe, Clock, Users
+  AlertTriangle, Megaphone, Info, Package, Globe, Clock, Users,
+  Crown, ChevronRight, RefreshCw
 } from "lucide-react";
 
 interface Pedido {
@@ -51,7 +52,9 @@ export default function VendedorDashboardPage() {
   const [clientesAnonimos, setClientesAnonimos] = useState<any[]>([]);
   const [resumenClientes, setResumenClientes] = useState<any>(null);
   const [expandedCliente, setExpandedCliente] = useState<string | null>(null);
-  const [tabActiva, setTabActiva] = useState<"pedidos" | "clientes">("pedidos");
+  const [tabActiva, setTabActiva] = useState<"pedidos" | "clientes" | "equipo">("pedidos");
+  const [dataEquipo, setDataEquipo] = useState<any>(null);
+  const [expandedVendedor, setExpandedVendedor] = useState<string | null>(null);
 
   useEffect(() => {
     if (authLoading) return;
@@ -62,7 +65,19 @@ export default function VendedorDashboardPage() {
     cargarPedidos();
     cargarNotificaciones();
     cargarClientes();
+    if ((vendedor as any)?.es_gerente) cargarEquipo();
   }, [vendedor, authLoading, router]);
+
+  const cargarEquipo = async () => {
+    const token = localStorage.getItem("vendedor_token");
+    if (!token) return;
+    try {
+      const res = await fetch("/api/vendedor/gerente/pedidos", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setDataEquipo(await res.json());
+    } catch (e) { console.error(e); }
+  };
 
   const cargarClientes = async () => {
     const token = localStorage.getItem("vendedor_token");
@@ -148,9 +163,24 @@ export default function VendedorDashboardPage() {
     return dias[nivel || "nuevo"] || 30;
   };
 
+  const esGerente = !!(vendedor as any)?.es_gerente;
+  const accentColor = esGerente ? "#a855f7" : "#f97316";
+  const accentGlow = esGerente ? "rgba(168,85,247,0.2)" : "rgba(249,115,22,0.2)";
+  const accentBg = esGerente ? "rgba(168,85,247,0.12)" : "rgba(249,115,22,0.12)";
+  const accentBorder = esGerente ? "rgba(168,85,247,0.35)" : "rgba(249,115,22,0.35)";
+  const gradientHeader = esGerente
+    ? "linear-gradient(to bottom right, #7c3aed, #4f46e5)"
+    : "linear-gradient(to bottom right, #f97316, #dc2626)";
+
+  const equipoPedidos: any[] = dataEquipo?.pedidos || [];
+  const equipo: any[] = dataEquipo?.equipo || [];
+  const clientesEquipo: any[] = dataEquipo?.clientes || [];
+  const resumenEquipo = dataEquipo?.resumen;
+
   const nivelTexto = ((vendedor as any)?.nivel_vendedor || "nuevo").replace("_", " ");
   const nivelBadgeColor = (() => {
     const n = (vendedor as any)?.nivel_vendedor || "nuevo";
+    if (esGerente) return "bg-purple-500/10 text-purple-400 border-purple-500/30";
     if (n === "master") return "bg-orange-500/10 text-orange-400 border-orange-500/30";
     if (n === "senior_pro") return "bg-orange-500/10 text-orange-400 border-orange-500/30";
     if (n === "senior") return "bg-purple-500/10 text-purple-400 border-purple-500/30";
@@ -174,25 +204,52 @@ export default function VendedorDashboardPage() {
       className="mx-auto max-w-6xl px-4 py-6 pb-20"
       style={{ fontFamily: "var(--font-montserrat), sans-serif" }}
     >
+      {/* BANNER GERENTE */}
+      {esGerente && (
+        <div className="rounded-2xl mb-6 px-5 py-4 flex flex-wrap items-center justify-between gap-3 relative overflow-hidden"
+          style={{ background: "linear-gradient(135deg, rgba(109,40,217,0.25) 0%, rgba(79,70,229,0.15) 100%)", border: "1px solid rgba(168,85,247,0.3)", boxShadow: "0 0 40px rgba(139,92,246,0.08)" }}>
+          <div className="absolute -right-16 -top-16 w-48 h-48 rounded-full pointer-events-none" style={{ background: "rgba(139,92,246,0.12)", filter: "blur(40px)" }} />
+          <div className="flex items-center gap-3 relative z-10">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, #7c3aed, #4f46e5)" }}>
+              <Crown className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <p className="text-white font-black text-sm">Panel de Gerente activo</p>
+              <p className="text-purple-300 text-xs">{equipo.length} vendedor{equipo.length !== 1 ? "es" : ""} en tu equipo · {clientesEquipo.length} clientes totales · {fmtMoney(resumenEquipo?.total_ventas || 0)} en ventas</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 relative z-10">
+            <button onClick={cargarEquipo} className="p-2 rounded-lg text-purple-400 hover:text-white transition-colors" style={{ background: "rgba(139,92,246,0.15)", border: "1px solid rgba(168,85,247,0.2)" }}>
+              <RefreshCw className="h-3.5 w-3.5" />
+            </button>
+            <button onClick={() => router.push("/catalogo/vendedor/gerente")}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-black text-white transition-all"
+              style={{ background: "linear-gradient(135deg, #7c3aed, #4f46e5)", boxShadow: "0 4px 20px rgba(124,58,237,0.3)" }}>
+              <Users className="h-4 w-4" /> Panel Completo <ChevronRight className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* HEADER */}
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
         <div className="flex items-center gap-4">
           <button
             onClick={() => router.push("/catalogo")}
             className="p-3 rounded-xl shadow-lg transition-opacity hover:opacity-80"
-            style={{ background: "linear-gradient(to bottom right, #f97316, #dc2626)", boxShadow: "0 10px 30px rgba(249,115,22,0.2)" }}
+            style={{ background: gradientHeader, boxShadow: `0 10px 30px ${accentGlow}` }}
             title="Ir al catálogo"
           >
-            <Store className="text-2xl text-white h-6 w-6" />
+            {esGerente ? <Crown className="text-2xl text-white h-6 w-6" /> : <Store className="text-2xl text-white h-6 w-6" />}
           </button>
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-white tracking-tight">Dashboard de Vendedor</h1>
+            <h1 className="text-2xl md:text-3xl font-bold text-white tracking-tight">{esGerente ? "Dashboard de Gerente" : "Dashboard de Vendedor"}</h1>
             <div className="flex items-center gap-2 mt-1">
               <span className="text-slate-400 font-medium">{vendedor.nombre}</span>
               <span className="text-slate-600">—</span>
               <span
                 className="font-bold font-mono px-2 py-0.5 rounded text-sm"
-                style={{ background: "rgba(249,115,22,0.1)", color: "#fb923c" }}
+                style={{ background: accentBg, color: accentColor }}
               >
                 {vendedor.codigo_referido}
               </span>
@@ -283,8 +340,8 @@ export default function VendedorDashboardPage() {
         style={{
           background: "linear-gradient(145deg, rgba(15,23,42,0.9) 0%, rgba(15,23,42,0.4) 100%)",
           backdropFilter: "blur(10px)",
-          border: "1px solid rgba(16,185,129,0.3)",
-          boxShadow: "0 0 30px rgba(16,185,129,0.05)",
+          border: `1px solid ${esGerente ? "rgba(168,85,247,0.3)" : "rgba(16,185,129,0.3)"}`,
+          boxShadow: `0 0 30px ${esGerente ? "rgba(168,85,247,0.05)" : "rgba(16,185,129,0.05)"}`,
         }}
       >
         <div
@@ -292,7 +349,7 @@ export default function VendedorDashboardPage() {
           style={{ background: "rgba(16,185,129,0.1)", filter: "blur(60px)" }}
         />
         <div className="relative z-10">
-          <h2 className="font-bold text-lg flex items-center gap-2 mb-2" style={{ color: "#10b981" }}>
+          <h2 className="font-bold text-lg flex items-center gap-2 mb-2" style={{ color: esGerente ? "#a855f7" : "#10b981" }}>
             <Globe className="h-5 w-5" /> Tu link de referido
           </h2>
           <p className="text-slate-400 text-sm mb-4">
@@ -313,7 +370,7 @@ export default function VendedorDashboardPage() {
             <button
               onClick={copyLink}
               className="font-bold py-3 px-6 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 whitespace-nowrap text-white"
-              style={{ background: "#f97316", boxShadow: "0 10px 25px rgba(249,115,22,0.2)" }}
+              style={{ background: esGerente ? "#7c3aed" : "#f97316", boxShadow: `0 10px 25px ${accentGlow}` }}
             >
               {copied ? <Check className="h-5 w-5" /> : <Copy className="h-5 w-5" />}
               {copied ? "Copiado" : "Copiar Link"}
@@ -341,21 +398,24 @@ export default function VendedorDashboardPage() {
         )}
       </div>
 
-      {/* TABS: Pedidos / Clientes */}
-      <div className="flex gap-1 mb-4">
-        {(["pedidos", "clientes"] as const).map((tab) => (
+      {/* TABS */}
+      <div className="flex flex-wrap gap-1 mb-4">
+        {([
+          { id: "pedidos", label: `Mis Pedidos (${pedidos.length})`, icon: ShoppingBag },
+          { id: "clientes", label: `Mis Clientes (${clientes.length + clientesAnonimos.length})`, icon: Users },
+          ...(esGerente ? [{ id: "equipo", label: `Mi Equipo (${equipo.length})`, icon: Crown }] : []),
+        ] as { id: "pedidos" | "clientes" | "equipo"; label: string; icon: any }[]).map(({ id, label, icon: Icon }) => (
           <button
-            key={tab}
-            onClick={() => setTabActiva(tab)}
+            key={id}
+            onClick={() => setTabActiva(id)}
             className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${
-              tabActiva === tab
-                ? "text-white"
-                : "text-slate-500 hover:text-slate-300"
+              tabActiva === id ? "text-white" : "text-slate-500 hover:text-slate-300"
             }`}
-            style={tabActiva === tab ? { background: "rgba(249,115,22,0.15)", border: "1px solid rgba(249,115,22,0.35)" } : { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}
+            style={tabActiva === id
+              ? { background: id === "equipo" ? "rgba(168,85,247,0.15)" : accentBg, border: `1px solid ${id === "equipo" ? "rgba(168,85,247,0.4)" : accentBorder}` }
+              : { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}
           >
-            {tab === "pedidos" ? <ShoppingBag className="h-4 w-4" /> : <Users className="h-4 w-4" />}
-            {tab === "pedidos" ? `Pedidos (${pedidos.length})` : `Clientes (${clientes.length + clientesAnonimos.length})`}
+            <Icon className="h-4 w-4" />{label}
           </button>
         ))}
       </div>
@@ -623,6 +683,178 @@ export default function VendedorDashboardPage() {
               )}
             </div>
           )}
+        </section>
+      )}
+
+      {/* TAB MI EQUIPO — solo gerentes */}
+      {tabActiva === "equipo" && esGerente && (
+        <section className="rounded-2xl p-6 space-y-4"
+          style={{ background: "linear-gradient(145deg, rgba(15,23,42,0.9) 0%, rgba(15,23,42,0.4) 100%)", backdropFilter: "blur(10px)", border: "1px solid rgba(168,85,247,0.15)" }}>
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+              <Crown className="h-5 w-5 text-purple-400" /> Mi Equipo
+            </h2>
+            {resumenEquipo && (
+              <div className="flex items-center gap-4 text-xs text-slate-400">
+                <span>Ventas equipo: <strong style={{ color: "#10b981" }}>{fmtMoney(resumenEquipo.total_ventas)}</strong></span>
+                <span>Tu comisión: <strong style={{ color: "#a855f7" }}>{fmtMoney(resumenEquipo.comision_pendiente + (resumenEquipo.comision_pagada || 0))}</strong></span>
+              </div>
+            )}
+          </div>
+
+          {/* KPIs rápidos */}
+          {resumenEquipo && (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {[
+                { label: "Vendedores", value: resumenEquipo.total_vendedores, color: "#a855f7" },
+                { label: "Clientes equipo", value: resumenEquipo.total_clientes, color: "#3b82f6" },
+                { label: "Pedidos totales", value: resumenEquipo.total_pedidos, color: "#f97316" },
+                { label: "Com. pendiente", value: fmtMoney(resumenEquipo.comision_pendiente), color: "#f59e0b" },
+              ].map(({ label, value, color }) => (
+                <div key={label} className="rounded-xl p-3 text-center" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                  <p className="text-[10px] text-gray-500 uppercase font-bold mb-1">{label}</p>
+                  <p className="text-lg font-black" style={{ color }}>{value}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Cards por vendedor */}
+          {equipo.length === 0 ? (
+            <div className="rounded-xl p-10 text-center border border-dashed border-white/10">
+              <Users className="h-8 w-8 mx-auto mb-3 text-slate-600" />
+              <p className="text-slate-500 text-sm">Aún no tenés vendedores asignados</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {equipo.map((v: any) => {
+                const isExp = expandedVendedor === v.id;
+                const vPedidos = equipoPedidos.filter((p: any) => p.vendedor_id === v.id);
+                const vClientes = clientesEquipo.filter((c: any) => c.vendedor_referente_id === v.id);
+                const vVentas = vPedidos.filter((p: any) => p.estado !== "cancelado").reduce((s: number, p: any) => s + (p.total || 0), 0);
+                const vComisionG = vPedidos.filter((p: any) => p.estado !== "cancelado").reduce((s: number, p: any) => s + (p.comision_gerente_monto || 0), 0);
+                const urgentes = vPedidos.filter((p: any) => {
+                  if (p.comision_estado === "pagada" || !p.fecha_limite_pago) return false;
+                  return Math.ceil((new Date(p.fecha_limite_pago).getTime() - Date.now()) / 86400000) <= 3;
+                }).length;
+
+                return (
+                  <div key={v.id} className="rounded-xl overflow-hidden" style={{ border: "1px solid rgba(168,85,247,0.12)" }}>
+                    <button className="w-full px-4 py-3 text-left" onClick={() => setExpandedVendedor(isExp ? null : v.id)}>
+                      <div className="flex flex-wrap items-center gap-3">
+                        <div className="w-9 h-9 rounded-xl flex items-center justify-center font-black text-sm shrink-0"
+                          style={{ background: "rgba(168,85,247,0.12)", color: "#a855f7", border: "1px solid rgba(168,85,247,0.25)" }}>
+                          {v.nombre.charAt(0)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="text-sm font-bold text-white">{v.nombre}</p>
+                            <span className="text-[9px] px-1.5 py-0.5 rounded font-bold capitalize" style={{ background: "rgba(168,85,247,0.1)", color: "#a855f7" }}>{v.nivel_vendedor || "nuevo"}</span>
+                            {urgentes > 0 && <span className="text-[9px] px-1.5 py-0.5 rounded font-bold bg-red-500/10 text-red-400">⚠ {urgentes} urgente{urgentes > 1 ? "s" : ""}</span>}
+                          </div>
+                          <p className="text-xs text-slate-500">{v.email} · <span className="font-mono">{v.codigo_referido}</span></p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="text-sm font-black text-emerald-400">{fmtMoney(vVentas)}</p>
+                          <p className="text-[10px] text-purple-400">Tu parte: {fmtMoney(vComisionG)}</p>
+                        </div>
+                      </div>
+                    </button>
+
+                    {/* Mini stats row */}
+                    <div className="grid grid-cols-3 border-t" style={{ borderColor: "rgba(255,255,255,0.05)", background: "rgba(0,0,0,0.12)" }}>
+                      {[
+                        { label: "Pedidos", value: vPedidos.length, color: "#8b5cf6" },
+                        { label: "Clientes", value: vClientes.length, color: "#f97316" },
+                        { label: "Pagados", value: vPedidos.filter((p: any) => p.estado_pago === "pagado").length, color: "#10b981" },
+                      ].map(({ label, value, color }) => (
+                        <div key={label} className="p-2 text-center" style={{ borderRight: "1px solid rgba(255,255,255,0.04)" }}>
+                          <p className="text-[9px] text-gray-600 uppercase font-bold">{label}</p>
+                          <p className="text-sm font-black" style={{ color }}>{value}</p>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Detalle expandido */}
+                    {isExp && (
+                      <div className="border-t p-4 space-y-4" style={{ borderColor: "rgba(255,255,255,0.05)", background: "rgba(0,0,0,0.1)" }}>
+                        {/* Clientes del vendedor */}
+                        <div>
+                          <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-2">Clientes registrados ({vClientes.length})</p>
+                          {vClientes.length === 0 ? (
+                            <p className="text-xs text-gray-700 italic">Sin clientes aún</p>
+                          ) : (
+                            <div className="flex flex-wrap gap-2">
+                              {vClientes.map((c: any) => {
+                                const cPedidos = vPedidos.filter((p: any) => p.datos_cliente?.cliente_id === c.id);
+                                const cTotal = cPedidos.filter((p: any) => p.estado !== "cancelado").reduce((s: number, p: any) => s + p.total, 0);
+                                return (
+                                  <div key={c.id} className="rounded-lg px-3 py-2" style={{ background: "rgba(168,85,247,0.06)", border: "1px solid rgba(168,85,247,0.15)" }}>
+                                    <p className="text-xs font-bold text-white">{c.nombre}</p>
+                                    <p className="text-[10px] text-gray-500">{c.email}</p>
+                                    <p className="text-[10px] text-purple-400 font-bold mt-0.5">{fmtMoney(cTotal)} · {cPedidos.length} pedido{cPedidos.length !== 1 ? "s" : ""}</p>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Pedidos recientes del vendedor */}
+                        <div>
+                          <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-2">Pedidos recientes</p>
+                          <div className="space-y-1.5">
+                            {vPedidos.slice(0, 4).map((p: any) => {
+                              const dias = p.fecha_limite_pago ? Math.ceil((new Date(p.fecha_limite_pago).getTime() - Date.now()) / 86400000) : null;
+                              return (
+                                <div key={p.id} className="flex flex-wrap items-center gap-2 rounded-lg px-3 py-2" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-xs text-white truncate">{p.datos_cliente?.nombre || "Cliente"}</p>
+                                    <p className="text-[10px] text-gray-600">{new Date(p.created_at).toLocaleDateString("es-AR")}</p>
+                                  </div>
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                                      p.estado === "entregado" ? "text-emerald-400 bg-emerald-400/10 border-emerald-400/30" :
+                                      p.estado === "enviado" ? "text-blue-400 bg-blue-400/10 border-blue-400/30" :
+                                      p.estado === "cancelado" ? "text-red-400 bg-red-400/10 border-red-400/30" :
+                                      "text-yellow-400 bg-yellow-400/10 border-yellow-400/30"
+                                    }`}>{p.estado}</span>
+                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${p.estado_pago === "pagado" ? "text-emerald-400 bg-emerald-400/10 border-emerald-400/30" : "text-slate-500 bg-slate-500/10 border-slate-500/20"}`}>
+                                      {p.estado_pago === "pagado" ? "💰 Pago" : "💰 Pend."}
+                                    </span>
+                                  </div>
+                                  <div className="text-right shrink-0">
+                                    <p className="text-xs font-black text-white">{fmtMoney(p.total)}</p>
+                                    <p className={`text-[10px] ${p.comision_estado === "pagada" ? "text-emerald-400" : dias !== null && dias <= 3 ? "text-red-400 font-bold" : "text-amber-400"}`}>
+                                      {p.comision_estado === "pagada" ? "✓" : dias !== null && dias <= 3 ? `⚠${dias}d` : "⏳"} {fmtMoney(p.comision_monto)}
+                                    </p>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                            {vPedidos.length > 4 && (
+                              <button onClick={() => router.push("/catalogo/vendedor/gerente")}
+                                className="w-full text-xs text-center py-1.5 text-purple-400 hover:text-white transition-colors">
+                                Ver todos ({vPedidos.length}) en Panel Completo →
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          <div className="pt-2 border-t border-white/5 flex justify-end">
+            <button onClick={() => router.push("/catalogo/vendedor/gerente")}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-black text-white"
+              style={{ background: "linear-gradient(135deg, #7c3aed, #4f46e5)", boxShadow: "0 4px 20px rgba(124,58,237,0.25)" }}>
+              <Crown className="h-4 w-4" /> Abrir Panel Completo de Gerente <ChevronRight className="h-3.5 w-3.5" />
+            </button>
+          </div>
         </section>
       )}
     </main>
