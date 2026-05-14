@@ -246,10 +246,52 @@ const HyperBanner = ({ type, badges, title, highlight, subtitle, features, cta, 
   );
 };
 
+function MobileBanner() {
+  const handleClick = () => {
+    window.location.href = 'https://www.madsjeez.com.ar';
+  };
+
+  return (
+    <div className="fixed bottom-0 left-0 right-0 z-[100] xl:hidden">
+      <div className="flex gap-2 p-2" style={{ background: 'rgba(3,3,5,0.95)', backdropFilter: 'blur(12px)', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+        {/* Banner Vendedor Mobile */}
+        <button onClick={handleClick} className="flex-1 relative overflow-hidden rounded-xl p-[1.5px] active:scale-[0.98] transition-transform">
+          <span className="absolute inset-0 bg-gradient-to-r from-[#ff2a00] to-[#ff9900] opacity-80" />
+          <div className="relative bg-[#0a0a0f] rounded-[10px] px-3 py-2.5 flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-[#ff2a00] to-[#ffaa00] flex items-center justify-center shrink-0">
+              <Crown className="w-5 h-5 text-white" />
+            </div>
+            <div className="text-left min-w-0">
+              <p className="text-[10px] font-black uppercase tracking-wider text-[#ffaa00]">Madsjeez Pro</p>
+              <p className="text-xs font-black text-white truncate">Domina el Mercado</p>
+            </div>
+            <ArrowRight className="w-4 h-4 text-[#ffaa00] shrink-0 ml-auto" />
+          </div>
+        </button>
+
+        {/* Banner Comprador Mobile */}
+        <button onClick={handleClick} className="flex-1 relative overflow-hidden rounded-xl p-[1.5px] active:scale-[0.98] transition-transform">
+          <span className="absolute inset-0 bg-gradient-to-r from-[#00e5ff] to-[#aa00ff] opacity-80" />
+          <div className="relative bg-[#0a0a0f] rounded-[10px] px-3 py-2.5 flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-[#00e5ff] to-[#aa00ff] flex items-center justify-center shrink-0">
+              <Gift className="w-5 h-5 text-white" />
+            </div>
+            <div className="text-left min-w-0">
+              <p className="text-[10px] font-black uppercase tracking-wider text-[#00e5ff]">Acceso Total</p>
+              <p className="text-xs font-black text-white truncate">Universo de Ofertas</p>
+            </div>
+            <ArrowRight className="w-4 h-4 text-[#00e5ff] shrink-0 ml-auto" />
+          </div>
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function SideBanners() {
   return (
     <>
-      {/* Banner Izquierdo - Vendedor */}
+      {/* Desktop xl+: Banners laterales verticales */}
       <div className="fixed left-4 top-1/2 -translate-y-1/2 z-40 hidden xl:block">
         <HyperBanner 
           type="seller"
@@ -272,7 +314,6 @@ export default function SideBanners() {
         />
       </div>
 
-      {/* Banner Derecho - Comprador */}
       <div className="fixed right-4 top-1/2 -translate-y-1/2 z-40 hidden xl:block">
         <HyperBanner 
           type="buyer"
@@ -294,6 +335,9 @@ export default function SideBanners() {
           }}
         />
       </div>
+
+      {/* Mobile/Tablet: Banner horizontal sticky bottom */}
+      <MobileBanner />
     </>
   );
 }
