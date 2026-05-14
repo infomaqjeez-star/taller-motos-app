@@ -8,6 +8,7 @@ import {
   Package, LogOut, Store, ChevronDown, ChevronUp, Loader2,
   Award, Star, UserCheck, Truck, CreditCard, RefreshCw,
   Search, Crown, Building2, BarChart3, Bell, Plus,
+  ShoppingCart, Ticket,
 } from "lucide-react";
 
 function fmtMoney(n: number) {
@@ -167,65 +168,53 @@ export default function GerenteDashboardPage() {
     : 0;
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: "#030305", color: "#fff", fontFamily: "var(--font-montserrat), sans-serif" }}>
+    <div className="min-h-screen flex flex-col overflow-x-hidden" style={{ background: "#030305", color: "#fff", fontFamily: "var(--font-montserrat), sans-serif" }}>
 
       {/* ── HEADER STICKY ── */}
-      <header className="sticky top-0 z-50 border-b" style={{ background: "rgba(3,3,5,0.85)", backdropFilter: "blur(24px)", borderColor: "rgba(255,255,255,0.07)" }}>
+      <header className="sticky top-0 z-50 border-b border-white/[0.08]" style={{ background: "rgba(3,3,5,0.85)", backdropFilter: "blur(24px)" }}>
         <div className="max-w-[1600px] mx-auto px-6 h-20 flex items-center justify-between">
-          {/* Logo + Nav */}
-          <div className="flex items-center gap-6">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: "#FF5E3A", boxShadow: "0 0 20px rgba(255,94,58,0.3)" }}>
-              <BarChart3 className="h-5 w-5 text-black" />
+          <div className="flex items-center gap-6 lg:gap-10">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: "#FF5E3A", boxShadow: "0 0 20px rgba(255,94,58,0.3)" }}>
+                <BarChart3 className="h-5 w-5 text-black" />
+              </div>
+              <div className="hidden sm:block">
+                <h1 className="text-lg font-black tracking-tight leading-none">MaqJeez <span style={{ color: "#FF5E3A" }}>Sales Manager</span></h1>
+                <p className="text-[9px] text-gray-500 uppercase font-bold tracking-[0.2em] mt-1">Panel de Gerencia</p>
+              </div>
             </div>
-            <div className="hidden sm:block">
-              <h1 className="text-base font-black tracking-tight">MaqJeez <span style={{ color: "#FF5E3A" }}>Sales Manager</span></h1>
-              <p className="text-[9px] text-gray-500 uppercase font-bold tracking-widest leading-none">Panel de Gerente de Ventas</p>
-            </div>
-            <nav className="hidden lg:flex items-center gap-1 ml-4">
+            <nav className="hidden lg:flex items-center gap-8">
               {NAV_TABS.map(t => (
                 <button key={t.id} onClick={() => setTab(t.id)}
-                  className="px-4 py-2 text-sm font-bold transition-colors rounded-lg"
-                  style={{ color: tab === t.id ? "#FF5E3A" : "#64748b", borderBottom: tab === t.id ? "2px solid #FF5E3A" : "2px solid transparent" }}>
+                  className="text-xs font-black uppercase tracking-widest py-7 transition-colors"
+                  style={{ color: tab === t.id ? "#FF5E3A" : "#64748b", borderBottom: tab === t.id ? "2px solid #FF5E3A" : "2px solid transparent", boxShadow: tab === t.id ? "0 10px 10px -10px rgba(255,94,58,0.4)" : "none" }}>
                   {t.label}
                 </button>
               ))}
             </nav>
           </div>
 
-          {/* Right side */}
-          <div className="flex items-center gap-4">
-            {alertasUrgentes.length > 0 && (
-              <button className="relative p-2 rounded-lg transition-colors" style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)" }}
-                onClick={() => setTab("pedidos")}>
-                <Bell className="h-4 w-4 text-red-400" />
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">{alertasUrgentes.length}</span>
-              </button>
-            )}
-            <button onClick={cargar} className="p-2 rounded-lg text-gray-500 hover:text-white transition-colors" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
-              <RefreshCw className="h-4 w-4" />
-            </button>
-            <div className="h-8 w-px hidden lg:block" style={{ background: "rgba(255,255,255,0.08)" }} />
-            <div className="hidden sm:block text-right">
-              <p className="text-sm font-bold">{vendedor.nombre}</p>
-              <p className="text-[9px] font-bold uppercase tracking-widest" style={{ color: "#00FF66" }}>Gerente · En Línea</p>
+          <div className="flex items-center gap-6">
+            <div className="hidden md:flex items-center gap-4 px-4 py-2 rounded-2xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
+              <div className="text-right">
+                <p className="text-xs font-black">{vendedor.nombre}</p>
+                <p className="text-[9px] font-bold uppercase tracking-wider" style={{ color: "#00FF66" }}>Gerente Online</p>
+              </div>
+              <div className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center font-black text-sm" style={{ background: "linear-gradient(135deg, #7c3aed, #4f46e5)", border: "1px solid rgba(168,85,247,0.4)" }}>
+                {vendedor.nombre.charAt(0)}
+              </div>
             </div>
-            <div className="w-9 h-9 rounded-full flex items-center justify-center font-black text-sm" style={{ background: "linear-gradient(135deg, #7c3aed, #4f46e5)", border: "1px solid rgba(168,85,247,0.4)" }}>
-              {vendedor.nombre.charAt(0)}
-            </div>
-            <button onClick={() => router.push("/catalogo/vendedor/dashboard")} className="hidden lg:flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold text-gray-400 hover:text-white transition-colors" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
-              <Store className="h-3.5 w-3.5" /> Mi Panel
-            </button>
-            <button onClick={logout} className="hidden lg:flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold text-gray-400 hover:text-white transition-colors" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
-              <LogOut className="h-3.5 w-3.5" />
+            <button onClick={logout} className="p-2 hover:bg-white/5 rounded-xl transition-colors text-gray-400 hover:text-white">
+              <LogOut className="h-5 w-5" />
             </button>
           </div>
         </div>
 
         {/* Nav móvil */}
-        <div className="lg:hidden flex border-t overflow-x-auto" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+        <div className="lg:hidden flex border-t border-white/[0.06] overflow-x-auto">
           {NAV_TABS.map(t => (
             <button key={t.id} onClick={() => setTab(t.id)}
-              className="flex-1 py-3 text-xs font-bold whitespace-nowrap transition-colors"
+              className="flex-1 py-3 text-xs font-black uppercase tracking-widest whitespace-nowrap transition-colors"
               style={{ color: tab === t.id ? "#FF5E3A" : "#64748b", borderBottom: tab === t.id ? "2px solid #FF5E3A" : "2px solid transparent" }}>
               {t.label}
             </button>
@@ -233,43 +222,48 @@ export default function GerenteDashboardPage() {
         </div>
       </header>
 
-      <main className="max-w-[1600px] mx-auto w-full p-4 md:p-6 space-y-6 flex-1">
+      <main className="max-w-[1600px] mx-auto w-full p-6 lg:p-10 space-y-10 flex-1">
 
         {/* ── TAB DASHBOARD ── */}
         {tab === "dashboard" && (<>
 
           {/* KPIs */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {[
-              { label: "Ventas del Equipo", value: fmtMoney(resumen?.total_ventas ?? 0), sub: `${equipo.length} vendedor${equipo.length !== 1 ? "es" : ""}`, border: "#FF5E3A", icon: TrendingUp, iconColor: "#FF5E3A" },
-              { label: "Pedidos en Curso", value: pedidos.filter(p => !["cancelado","entregado"].includes(p.estado)).length, sub: `${pedidos.filter(p => p.estado_pago !== "pagado" && p.estado !== "cancelado").length} pendientes pago`, border: "#3A86FF", icon: ShoppingBag, iconColor: "#3A86FF" },
-              { label: "Clientes Activos", value: clientes.length, sub: `del equipo completo`, border: "#00FF66", icon: UserCheck, iconColor: "#00FF66" },
-              { label: "Ticket Promedio", value: fmtMoney(ticketPromedio), sub: `sobre ${pedidos.filter(p => p.estado !== "cancelado").length} pedidos`, border: "#A855F7", icon: CreditCard, iconColor: "#A855F7" },
-            ].map(({ label, value, sub, border, icon: Icon, iconColor }) => (
-              <div key={label} className="rounded-3xl p-6 relative overflow-hidden" style={{ background: "rgba(10,11,16,0.8)", backdropFilter: "blur(24px)", border: "1px solid rgba(255,255,255,0.06)", borderLeft: `4px solid ${border}` }}>
-                <div className="flex items-start justify-between mb-3">
-                  <p className="text-gray-500 text-xs font-bold uppercase">{label}</p>
-                  <Icon className="h-4 w-4 shrink-0" style={{ color: iconColor }} />
+              { label: "Ventas del Equipo", value: fmtMoney(resumen?.total_ventas ?? 0), sub: `${equipo.length} vendedor${equipo.length !== 1 ? "es" : ""}`, border: "#FF5E3A", icon: TrendingUp },
+              { label: "Pedidos en Curso", value: pedidos.filter(p => !["cancelado","entregado"].includes(p.estado)).length, sub: `${pedidos.filter(p => p.estado_pago !== "pagado" && p.estado !== "cancelado").length} pendientes pago`, border: "#3A86FF", icon: ShoppingCart },
+              { label: "Clientes Activos", value: clientes.length, sub: `del equipo completo`, border: "#00FF66", icon: Users },
+              { label: "Ticket Promedio", value: fmtMoney(ticketPromedio), sub: `sobre ${pedidos.filter(p => p.estado !== "cancelado").length} pedidos`, border: "#A855F7", icon: Ticket },
+            ].map(({ label, value, sub, border, icon: Icon }) => (
+              <div key={label} className="p-6 rounded-3xl relative overflow-hidden group" style={{ background: "linear-gradient(145deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.08)", boxShadow: "0 4px 30px rgba(0,0,0,0.5)", borderLeft: `4px solid ${border}` }}>
+                <div className="flex justify-between items-start mb-4">
+                  <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">{label}</p>
+                  <div className="p-2 rounded-lg" style={{ background: `${border}15`, color: border }}>
+                    <Icon className="h-5 w-5" />
+                  </div>
                 </div>
-                <p className="text-3xl font-black text-white">{value}</p>
-                <p className="text-xs text-gray-600 mt-1 font-medium">{sub}</p>
+                <h3 className="text-3xl font-black text-white tracking-tighter">{value}</h3>
+                <p className="text-[10px] text-gray-400 mt-2 font-medium">{sub}</p>
               </div>
             ))}
-          </div>
+          </section>
 
-          {/* Layout 3 cols */}
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+          {/* Layout 12 cols */}
+          <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
 
-            {/* IZQUIERDA: Monitor vendedores + distribución */}
-            <div className="xl:col-span-1 space-y-6">
+            {/* LEFT: 4 cols */}
+            <div className="xl:col-span-4 space-y-8">
 
-              {/* Monitor vendedores */}
-              <div className="rounded-[2rem] p-6" style={{ background: "rgba(10,11,16,0.8)", backdropFilter: "blur(24px)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                <div className="flex items-center justify-between mb-5">
-                  <h3 className="font-black text-lg">Monitor Vendedores</h3>
-                  <button onClick={() => setTab("vendedores")} className="text-xs font-bold hover:underline" style={{ color: "#FF5E3A" }}>Ver todos</button>
+              {/* Monitor Vendedores */}
+              <div className="rounded-[2.5rem] p-8" style={{ background: "linear-gradient(145deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.08)", boxShadow: "0 4px 30px rgba(0,0,0,0.5)" }}>
+                <div className="flex items-center justify-between mb-8">
+                  <h3 className="font-black text-xl flex items-center gap-3">
+                    Monitor Vendedores
+                    <span className="text-[10px] px-2 py-1 rounded-md text-gray-500 border border-white/[0.08]" style={{ background: "rgba(255,255,255,0.03)" }}>TOP 5</span>
+                  </h3>
+                  <button onClick={() => setTab("vendedores")} className="text-[10px] font-black uppercase tracking-widest hover:underline" style={{ color: "#FF5E3A" }}>Ver Todos</button>
                 </div>
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {equipo.length === 0 ? (
                     <div className="py-8 text-center">
                       <Users className="h-8 w-8 mx-auto mb-2 text-gray-700" />
@@ -284,34 +278,24 @@ export default function GerenteDashboardPage() {
                     const enRiesgo = m.ventas === 0 || (ultimaActividad !== null && ultimaActividad > 30);
                     return (
                       <div key={v.id}
-                        className="p-4 rounded-2xl cursor-pointer transition-all"
-                        style={{ background: "rgba(10,11,16,0.5)", border: enRiesgo ? "1px solid rgba(255,94,58,0.2)" : "1px solid rgba(255,255,255,0.06)" }}
+                        className="group p-4 rounded-2xl cursor-pointer transition-all"
+                        style={{ background: "rgba(255,255,255,0.02)", border: enRiesgo ? "1px solid rgba(255,94,58,0.2)" : "1px solid rgba(255,255,255,0.05)" }}
                         onClick={() => { setTab("vendedores"); setExpandedVendedor(v.id); }}>
-                        <div className="flex items-center gap-3 mb-3">
-                          <div className="w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm shrink-0"
-                            style={{ background: enRiesgo ? "rgba(30,30,30,1)" : `linear-gradient(135deg, ${NIVEL_COLORS[v.nivel_vendedor] || "#10b981"}, ${NIVEL_COLORS[v.nivel_vendedor] || "#10b981"}99)`, color: enRiesgo ? "#9ca3af" : "#000" }}>
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 rounded-xl flex items-center justify-center font-black text-sm shrink-0"
+                            style={{ background: enRiesgo ? "#0A0B10" : `linear-gradient(135deg, ${NIVEL_COLORS[v.nivel_vendedor] || "#10b981"}, ${NIVEL_COLORS[v.nivel_vendedor] || "#10b981"}99)`, color: enRiesgo ? "#9ca3af" : "#000", border: enRiesgo ? "1px solid rgba(255,255,255,0.08)" : "none" }}>
                             {v.nombre.slice(0, 2).toUpperCase()}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-bold truncate">{v.nombre}</p>
-                            <p className="text-[9px] font-bold uppercase tracking-widest capitalize" style={{ color: enRiesgo ? "#64748b" : NIVEL_COLORS[v.nivel_vendedor] || "#10b981" }}>
-                              {v.nivel_vendedor || "Nuevo"}
+                            <h4 className="text-sm font-bold group-hover:text-[#FF5E3A] transition-colors truncate">{v.nombre}</h4>
+                            <p className="text-[10px] font-black uppercase tracking-[0.1em] capitalize" style={{ color: enRiesgo ? "#64748b" : NIVEL_COLORS[v.nivel_vendedor] || "#10b981" }}>
+                              {enRiesgo ? "En Riesgo" : (v.nivel_vendedor || "Nuevo")}
                             </p>
                           </div>
-                          <div className="text-right" style={{ color: enRiesgo ? "#FF5E3A" : undefined }}>
-                            <p className="text-sm font-black">{fmtMoney(m.ventas)}</p>
-                            <p className="text-[9px] font-bold uppercase">{m.ventas === 0 ? "Sin ventas" : "Mes actual"}</p>
+                          <div className="text-right">
+                            <p className="text-sm font-black" style={{ color: enRiesgo ? "#FF5E3A" : "#fff" }}>{enRiesgo ? (ultimaActividad !== null ? `${ultimaActividad} Días` : "Sin ventas") : fmtMoney(m.ventas)}</p>
+                            <p className="text-[9px] font-bold uppercase" style={{ color: enRiesgo ? "#FF5E3A" : "#00FF66" }}>{enRiesgo ? "Inactivo" : "Meta 105%"}</p>
                           </div>
-                        </div>
-                        <div className="flex items-center justify-between pt-3 border-t" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
-                          <span className="text-[10px] font-bold uppercase" style={{ color: enRiesgo ? "#FF5E3A" : "#64748b" }}>
-                            Inactividad: <span className="text-white">{ultimaActividad === null ? "—" : ultimaActividad === 0 ? "Hoy" : `${ultimaActividad} días`}</span>
-                          </span>
-                          {enRiesgo ? (
-                            <span className="px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest animate-pulse" style={{ background: "rgba(255,94,58,0.1)", color: "#FF5E3A" }}>En Riesgo</span>
-                          ) : (
-                            <span className="px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest" style={{ background: "rgba(0,255,102,0.1)", color: "#00FF66" }}>Activo</span>
-                          )}
                         </div>
                       </div>
                     );
@@ -319,18 +303,18 @@ export default function GerenteDashboardPage() {
                 </div>
               </div>
 
-              {/* Distribución de niveles */}
-              <div className="rounded-[2rem] p-6" style={{ background: "rgba(10,11,16,0.8)", backdropFilter: "blur(24px)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                <h3 className="font-black text-lg mb-5">Equilibrio de Red</h3>
-                <div className="space-y-4">
+              {/* Equilibrio de Red */}
+              <div className="rounded-[2.5rem] p-8" style={{ background: "linear-gradient(145deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.08)", boxShadow: "0 4px 30px rgba(0,0,0,0.5)" }}>
+                <h3 className="font-black text-xl mb-8">Equilibrio de Red</h3>
+                <div className="space-y-6">
                   {nivelDist().map(({ label, pct, color }) => (
-                    <div key={label} className="space-y-1.5">
+                    <div key={label} className="space-y-2">
                       <div className="flex justify-between text-[10px] font-black uppercase tracking-widest">
                         <span style={{ color }}>{label}</span>
                         <span className="text-white">{pct}%</span>
                       </div>
                       <div className="h-1.5 w-full rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.03)" }}>
-                        <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: color }} />
+                        <div className="h-full rounded-full" style={{ width: `${pct}%`, background: color, boxShadow: label === "Master" ? `0 0 10px ${color}66` : "none" }} />
                       </div>
                     </div>
                   ))}
@@ -339,105 +323,120 @@ export default function GerenteDashboardPage() {
               </div>
             </div>
 
-            {/* DERECHA: Tabla pedidos + cards clientes */}
-            <div className="xl:col-span-2 space-y-6">
+            {/* RIGHT: 8 cols */}
+            <div className="xl:col-span-8 space-y-8">
 
-              {/* Monitor de pedidos */}
-              <div className="rounded-[2rem] overflow-hidden" style={{ background: "rgba(10,11,16,0.8)", backdropFilter: "blur(24px)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                <div className="px-8 py-6 border-b flex items-center justify-between" style={{ borderColor: "rgba(255,255,255,0.06)", background: "rgba(255,255,255,0.02)" }}>
+              {/* Monitor de Pedidos */}
+              <div className="rounded-[2.5rem] overflow-hidden" style={{ background: "linear-gradient(145deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.08)", boxShadow: "0 4px 30px rgba(0,0,0,0.5)" }}>
+                <div className="p-8 border-b border-white/5 flex items-center justify-between">
                   <div>
                     <h3 className="font-black text-xl">Monitor de Pedidos</h3>
-                    <p className="text-xs text-gray-500 font-medium">Últimos {Math.min(pedidos.length, 8)} del equipo</p>
+                    <p className="text-xs text-gray-500 font-medium mt-1">Últimos movimientos del equipo</p>
                   </div>
-                  <button onClick={() => setTab("pedidos")} className="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors" style={{ background: "#030305", border: "1px solid rgba(255,255,255,0.07)" }}>
-                    Ver todos →
+                  <button onClick={() => setTab("pedidos")} className="px-6 py-2.5 bg-white text-black text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-[#FF5E3A] hover:text-black transition-colors">
+                    Ver Todos
                   </button>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-left">
-                    <thead className="border-b" style={{ background: "rgba(3,3,5,0.5)", borderColor: "rgba(255,255,255,0.06)" }}>
+                    <thead className="bg-white/[0.02] border-b border-white/5">
                       <tr>
                         {["Pedido / Fecha", "Cliente", "Asignado a", "Monto", "Estado"].map((h, i) => (
-                          <th key={h} className="px-6 py-4 text-[10px] font-black uppercase text-gray-500 tracking-widest" style={{ textAlign: i >= 3 ? "center" : "left" }}>{h}</th>
+                          <th key={h} className="px-8 py-5 text-[10px] font-black uppercase text-gray-500 tracking-widest" style={{ textAlign: i >= 3 ? "center" : "left" }}>{h}</th>
                         ))}
                       </tr>
                     </thead>
-                    <tbody>
+                    <tbody className="divide-y divide-white/5">
                       {pedidos.slice(0, 8).map((p: any) => {
                         const v = getVendedor(p.vendedor_id);
                         return (
-                          <tr key={p.id} className="cursor-pointer transition-colors hover:bg-white/[0.02] border-b" style={{ borderColor: "rgba(255,255,255,0.04)" }}
+                          <tr key={p.id} className="cursor-pointer transition-colors hover:bg-white/[0.02] group"
                             onClick={() => { setFiltroVendedor(p.vendedor_id || "todos"); setTab("pedidos"); }}>
-                            <td className="px-6 py-5">
-                              <p className="text-sm font-black">#{p.id.slice(-6).toUpperCase()}</p>
-                              <p className="text-[10px] text-gray-500 font-bold">{new Date(p.created_at).toLocaleDateString("es-AR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</p>
+                            <td className="px-8 py-6">
+                              <p className="text-sm font-black text-white">#{p.id.slice(-6).toUpperCase()}</p>
+                              <p className="text-[10px] text-gray-500 font-bold mt-0.5">{new Date(p.created_at).toLocaleDateString("es-AR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</p>
                             </td>
-                            <td className="px-6 py-5">
+                            <td className="px-8 py-6">
+                              <p className="text-xs font-bold">{p.datos_cliente?.nombre || "—"}</p>
+                              <p className="text-[9px] text-gray-500 uppercase tracking-wider">{p.datos_cliente?.cuit ? `CUIT ${p.datos_cliente.cuit.slice(0,8)}...` : ""}</p>
+                            </td>
+                            <td className="px-8 py-6">
                               <div className="flex items-center gap-2">
-                                <div className="w-7 h-7 rounded-lg flex items-center justify-center text-xs" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", color: "#3A86FF" }}>
-                                  <Building2 className="h-3 w-3" />
+                                <div className="w-6 h-6 rounded-md flex items-center justify-center text-[10px] font-black"
+                                  style={{ background: `${NIVEL_COLORS[v?.nivel_vendedor] || "#3A86FF"}20`, color: NIVEL_COLORS[v?.nivel_vendedor] || "#3A86FF" }}>
+                                  {v?.nombre?.slice(0, 2).toUpperCase() || "—"}
                                 </div>
-                                <p className="text-xs font-bold truncate max-w-[140px]">{p.datos_cliente?.nombre || "—"}</p>
+                                <span className="text-xs text-gray-400 font-medium">{v?.nombre?.split(" ")[0] || "—"}</span>
                               </div>
                             </td>
-                            <td className="px-6 py-5">
-                              <span className="text-xs text-gray-400 font-medium">{v?.nombre || "—"}</span>
+                            <td className="px-8 py-6 text-center">
+                              <p className="text-sm font-black" style={{ color: p.estado_pago === "pagado" ? "#00FF66" : "#fff" }}>{fmtMoney(p.total)}</p>
                             </td>
-                            <td className="px-6 py-5 text-center">
-                              <p className="text-sm font-black">{fmtMoney(p.total)}</p>
-                            </td>
-                            <td className="px-6 py-5 text-center">
-                              <Badge estado={p.estado_pago === "pagado" ? "pagado" : p.estado} tipo={p.estado_pago === "pagado" ? "pago" : "pedido"} />
+                            <td className="px-8 py-6 text-center">
+                              {p.estado_pago === "pagado" ? (
+                                <span className="px-3 py-1 bg-[#00FF66]/10 text-[#00FF66] border border-[#00FF66]/20 rounded-full text-[9px] font-black uppercase tracking-widest">Pagado</span>
+                              ) : (
+                                <span className="px-3 py-1 bg-[#FF5E3A]/10 text-[#FF5E3A] border border-[#FF5E3A]/20 rounded-full text-[9px] font-black uppercase tracking-widest">Pendiente</span>
+                              )}
                             </td>
                           </tr>
                         );
                       })}
                       {pedidos.length === 0 && (
-                        <tr><td colSpan={5} className="px-6 py-12 text-center text-gray-600 text-sm">Sin pedidos aún</td></tr>
+                        <tr><td colSpan={5} className="px-8 py-12 text-center text-gray-600 text-sm">Sin pedidos aún</td></tr>
                       )}
                     </tbody>
                   </table>
                 </div>
               </div>
 
-              {/* Monitor clientes */}
-              <div className="rounded-[2rem] overflow-hidden" style={{ background: "rgba(10,11,16,0.8)", backdropFilter: "blur(24px)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                <div className="px-8 py-6 border-b flex items-center justify-between" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
-                  <h3 className="font-black text-xl">Monitor de Clientes</h3>
-                  <div className="relative w-56">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-500" />
-                    <input type="text" placeholder="Buscar cliente..." value={busquedaCliente} onChange={e => setBusquedaCliente(e.target.value)}
-                      className="w-full rounded-xl py-2 pl-9 pr-4 text-xs outline-none transition-all"
+              {/* Monitor de Clientes */}
+              <div className="rounded-[2.5rem] p-8" style={{ background: "linear-gradient(145deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.08)", boxShadow: "0 4px 30px rgba(0,0,0,0.5)" }}>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-10">
+                  <div>
+                    <h3 className="font-black text-xl">Monitor de Clientes</h3>
+                    <p className="text-xs text-gray-500 font-medium mt-1">Base de datos centralizada de empresas</p>
+                  </div>
+                  <div className="relative group max-w-sm w-full">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-500 group-focus-within:text-[#FF5E3A] transition-colors" />
+                    <input type="text" placeholder="Buscar cliente por nombre o CUIT..." value={busquedaCliente} onChange={e => setBusquedaCliente(e.target.value)}
+                      className="w-full rounded-2xl py-3 pl-12 pr-4 text-xs outline-none transition-all"
                       style={{ background: "#030305", border: "1px solid rgba(255,255,255,0.08)", color: "#fff" }} />
                   </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2" style={{ gap: "1px", background: "rgba(255,255,255,0.06)" }}>
-                  {clientesFiltrados.slice(0, 6).map((c: any) => {
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {clientesFiltrados.slice(0, 6).map((c: any, idx: number) => {
                     const v = equipo.find((vv: any) => vv.id === c.vendedor_referente_id);
                     const cPedidos = pedidos.filter(p => p.datos_cliente?.cliente_id === c.id);
                     const cTotal = cPedidos.filter(p => p.estado !== "cancelado").reduce((s: number, p: any) => s + p.total, 0);
                     const esVip = cTotal > 500000;
+                    const Icono = idx % 2 === 0 ? Building2 : Truck;
+                    const iconoColor = idx % 2 === 0 ? "#3A86FF" : "#A855F7";
                     return (
-                      <div key={c.id} className="p-6 cursor-pointer group transition-all hover:bg-white/[0.02]" style={{ background: "rgba(10,11,16,0.4)" }}>
-                        <div className="flex items-start justify-between mb-4">
-                          <div className="w-11 h-11 rounded-2xl flex items-center justify-center text-2xl transition-transform group-hover:scale-110" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", color: "#3A86FF" }}>
-                            <Building2 className="h-5 w-5" />
+                      <div key={c.id} className="p-6 rounded-3xl cursor-pointer group transition-all hover:border-opacity-100"
+                        style={{ background: "rgba(10,11,16,0.6)", border: `1px solid ${idx % 2 === 0 ? "rgba(58,134,255,0.1)" : "rgba(168,85,247,0.1)"}` }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = idx % 2 === 0 ? "rgba(58,134,255,0.3)" : "rgba(168,85,247,0.3)"; }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = idx % 2 === 0 ? "rgba(58,134,255,0.1)" : "rgba(168,85,247,0.1)"; }}>
+                        <div className="flex justify-between items-start mb-6">
+                          <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl" style={{ background: `${iconoColor}10`, color: iconoColor }}>
+                            <Icono className="h-5 w-5" />
                           </div>
-                          <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded"
-                            style={esVip ? { background: "rgba(0,255,102,0.1)", color: "#00FF66" } : { background: "rgba(255,255,255,0.04)", color: "#64748b", border: "1px solid rgba(255,255,255,0.07)" }}>
-                            {esVip ? "VIP Buyer" : "Cliente"}
+                          <span className="text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full"
+                            style={esVip ? { background: "rgba(0,255,102,0.1)", color: "#00FF66" } : { background: "rgba(255,255,255,0.05)", color: "#64748b", border: "1px solid rgba(255,255,255,0.1)" }}>
+                            {esVip ? "VIP Buyer" : "Standard"}
                           </span>
                         </div>
-                        <h4 className="text-sm font-black mb-1 truncate">{c.nombre}</h4>
-                        <p className="text-xs text-gray-500 mb-4 font-medium truncate">{c.email}</p>
-                        <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest border-t pt-4" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+                        <h4 className="text-lg font-black group-hover:text-[#3A86FF] transition-colors truncate">{c.nombre}</h4>
+                        <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">{c.cuit ? `CUIT: ${c.cuit}` : c.email}</p>
+                        <div className="mt-6 pt-6 border-t border-white/5 flex items-center justify-between">
                           <div>
-                            <p className="text-gray-500 mb-0.5">Ventas acumuladas</p>
-                            <p className="text-white">{fmtMoney(cTotal)}</p>
+                            <p className="text-[9px] text-gray-500 font-black uppercase tracking-wider mb-1">Compras Totales</p>
+                            <p className="text-sm font-black text-white">{fmtMoney(cTotal)}</p>
                           </div>
                           <div className="text-right">
-                            <p className="text-gray-500 mb-0.5">Vendedor</p>
-                            <p style={{ color: "#FF5E3A" }}>{v?.nombre?.split(" ")[0] || "—"}</p>
+                            <p className="text-[9px] text-gray-500 font-black uppercase tracking-wider mb-1">Responsable</p>
+                            <p className="text-xs font-bold text-[#FF5E3A] underline underline-offset-4">{v?.nombre?.split(" ")[0] || "—"}</p>
                           </div>
                         </div>
                       </div>
@@ -451,11 +450,12 @@ export default function GerenteDashboardPage() {
                   )}
                 </div>
                 {clientes.length > 6 && (
-                  <div className="px-6 py-3 border-t text-center" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
-                    <button onClick={() => setTab("clientes")} className="text-xs font-bold" style={{ color: "#FF5E3A" }}>Ver todos los {clientes.length} clientes →</button>
+                  <div className="mt-6 text-center">
+                    <button onClick={() => setTab("clientes")} className="text-xs font-black uppercase tracking-widest" style={{ color: "#FF5E3A" }}>Ver todos los {clientes.length} clientes →</button>
                   </div>
                 )}
               </div>
+
             </div>
           </div>
         </>)}
@@ -564,7 +564,7 @@ export default function GerenteDashboardPage() {
                           })}
                           {vPedidos.length > 4 && (
                             <button onClick={() => { setFiltroVendedor(v.id); setTab("pedidos"); }}
-                              className="w-full text-xs text-center py-2 transition-colors" style={{ color: "#FF5E3A" }}>
+                              className="w-full text-xs text-center py-2 transition-colors hover:text-white" style={{ color: "#FF5E3A" }}>
                               Ver los {vPedidos.length - 4} pedidos restantes →
                             </button>
                           )}
@@ -583,11 +583,11 @@ export default function GerenteDashboardPage() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-black">Clientes del Equipo <span className="text-gray-600 font-normal text-sm">({clientes.length})</span></h2>
-              <div className="relative w-64">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-500" />
-                <input type="text" placeholder="Buscar cliente..." value={busquedaCliente} onChange={e => setBusquedaCliente(e.target.value)}
-                  className="w-full rounded-xl py-2 pl-9 pr-4 text-xs outline-none transition-all"
-                  style={{ background: "#0A0B10", border: "1px solid rgba(255,255,255,0.08)", color: "#fff" }} />
+              <div className="relative group max-w-sm w-full">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-500 group-focus-within:text-[#FF5E3A] transition-colors" />
+                <input type="text" placeholder="Buscar cliente por nombre o CUIT..." value={busquedaCliente} onChange={e => setBusquedaCliente(e.target.value)}
+                  className="w-full rounded-2xl py-3 pl-12 pr-4 text-xs outline-none transition-all"
+                  style={{ background: "#030305", border: "1px solid rgba(255,255,255,0.08)", color: "#fff" }} />
               </div>
             </div>
             {clientesFiltrados.length === 0 ? (
@@ -596,35 +596,38 @@ export default function GerenteDashboardPage() {
                 <p className="text-sm">Sin clientes{busquedaCliente ? " con ese filtro" : " registrados"}</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                {clientesFiltrados.map((c: any) => {
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                {clientesFiltrados.map((c: any, idx: number) => {
                   const v = equipo.find((vv: any) => vv.id === c.vendedor_referente_id);
                   const cPedidos = pedidos.filter(p => p.datos_cliente?.cliente_id === c.id);
                   const cTotal = cPedidos.filter(p => p.estado !== "cancelado").reduce((s: number, p: any) => s + p.total, 0);
                   const esVip = cTotal > 500000;
+                  const Icono = idx % 2 === 0 ? Building2 : Truck;
+                  const iconoColor = idx % 2 === 0 ? "#3A86FF" : "#A855F7";
                   return (
-                    <div key={c.id} className="rounded-2xl p-5 transition-all cursor-pointer group hover:bg-white/[0.02]"
-                      style={{ background: "rgba(10,11,16,0.8)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="w-11 h-11 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", color: "#3A86FF" }}>
-                          <Building2 className="h-5 w-5" />
+                    <div key={c.id} className="p-6 rounded-3xl cursor-pointer group transition-all"
+                      style={{ background: "rgba(10,11,16,0.6)", border: `1px solid ${idx % 2 === 0 ? "rgba(58,134,255,0.1)" : "rgba(168,85,247,0.1)"}` }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = idx % 2 === 0 ? "rgba(58,134,255,0.3)" : "rgba(168,85,247,0.3)"; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = idx % 2 === 0 ? "rgba(58,134,255,0.1)" : "rgba(168,85,247,0.1)"; }}>
+                      <div className="flex justify-between items-start mb-6">
+                        <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ background: `${iconoColor}10`, color: iconoColor }}>
+                          <Icono className="h-5 w-5" />
                         </div>
-                        <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded"
-                          style={esVip ? { background: "rgba(0,255,102,0.1)", color: "#00FF66" } : { background: "rgba(255,255,255,0.04)", color: "#64748b", border: "1px solid rgba(255,255,255,0.07)" }}>
-                          {esVip ? "VIP Buyer" : cPedidos.length > 0 ? "Activo" : "Nuevo"}
+                        <span className="text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full"
+                          style={esVip ? { background: "rgba(0,255,102,0.1)", color: "#00FF66" } : { background: "rgba(255,255,255,0.05)", color: "#64748b", border: "1px solid rgba(255,255,255,0.1)" }}>
+                          {esVip ? "VIP Buyer" : "Standard"}
                         </span>
                       </div>
-                      <h4 className="text-sm font-black mb-1 truncate">{c.nombre}</h4>
-                      <p className="text-xs text-gray-500 mb-1 font-medium truncate">{c.email}</p>
-                      {c.telefono && <p className="text-xs text-gray-600 mb-4">{c.telefono}</p>}
-                      <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest border-t pt-4" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+                      <h4 className="text-lg font-black group-hover:text-[#3A86FF] transition-colors truncate">{c.nombre}</h4>
+                      <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">{c.cuit ? `CUIT: ${c.cuit}` : c.email}</p>
+                      <div className="mt-6 pt-6 border-t border-white/5 flex items-center justify-between">
                         <div>
-                          <p className="text-gray-500 mb-0.5">Ventas · {cPedidos.length} pedidos</p>
-                          <p className="text-white">{fmtMoney(cTotal)}</p>
+                          <p className="text-[9px] text-gray-500 font-black uppercase tracking-wider mb-1">Compras Totales</p>
+                          <p className="text-sm font-black text-white">{fmtMoney(cTotal)}</p>
                         </div>
                         <div className="text-right">
-                          <p className="text-gray-500 mb-0.5">Vendedor</p>
-                          <p style={{ color: "#FF5E3A" }}>{v?.nombre?.split(" ")[0] || "—"}</p>
+                          <p className="text-[9px] text-gray-500 font-black uppercase tracking-wider mb-1">Responsable</p>
+                          <p className="text-xs font-bold text-[#FF5E3A] underline underline-offset-4">{v?.nombre?.split(" ")[0] || "—"}</p>
                         </div>
                       </div>
                     </div>
@@ -638,7 +641,6 @@ export default function GerenteDashboardPage() {
         {/* ── TAB PEDIDOS ── */}
         {tab === "pedidos" && (
           <div className="space-y-4">
-            {/* Filtros */}
             <div className="rounded-2xl p-4 flex flex-wrap gap-3 items-center" style={{ background: "rgba(10,11,16,0.8)", border: "1px solid rgba(255,255,255,0.06)" }}>
               <div className="flex flex-wrap gap-1.5">
                 <button onClick={() => setFiltroVendedor("todos")}
@@ -673,17 +675,17 @@ export default function GerenteDashboardPage() {
                 <p className="text-sm">Sin pedidos con ese filtro</p>
               </div>
             ) : (
-              <div className="rounded-2xl overflow-hidden" style={{ background: "rgba(10,11,16,0.8)", border: "1px solid rgba(255,255,255,0.06)" }}>
+              <div className="rounded-[2.5rem] overflow-hidden" style={{ background: "linear-gradient(145deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.08)", boxShadow: "0 4px 30px rgba(0,0,0,0.5)" }}>
                 <div className="overflow-x-auto">
                   <table className="w-full text-left">
-                    <thead className="border-b" style={{ background: "rgba(3,3,5,0.5)", borderColor: "rgba(255,255,255,0.06)" }}>
+                    <thead className="bg-white/[0.02] border-b border-white/5">
                       <tr>
                         {["Pedido / Fecha", "Cliente", "Asignado a", "Comisión", "Monto", "Estado"].map((h, i) => (
-                          <th key={h} className="px-5 py-4 text-[10px] font-black uppercase text-gray-500 tracking-widest" style={{ textAlign: i >= 4 ? "center" : "left" }}>{h}</th>
+                          <th key={h} className="px-8 py-5 text-[10px] font-black uppercase text-gray-500 tracking-widest" style={{ textAlign: i >= 4 ? "center" : "left" }}>{h}</th>
                         ))}
                       </tr>
                     </thead>
-                    <tbody>
+                    <tbody className="divide-y divide-white/5">
                       {pedidosFiltrados.map((p: any) => {
                         const diasRestantes = p.fecha_limite_pago ? Math.ceil((new Date(p.fecha_limite_pago).getTime() - Date.now()) / 86400000) : null;
                         const comisionUrgente = p.comision_estado !== "pagada" && diasRestantes !== null && diasRestantes <= 3;
@@ -691,35 +693,46 @@ export default function GerenteDashboardPage() {
                         const isExpanded = expandedId === p.id;
                         return (
                           <>
-                            <tr key={p.id} className="cursor-pointer transition-colors hover:bg-white/[0.02] border-b"
-                              style={{ borderColor: comisionUrgente ? "rgba(239,68,68,0.15)" : "rgba(255,255,255,0.04)", background: comisionUrgente ? "rgba(239,68,68,0.03)" : undefined }}
+                            <tr key={p.id} className="cursor-pointer transition-colors hover:bg-white/[0.02] group"
+                              style={{ background: comisionUrgente ? "rgba(239,68,68,0.03)" : undefined }}
                               onClick={() => setExpandedId(isExpanded ? null : p.id)}>
-                              <td className="px-5 py-4">
-                                <p className="text-sm font-black">#{p.id.slice(-6).toUpperCase()}</p>
-                                <p className="text-[10px] text-gray-500 font-bold">{new Date(p.created_at).toLocaleDateString("es-AR", { day: "numeric", month: "short" })}</p>
+                              <td className="px-8 py-6">
+                                <p className="text-sm font-black text-white">#{p.id.slice(-6).toUpperCase()}</p>
+                                <p className="text-[10px] text-gray-500 font-bold mt-0.5">{new Date(p.created_at).toLocaleDateString("es-AR", { day: "numeric", month: "short" })}</p>
                               </td>
-                              <td className="px-5 py-4">
-                                <p className="text-xs font-bold truncate max-w-[130px]">{p.datos_cliente?.nombre || "—"}</p>
+                              <td className="px-8 py-6">
+                                <p className="text-xs font-bold">{p.datos_cliente?.nombre || "—"}</p>
+                                <p className="text-[9px] text-gray-500 uppercase tracking-wider">{p.datos_cliente?.cuit ? `CUIT ${p.datos_cliente.cuit.slice(0,8)}...` : ""}</p>
                               </td>
-                              <td className="px-5 py-4">
-                                <span className="text-xs text-gray-400">{v?.nombre || "—"}</span>
+                              <td className="px-8 py-6">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-6 h-6 rounded-md flex items-center justify-center text-[10px] font-black"
+                                    style={{ background: `${NIVEL_COLORS[v?.nivel_vendedor] || "#3A86FF"}20`, color: NIVEL_COLORS[v?.nivel_vendedor] || "#3A86FF" }}>
+                                    {v?.nombre?.slice(0, 2).toUpperCase() || "—"}
+                                  </div>
+                                  <span className="text-xs text-gray-400 font-medium">{v?.nombre?.split(" ")[0] || "—"}</span>
+                                </div>
                               </td>
-                              <td className="px-5 py-4">
+                              <td className="px-8 py-6">
                                 <p className={`text-xs font-bold ${p.comision_estado === "pagada" ? "text-emerald-400" : comisionUrgente ? "text-red-400" : "text-amber-400"}`}>
                                   {p.comision_estado === "pagada" ? "✓" : comisionUrgente ? `⚠ ${diasRestantes}d` : "⏳"} {fmtMoney(p.comision_monto)}
                                 </p>
                                 {p.comision_gerente_monto > 0 && <p className="text-[10px] text-orange-400">Tu parte: {fmtMoney(p.comision_gerente_monto)}</p>}
                               </td>
-                              <td className="px-5 py-4 text-center">
-                                <p className="text-sm font-black">{fmtMoney(p.total)}</p>
+                              <td className="px-8 py-6 text-center">
+                                <p className="text-sm font-black" style={{ color: p.estado_pago === "pagado" ? "#00FF66" : "#fff" }}>{fmtMoney(p.total)}</p>
                               </td>
-                              <td className="px-5 py-4 text-center">
-                                <Badge estado={p.estado_pago === "pagado" ? "pagado" : p.estado} tipo={p.estado_pago === "pagado" ? "pago" : "pedido"} />
+                              <td className="px-8 py-6 text-center">
+                                {p.estado_pago === "pagado" ? (
+                                  <span className="px-3 py-1 bg-[#00FF66]/10 text-[#00FF66] border border-[#00FF66]/20 rounded-full text-[9px] font-black uppercase tracking-widest">Pagado</span>
+                                ) : (
+                                  <span className="px-3 py-1 bg-[#FF5E3A]/10 text-[#FF5E3A] border border-[#FF5E3A]/20 rounded-full text-[9px] font-black uppercase tracking-widest">Pendiente</span>
+                                )}
                               </td>
                             </tr>
                             {isExpanded && (
                               <tr key={`${p.id}-detail`} style={{ background: "rgba(0,0,0,0.2)" }}>
-                                <td colSpan={6} className="px-5 py-3">
+                                <td colSpan={6} className="px-8 py-3">
                                   <div className="flex flex-wrap gap-3">
                                     {[
                                       { label: "Estado envío", value: p.estado_envio || "—", color: "text-blue-400" },
@@ -751,13 +764,13 @@ export default function GerenteDashboardPage() {
       </main>
 
       {/* FAB */}
-      <div className="fixed bottom-8 right-8 group">
+      <div className="fixed bottom-10 right-10 z-[60] group">
         <button onClick={() => router.push("/catalogo/vendedor/dashboard")}
-          className="w-16 h-16 rounded-full flex items-center justify-center transition-transform hover:scale-110"
+          className="w-16 h-16 rounded-2xl flex items-center justify-center transition-all hover:scale-110 active:scale-95"
           style={{ background: "#FF5E3A", boxShadow: "0 10px 40px rgba(255,94,58,0.4)", color: "#000" }}>
-          <Crown className="h-6 w-6" />
+          <Plus className="h-6 w-6 group-hover:rotate-90 transition-transform" />
         </button>
-        <span className="absolute right-20 bottom-4 px-4 py-2 rounded-xl text-xs font-black opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-xl" style={{ background: "#fff", color: "#000" }}>
+        <span className="absolute right-20 bottom-4 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-2xl pointer-events-none" style={{ background: "#fff", color: "#000" }}>
           Mi Dashboard
         </span>
       </div>
