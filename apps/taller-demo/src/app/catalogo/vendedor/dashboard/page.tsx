@@ -47,6 +47,11 @@ export default function VendedorDashboardPage() {
   const [copied, setCopied] = useState(false);
   const [notificaciones, setNotificaciones] = useState<any[]>([]);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [clientes, setClientes] = useState<any[]>([]);
+  const [clientesAnonimos, setClientesAnonimos] = useState<any[]>([]);
+  const [resumenClientes, setResumenClientes] = useState<any>(null);
+  const [expandedCliente, setExpandedCliente] = useState<string | null>(null);
+  const [tabActiva, setTabActiva] = useState<"pedidos" | "clientes">("pedidos");
 
   useEffect(() => {
     if (authLoading) return;
@@ -56,7 +61,24 @@ export default function VendedorDashboardPage() {
     }
     cargarPedidos();
     cargarNotificaciones();
+    cargarClientes();
   }, [vendedor, authLoading, router]);
+
+  const cargarClientes = async () => {
+    const token = localStorage.getItem("vendedor_token");
+    if (!token) return;
+    try {
+      const res = await fetch("/api/vendedor/clientes", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      setClientes(data.clientes || []);
+      setClientesAnonimos(data.anonimos || []);
+      setResumenClientes(data.resumen || null);
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const cargarPedidos = async () => {
     const token = localStorage.getItem("vendedor_token");
@@ -319,7 +341,27 @@ export default function VendedorDashboardPage() {
         )}
       </div>
 
+      {/* TABS: Pedidos / Clientes */}
+      <div className="flex gap-1 mb-4">
+        {(["pedidos", "clientes"] as const).map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setTabActiva(tab)}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${
+              tabActiva === tab
+                ? "text-white"
+                : "text-slate-500 hover:text-slate-300"
+            }`}
+            style={tabActiva === tab ? { background: "rgba(249,115,22,0.15)", border: "1px solid rgba(249,115,22,0.35)" } : { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}
+          >
+            {tab === "pedidos" ? <ShoppingBag className="h-4 w-4" /> : <Users className="h-4 w-4" />}
+            {tab === "pedidos" ? `Pedidos (${pedidos.length})` : `Clientes (${clientes.length + clientesAnonimos.length})`}
+          </button>
+        ))}
+      </div>
+
       {/* ORDERS */}
+      {tabActiva === "pedidos" && (
       <section
         className="rounded-2xl p-6"
         style={{
@@ -439,6 +481,150 @@ export default function VendedorDashboardPage() {
           </div>
         )}
       </section>
+      )}
+
+      {/* CLIENTES */}
+      {tabActiva === "clientes" && (
+        <section
+          className="rounded-2xl p-6"
+          style={{
+            background: "linear-gradient(145deg, rgba(15,23,42,0.9) 0%, rgba(15,23,42,0.4) 100%)",
+            backdropFilter: "blur(10px)",
+            border: "1px solid rgba(255,255,255,0.05)",
+          }}
+        >
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+              <Users className="h-5 w-5 text-slate-400" /> Tus clientes
+            </h2>
+            {resumenClientes && (
+              <div className="flex items-center gap-4 text-xs text-slate-400">
+                <span>Total comprado: <strong className="text-white">{fmtMoney(resumenClientes.total_comprado)}</strong></span>
+                <span>Comisión generada: <strong style={{ color: "#fb923c" }}>{fmtMoney(resumenClientes.comision_total)}</strong></span>
+              </div>
+            )}
+          </div>
+
+          {clientes.length === 0 && clientesAnonimos.length === 0 ? (
+            <div className="border border-slate-800 border-dashed rounded-xl p-10 flex flex-col items-center justify-center text-center">
+              <div className="p-4 rounded-full mb-4" style={{ background: "#1e293b" }}>
+                <Users className="h-8 w-8 text-slate-500" />
+              </div>
+              <h3 className="text-slate-300 font-bold mb-1">Aún no tenés clientes registrados</h3>
+              <p className="text-slate-500 text-sm max-w-sm">
+                Cuando alguien se registre usando tu link o código de referido, aparecerá aquí con todo su historial de compras.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {/* Clientes registrados */}
+              {clientes.map((c) => {
+                const isExp = expandedCliente === c.id;
+                return (
+                  <div key={c.id} className="rounded-xl overflow-hidden border border-white/5" style={{ background: "rgba(255,255,255,0.02)" }}>
+                    <button
+                      className="w-full flex flex-wrap items-center gap-3 px-4 py-3 text-left"
+                      onClick={() => setExpandedCliente(isExp ? null : c.id)}
+                    >
+                      <div className="w-9 h-9 rounded-full flex items-center justify-center font-black text-sm shrink-0" style={{ background: "rgba(249,115,22,0.12)", color: "#fb923c", border: "1px solid rgba(249,115,22,0.25)" }}>
+                        {c.nombre.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-sm font-bold text-white truncate">{c.nombre}</p>
+                          <span className="text-[10px] px-2 py-0.5 rounded-full border text-emerald-400 bg-emerald-400/10 border-emerald-400/30">✓ Registrado</span>
+                          {c.descuento_cliente_pct > 0 && (
+                            <span className="text-[10px] px-2 py-0.5 rounded-full border text-blue-400 bg-blue-400/10 border-blue-400/30">{c.descuento_cliente_pct}% dto</span>
+                          )}
+                        </div>
+                        <p className="text-xs text-slate-500 mt-0.5">{c.email} {c.telefono ? `· ${c.telefono}` : ""}</p>
+                      </div>
+                      <div className="text-right shrink-0 space-y-0.5">
+                        <p className="text-sm font-black text-white">{fmtMoney(c.total_comprado)}</p>
+                        <p className="text-[10px] text-slate-500">{c.total_pedidos} pedido{c.total_pedidos !== 1 ? "s" : ""}</p>
+                        <p className="text-[10px]" style={{ color: "#fb923c" }}>{fmtMoney(c.comision_generada)} com.</p>
+                      </div>
+                    </button>
+
+                    {isExp && c.pedidos.length > 0 && (
+                      <div className="border-t border-white/[0.04] px-4 py-3 space-y-2" style={{ background: "rgba(0,0,0,0.15)" }}>
+                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-2">Historial de pedidos</p>
+                        {c.pedidos.map((p: any) => (
+                          <div key={p.id} className="flex flex-wrap items-center gap-2 rounded-lg px-3 py-2" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)" }}>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs text-slate-300">{new Date(p.created_at).toLocaleDateString("es-AR")}</p>
+                            </div>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                                p.estado === "entregado" ? "text-emerald-400 bg-emerald-400/10 border-emerald-400/30" :
+                                p.estado === "enviado" ? "text-blue-400 bg-blue-400/10 border-blue-400/30" :
+                                p.estado === "confirmado" || p.estado === "pagado" ? "text-purple-400 bg-purple-400/10 border-purple-400/30" :
+                                p.estado === "cancelado" ? "text-red-400 bg-red-400/10 border-red-400/30" :
+                                "text-yellow-400 bg-yellow-400/10 border-yellow-400/30"
+                              }`}>
+                                {p.estado === "entregado" ? "✓ Entregado" : p.estado === "enviado" ? "🚚 Enviado" :
+                                 p.estado === "confirmado" ? "✓ Confirmado" : p.estado === "pagado" ? "💳 Pagado" :
+                                 p.estado === "cancelado" ? "✕ Cancelado" : "⏳ Pendiente"}
+                              </span>
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                                p.estado_pago === "pagado" ? "text-emerald-400 bg-emerald-400/10 border-emerald-400/30" : "text-slate-500 bg-slate-500/10 border-slate-500/20"
+                              }`}>
+                                {p.estado_pago === "pagado" ? "💰 Pago" : "💰 Pendiente"}
+                              </span>
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                                p.estado_envio === "entregado" ? "text-emerald-400 bg-emerald-400/10 border-emerald-400/30" :
+                                p.estado_envio === "enviado" ? "text-blue-400 bg-blue-400/10 border-blue-400/30" :
+                                "text-slate-500 bg-slate-500/10 border-slate-500/20"
+                              }`}>
+                                {p.estado_envio === "entregado" ? "📦 Entregado" : p.estado_envio === "enviado" ? "🚚 Despachado" : "📦 Sin despacho"}
+                              </span>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <p className="text-xs font-black text-white">{fmtMoney(p.total)}</p>
+                              <p className={`text-[10px] ${ p.comision_estado === "pagada" ? "text-emerald-400" : "text-amber-400" }`}>
+                                {p.comision_estado === "pagada" ? "✓" : "⏳"} {fmtMoney(p.comision_monto)}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+
+              {/* Clientes anónimos (compraron pero no se registraron) */}
+              {clientesAnonimos.length > 0 && (
+                <>
+                  <div className="pt-2 pb-1">
+                    <p className="text-[10px] text-slate-600 font-bold uppercase tracking-widest">Compradores sin registro ({clientesAnonimos.length})</p>
+                  </div>
+                  {clientesAnonimos.map((c, i) => (
+                    <div key={i} className="rounded-xl overflow-hidden border border-white/[0.03]" style={{ background: "rgba(255,255,255,0.015)" }}>
+                      <div className="flex flex-wrap items-center gap-3 px-4 py-3">
+                        <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                          <Users className="h-4 w-4 text-slate-500" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-bold text-slate-300 truncate">{c.nombre}</p>
+                            <span className="text-[10px] px-2 py-0.5 rounded-full border text-slate-500 bg-slate-500/10 border-slate-500/20">Sin registro</span>
+                          </div>
+                          <p className="text-xs text-slate-600 mt-0.5">{c.email || "Sin email"} {c.telefono ? `· ${c.telefono}` : ""}</p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="text-sm font-black text-white">{fmtMoney(c.total_comprado)}</p>
+                          <p className="text-[10px] text-slate-500">{c.total_pedidos} pedido{c.total_pedidos !== 1 ? "s" : ""}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </>
+              )}
+            </div>
+          )}
+        </section>
+      )}
     </main>
   );
 }
