@@ -14,6 +14,7 @@ import { useCart, CartItem } from "@/components/catalogo/CartContext";
 import { useVendedorAuth } from "@/components/vendedor/VendedorAuthContext";
 import { useClienteAuth } from "@/components/cliente/ClienteAuthContext";
 import ReferralTracker from "@/components/catalogo/ReferralTracker";
+import SideBanners from "@/components/catalogo/SideBanners";
 
 interface Producto {
   sku: string;
@@ -520,6 +521,7 @@ function CatalogoContent() {
 
       <CartDrawer />
       <CartButton />
+      <SideBanners />
     </main>
   );
 }
