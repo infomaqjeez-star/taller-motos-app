@@ -167,9 +167,9 @@ const HyperBanner = ({ type, badges, title, highlight, subtitle, features, cta, 
         }
       `}</style>
 
-      <div 
+      <div
         ref={cardRef}
-        className={`card-3d-wrapper relative w-full h-full rounded-[2rem] glass-dark neon-box-${type} flex flex-col items-center p-5 shadow-2xl`}
+        className={`card-3d-wrapper relative w-full h-full rounded-[2rem] glass-dark neon-box-${type} flex flex-col items-center p-5 shadow-2xl active:scale-[0.97] transition-transform duration-75`}
         style={{ ...style, boxShadow: `0 30px 60px -15px ${colors.glowShadow}` }}
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
