@@ -538,13 +538,9 @@ function ActionBtn({ icon, label, onClick }: { icon: React.ReactNode; label: str
 }
 
 const ProductCard = memo(function ProductCard({ producto, addItem }: { producto: Producto; addItem: (item: Omit<CartItem, "cantidad"> & { cantidad?: number }) => void }) {
-  const [qty, setQty] = useState(1);
-  const increase = () => setQty((q) => q + 1);
-  const decrease = () => setQty((q) => Math.max(1, q - 1));
   const handleAdd = useCallback(() => {
-    addItem({ sku: producto.sku, nombre: producto.name, precio: producto.catalog_price || 0, imagen: producto.image_url || "", cantidad: qty });
-    setQty(1);
-  }, [addItem, producto, qty]);
+    addItem({ sku: producto.sku, nombre: producto.name, precio: producto.catalog_price || 0, imagen: producto.image_url || "", cantidad: 1 });
+  }, [addItem, producto]);
 
   return (
     <article className="product-card flex flex-col overflow-hidden rounded-2xl group">
@@ -575,25 +571,14 @@ const ProductCard = memo(function ProductCard({ producto, addItem }: { producto:
         <h3 className="text-slate-200 font-semibold text-[11px] sm:text-xs md:text-sm leading-tight line-clamp-2 mb-1 sm:mb-2">{producto.name}</h3>
         <div className="mt-auto">
           <div className="font-black text-base sm:text-xl md:text-2xl tracking-tight mb-2 sm:mb-3" style={{ color: "#10b981" }}>{fmtPrecio(producto.catalog_price)}</div>
-          <div className="flex items-stretch gap-1 sm:gap-2">
-            <div className="hidden sm:flex items-center bg-slate-950 rounded-xl border border-slate-700 overflow-hidden w-20 md:w-24 shrink-0">
-              <button onClick={decrease} className="w-7 md:w-8 h-full flex justify-center items-center text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
-                <Minus className="h-3 w-3 md:h-3.5 md:w-3.5" />
-              </button>
-              <input type="number" value={qty} readOnly className="w-full h-8 md:h-10 bg-transparent text-center text-white font-bold text-xs md:text-sm outline-none" />
-              <button onClick={increase} className="w-7 md:w-8 h-full flex justify-center items-center text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
-                <Plus className="h-3 w-3 md:h-3.5 md:w-3.5" />
-              </button>
-            </div>
-            <button
-              onClick={handleAdd}
-              className="flex-grow font-bold rounded-lg sm:rounded-xl transition-all active:scale-95 flex items-center justify-center gap-1 text-white text-[10px] sm:text-xs md:text-sm py-2.5 sm:py-2"
-              style={{ background: "#f97316" }}
-            >
-              <Plus className="h-3 w-3 sm:hidden" />
-              {qty > 1 ? `${qty}x` : ""} Agregar
-            </button>
-          </div>
+          <button
+            onClick={handleAdd}
+            className="w-full font-bold rounded-lg sm:rounded-xl transition-all active:scale-95 flex items-center justify-center gap-1 text-white text-[10px] sm:text-xs md:text-sm py-2.5 sm:py-2"
+            style={{ background: "#f97316" }}
+          >
+            <Plus className="h-3 w-3 sm:hidden" />
+            Agregar
+          </button>
         </div>
       </div>
     </article>
