@@ -53,20 +53,35 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
+    // Clientes registrados de cada vendedor del equipo
+    const { data: clientesEquipo } = await supabase
+      .from("clientes_catalogo")
+      .select("id, nombre, email, telefono, codigo_referido, descuento_cliente_pct, created_at, vendedor_referente_id")
+      .in("vendedor_referente_id", equipoIds)
+      .eq("estado", "activo")
+      .order("created_at", { ascending: false });
+
     // Resumen del equipo
-    const totalVentas = (pedidos || []).filter((p: any) => p.estado !== "cancelado").reduce((s: number, p: any) => s + (p.total || 0), 0);
+    const pedidosActivos = (pedidos || []).filter((p: any) => p.estado !== "cancelado");
+    const totalVentas = pedidosActivos.reduce((s: number, p: any) => s + (p.total || 0), 0);
     const comisionPendiente = (pedidos || []).filter((p: any) => p.comision_estado !== "pagada").reduce((s: number, p: any) => s + (p.comision_gerente_monto || 0), 0);
     const comisionPagada = (pedidos || []).filter((p: any) => p.comision_estado === "pagada").reduce((s: number, p: any) => s + (p.comision_gerente_monto || 0), 0);
+    const pedidosDespachados = (pedidos || []).filter((p: any) => p.estado_envio === "enviado" || p.estado_envio === "entregado").length;
+    const pedidosPagados = (pedidos || []).filter((p: any) => p.estado_pago === "pagado").length;
 
     return NextResponse.json({
       pedidos: pedidos || [],
       equipo: equipo || [],
+      clientes: clientesEquipo || [],
       resumen: {
         total_pedidos: (pedidos || []).length,
         total_ventas: totalVentas,
         comision_pendiente: comisionPendiente,
         comision_pagada: comisionPagada,
         total_vendedores: equipoIds.length,
+        total_clientes: (clientesEquipo || []).length,
+        pedidos_despachados: pedidosDespachados,
+        pedidos_pagados: pedidosPagados,
       },
     });
   } catch {
