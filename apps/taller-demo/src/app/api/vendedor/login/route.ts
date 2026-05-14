@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
     const supabase = getSupabaseServer();
     const { data: vendedor, error } = await supabase
       .from("vendedores")
-      .select("id, nombre, email, codigo_referido, password_hash, comision_pct, nivel_vendedor, estado")
+      .select("id, nombre, email, codigo_referido, password_hash, comision_pct, nivel_vendedor, estado, es_gerente, lider_id")
       .eq("email", email.trim().toLowerCase())
       .single();
 
@@ -53,6 +53,8 @@ export async function POST(req: NextRequest) {
         codigo_referido: vendedor.codigo_referido,
         comision_pct: vendedor.comision_pct,
         nivel_vendedor: vendedor.nivel_vendedor,
+        es_gerente: vendedor.es_gerente ?? false,
+        lider_id: vendedor.lider_id ?? null,
       },
     });
   } catch (err) {

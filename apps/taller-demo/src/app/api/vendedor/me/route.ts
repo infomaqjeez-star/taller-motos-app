@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
     const supabase = getSupabaseServer();
     const { data: vendedor, error } = await supabase
       .from("vendedores")
-      .select("id, nombre, email, codigo_referido, comision_pct, nivel_vendedor, estado")
+      .select("id, nombre, email, codigo_referido, comision_pct, nivel_vendedor, estado, es_gerente, lider_id")
       .eq("id", vendedorId)
       .single();
 
@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Cuenta inactiva" }, { status: 403 });
     }
 
-    return NextResponse.json({ vendedor });
+    return NextResponse.json({ vendedor: { ...vendedor, es_gerente: vendedor.es_gerente ?? false } });
   } catch {
     return NextResponse.json({ error: "Token inválido" }, { status: 401 });
   }
