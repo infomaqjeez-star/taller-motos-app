@@ -45,6 +45,14 @@ import {
   Star,
   AlertTriangle,
   Megaphone,
+  Search,
+  Tag,
+  CheckCircle,
+  XCircle,
+  Loader2,
+  ImageOff,
+  Zap,
+  Slash,
 } from "lucide-react";
 
 interface Pedido {
@@ -187,6 +195,16 @@ function AdminPedidosContent() {
   const [porcentajeAjuste, setPorcentajeAjuste] = useState("");
   const [ajustandoPrecios, setAjustandoPrecios] = useState(false);
   const [mensajeAjuste, setMensajeAjuste] = useState("");
+  // Estados para edición por SKU
+  const [skuBuscar, setSkuBuscar] = useState("");
+  const [productoEdit, setProductoEdit] = useState<any | null>(null);
+  const [loadingProducto, setLoadingProducto] = useState(false);
+  const [guardandoProducto, setGuardandoProducto] = useState(false);
+  const [mensajeProducto, setMensajeProducto] = useState("");
+  const [precioNormalEdit, setPrecioNormalEdit] = useState("");
+  const [enOfertaEdit, setEnOfertaEdit] = useState(false);
+  const [pctDescuentoEdit, setPctDescuentoEdit] = useState("");
+  const [precioOfertaEdit, setPrecioOfertaEdit] = useState("");
   const [evolucion, setEvolucion] = useState<EvolucionData | null>(null);
   const [pedidosPorEstado, setPedidosPorEstado] = useState<Record<string, number>>({});
   const [loadingDashboard, setLoadingDashboard] = useState(true);
@@ -376,6 +394,71 @@ function AdminPedidosContent() {
       setMensajeAjuste("Error de red: " + e.message);
     } finally {
       setAjustandoPrecios(false);
+    }
+  };
+
+  const buscarProductoSku = async () => {
+    const sku = skuBuscar.trim();
+    if (!sku) return;
+    setLoadingProducto(true);
+    setMensajeProducto("");
+    setProductoEdit(null);
+    try {
+      const res = await fetch(`/api/catalogo/precios-sku?sku=${encodeURIComponent(sku)}`);
+      const data = await res.json();
+      if (!res.ok) {
+        setMensajeProducto(data.error || "Producto no encontrado");
+        return;
+      }
+      const p = data.producto;
+      setProductoEdit(p);
+      setPrecioNormalEdit(String(p.catalog_price || ""));
+      setEnOfertaEdit(p.on_sale || false);
+      setPctDescuentoEdit(String(p.discount_pct || ""));
+      setPrecioOfertaEdit(p.discount_price ? String(p.discount_price) : "");
+    } catch (e: any) {
+      setMensajeProducto("Error: " + e.message);
+    } finally {
+      setLoadingProducto(false);
+    }
+  };
+
+  const guardarProductoSku = async () => {
+    if (!productoEdit) return;
+    setGuardandoProducto(true);
+    setMensajeProducto("");
+    try {
+      const body: Record<string, unknown> = {
+        sku: productoEdit.sku,
+        catalog_price: Number(precioNormalEdit) || 0,
+        on_sale: enOfertaEdit,
+      };
+      if (enOfertaEdit) {
+        const oferta = Number(precioOfertaEdit);
+        body.discount_price = oferta > 0 && oferta < Number(precioNormalEdit) ? oferta : null;
+        const pct = Number(pctDescuentoEdit);
+        body.discount_pct = pct > 0 && pct <= 100 ? pct : 0;
+      } else {
+        body.discount_price = null;
+        body.discount_pct = 0;
+      }
+      const res = await fetch("/api/catalogo/precios-sku", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setMensajeProducto("Error: " + (data.error || "Desconocido"));
+        return;
+      }
+      setMensajeProducto(`Guardado: ${data.producto.sku}`);
+      setProductoEdit(data.producto);
+      cargarPrecios();
+    } catch (e: any) {
+      setMensajeProducto("Error: " + e.message);
+    } finally {
+      setGuardandoProducto(false);
     }
   };
 
@@ -1561,6 +1644,187 @@ function AdminPedidosContent() {
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* ── EDITAR PRECIO POR SKU ── */}
+          <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4 space-y-4">
+            <h3 className="text-sm font-bold text-white flex items-center gap-2">
+              <Tag className="h-4 w-4 text-[#FF5722]" /> Editar producto por SKU
+            </h3>
+
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                <input
+                  value={skuBuscar}
+                  onChange={(e) => setSkuBuscar(e.target.value.toUpperCase())}
+                  onKeyDown={(e) => e.key === "Enter" && buscarProductoSku()}
+                  placeholder="Ej: AK-123, CARDAN-456"
+                  className="w-full pl-9 pr-3 py-2 rounded-lg border border-white/10 bg-white/5 text-sm text-white outline-none focus:border-[#FF5722] uppercase"
+                />
+              </div>
+              <button
+                onClick={buscarProductoSku}
+                disabled={loadingProducto || !skuBuscar.trim()}
+                className="px-4 py-2 rounded-lg bg-[#FF5722] text-sm font-bold text-white hover:bg-[#FF5722]/80 disabled:opacity-40"
+              >
+                {loadingProducto ? <Loader2 className="w-4 h-4 animate-spin" /> : "Buscar"}
+              </button>
+            </div>
+
+            {mensajeProducto && (
+              <p className={`text-xs ${mensajeProducto.includes("Error") || mensajeProducto.includes("No encontrado") ? "text-red-400" : "text-[#39FF14]"}`}>
+                {mensajeProducto}
+              </p>
+            )}
+
+            {productoEdit && (
+              <div className="space-y-4">
+                {/* Card producto */}
+                <div className="flex gap-3 p-3 rounded-lg bg-white/5 border border-white/5">
+                  <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-slate-800 flex items-center justify-center">
+                    {productoEdit.image_url ? (
+                      <img src={productoEdit.image_url} alt={productoEdit.name} className="w-full h-full object-contain" />
+                    ) : (
+                      <ImageOff className="w-6 h-6 text-gray-600" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-[10px] font-black px-2 py-0.5 rounded bg-slate-800 text-gray-300">{productoEdit.sku}</span>
+                      {productoEdit.on_sale && (
+                        <span className="text-[10px] font-black px-2 py-0.5 rounded bg-red-900/30 text-red-400">
+                          <Zap className="w-3 h-3 inline mr-0.5" />EN OFERTA -{productoEdit.discount_pct}%
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm font-bold text-white line-clamp-1">{productoEdit.name}</p>
+                    <div className="mt-1 flex items-baseline gap-2">
+                      {productoEdit.on_sale && productoEdit.discount_price ? (
+                        <>
+                          <span className="text-base font-black text-[#39FF14]">{fmtMoney(productoEdit.discount_price)}</span>
+                          <span className="text-xs text-gray-500 line-through">{fmtMoney(productoEdit.catalog_price)}</span>
+                        </>
+                      ) : (
+                        <span className="text-base font-black text-[#39FF14]">{fmtMoney(productoEdit.catalog_price)}</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Precio normal */}
+                <div>
+                  <label className="text-xs font-bold text-gray-400 mb-1.5 block">Precio normal</label>
+                  <div className="relative">
+                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#39FF14]" />
+                    <input
+                      type="number"
+                      min={0}
+                      value={precioNormalEdit}
+                      onChange={(e) => {
+                        setPrecioNormalEdit(e.target.value);
+                        if (enOfertaEdit && pctDescuentoEdit) {
+                          const p = Number(e.target.value);
+                          const pct = Number(pctDescuentoEdit);
+                          if (p > 0 && pct > 0) setPrecioOfertaEdit(String(Math.round(p * (1 - pct / 100))));
+                        }
+                      }}
+                      className="w-full pl-9 pr-3 py-2 rounded-lg border border-white/10 bg-white/5 text-sm text-white outline-none focus:border-[#FF5722]"
+                    />
+                  </div>
+                </div>
+
+                {/* Toggle oferta */}
+                <div className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/5">
+                  <div className="flex items-center gap-2">
+                    <Tag className="w-4 h-4" style={{ color: enOfertaEdit ? "#ef4444" : "#6B7280" }} />
+                    <div>
+                      <p className="text-xs font-bold text-white">Poner en oferta</p>
+                      <p className="text-[10px] text-gray-500">Muestra precio tachado + descuento en catálogo</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const next = !enOfertaEdit;
+                      setEnOfertaEdit(next);
+                      if (!next) { setPrecioOfertaEdit(""); setPctDescuentoEdit(""); }
+                      else if (precioNormalEdit && !precioOfertaEdit) {
+                        setPctDescuentoEdit("10");
+                        setPrecioOfertaEdit(String(Math.round(Number(precioNormalEdit) * 0.9)));
+                      }
+                    }}
+                    className="w-12 h-6 rounded-full relative transition-all flex-shrink-0"
+                    style={{ background: enOfertaEdit ? "#ef4444" : "#374151" }}
+                  >
+                    <span className="absolute top-0.5 w-5 h-5 rounded-full transition-all bg-white"
+                      style={{ left: enOfertaEdit ? "calc(100% - 22px)" : "2px" }} />
+                  </button>
+                </div>
+
+                {enOfertaEdit && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs font-bold text-gray-400 mb-1.5 block flex items-center gap-1">
+                        <Percent className="w-3 h-3" /> % Descuento
+                      </label>
+                      <input
+                        type="number" min={1} max={99}
+                        value={pctDescuentoEdit}
+                        onChange={(e) => {
+                          setPctDescuentoEdit(e.target.value);
+                          const precio = Number(precioNormalEdit);
+                          const pct = Number(e.target.value);
+                          if (precio > 0 && pct > 0 && pct <= 100) {
+                            setPrecioOfertaEdit(String(Math.round(precio * (1 - pct / 100))));
+                          }
+                        }}
+                        className="w-full px-3 py-2 rounded-lg border border-red-900/30 bg-white/5 text-sm text-white outline-none focus:border-[#FF5722]"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-bold text-gray-400 mb-1.5 block flex items-center gap-1">
+                        <Slash className="w-3 h-3" /> Precio oferta
+                      </label>
+                      <div className="relative">
+                        <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-red-400" />
+                        <input
+                          type="number" min={0}
+                          value={precioOfertaEdit}
+                          onChange={(e) => {
+                            setPrecioOfertaEdit(e.target.value);
+                            const precio = Number(precioNormalEdit);
+                            const oferta = Number(e.target.value);
+                            if (precio > 0 && oferta > 0 && oferta < precio) {
+                              setPctDescuentoEdit(String(Math.round(((precio - oferta) / precio) * 100)));
+                            }
+                          }}
+                          className="w-full pl-9 pr-3 py-2 rounded-lg border border-red-900/30 bg-white/5 text-sm text-white outline-none focus:border-[#FF5722]"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {enOfertaEdit && Number(precioNormalEdit) > 0 && Number(precioOfertaEdit) > 0 && (
+                  <div className="rounded-lg p-3 flex items-center justify-between bg-red-900/10 border border-red-900/20">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-gray-500 line-through">{fmtMoney(Number(precioNormalEdit))}</span>
+                      <span className="text-base font-black text-[#39FF14]">{fmtMoney(Number(precioOfertaEdit))}</span>
+                    </div>
+                    <span className="text-xs font-black px-2 py-0.5 rounded bg-red-900/20 text-red-400">-{pctDescuentoEdit}%</span>
+                  </div>
+                )}
+
+                <button
+                  onClick={guardarProductoSku}
+                  disabled={guardandoProducto}
+                  className="w-full py-3 rounded-lg bg-[#39FF14] text-sm font-black text-[#121212] hover:bg-[#39FF14]/80 disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {guardandoProducto ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+                  {guardandoProducto ? "Guardando..." : "Guardar cambios"}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
