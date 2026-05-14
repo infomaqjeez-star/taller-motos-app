@@ -3,11 +3,11 @@ import { getSupabaseServer } from "@/lib/supabase-server";
 import { Resend } from "resend";
 import { randomBytes } from "crypto";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev";
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://appjeezpro.store";
 
 export async function POST(req: NextRequest) {
+  const resend = new Resend(process.env.RESEND_API_KEY || "re_placeholder");
   try {
     const { email, rol } = await req.json();
     if (!email || !rol) {
