@@ -32,13 +32,13 @@ export async function GET(req: NextRequest) {
     // Obtener vendedores del equipo (subordinados + el propio gerente)
     const { data: subordinados } = await supabase
       .from("vendedores")
-      .select("id, nombre, codigo_referido, nivel_vendedor, comision_pct, estado, lider_id")
+      .select("id, nombre, email, codigo_referido, nivel_vendedor, comision_pct, estado, lider_id")
       .eq("lider_id", gerenteId);
 
     // También incluir al gerente para que se vea a sí mismo
     const { data: gerenteData } = await supabase
       .from("vendedores")
-      .select("id, nombre, codigo_referido, nivel_vendedor, comision_pct, estado, lider_id")
+      .select("id, nombre, email, codigo_referido, nivel_vendedor, comision_pct, estado, lider_id")
       .eq("id", gerenteId)
       .single();
 
