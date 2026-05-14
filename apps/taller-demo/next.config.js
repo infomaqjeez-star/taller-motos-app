@@ -4,7 +4,11 @@ const nextConfig = {
   output: 'standalone',
   serverRuntimeConfig: { port: process.env.PORT || 3001 },
   images: {
-    unoptimized: true
+    formats: ['image/avif', 'image/webp'],
+    minimumCacheTTL: 86400,
+    remotePatterns: [
+      { protocol: 'https', hostname: '**' },
+    ],
   },
   experimental: {
     serverActions: {

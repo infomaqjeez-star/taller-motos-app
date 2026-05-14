@@ -22,10 +22,6 @@ if (typeof window !== "undefined") {
   }
 }
 
-console.log("[Supabase Init]", {
-  url: url && !url.includes("placeholder") ? "✓ URL configured" : "✗ URL missing",
-  key: key && !key.includes("placeholder") ? "✓ Key configured" : "✗ Key missing",
-});
 
 /**
  * Cliente browser con cookies (compatible con middleware @supabase/ssr).
@@ -52,9 +48,6 @@ export const supabase: SupabaseClient = createBrowserClient(
 // 🔌 Nota: Realtime usa polling en producción (fallback automático)
 // Los errores de WebSocket se deben a que RLS no está configurado en Supabase
 // Para habilitar Realtime: configurar RLS en tablas meli_printed_labels y etiquetas_history
-if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
-  console.log("[Supabase] Client initialized. Using polling for data sync.");
-}
 
 // Helper para obtener usuario actual
 export async function getCurrentUser() {

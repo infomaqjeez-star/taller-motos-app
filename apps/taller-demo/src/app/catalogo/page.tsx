@@ -1,20 +1,22 @@
 "use client";
 
 import { Suspense, useEffect, useMemo, useState, memo, useCallback, useRef } from "react";
+import dynamic from "next/dynamic";
+import Image from "next/image";
 import Link from "next/link";
 import {
   BookOpen, Search, Tag, Plus, Minus, Users, X, Package, AlertCircle,
-  Lightbulb, PlusCircle, ChevronDown, Clock, AlertTriangle, Megaphone,
+  Lightbulb, PlusCircle, ChevronDown,  AlertTriangle, Megaphone,
   Funnel, User, TagIcon
 } from "lucide-react";
-import { supabase } from "@/lib/supabase";
-import CartDrawer from "@/components/catalogo/CartDrawer";
 import CartButton from "@/components/catalogo/CartButton";
 import { useCart, CartItem } from "@/components/catalogo/CartContext";
 import { useVendedorAuth } from "@/components/vendedor/VendedorAuthContext";
 import { useClienteAuth } from "@/components/cliente/ClienteAuthContext";
 import ReferralTracker from "@/components/catalogo/ReferralTracker";
-import SideBanners from "@/components/catalogo/SideBanners";
+
+const CartDrawer = dynamic(() => import("@/components/catalogo/CartDrawer"), { ssr: false });
+const SideBanners = dynamic(() => import("@/components/catalogo/SideBanners"), { ssr: false });
 
 interface Producto {
   sku: string;
@@ -30,7 +32,7 @@ function fmtPrecio(precio: number) {
   return "$" + precio.toLocaleString("es-AR", { maximumFractionDigits: 0 });
 }
 
-function DropdownCategorias({
+const DropdownCategorias = memo(function DropdownCategorias({
   catId,
   onChange,
   productos,
@@ -85,10 +87,9 @@ function DropdownCategorias({
       )}
     </div>
   );
-}
+});
 
-function EntregasStatus() {
-  const [open, setOpen] = useState(false);
+const EntregasStatus = memo(function EntregasStatus() {
   const estado = "normal";
 
   if (estado === "normal") {
@@ -117,7 +118,7 @@ function EntregasStatus() {
       </p>
     </div>
   );
-}
+});
 
 function useReferralBanner() {
   const [banner, setBanner] = useState<{ codigo: string; nombre: string } | null>(null);
@@ -555,13 +556,12 @@ const ProductCard = memo(function ProductCard({ producto, addItem }: { producto:
           {producto.sku}
         </span>
         {producto.image_url ? (
-          <img
+          <Image
             src={producto.image_url}
             alt={producto.name}
             width={160} height={160}
             className="max-h-full max-w-full object-contain group-hover:scale-110 transition-transform duration-300"
             loading="lazy"
-            decoding="async"
             onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
           />
         ) : (
