@@ -150,10 +150,10 @@ const HyperBanner = ({ type, badges, title, highlight, subtitle, features, cta, 
         </div>
 
         {/* Malla de fondo tecnológica */}
-        <div className="absolute inset-0 z-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:30px_30px] rounded-[2rem] opacity-30" />
+        <div className="absolute inset-0 z-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:30px_30px] rounded-[2rem] opacity-30 pointer-events-none" />
 
         {/* ===================== CENTRO VISUAL 3D MASIVO ===================== */}
-        <div className="relative w-full h-[40%] min-h-[220px] flex items-center justify-center mt-4 mb-4 transform-style-preserve-3d">
+        <div className="relative w-full h-[40%] min-h-[220px] flex items-center justify-center mt-4 mb-4 transform-style-preserve-3d pointer-events-none">
           
           {/* Anillos de energía de fondo (z-pop-1) */}
           <div className="absolute w-44 h-44 rounded-full border border-dashed z-pop-1 opacity-30" style={{ borderColor: colors.neon1 }} />
@@ -189,7 +189,7 @@ const HyperBanner = ({ type, badges, title, highlight, subtitle, features, cta, 
         </div>
 
         {/* ===================== TIPOGRAFÍA 3D ===================== */}
-        <div className="text-center w-full z-pop-2 flex flex-col items-center">
+        <div className="text-center w-full z-pop-2 flex flex-col items-center pointer-events-none">
           <div className={`px-4 py-1.5 rounded-full border border-white/10 bg-black/50 backdrop-blur-md flex items-center gap-2 mb-5 shadow-[0_0_15px_${colors.glowShadow}]`}>
             <Sparkles className={`w-4 h-4 ${colors.iconColor}`} />
             <span className={`text-xs font-black tracking-[0.2em] uppercase text-transparent bg-clip-text bg-gradient-to-r ${colors.gradientText}`}>{badges}</span>
@@ -211,7 +211,7 @@ const HyperBanner = ({ type, badges, title, highlight, subtitle, features, cta, 
         <div className="flex-grow" />
 
         {/* ===================== MARQUEE & BOTÓN CTA (z-pop-3) ===================== */}
-        <div className="w-full relative z-pop-2 mb-5">
+        <div className="w-full relative z-pop-2 mb-5 pointer-events-none">
           <div className="relative w-full overflow-hidden flex whitespace-nowrap opacity-50 py-2 mask-image-linear-edges">
             <div className="absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-[#0a0a0f] to-transparent z-10" />
             <div className="absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-[#0a0a0f] to-transparent z-10" />
@@ -226,8 +226,8 @@ const HyperBanner = ({ type, badges, title, highlight, subtitle, features, cta, 
           </div>
         </div>
 
-        <div className="w-full z-pop-3 pb-2">
-          <button className={`w-full relative overflow-hidden rounded-2xl group/btn p-[2px] transition-transform active:scale-95`}>
+        <div className="w-full z-pop-3 pb-2 pointer-events-none">
+          <div className={`w-full relative overflow-hidden rounded-2xl group/btn p-[2px]`}>
             {/* Borde de botón */}
             <span className={`absolute inset-0 bg-gradient-to-r ${colors.btnGradient} opacity-70 group-hover/btn:opacity-100`} />
             
@@ -239,7 +239,7 @@ const HyperBanner = ({ type, badges, title, highlight, subtitle, features, cta, 
                 <ArrowRight className="w-4 h-4 text-white group-hover/btn:translate-x-1 transition-transform" />
               </div>
             </div>
-          </button>
+          </div>
         </div>
       </div>
     </div>
