@@ -24,20 +24,30 @@ export async function GET(_req: NextRequest) {
     const supabase = getSupabaseServer();
 
     // 2) Paralelizar ambas queries
-    const [productosRes, ventasRes] = await Promise.all([
-      supabase
+    // Intentar con columnas nuevas; si fallan (no existen en la tabla aun), hacer fallback
+    let productosRes: any = await supabase
+      .from("catalog_products")
+      .select("sku, name, catalog_price, discount_price, on_sale, discount_pct, image_url, category")
+      .eq("active", true);
+
+    // Fallback si faltan las columnas nuevas (discount_price, on_sale, discount_pct)
+    if (productosRes.error && productosRes.error.message?.includes("discount_price")) {
+      productosRes = await supabase
         .from("catalog_products")
-        .select("sku, name, catalog_price, discount_price, on_sale, discount_pct, image_url, category")
-        .eq("active", true),
+        .select("sku, name, catalog_price, image_url, category")
+        .eq("active", true);
+    }
+
+    if (productosRes.error) {
+      return NextResponse.json({ error: productosRes.error.message }, { status: 500 });
+    }
+
+    const [ventasRes] = await Promise.all([
       supabase
         .from("ventas_items")
         .select("sku, cantidad, ventas_repuestos!inner(status)")
         .eq("ventas_repuestos.status", "activa"),
     ]);
-
-    if (productosRes.error) {
-      return NextResponse.json({ error: productosRes.error.message }, { status: 500 });
-    }
 
     if (ventasRes.error) {
       console.error("[catalogo/productos] error ventas:", ventasRes.error);
@@ -53,12 +63,12 @@ export async function GET(_req: NextRequest) {
     });
 
     // 4) Unir y ordenar: primero por ventas_count DESC, luego por SKU
-    const productosConVentas = (productosRes.data || []).map((p) => ({
+    const productosConVentas = (productosRes.data || []).map((p: any) => ({
       ...p,
       ventas_count: ventasPorSku[p.sku] || 0,
     }));
 
-    productosConVentas.sort((a, b) => {
+    productosConVentas.sort((a: any, b: any) => {
       if (b.ventas_count !== a.ventas_count) {
         return b.ventas_count - a.ventas_count;
       }
