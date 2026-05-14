@@ -22,6 +22,9 @@ interface Producto {
   sku: string;
   name: string;
   catalog_price: number;
+  discount_price: number | null;
+  on_sale: boolean;
+  discount_pct: number;
   image_url: string | null;
   category: string;
   ventas_count: number;
@@ -538,9 +541,10 @@ function ActionBtn({ icon, label, onClick }: { icon: React.ReactNode; label: str
 }
 
 const ProductCard = memo(function ProductCard({ producto, addItem }: { producto: Producto; addItem: (item: Omit<CartItem, "cantidad"> & { cantidad?: number }) => void }) {
+  const precioFinal = producto.on_sale && producto.discount_price ? producto.discount_price : producto.catalog_price;
   const handleAdd = useCallback(() => {
-    addItem({ sku: producto.sku, nombre: producto.name, precio: producto.catalog_price || 0, imagen: producto.image_url || "", cantidad: 1 });
-  }, [addItem, producto]);
+    addItem({ sku: producto.sku, nombre: producto.name, precio: precioFinal || 0, imagen: producto.image_url || "", cantidad: 1 });
+  }, [addItem, producto, precioFinal]);
 
   return (
     <article className="product-card flex flex-col overflow-hidden rounded-2xl group">
@@ -570,7 +574,17 @@ const ProductCard = memo(function ProductCard({ producto, addItem }: { producto:
       <div className="p-2 sm:p-3 md:p-5 flex flex-col flex-grow">
         <h3 className="text-slate-200 font-semibold text-[11px] sm:text-xs md:text-sm leading-tight line-clamp-2 mb-1 sm:mb-2">{producto.name}</h3>
         <div className="mt-auto">
-          <div className="font-black text-base sm:text-xl md:text-2xl tracking-tight mb-2 sm:mb-3" style={{ color: "#10b981" }}>{fmtPrecio(producto.catalog_price)}</div>
+          {producto.on_sale && producto.discount_price ? (
+            <div className="mb-2 sm:mb-3">
+              <div className="flex items-center gap-2 mb-0.5">
+                <span className="font-black text-base sm:text-xl md:text-2xl tracking-tight" style={{ color: "#10b981" }}>{fmtPrecio(producto.discount_price)}</span>
+                <span className="text-[10px] sm:text-xs font-bold px-1.5 py-0.5 rounded" style={{ background: "#ef444420", color: "#ef4444" }}>-{producto.discount_pct}%</span>
+              </div>
+              <div className="text-xs sm:text-sm" style={{ color: "#64748b", textDecoration: "line-through" }}>{fmtPrecio(producto.catalog_price)}</div>
+            </div>
+          ) : (
+            <div className="font-black text-base sm:text-xl md:text-2xl tracking-tight mb-2 sm:mb-3" style={{ color: "#10b981" }}>{fmtPrecio(producto.catalog_price)}</div>
+          )}
           <button
             onClick={handleAdd}
             className="w-full font-bold rounded-lg sm:rounded-xl transition-all active:scale-95 flex items-center justify-center gap-1 text-white text-[10px] sm:text-xs md:text-sm py-2.5 sm:py-2"

@@ -27,7 +27,7 @@ export async function GET(_req: NextRequest) {
     const [productosRes, ventasRes] = await Promise.all([
       supabase
         .from("catalog_products")
-        .select("sku, name, catalog_price, image_url, category")
+        .select("sku, name, catalog_price, discount_price, on_sale, discount_pct, image_url, category")
         .eq("active", true),
       supabase
         .from("ventas_items")
