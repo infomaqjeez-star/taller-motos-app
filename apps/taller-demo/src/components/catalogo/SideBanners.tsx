@@ -7,12 +7,6 @@ import {
 } from 'lucide-react';
 
 const hyperVisualStyles = `
-  @keyframes spin-slow {
-    100% { transform: rotate(360deg); }
-  }
-  @keyframes spin-reverse {
-    100% { transform: rotate(-360deg); }
-  }
   @keyframes float-extreme {
     0%, 100% { transform: translateY(0px) scale(1); }
     50% { transform: translateY(-20px) scale(1.05); }
@@ -106,7 +100,7 @@ const HyperBanner = ({ type, badges, title, highlight, subtitle, features, cta, 
   };
 
   const handleClick = () => {
-    window.open('https://www.madsjeez.com.ar', '_blank');
+    window.location.href = 'https://www.madsjeez.com.ar';
   };
 
   const isSeller = type === 'seller';
@@ -118,20 +112,14 @@ const HyperBanner = ({ type, badges, title, highlight, subtitle, features, cta, 
     >
       <style>{hyperVisualStyles}</style>
       <style>{`
-        @property --angle {
-          syntax: '<angle>';
-          initial-value: 0deg;
-          inherits: false;
-        }
         .neon-box-${type}::before {
           content: '';
           position: absolute;
-          inset: -4px;
-          background: conic-gradient(from var(--angle), ${colors.neon1}, ${colors.neon2}, ${colors.neon1});
+          inset: -3px;
+          background: linear-gradient(135deg, ${colors.neon1}, ${colors.neon2}, ${colors.neon1});
           border-radius: 2.2rem;
           z-index: -1;
-          animation: spin-slow 3s linear infinite;
-          opacity: 0.5;
+          opacity: 0.6;
           transition: opacity 0.3s;
         }
         .perspective-container:hover .neon-box-${type}::before {
@@ -168,8 +156,8 @@ const HyperBanner = ({ type, badges, title, highlight, subtitle, features, cta, 
         <div className="relative w-full h-[40%] min-h-[220px] flex items-center justify-center mt-4 mb-4 transform-style-preserve-3d">
           
           {/* Anillos de energía de fondo (z-pop-1) */}
-          <div className="absolute w-44 h-44 rounded-full border border-dashed z-pop-1 opacity-30 animate-[spin-slow_15s_linear_infinite]" style={{ borderColor: colors.neon1 }} />
-          <div className="absolute w-56 h-56 rounded-full border border-solid z-pop-1 opacity-10 animate-[spin-reverse_20s_linear_infinite]" style={{ borderColor: colors.neon2 }} />
+          <div className="absolute w-44 h-44 rounded-full border border-dashed z-pop-1 opacity-30" style={{ borderColor: colors.neon1 }} />
+          <div className="absolute w-56 h-56 rounded-full border border-solid z-pop-1 opacity-10" style={{ borderColor: colors.neon2 }} />
           
           {/* Pulsos de energía */}
           <div className="absolute w-28 h-28 rounded-full z-0 animate-[pulse-ring_2s_ease-out_infinite]" style={{ backgroundColor: colors.neon1 }} />
@@ -240,8 +228,8 @@ const HyperBanner = ({ type, badges, title, highlight, subtitle, features, cta, 
 
         <div className="w-full z-pop-3 pb-2">
           <button className={`w-full relative overflow-hidden rounded-2xl group/btn p-[2px] transition-transform active:scale-95`}>
-            {/* Borde de botón animado */}
-            <span className={`absolute inset-0 bg-gradient-to-r ${colors.btnGradient} animate-[spin-slow_2s_linear_infinite] opacity-70 group-hover/btn:opacity-100`} />
+            {/* Borde de botón */}
+            <span className={`absolute inset-0 bg-gradient-to-r ${colors.btnGradient} opacity-70 group-hover/btn:opacity-100`} />
             
             <div className="relative bg-[#050508] hover:bg-transparent transition-colors duration-300 rounded-[14px] px-4 py-4 flex items-center justify-center gap-3">
               <span className="font-black uppercase tracking-[0.2em] text-sm text-white drop-shadow-lg">
