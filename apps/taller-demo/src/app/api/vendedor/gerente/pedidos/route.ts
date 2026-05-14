@@ -29,17 +29,28 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "No sos gerente" }, { status: 403 });
     }
 
-    // Obtener vendedores del equipo
-    const { data: equipo } = await supabase
+    // Obtener vendedores del equipo (subordinados + el propio gerente)
+    const { data: subordinados } = await supabase
       .from("vendedores")
-      .select("id, nombre, codigo_referido, nivel_vendedor, comision_pct")
-      .eq("lider_id", gerenteId)
-      .eq("estado", "activo");
+      .select("id, nombre, codigo_referido, nivel_vendedor, comision_pct, estado, lider_id")
+      .eq("lider_id", gerenteId);
 
-    const equipoIds = (equipo || []).map((v: any) => v.id);
+    // También incluir al gerente para que se vea a sí mismo
+    const { data: gerenteData } = await supabase
+      .from("vendedores")
+      .select("id, nombre, codigo_referido, nivel_vendedor, comision_pct, estado, lider_id")
+      .eq("id", gerenteId)
+      .single();
+
+    const equipo = [...(subordinados || [])];
+    if (gerenteData && !equipo.find((v: any) => v.id === gerenteData.id)) {
+      equipo.push(gerenteData);
+    }
+
+    const equipoIds = equipo.map((v: any) => v.id);
 
     if (equipoIds.length === 0) {
-      return NextResponse.json({ pedidos: [], equipo: [], resumen: null });
+      return NextResponse.json({ pedidos: [], equipo: [], resumen: null, debug: { gerenteId, message: "No hay vendedores asignados a este gerente" } });
     }
 
     // Pedidos de todo el equipo
