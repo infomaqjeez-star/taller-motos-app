@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState, useRef } from 'react';
-import { 
-  Crown, TrendingUp, Flame, Gift, Zap, Globe, 
-  Sparkles, Star, ArrowRight
+import React, { useState, useRef, useEffect, useMemo } from 'react';
+import {
+  Crown, TrendingUp, Flame, Gift, Zap, Globe,
+  Sparkles, Star, ArrowRight, DollarSign, TrendingUp as TrendUp,
+  Percent, Rocket, Wallet, PiggyBank, Target, Award
 } from 'lucide-react';
 
 const hyperVisualStyles = `
@@ -47,6 +48,45 @@ const hyperVisualStyles = `
     border: 1px solid rgba(255,255,255,0.1);
   }
 `;
+
+const SELLER_MESSAGES = [
+  { badge: "Querés vender?", hook: "Ganá dinero ya", sub: "Empezá a vender hoy. Sin inversión inicial." },
+  { badge: "Generá ingresos", hook: "Ganá 10% x venta", sub: "Por cada referido que venda, cobrás comisión." },
+  { badge: "Tu propio negocio", hook: "Vendé sin límites", sub: "Catálogo nacional. Envíos a todo el país." },
+  { badge: "Dinero extra hoy", hook: "Sin inversión", sub: "Solo necesitás ganas de vender. Nosotros hacemos el resto." },
+  { badge: "Referidos = $$", hook: "Ganá por equipo", sub: "Armá tu red de vendedores y cobrá por todos." },
+  { badge: "Emprendé ya", hook: "Sé tu propio jefe", sub: "Trabajá desde donde quieras, cuando quieras." },
+  { badge: "Vendedor Pro", hook: "Multiplicá tu plata", sub: "Accedé a precios mayoristas y revendé con margen." },
+  { badge: "Comisiones reales", hook: "Cobrá por vender", sub: "Pagos diarios directo a tu cuenta." },
+  { badge: "Red de ventas", hook: "Ganá en automático", sub: "Mientras más vende tu equipo, más ganás vos." },
+  { badge: "Oportunidad única", hook: "Entrá ahora", sub: "Los primeros en entrar tienen más beneficios." },
+];
+
+const BUYER_MESSAGES = [
+  { badge: "Ofertas únicas", hook: "Descuentos exclusivos", sub: "Precios que no encontrás en otro lado." },
+  { badge: "Envío gratis", hook: "Comprá al mejor precio", sub: "Productos premium con entrega sin costo." },
+  { badge: "Solo por hoy", hook: "Hasta 50% OFF", sub: "Flash sales cada semana. No te lo pierdas." },
+  { badge: "Nuevos ingresos", hook: "Productos premium", sub: "Lo último en repuestos y accesorios." },
+  { badge: "Garantía real", hook: "Compra protegida", sub: "Te devolvemos tu dinero si no te gusta." },
+  { badge: "Precios locos", hook: "No te lo pierdas", sub: "Stock limitado a precios imbatibles." },
+  { badge: "Catálogo nuevo", hook: "Descubrí todo", sub: "Miles de productos para tu moto." },
+  { badge: "Pago seguro", hook: "Compra 100% segura", sub: "Protección al comprador en cada pedido." },
+  { badge: "Llega hoy", hook: "Envío express", sub: "En CABA y GBA entregamos el mismo día." },
+  { badge: "Fidelidad", hook: "Acumulá puntos", sub: "Cada compra suma. Canjeá por descuentos." },
+];
+
+function useRotatingMessage() {
+  const idx = useMemo(() => {
+    if (typeof window === "undefined") return 0;
+    const stored = localStorage.getItem("bannerRotationIndex");
+    let current = stored ? parseInt(stored, 10) : -1;
+    if (isNaN(current)) current = -1;
+    const next = (current + 1) % 10;
+    localStorage.setItem("bannerRotationIndex", String(next));
+    return next;
+  }, []);
+  return { sellerMsg: SELLER_MESSAGES[idx], buyerMsg: BUYER_MESSAGES[idx], idx };
+}
 
 interface HyperBannerProps {
   type: 'seller' | 'buyer';
@@ -246,7 +286,7 @@ const HyperBanner = ({ type, badges, title, highlight, subtitle, features, cta, 
   );
 };
 
-function MobileBanner() {
+function MobileBanner({ sellerMsg, buyerMsg }: { sellerMsg: typeof SELLER_MESSAGES[0]; buyerMsg: typeof BUYER_MESSAGES[0] }) {
   const handleClick = () => {
     window.location.href = 'https://www.madsjeez.com.ar';
   };
@@ -262,8 +302,8 @@ function MobileBanner() {
               <Crown className="w-5 h-5 text-white" />
             </div>
             <div className="text-left min-w-0">
-              <p className="text-[10px] font-black uppercase tracking-wider text-[#ffaa00]">Madsjeez Pro</p>
-              <p className="text-xs font-black text-white truncate">Domina el Mercado</p>
+              <p className="text-[10px] font-black uppercase tracking-wider text-[#ffaa00]">{sellerMsg.badge}</p>
+              <p className="text-xs font-black text-white truncate">{sellerMsg.hook}</p>
             </div>
             <ArrowRight className="w-4 h-4 text-[#ffaa00] shrink-0 ml-auto" />
           </div>
@@ -277,8 +317,8 @@ function MobileBanner() {
               <Gift className="w-5 h-5 text-white" />
             </div>
             <div className="text-left min-w-0">
-              <p className="text-[10px] font-black uppercase tracking-wider text-[#00e5ff]">Acceso Total</p>
-              <p className="text-xs font-black text-white truncate">Universo de Ofertas</p>
+              <p className="text-[10px] font-black uppercase tracking-wider text-[#00e5ff]">{buyerMsg.badge}</p>
+              <p className="text-xs font-black text-white truncate">{buyerMsg.hook}</p>
             </div>
             <ArrowRight className="w-4 h-4 text-[#00e5ff] shrink-0 ml-auto" />
           </div>
@@ -289,16 +329,18 @@ function MobileBanner() {
 }
 
 export default function SideBanners() {
+  const { sellerMsg, buyerMsg } = useRotatingMessage();
+
   return (
     <>
       {/* Desktop xl+: Banners laterales verticales */}
       <div className="fixed left-4 top-1/2 -translate-y-1/2 z-40 hidden xl:block">
-        <HyperBanner 
+        <HyperBanner
           type="seller"
-          badges="Madsjeez Pro"
-          title="DOMINA EL"
-          highlight="MERCADO"
-          subtitle="Vende tus productos a todo el país. Multiplica tu facturación con exposición masiva."
+          badges={sellerMsg.badge}
+          title={sellerMsg.hook}
+          highlight=""
+          subtitle={sellerMsg.sub}
           features={["Exposición Nivel Dios", "Pagos Diarios", "Cero Límites", "Soporte AI"]}
           cta="Crear Imperio"
           colors={{
@@ -315,12 +357,12 @@ export default function SideBanners() {
       </div>
 
       <div className="fixed right-4 top-1/2 -translate-y-1/2 z-40 hidden xl:block">
-        <HyperBanner 
+        <HyperBanner
           type="buyer"
-          badges="Acceso Total"
-          title="UNIVERSO DE"
-          highlight="OFERTAS"
-          subtitle="Descubre productos exclusivos, envíos relámpago y precios que rompen la matriz."
+          badges={buyerMsg.badge}
+          title={buyerMsg.hook}
+          highlight=""
+          subtitle={buyerMsg.sub}
           features={["Envíos Flash", "Garantía Blindada", "Precios Épicos", "Compra 100% Segura"]}
           cta="Explorar Todo"
           colors={{
@@ -337,7 +379,7 @@ export default function SideBanners() {
       </div>
 
       {/* Mobile/Tablet: Banner horizontal sticky bottom */}
-      <MobileBanner />
+      <MobileBanner sellerMsg={sellerMsg} buyerMsg={buyerMsg} />
     </>
   );
 }
