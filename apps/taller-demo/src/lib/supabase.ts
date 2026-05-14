@@ -37,11 +37,6 @@ export const supabase: SupabaseClient = createBrowserClient(
       persistSession: true,
       detectSessionInUrl: true,
     },
-    realtime: {
-      params: {
-        eventsPerSecond: 10,
-      },
-    },
   },
 );
 
