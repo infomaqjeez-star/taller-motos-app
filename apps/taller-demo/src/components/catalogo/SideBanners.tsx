@@ -110,33 +110,36 @@ interface HyperBannerProps {
 
 const HyperBanner = ({ type, badges, title, highlight, subtitle, features, cta, colors }: HyperBannerProps) => {
   const cardRef = useRef<HTMLDivElement>(null);
-  const [style, setStyle] = useState<React.CSSProperties>({});
-  const [glare, setGlare] = useState({ opacity: 0, x: 0, y: 0 });
+  const glareRef = useRef<HTMLDivElement>(null);
+  const rafRef = useRef<number | null>(null);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!cardRef.current) return;
-    const rect = cardRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left; 
-    const y = e.clientY - rect.top;  
-    
-    const centerX = rect.width / 2;
-    const centerY = rect.height / 2;
-    
-    const rotateX = ((y - centerY) / centerY) * -20; 
-    const rotateY = ((x - centerX) / centerX) * 20;
-
-    setStyle({
-      transform: `rotateX(${rotateX}deg) rotateY(${rotateY}deg)`,
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    rafRef.current = requestAnimationFrame(() => {
+      const rect = cardRef.current!.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      const centerX = rect.width / 2;
+      const centerY = rect.height / 2;
+      const rotateX = ((y - centerY) / centerY) * -20;
+      const rotateY = ((x - centerX) / centerX) * 20;
+      cardRef.current!.style.transform = `rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+      if (glareRef.current) {
+        glareRef.current.style.background = `radial-gradient(circle 250px at ${x}px ${y}px, ${colors.glareColor}, transparent 100%)`;
+        glareRef.current.style.opacity = '1';
+      }
     });
-    setGlare({ opacity: 1, x, y });
   };
 
   const handleMouseLeave = () => {
-    setStyle({
-      transform: 'rotateX(0deg) rotateY(0deg)',
-      transition: 'transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1)'
-    });
-    setGlare({ opacity: 0, x: 0, y: 0 });
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    if (cardRef.current) {
+      cardRef.current.style.transform = 'rotateX(0deg) rotateY(0deg)';
+      cardRef.current.style.transition = 'transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1)';
+      setTimeout(() => { if (cardRef.current) cardRef.current.style.transition = ''; }, 600);
+    }
+    if (glareRef.current) glareRef.current.style.opacity = '0';
   };
 
   const handleClick = () => {
@@ -170,18 +173,15 @@ const HyperBanner = ({ type, badges, title, highlight, subtitle, features, cta, 
       <div
         ref={cardRef}
         className={`card-3d-wrapper relative w-full h-full rounded-[2rem] glass-dark neon-box-${type} flex flex-col items-center p-5 shadow-2xl active:scale-[0.97] transition-transform duration-75`}
-        style={{ ...style, boxShadow: `0 30px 60px -15px ${colors.glowShadow}` }}
+        style={{ boxShadow: `0 30px 60px -15px ${colors.glowShadow}` }}
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
         onClick={handleClick}
       >
         {/* Glare dinámico que sigue el ratón */}
-        <div 
-          className="absolute inset-0 pointer-events-none rounded-[2rem] z-50 mix-blend-screen transition-opacity duration-300"
-          style={{
-            background: `radial-gradient(circle 250px at ${glare.x}px ${glare.y}px, ${colors.glareColor}, transparent 100%)`,
-            opacity: glare.opacity,
-          }}
+        <div
+          ref={glareRef}
+          className="absolute inset-0 pointer-events-none rounded-[2rem] z-50 mix-blend-screen transition-opacity duration-300 opacity-0"
         />
 
         {/* Barrido holográfico (Scanline) */}

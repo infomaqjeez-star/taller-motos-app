@@ -7,7 +7,7 @@ import {
   ShieldStar, CurrencyDollar, Package, Users, TrendUp,
   Ranking, ShoppingCart, Buildings, Funnel,
   MagnifyingGlass, Info, Bell, Plus, Truck, HardHat,
-  LogOut, ChevronDown, ChevronUp, Star, Loader2
+  SignOut, CaretDown, CaretUp, Star, Spinner
 } from "@phosphor-icons/react";
 
 function fmtMoney(n: number) {
@@ -89,7 +89,7 @@ export default function GerenteDashboardPage() {
   if (authLoading || loading) {
     return (
       <main className="min-h-screen flex items-center justify-center" style={{ background: "#08090D" }}>
-        <Loader2 className="h-8 w-8 animate-spin text-orange-400" />
+        <span className="h-8 w-8 animate-spin text-orange-400"><Spinner size={32} /></span>
       </main>
     );
   }
@@ -107,24 +107,32 @@ export default function GerenteDashboardPage() {
 
   const getVendedor = (id: string) => equipo.find((v: any) => v.id === id);
 
-  const metricasVendedor = (vId: string) => {
-    const ps = pedidos.filter(p => p.vendedor_id === vId);
-    const activos = ps.filter(p => p.estado !== "cancelado");
-    const ventas = activos.reduce((s: number, p: any) => s + (p.total || 0), 0);
-    const comisionG = activos.reduce((s: number, p: any) => s + (p.comision_gerente_monto || 0), 0);
-    const pagados = ps.filter(p => p.estado_pago === "pagado").length;
-    const despachados = ps.filter(p => p.estado_envio === "enviado" || p.estado_envio === "entregado").length;
-    const clientesV = clientes.filter(c => c.vendedor_referente_id === vId);
-    return { total: ps.length, ventas, comisionG, pagados, despachados, clientes: clientesV };
-  };
+  const metricasMap = useMemo(() => {
+    const map: Record<string, { total: number; ventas: number; comisionG: number; pagados: number; despachados: number; clientes: any[] }> = {};
+    for (const v of equipo) {
+      const ps = pedidos.filter(p => p.vendedor_id === v.id);
+      const activos = ps.filter(p => p.estado !== "cancelado");
+      const ventas = activos.reduce((s: number, p: any) => s + (p.total || 0), 0);
+      const comisionG = activos.reduce((s: number, p: any) => s + (p.comision_gerente_monto || 0), 0);
+      const pagados = ps.filter(p => p.estado_pago === "pagado").length;
+      const despachados = ps.filter(p => p.estado_envio === "enviado" || p.estado_envio === "entregado").length;
+      const clientesV = clientes.filter(c => c.vendedor_referente_id === v.id);
+      map[v.id] = { total: ps.length, ventas, comisionG, pagados, despachados, clientes: clientesV };
+    }
+    return map;
+  }, [equipo, pedidos, clientes]);
 
-  const ticketPromedio = pedidos.length > 0
-    ? pedidos.filter(p => p.estado !== "cancelado").reduce((s: number, p: any) => s + (p.total || 0), 0) / pedidos.filter(p => p.estado !== "cancelado").length
-    : 0;
+  const metricasVendedor = (vId: string) => metricasMap[vId] || { total: 0, ventas: 0, comisionG: 0, pagados: 0, despachados: 0, clientes: [] };
 
-  const tasaConversion = pedidos.length > 0
-    ? Math.round((pedidos.filter(p => p.estado === "confirmado" || p.estado === "pagado" || p.estado === "enviado" || p.estado === "entregado").length / pedidos.length) * 100)
-    : 0;
+  const ticketPromedio = useMemo(() => {
+    const activos = pedidos.filter(p => p.estado !== "cancelado");
+    return activos.length > 0 ? activos.reduce((s: number, p: any) => s + (p.total || 0), 0) / activos.length : 0;
+  }, [pedidos]);
+
+  const tasaConversion = useMemo(() => {
+    if (pedidos.length === 0) return 0;
+    return Math.round((pedidos.filter(p => p.estado === "confirmado" || p.estado === "pagado" || p.estado === "enviado" || p.estado === "entregado").length / pedidos.length) * 100);
+  }, [pedidos]);
 
   const NAV_TABS = [
     { id: "dashboard" as const, label: "Dashboard" },
@@ -214,7 +222,7 @@ export default function GerenteDashboardPage() {
           <div className="flex items-center gap-10">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-lg flex items-center justify-center shadow-lg" style={{ background: "#FF5E3A", boxShadow: "0 0 20px rgba(255,94,58,0.2)" }}>
-                <ShieldStar weight="fill" className="text-black" size={20} />
+                <ShieldStar weight="fill" color="#000" size={20} />
               </div>
               <div className="leading-none">
                 <span className="text-sm font-black tracking-tight">MAQJEEZ</span>
@@ -240,7 +248,7 @@ export default function GerenteDashboardPage() {
               </div>
             </div>
             <button onClick={logout} className="p-2 hover:bg-white/5 rounded-xl transition-colors text-gray-400 hover:text-white">
-              <LogOut size={20} />
+              <SignOut size={20} />
             </button>
             <div className="w-10 h-10 rounded-full border border-white/[0.06] p-1 flex items-center justify-center font-black text-xs" style={{ background: "linear-gradient(135deg, #7c3aed, #4f46e5)" }}>
               {vendedor.nombre?.charAt(0)?.toUpperCase()}
@@ -328,7 +336,7 @@ export default function GerenteDashboardPage() {
                 <div className="p-5 border-b border-white/5 flex items-center justify-between">
                   <div>
                     <h3 className="text-sm font-black flex items-center gap-2">
-                      <Ranking weight="bold" style={{ color: "#FF5E3A" }} size={18} />
+                      <Ranking weight="bold" color="#FF5E3A" size={18} />
                       Ranking de Ventas
                     </h3>
                     <span className="help-pill mt-1">Rendimiento Individual</span>
@@ -341,7 +349,7 @@ export default function GerenteDashboardPage() {
                 <div className="p-4 space-y-2 overflow-y-auto max-h-[500px]">
                   {topVendedores.length === 0 ? (
                     <div className="py-8 text-center text-gray-600">
-                      <Users size={32} className="mx-auto mb-2 opacity-20" />
+                      <span className="mx-auto mb-2 opacity-20 block"><Users size={32} /></span>
                       <p className="text-xs">Sin vendedores asignados</p>
                     </div>
                   ) : topVendedores.map((v: any, idx: number) => {
@@ -395,13 +403,13 @@ export default function GerenteDashboardPage() {
                 <div className="p-5 border-b border-white/5 flex items-center justify-between flex-wrap gap-4">
                   <div>
                     <h3 className="text-sm font-black flex items-center gap-2">
-                      <ShoppingCart weight="bold" style={{ color: "#FF5E3A" }} size={18} />
+                      <ShoppingCart weight="bold" color="#FF5E3A" size={18} />
                       Monitor de Órdenes Recientes
                     </h3>
                     <span className="help-pill mt-1">Flujo de Caja en Tiempo Real</span>
                   </div>
                   <div className="relative">
-                    <MagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={14} />
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500"><MagnifyingGlass size={14} /></span>
                     <input type="text" placeholder="Filtrar pedido..." onChange={e => { setBusquedaCliente(e.target.value); setTab("pedidos"); }}
                       className="bg-[#111319] border border-white/5 rounded-lg py-1.5 pl-8 pr-4 text-[10px] focus:outline-none focus:border-[#FF5E3A] w-48 text-white" />
                   </div>
@@ -467,7 +475,7 @@ export default function GerenteDashboardPage() {
                 <div className="p-5 border-b border-white/5 flex items-center justify-between">
                   <div>
                     <h3 className="text-sm font-black flex items-center gap-2">
-                      <Buildings weight="bold" style={{ color: "#FF5E3A" }} size={18} />
+                      <Buildings weight="bold" color="#FF5E3A" size={18} />
                       Base de Clientes Corporativos
                     </h3>
                     <span className="help-pill mt-1">Directorio de Empresas</span>
@@ -508,7 +516,7 @@ export default function GerenteDashboardPage() {
                   })}
                   {clientes.length === 0 && (
                     <div className="col-span-2 py-8 text-center text-gray-600">
-                      <Users size={32} className="mx-auto mb-2 opacity-20" />
+                      <span className="mx-auto mb-2 opacity-20 block"><Users size={32} /></span>
                       <p className="text-sm">Sin clientes registrados</p>
                     </div>
                   )}
@@ -527,7 +535,7 @@ export default function GerenteDashboardPage() {
             </div>
             {equipo.length === 0 ? (
               <div className="rounded-xl p-12 text-center text-gray-600 border border-dashed border-white/[0.08]">
-                <Users size={40} className="mx-auto mb-3 opacity-20" />
+                <span className="mx-auto mb-3 opacity-20 block"><Users size={40} /></span>
                 <p className="text-sm">No tenés vendedores asignados</p>
               </div>
             ) : equipoOrdenado.map((v: any, idx: number) => {
@@ -549,7 +557,7 @@ export default function GerenteDashboardPage() {
                         <div className="flex items-center gap-2 flex-wrap">
                           <p className="text-sm font-black text-white">{v.nombre}</p>
                           <span className="text-[9px] px-2 py-0.5 rounded-full font-bold capitalize" style={{ background: `${NIVEL_COLORS[v.nivel_vendedor] || "#10b981"}15`, color: NIVEL_COLORS[v.nivel_vendedor] || "#10b981", border: `1px solid ${NIVEL_COLORS[v.nivel_vendedor] || "#10b981"}30` }}>
-                            <Star className="inline" size={10} /> {v.nivel_vendedor || "nuevo"}
+                            <Star size={10} /> {v.nivel_vendedor || "nuevo"}
                           </span>
                         </div>
                         <p className="text-xs text-gray-500 mt-0.5">{v.email} · <span className="font-mono">{v.codigo_referido}</span> · {v.comision_pct}% com.</p>
@@ -559,7 +567,7 @@ export default function GerenteDashboardPage() {
                           <p className="text-sm font-black text-emerald-400">{fmtMoney(m.ventas)}</p>
                           <p className="text-[10px] text-orange-400">Tu parte: {fmtMoney(m.comisionG)}</p>
                         </div>
-                        {isExp ? <ChevronUp size={16} className="text-gray-600" /> : <ChevronDown size={16} className="text-gray-600" />}
+                        {isExp ? <CaretUp size={16} /> : <CaretDown size={16} />}
                       </div>
                     </div>
                   </button>
@@ -642,7 +650,7 @@ export default function GerenteDashboardPage() {
             <div className="flex items-center justify-between flex-wrap gap-4">
               <h2 className="text-sm font-black">Clientes del Equipo <span className="text-gray-500 font-normal text-xs">({clientes.length})</span></h2>
               <div className="relative group max-w-sm w-full">
-                <MagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-[#FF5E3A] transition-colors" size={14} />
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-[#FF5E3A] transition-colors"><MagnifyingGlass size={14} /></span>
                 <input type="text" placeholder="Buscar cliente por nombre o CUIT..." value={busquedaCliente} onChange={e => setBusquedaCliente(e.target.value)}
                   className="w-full rounded-xl py-3 pl-10 pr-4 text-xs outline-none focus:border-[#FF5E3A] text-white"
                   style={{ background: "#08090D", border: "1px solid rgba(255,255,255,0.08)" }} />
@@ -650,7 +658,7 @@ export default function GerenteDashboardPage() {
             </div>
             {clientesFiltrados.length === 0 ? (
               <div className="py-12 text-center text-gray-600">
-                <Users size={40} className="mx-auto mb-3 opacity-20" />
+                <span className="mx-auto mb-3 opacity-20 block"><Users size={40} /></span>
                 <p className="text-sm">Sin clientes{busquedaCliente ? " con ese filtro" : " registrados"}</p>
               </div>
             ) : (
@@ -729,7 +737,7 @@ export default function GerenteDashboardPage() {
 
             {pedidosFiltrados.length === 0 ? (
               <div className="text-center py-16 text-gray-600">
-                <Package size={40} className="mx-auto mb-3 opacity-20" />
+                <span className="mx-auto mb-3 opacity-20 block"><Package size={40} /></span>
                 <p className="text-sm">Sin pedidos con ese filtro</p>
               </div>
             ) : (
@@ -818,7 +826,7 @@ export default function GerenteDashboardPage() {
           className="group flex items-center gap-3 bg-white text-black pl-5 pr-1 py-1 rounded-full shadow-2xl hover:scale-105 transition-all active:scale-95">
           <span className="text-[10px] font-black uppercase tracking-widest">Nueva Gestión</span>
           <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: "#FF5E3A" }}>
-            <Plus weight="bold" size={20} className="text-black" />
+            <Plus weight="bold" size={20} color="#000" />
           </div>
         </button>
       </div>
