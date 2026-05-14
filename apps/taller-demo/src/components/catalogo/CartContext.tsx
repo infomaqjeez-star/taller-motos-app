@@ -69,7 +69,6 @@ function calcularTotales(
   let envio = 0;
   if (conDescuento < 30_000) envio = 10_000;
   else if (conDescuento < 50_000) envio = 8_000;
-  else if (conDescuento < 100_000) envio = 5_000;
 
   const total = conDescuento + envio;
 
