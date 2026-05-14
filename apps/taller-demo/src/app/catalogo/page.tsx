@@ -35,6 +35,13 @@ function fmtPrecio(precio: number) {
   return "$" + precio.toLocaleString("es-AR", { maximumFractionDigits: 0 });
 }
 
+function badgeDescuento(pct: number) {
+  if (pct >= 51) return { label: "MEGA DESCUENTO", bg: "#7f1d1d", color: "#fbbf24", border: "#fbbf24" };
+  if (pct >= 31) return { label: "SUPER DESCUENTO", bg: "#083344", color: "#22d3ee", border: "#22d3ee" };
+  if (pct >= 16) return { label: "DESCUENTAZO", bg: "#3f2e05", color: "#facc15", border: "#facc15" };
+  return { label: "DESCUENTO", bg: "#2a0f0f", color: "#fb923c", border: "#fb923c" };
+}
+
 const DropdownCategorias = memo(function DropdownCategorias({
   catId,
   onChange,
@@ -578,7 +585,15 @@ const ProductCard = memo(function ProductCard({ producto, addItem }: { producto:
             <div className="mb-2 sm:mb-3">
               <div className="flex items-center gap-2 mb-0.5">
                 <span className="font-black text-base sm:text-xl md:text-2xl tracking-tight" style={{ color: "#10b981" }}>{fmtPrecio(producto.discount_price)}</span>
-                <span className="text-[10px] sm:text-xs font-bold px-1.5 py-0.5 rounded" style={{ background: "#ef444420", color: "#ef4444" }}>-{producto.discount_pct}%</span>
+                {(() => {
+                  const b = badgeDescuento(producto.discount_pct);
+                  return (
+                    <span className="text-[9px] sm:text-[10px] font-black px-1.5 py-0.5 rounded border"
+                      style={{ background: b.bg, color: b.color, borderColor: b.border }}>
+                      {b.label} -{producto.discount_pct}%
+                    </span>
+                  );
+                })()}
               </div>
               <div className="text-xs sm:text-sm" style={{ color: "#64748b", textDecoration: "line-through" }}>{fmtPrecio(producto.catalog_price)}</div>
             </div>
