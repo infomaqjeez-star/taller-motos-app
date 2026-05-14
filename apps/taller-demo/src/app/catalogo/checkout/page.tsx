@@ -261,6 +261,7 @@ export default function CheckoutPage() {
             notas: form.notas,
             comprobante: uploadedUrl || form.comprobante,
             numeroCliente: numeroCliente,
+            ...(cliente?.id ? { cliente_id: cliente.id } : {}),
           },
           subtotal: totals.subtotal,
           descuento_pct: totals.descuentoVolumenPct,
@@ -276,6 +277,14 @@ export default function CheckoutPage() {
     } catch (err) {
       console.error("Error guardando pedido:", err);
       // Continuar igual y enviar por WhatsApp
+    }
+
+    // Limpiar ref de localStorage solo si el pedido fue generado con ese ref
+    // (para no contaminar pedidos futuros con links viejos)
+    if (vendedorIdLS) {
+      localStorage.removeItem("ref_vendedor_id");
+      localStorage.removeItem("ref_codigo");
+      localStorage.removeItem("ref_nombre");
     }
 
     const mensaje = generarMensajeWhatsApp(items, totals, form);
