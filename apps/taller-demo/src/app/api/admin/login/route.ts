@@ -1,28 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
-import bcrypt from "bcryptjs";
-import { SignJWT } from "jose";
 import { getSupabaseServer } from "@/lib/supabase-server";
-
-const SECRET = new TextEncoder().encode(
-  process.env.ADMIN_JWT_SECRET || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "fallback-secret"
-);
-
-async function createTempToken(adminId: string) {
-  return new SignJWT({ admin_id: adminId, step: "2fa" })
-    .setProtectedHeader({ alg: "HS256" })
-    .setExpirationTime("5m")
-    .sign(SECRET);
-}
-
-async function createAdminToken(adminId: string, email: string) {
-  return new SignJWT({ admin_id: adminId, email, type: "admin_session" })
-    .setProtectedHeader({ alg: "HS256" })
-    .setExpirationTime("365d")
-    .sign(SECRET);
-}
 
 export async function POST(req: NextRequest) {
   try {
+    // Dynamic imports para no crashear el modulo si falta alguna lib
+    const [{ default: bcrypt }, { SignJWT }] = await Promise.all([
+      import("bcryptjs"),
+      import("jose"),
+    ]);
+
+    const SECRET = new TextEncoder().encode(
+      process.env.ADMIN_JWT_SECRET || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "fallback-secret"
+    );
+
+    const createTempToken = async (adminId: string) => {
+      return new SignJWT({ admin_id: adminId, step: "2fa" })
+        .setProtectedHeader({ alg: "HS256" })
+        .setExpirationTime("5m")
+        .sign(SECRET);
+    };
+
+    const createAdminToken = async (adminId: string, email: string) => {
+      return new SignJWT({ admin_id: adminId, email, type: "admin_session" })
+        .setProtectedHeader({ alg: "HS256" })
+        .setExpirationTime("365d")
+        .sign(SECRET);
+    };
+
     const { email, password } = await req.json();
     if (!email || !password) {
       return NextResponse.json({ error: "Email y contraseña requeridos" }, { status: 400 });
@@ -37,6 +41,7 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (error || !admin) {
+      console.error("[admin/login] supabase error:", error);
       return NextResponse.json({ error: "Credenciales inválidas" }, { status: 401 });
     }
 
@@ -44,8 +49,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Cuenta inactiva" }, { status: 401 });
     }
 
-    let valid = await bcrypt.compare(password, admin.password_hash);
-    // Fallback: si bcrypt falla y el hash NO tiene formato bcrypt, comparar como texto plano (modo debug)
+    let valid = false;
+    try {
+      valid = await bcrypt.compare(password, admin.password_hash);
+    } catch {
+      valid = false;
+    }
     if (!valid && !admin.password_hash.startsWith("$2")) {
       valid = password === admin.password_hash;
     }
@@ -53,7 +62,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Credenciales inválidas" }, { status: 401 });
     }
 
-    // Si 2FA está activo, devolver tempToken para verificacion en paso 2
     if (admin.totp_enabled && admin.totp_secret) {
       const tempToken = await createTempToken(admin.id);
       return NextResponse.json({
@@ -71,8 +79,8 @@ export async function POST(req: NextRequest) {
       },
       adminToken,
     });
-  } catch (err) {
-    console.error("admin/login error:", err);
-    return NextResponse.json({ error: "Error interno" }, { status: 500 });
+  } catch (err: any) {
+    console.error("[admin/login] fatal error:", err);
+    return NextResponse.json({ error: err.message || "Error interno del servidor" }, { status: 500 });
   }
 }
