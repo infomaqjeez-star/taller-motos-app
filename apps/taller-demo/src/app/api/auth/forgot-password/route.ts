@@ -7,10 +7,19 @@ export const dynamic = "force-dynamic";
 const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev";
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://appjeezpro.store";
 
+async function sendEmail(to: string, subject: string, html: string) {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) throw new Error("RESEND_API_KEY no configurada");
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({ from: FROM_EMAIL, to, subject, html }),
+  });
+  if (!res.ok) throw new Error(`Resend error: ${res.status}`);
+  return res.json();
+}
+
 export async function POST(req: NextRequest) {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { Resend } = require("resend");
-  const resend = new Resend(process.env.RESEND_API_KEY);
   try {
     const { email, rol } = await req.json();
     if (!email || !rol) {
@@ -77,11 +86,7 @@ export async function POST(req: NextRequest) {
     };
 
     // Enviar email
-    await resend.emails.send({
-      from: FROM_EMAIL,
-      to: emailNorm,
-      subject: "Restablecer contraseña — MaqJeez",
-      html: `
+    await sendEmail(emailNorm, "Restablecer contraseña — MaqJeez", `
         <div style="font-family: Arial, sans-serif; max-width: 520px; margin: 0 auto; background: #0a0b10; color: #ffffff; border-radius: 12px; overflow: hidden;">
           <div style="background: linear-gradient(135deg, #1a1a2e 0%, #0a0b10 100%); padding: 40px 32px 32px; border-bottom: 1px solid rgba(255,94,58,0.3);">
             <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
