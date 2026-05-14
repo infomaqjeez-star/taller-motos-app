@@ -1,13 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServer } from "@/lib/supabase-server";
-import { Resend } from "resend";
 import { randomBytes } from "crypto";
+
+export const dynamic = "force-dynamic";
 
 const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev";
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://appjeezpro.store";
 
 export async function POST(req: NextRequest) {
-  const resend = new Resend(process.env.RESEND_API_KEY || "re_placeholder");
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { Resend } = require("resend");
+  const resend = new Resend(process.env.RESEND_API_KEY);
   try {
     const { email, rol } = await req.json();
     if (!email || !rol) {
