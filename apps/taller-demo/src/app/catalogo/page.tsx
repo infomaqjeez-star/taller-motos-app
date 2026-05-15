@@ -7,7 +7,7 @@ import Link from "next/link";
 import {
   BookOpen, Search, Tag, Plus, Minus, Users, X, Package, AlertCircle,
   Lightbulb, PlusCircle, ChevronDown,  AlertTriangle, Megaphone,
-  Funnel, User, TagIcon
+  Funnel, User, TagIcon, Share2, ExternalLink
 } from "lucide-react";
 import CartButton from "@/components/catalogo/CartButton";
 import { useCart, CartItem } from "@/components/catalogo/CartContext";
@@ -556,11 +556,18 @@ const ProductCard = memo(function ProductCard({ producto, addItem }: { producto:
   return (
     <article className="product-card flex flex-col overflow-hidden rounded-2xl group">
       {/* Image */}
-      <div className="bg-slate-50 h-28 sm:h-40 md:h-48 p-2 sm:p-3 md:p-4 relative flex items-center justify-center overflow-hidden">
+      <Link href={`/catalogo/producto/${producto.sku}`} className="bg-slate-50 h-28 sm:h-40 md:h-48 p-2 sm:p-3 md:p-4 relative flex items-center justify-center overflow-hidden cursor-pointer">
         <span className="absolute top-2 left-2 text-white text-[9px] sm:text-xs font-bold font-mono px-1.5 py-0.5 rounded border z-10"
           style={{ background: "rgba(15,23,42,0.9)", borderColor: "#334155" }}>
           {producto.sku}
         </span>
+        <button
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigator.clipboard.writeText(`${window.location.origin}/catalogo/producto/${producto.sku}`); }}
+          className="absolute top-2 right-2 z-10 bg-white/90 hover:bg-white text-slate-700 p-1.5 rounded-md shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
+          title="Copiar link del producto"
+        >
+          <Share2 className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+        </button>
         {producto.image_url ? (
           <Image
             src={producto.image_url}
@@ -575,7 +582,7 @@ const ProductCard = memo(function ProductCard({ producto, addItem }: { producto:
             <Tag className="h-8 w-8 sm:h-10 sm:w-10 text-slate-400" />
           </div>
         )}
-      </div>
+      </Link>
 
       {/* Info */}
       <div className="p-2 sm:p-3 md:p-5 flex flex-col flex-grow">
