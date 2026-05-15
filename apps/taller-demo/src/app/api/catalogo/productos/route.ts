@@ -5,7 +5,7 @@ export const revalidate = 300; // 5 min ISR
 
 // Cache en memoria para evitar golpear Supabase en cada request
 let cache: { data: any[]; ts: number } | null = null;
-const CACHE_TTL_MS = 300_000; // 5 minutos
+const CACHE_TTL_MS = 5_000; // 5 segundos (más fresco para desarrollo)
 
 export async function GET(_req: NextRequest) {
   try {
@@ -15,7 +15,7 @@ export async function GET(_req: NextRequest) {
         { productos: cache.data },
         {
           headers: {
-            "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
+            "Cache-Control": "no-store, max-age=0",
           },
         }
       );
@@ -82,7 +82,7 @@ export async function GET(_req: NextRequest) {
       { productos: productosConVentas },
       {
         headers: {
-          "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
+          "Cache-Control": "no-store, max-age=0",
         },
       }
     );

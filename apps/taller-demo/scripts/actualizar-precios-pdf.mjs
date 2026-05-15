@@ -46,14 +46,14 @@ function readCsv(filePath) {
     if (cols.length >= 3) {
       const sku = cols[0]?.trim();
       const titulo = cols[1]?.trim();
-      const precioBaseStr = cols[2]?.trim();
-      const precioBase = parseInt(precioBaseStr, 10);
-      if (sku && !isNaN(precioBase) && precioBase > 0) {
+      const precioCatalogoStr = cols[3]?.trim();
+      const precioCatalogo = parseInt(precioCatalogoStr, 10);
+      if (sku && !isNaN(precioCatalogo) && precioCatalogo > 0) {
         results.push({
           sku,
           titulo,
-          precio_base: precioBase,
-          precio_catalogo: roundPrice99(precioBase * 4),
+          precio_base: parseInt(cols[2]?.trim() || "0", 10),
+          precio_catalogo: precioCatalogo,
         });
       }
     }
@@ -138,8 +138,8 @@ async function main() {
         const { error } = await supabase
           .from("catalog_products")
           .update({
+            name: p.titulo,
             catalog_price: p.catalog_price,
-            stock: p.stock,
             active: true,
           })
           .eq("sku", p.sku);

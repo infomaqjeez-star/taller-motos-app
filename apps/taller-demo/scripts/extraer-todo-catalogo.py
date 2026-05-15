@@ -166,7 +166,7 @@ def extract_products():
                     title = title.replace('Konecta', 'Maqjeez').replace('KONECTA', 'MAQJEEZ')
                     title = title.replace('konecta', 'Maqjeez')
                     
-                    catalog_price = round_price_99(price * 4)
+                    catalog_price = round_price_99(price * 2.5)
                     
                     seen_skus.add(sku)
                     products.append({

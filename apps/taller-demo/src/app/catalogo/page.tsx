@@ -196,7 +196,7 @@ function CatalogoContent() {
   useEffect(() => {
     let ok = true;
     // Intentar desde cache del browser primero
-    fetch("/api/catalogo/productos", { cache: "default" })
+    fetch("/api/catalogo/productos?" + Date.now(), { cache: "no-store" })
       .then((res) => res.json())
       .then(({ productos, error }) => {
         if (!ok) return;
