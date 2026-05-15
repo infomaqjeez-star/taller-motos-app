@@ -25,9 +25,58 @@ export default function TicketPrinter({ isOpen, venta, clientData, onClose }: Pr
   if (!isOpen) return null;
 
   const handlePrint = () => {
+    const content = document.getElementById("comprobante-a4");
+    if (!content) return;
+
+    const iframe = document.createElement("iframe");
+    iframe.style.position = "fixed";
+    iframe.style.right = "0";
+    iframe.style.bottom = "0";
+    iframe.style.width = "0";
+    iframe.style.height = "0";
+    iframe.style.border = "0";
+    iframe.style.visibility = "hidden";
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow?.document;
+    if (!doc) return;
+
+    doc.open();
+    doc.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Comprobante MaqJeez</title>
+          <style>
+            @page { size: A4; margin: 10mm; }
+            body { margin: 0; padding: 0; font-family: Arial, sans-serif; color: #333; }
+            table { border-collapse: collapse; width: 100%; }
+            td, th { padding: 10px; border: 1px solid #ddd; }
+            thead tr { background-color: #000 !important; color: #fff !important; }
+            tfoot td { font-weight: bold; }
+          </style>
+        </head>
+        <body>
+          ${content.innerHTML}
+        </body>
+      </html>
+    `);
+    doc.close();
+
+    iframe.onload = () => {
+      setTimeout(() => {
+        iframe.contentWindow?.print();
+        setTimeout(() => document.body.removeChild(iframe), 1000);
+      }, 300);
+    };
+
+    // Fallback si onload no dispara
     setTimeout(() => {
-      window.print();
-    }, 100);
+      iframe.contentWindow?.print();
+      setTimeout(() => {
+        if (iframe.parentNode) document.body.removeChild(iframe);
+      }, 1000);
+    }, 500);
   };
 
   const handleWhatsApp = () => {
@@ -306,61 +355,6 @@ export default function TicketPrinter({ isOpen, venta, clientData, onClose }: Pr
         </div>
       </div>
 
-      {/* Print styles para A4 */}
-      <style>{`
-        @media print {
-          body {
-            margin: 0;
-            padding: 0;
-            background: white;
-          }
-          
-          * {
-            box-shadow: none !important;
-            background: white !important;
-            color: #000 !important;
-          }
-          
-          @page {
-            size: A4;
-            margin: 10mm;
-          }
-          
-          #comprobante-a4 {
-            margin: 0 !important;
-            border: none !important;
-            width: 100% !important;
-            max-width: 100%;
-            font-family: Arial, sans-serif;
-            font-size: 12px;
-            line-height: 1.4;
-            color: #000;
-          }
-          
-          button {
-            display: none !important;
-          }
-          
-          .fixed {
-            display: none !important;
-          }
-          
-          div[class*="modal"],
-          div[class*="overlay"],
-          div[class*="Modal"] {
-            display: none !important;
-          }
-          
-          table {
-            color: #000 !important;
-            border-collapse: collapse;
-          }
-          
-          td, th {
-            color: #000 !important;
-          }
-        }
-      `}</style>
     </>
   );
 }
