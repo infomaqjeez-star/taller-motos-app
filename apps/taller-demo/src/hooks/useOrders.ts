@@ -21,7 +21,7 @@ export function useOrders() {
     status: "all",
     search: "",
     overdueOnly: false,
-    clientNotification: "pendiente_de_aviso",
+    clientNotification: "all",
   });
 
   const refresh = useCallback(async () => {
