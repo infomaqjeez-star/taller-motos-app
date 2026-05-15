@@ -448,7 +448,7 @@ export default function VentasPage() {
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
 
   // ── Datos del cliente (para ticket)
-  const [clientData, setClientData] = useState<{ nombre?: string; dni?: string; direccion?: string }>({});
+  const [clientData, setClientData] = useState<{ nombre?: string; dni?: string; direccion?: string; telefono?: string }>({});
 
   // ── Movimientos del día
   const [ventasHoy, setVentasHoy] = useState<VentaRepuesto[]>([]);
@@ -498,6 +498,10 @@ export default function VentasPage() {
         notas,
         createdAt:  new Date().toLocaleString("sv-SE", { timeZone: "America/Argentina/Buenos_Aires" }).replace(" ", "T"),
         items:      valid.map(i => ({ ...i, ventaId: "" })),
+        clienteNombre:    clientData.nombre || "",
+        clienteDni:       clientData.dni || "",
+        clienteDireccion: clientData.direccion || "",
+        clienteTelefono:  clientData.telefono || "",
       };
       await ventasDb.create(venta);
       setItems([newItem()]);
@@ -934,7 +938,12 @@ export default function VentasPage() {
         <TicketPrinter
           isOpen={ticketModal.isOpen}
           venta={ticketModal.venta}
-          clientData={clientData}
+          clientData={{
+            nombre: ticketModal.venta.clienteNombre || "Consumidor Final",
+            dni: ticketModal.venta.clienteDni || "-",
+            direccion: ticketModal.venta.clienteDireccion || "-",
+            telefono: ticketModal.venta.clienteTelefono || "-",
+          }}
           onClose={() => setTicketModal({ isOpen: false })}
         />
       )}

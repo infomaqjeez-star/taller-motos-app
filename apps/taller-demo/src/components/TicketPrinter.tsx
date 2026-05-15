@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
-import { Printer, X } from "lucide-react";
-import { VentaItem, MetodoPago } from "@/lib/types";
+import { Printer, X, MessageCircle } from "lucide-react";
+import { VentaItem, MetodoPago, METODO_PAGO_LABELS } from "@/lib/types";
 
 interface Props {
   isOpen: boolean;
@@ -28,6 +28,25 @@ export default function TicketPrinter({ isOpen, venta, clientData, onClose }: Pr
     setTimeout(() => {
       window.print();
     }, 100);
+  };
+
+  const handleWhatsApp = () => {
+    const fecha = formatDateTime(venta.createdAt);
+    const metodo = METODO_PAGO_LABELS[venta.metodoPago];
+    let texto = `*Comprobante MaqJeez*\n📅 ${fecha}\n\n`;
+    texto += `*Cliente:* ${clientName}\n`;
+    if (clientDni && clientDni !== "-") texto += `DNI/CUIT: ${clientDni}\n`;
+    if (clientDir && clientDir !== "-") texto += `Dirección: ${clientDir}\n`;
+    if (clientTel && clientTel !== "-") texto += `Tel: ${clientTel}\n`;
+    texto += `\n*Productos:*\n`;
+    venta.items.forEach((item) => {
+      texto += `• ${item.cantidad}x ${item.producto} — ${formatCurrency(item.precioUnit)} c/u = ${formatCurrency(item.subtotal)}\n`;
+    });
+    texto += `\n*Total:* ${formatCurrency(venta.total)}\n`;
+    texto += `*Método de pago:* ${metodo}\n\n`;
+    texto += `_Gracias por confiar en MaqJeez_`;
+    const url = `https://wa.me/?text=${encodeURIComponent(texto)}`;
+    window.open(url, "_blank");
   };
 
   const formatCurrency = (n: number) =>
@@ -266,6 +285,14 @@ export default function TicketPrinter({ isOpen, venta, clientData, onClose }: Pr
               className="flex-1 px-4 py-2 rounded-lg text-sm font-semibold bg-gray-200 text-gray-900 hover:bg-gray-300 transition-colors"
             >
               Cerrar
+            </button>
+            <button
+              onClick={handleWhatsApp}
+              className="flex-1 px-4 py-2 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 text-white transition-colors"
+              style={{ background: "#22c55e" }}
+            >
+              <MessageCircle className="w-4 h-4" />
+              Enviar por WhatsApp
             </button>
             <button
               onClick={handlePrint}

@@ -517,6 +517,10 @@ function toVenta(r: Record<string, unknown>, items: VentaItem[]): VentaRepuesto 
     notas:      (r.notas as string) ?? "",
     createdAt:  r.created_at as string,
     items,
+    clienteNombre:    (r.cliente_nombre as string) ?? "",
+    clienteDni:       (r.cliente_dni as string) ?? "",
+    clienteDireccion: (r.cliente_direccion as string) ?? "",
+    clienteTelefono:  (r.cliente_telefono as string) ?? "",
   };
 }
 

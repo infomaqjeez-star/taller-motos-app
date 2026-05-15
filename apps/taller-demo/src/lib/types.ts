@@ -302,6 +302,11 @@ export interface VentaRepuesto {
   notas: string;
   createdAt: string;
   items: VentaItem[];
+  // Datos del cliente (guardados al momento de la venta)
+  clienteNombre?: string;
+  clienteDni?: string;
+  clienteDireccion?: string;
+  clienteTelefono?: string;
 }
 
 export interface VentasStats {

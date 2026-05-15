@@ -135,7 +135,7 @@ export async function POST(request: NextRequest) {
     switch (action) {
       case "update": {
         // Actualizar venta existente
-        const { id: ventaId, vendedor, metodoPago, total, status, notas, items } = venta;
+        const { id: ventaId, vendedor, metodoPago, total, status, notas, items, clienteNombre, clienteDni, clienteDireccion, clienteTelefono } = venta;
         
         result = await supabase
           .from("ventas_repuestos")
@@ -145,6 +145,10 @@ export async function POST(request: NextRequest) {
             total,
             status,
             notas,
+            cliente_nombre: clienteNombre || "",
+            cliente_dni: clienteDni || "",
+            cliente_direccion: clienteDireccion || "",
+            cliente_telefono: clienteTelefono || "",
           })
           .eq("id", ventaId);
 
@@ -176,7 +180,7 @@ export async function POST(request: NextRequest) {
 
       default: {
         // Crear nueva venta
-        const { vendedor, metodoPago, total, status, notas, items, createdAt } = body;
+        const { vendedor, metodoPago, total, status, notas, items, createdAt, clienteNombre, clienteDni, clienteDireccion, clienteTelefono } = body;
         const ventaId = randomUUID();
 
         // Crear la venta principal (id explícito: la tabla no tiene DEFAULT en producción)
@@ -190,6 +194,10 @@ export async function POST(request: NextRequest) {
             status: status || "activa",
             notas,
             created_at: createdAt || new Date().toISOString(),
+            cliente_nombre: clienteNombre || "",
+            cliente_dni: clienteDni || "",
+            cliente_direccion: clienteDireccion || "",
+            cliente_telefono: clienteTelefono || "",
           })
           .select()
           .single();
