@@ -35,24 +35,41 @@ function roundPrice99(n) {
   return (Math.floor(n / 10000) + 1) * 10000 - 1;
 }
 
-function readCsv(filePath) {
-  const content = fs.readFileSync(filePath, "utf-8");
-  const lines = content.split("\n").filter((l) => l.trim());
-  const headers = lines[0].split(",").map((h) => h.trim());
-  const results = [];
+function parseCsvLine(line) {
+  const result = [];
+  let current = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    if (char === '"') {
+      inQuotes = !inQuotes;
+    } else if (char === ',' && !inQuotes) {
+      result.push(current.trim());
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+  result.push(current.trim());
+  return result;
+}
 
+function readCsv(path) {
+  const content = fs.readFileSync(path, "utf-8");
+  const lines = content.split("\n").filter((l) => l.trim());
+  const results = [];
   for (let i = 1; i < lines.length; i++) {
-    const cols = lines[i].split(",");
-    if (cols.length >= 3) {
-      const sku = cols[0]?.trim();
-      const titulo = cols[1]?.trim();
-      const precioCatalogoStr = cols[3]?.trim();
+    const cols = parseCsvLine(lines[i]);
+    if (cols.length >= 5) {
+      const sku = cols[0]?.replace(/"/g, '').trim();
+      const titulo = cols[1]?.replace(/"/g, '').trim();
+      const precioCatalogoStr = cols[3]?.replace(/"/g, '').trim();
       const precioCatalogo = parseInt(precioCatalogoStr, 10);
       if (sku && !isNaN(precioCatalogo) && precioCatalogo > 0) {
         results.push({
           sku,
           titulo,
-          precio_base: parseInt(cols[2]?.trim() || "0", 10),
+          precio_base: parseInt(cols[2]?.replace(/"/g, '').trim() || "0", 10),
           precio_catalogo: precioCatalogo,
         });
       }
@@ -106,6 +123,7 @@ async function main() {
   for (const p of pdfProducts) {
     activos.push({
       sku: p.sku,
+      titulo: p.titulo,
       catalog_price: p.precio_catalogo,
       stock: 999999,
     });
@@ -129,20 +147,20 @@ async function main() {
 
   console.log("🚀 Actualizando productos en Supabase...\n");
 
-  // 1) Activos: actualizar precio + stock + active=true
+  // 1) Activos: upsert (insertar si no existe, actualizar si existe)
   for (let i = 0; i < activos.length; i += BATCH) {
     const batch = activos.slice(i, i + BATCH);
     try {
-      // Hacer update individual para cada producto
       for (const p of batch) {
         const { error } = await supabase
           .from("catalog_products")
-          .update({
+          .upsert({
+            sku: p.sku,
             name: p.titulo,
             catalog_price: p.catalog_price,
             active: true,
-          })
-          .eq("sku", p.sku);
+            stock: 999999,
+          }, { onConflict: "sku" });
 
         if (error) {
           console.error(`   ❌ ${p.sku}:`, error.message);
