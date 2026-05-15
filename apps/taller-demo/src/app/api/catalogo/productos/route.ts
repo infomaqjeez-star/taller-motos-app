@@ -42,25 +42,24 @@ export async function GET(_req: NextRequest) {
       return NextResponse.json({ error: productosRes.error.message }, { status: 500 });
     }
 
-    const [ventasRes] = await Promise.all([
-      supabase
+    // 3) Contar ventas por SKU (opcional — si la tabla no existe, ignorar)
+    const ventasPorSku: Record<string, number> = {};
+    try {
+      const ventasRes = await supabase
         .from("ventas_items")
         .select("sku, cantidad, ventas_repuestos!inner(status)")
-        .eq("ventas_repuestos.status", "activa"),
-    ]);
-
-    if (ventasRes.error) {
-      console.error("[catalogo/productos] error ventas:", ventasRes.error);
-    }
-
-    // 3) Contar ventas por SKU
-    const ventasPorSku: Record<string, number> = {};
-    ventasRes.data?.forEach((item: any) => {
-      const sku = item.sku;
-      if (sku && sku.trim() !== "") {
-        ventasPorSku[sku] = (ventasPorSku[sku] || 0) + (item.cantidad || 1);
+        .eq("ventas_repuestos.status", "activa");
+      if (!ventasRes.error) {
+        ventasRes.data?.forEach((item: any) => {
+          const sku = item.sku;
+          if (sku && sku.trim() !== "") {
+            ventasPorSku[sku] = (ventasPorSku[sku] || 0) + (item.cantidad || 1);
+          }
+        });
       }
-    });
+    } catch (_) {
+      // ventas_items no disponible, continuar sin conteo
+    }
 
     // 4) Unir y ordenar: primero por ventas_count DESC, luego por SKU
     const productosConVentas = (productosRes.data || []).map((p: any) => ({
