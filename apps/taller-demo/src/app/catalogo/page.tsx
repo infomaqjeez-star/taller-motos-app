@@ -16,7 +16,6 @@ import { useClienteAuth } from "@/components/cliente/ClienteAuthContext";
 import ReferralTracker from "@/components/catalogo/ReferralTracker";
 
 const CartDrawer = dynamic(() => import("@/components/catalogo/CartDrawer"), { ssr: false });
-const SideBanners = dynamic(() => import("@/components/catalogo/SideBanners"), { ssr: false });
 
 interface Producto {
   sku: string;
@@ -531,7 +530,6 @@ function CatalogoContent() {
 
       <CartDrawer />
       <CartButton />
-      <SideBanners />
     </main>
   );
 }
