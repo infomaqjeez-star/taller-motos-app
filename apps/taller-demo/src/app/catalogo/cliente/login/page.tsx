@@ -6,8 +6,9 @@ import { useRouter } from "next/navigation";
 import { useClienteAuth } from "@/components/cliente/ClienteAuthContext";
 import {
   ArrowLeft, User, Mail, Phone, Lock, Loader2,
-  Eye, EyeOff, Store, ChevronRight,
+  Eye, EyeOff, Store, ChevronRight, ChevronDown,
   ShoppingBag, TrendingUp, CheckCircle, XCircle,
+  BookOpen, Receipt, BadgeCheck, Truck, Share2, Wallet, Users, KeyRound,
 } from "lucide-react";
 import ForgotPasswordModal from "@/components/auth/ForgotPasswordModal";
 
@@ -300,6 +301,114 @@ export default function ClienteLoginPage() {
                     ¿Ya tenés cuenta?{" "}
                     <button type="button" onClick={() => switchTab("login")} className="font-bold hover:underline" style={{ color: "#FF5E3A" }}>Iniciá sesión</button>
                   </p>
+
+                  {/* ── COMO FUNCIONA ── */}
+                  <div className="pt-3 mt-3 border-t" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+                    <div className="flex items-center gap-2 mb-3">
+                      <BookOpen className="h-3.5 w-3.5 text-gray-500" />
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">
+                        Antes de elegir, conocé cómo funciona
+                      </span>
+                    </div>
+
+                    {/* Tutorial COMPRADOR */}
+                    <details className="group rounded-xl mb-2 overflow-hidden" style={{ background: "rgba(255,94,58,0.04)", border: "1px solid rgba(255,94,58,0.15)" }}>
+                      <summary className="cursor-pointer list-none px-4 py-3 flex items-center justify-between gap-3 hover:bg-white/[0.02] transition">
+                        <span className="flex items-center gap-2.5 min-w-0">
+                          <ShoppingBag className="h-4 w-4 shrink-0" style={{ color: "#FF5E3A" }} />
+                          <span className="text-sm font-bold text-white truncate">Cómo funciona si soy Comprador</span>
+                        </span>
+                        <ChevronDown className="h-4 w-4 text-gray-500 shrink-0 group-open:rotate-180 transition-transform" />
+                      </summary>
+                      <ol className="px-4 pb-4 pt-1 space-y-2.5 text-xs text-gray-300 leading-relaxed">
+                        <li className="flex gap-2.5">
+                          <span className="font-mono text-[10px] text-gray-500 mt-0.5 w-5 shrink-0">01</span>
+                          <div>
+                            <strong className="text-white">Te registrás</strong> con email y contraseña. Si tenés código de un vendedor, lo cargás acá.
+                          </div>
+                        </li>
+                        <li className="flex gap-2.5">
+                          <span className="font-mono text-[10px] text-gray-500 mt-0.5 w-5 shrink-0">02</span>
+                          <div>
+                            <strong className="text-white">Navegás el catálogo</strong> con precios B2B ya con 3% OFF aplicado, más las ofertas vigentes.
+                          </div>
+                        </li>
+                        <li className="flex gap-2.5">
+                          <span className="font-mono text-[10px] text-gray-500 mt-0.5 w-5 shrink-0">03</span>
+                          <div>
+                            <strong className="text-white">Agregás al carrito</strong> y confirmás el pedido. Recibís número de orden y datos de transferencia.
+                          </div>
+                        </li>
+                        <li className="flex gap-2.5">
+                          <span className="font-mono text-[10px] text-gray-500 mt-0.5 w-5 shrink-0">04</span>
+                          <div>
+                            <strong className="text-white">Pagás y subís el comprobante</strong> desde tu panel. El equipo valida en 1 a 4 horas hábiles.
+                          </div>
+                        </li>
+                        <li className="flex gap-2.5">
+                          <span className="font-mono text-[10px] text-gray-500 mt-0.5 w-5 shrink-0">05</span>
+                          <div>
+                            <strong className="text-white">Recibís el pedido</strong> en 24 a 72hs (CABA/GBA) o 3 a 7 días hábiles al interior. Seguís el estado desde tu cuenta.
+                          </div>
+                        </li>
+                      </ol>
+                    </details>
+
+                    {/* Tutorial VENDEDOR */}
+                    <details className="group rounded-xl mb-2 overflow-hidden" style={{ background: "rgba(0,255,102,0.04)", border: "1px solid rgba(0,255,102,0.15)" }}>
+                      <summary className="cursor-pointer list-none px-4 py-3 flex items-center justify-between gap-3 hover:bg-white/[0.02] transition">
+                        <span className="flex items-center gap-2.5 min-w-0">
+                          <TrendingUp className="h-4 w-4 shrink-0" style={{ color: "#00FF66" }} />
+                          <span className="text-sm font-bold text-white truncate">Cómo funciona si soy Vendedor</span>
+                        </span>
+                        <ChevronDown className="h-4 w-4 text-gray-500 shrink-0 group-open:rotate-180 transition-transform" />
+                      </summary>
+                      <ol className="px-4 pb-4 pt-1 space-y-2.5 text-xs text-gray-300 leading-relaxed">
+                        <li className="flex gap-2.5">
+                          <span className="font-mono text-[10px] text-gray-500 mt-0.5 w-5 shrink-0">01</span>
+                          <div>
+                            <strong className="text-white">Te das de alta</strong> como vendedor y recibís un código único + tu link de referido.
+                          </div>
+                        </li>
+                        <li className="flex gap-2.5">
+                          <span className="font-mono text-[10px] text-gray-500 mt-0.5 w-5 shrink-0">02</span>
+                          <div>
+                            <strong className="text-white">Compartís tu link</strong> con clientes por WhatsApp, mail o redes. Quien se registra usando tu link queda asociado a vos.
+                          </div>
+                        </li>
+                        <li className="flex gap-2.5">
+                          <span className="font-mono text-[10px] text-gray-500 mt-0.5 w-5 shrink-0">03</span>
+                          <div>
+                            <strong className="text-white">Tus clientes compran</strong> en el catálogo. Vos no tenés que hacer nada, ellos pagan a MaqJeez directo.
+                          </div>
+                        </li>
+                        <li className="flex gap-2.5">
+                          <span className="font-mono text-[10px] text-gray-500 mt-0.5 w-5 shrink-0">04</span>
+                          <div>
+                            <strong className="text-white">Cobrás comisión 10 a 15%</strong> sobre cada pedido pagado. Lo ves en tiempo real en tu panel.
+                          </div>
+                        </li>
+                        <li className="flex gap-2.5">
+                          <span className="font-mono text-[10px] text-gray-500 mt-0.5 w-5 shrink-0">05</span>
+                          <div>
+                            <strong className="text-white">Se te liquida</strong> según el ciclo del taller. Las comisiones aprobadas pasan a "disponibles para retiro".
+                          </div>
+                        </li>
+                      </ol>
+                    </details>
+
+                    <Link
+                      href="/ayuda"
+                      className="flex items-center justify-between px-4 py-3 rounded-xl text-xs text-gray-400 hover:text-white transition group"
+                      style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}
+                    >
+                      <span className="flex items-center gap-2.5">
+                        <BookOpen className="h-3.5 w-3.5" />
+                        Ver el centro de ayuda completo (33 tutoriales)
+                      </span>
+                      <ChevronRight className="h-4 w-4 text-gray-500 group-hover:text-white transition" />
+                    </Link>
+                  </div>
                 </div>
               )}
 
@@ -413,25 +522,6 @@ export default function ClienteLoginPage() {
                       <div className="shimmer-layer absolute inset-0 -translate-x-full" style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)" }} />
                     </button>
                   </form>
-
-                    <div className="mt-4 relative flex items-center justify-center">
-                      <div className="absolute w-full border-t" style={{ borderColor: "rgba(71,85,105,0.3)" }} />
-                      <div className="relative px-3 text-xs font-medium text-gray-600" style={{ background: "rgba(10,11,16,0.97)" }}>O continuar con</div>
-                    </div>
-
-                    <button type="button"
-                      className="w-full font-semibold py-3.5 px-4 rounded-xl flex items-center justify-center gap-3 text-gray-300 transition-colors"
-                      style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)" }}
-                      onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.08)")}
-                      onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.04)")}>
-                      <svg viewBox="0 0 24 24" className="w-5 h-5">
-                        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-                        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-                      </svg>
-                      Google
-                    </button>
 
                   {refInfo && tab === "register" && (
                     <div className="mt-2 px-4 py-2.5 rounded-xl text-center" style={{ background: "rgba(255,94,58,0.06)", border: "1px solid rgba(255,94,58,0.2)" }}>
