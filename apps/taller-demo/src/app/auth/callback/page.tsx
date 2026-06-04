@@ -87,7 +87,7 @@ function AuthCallbackInner() {
   if (errorInfo) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-[#0a0a0a] px-4 text-center gap-4">
-        <h1 className="text-xl font-bold text-red-400">Error en login con Google</h1>
+        <h1 className="text-xl font-bold text-red-400">Error al confirmar la sesión</h1>
         <pre className="text-left text-xs text-gray-400 bg-[#1a1a1a] p-4 rounded-lg max-w-lg whitespace-pre-wrap">
           {errorInfo}
         </pre>

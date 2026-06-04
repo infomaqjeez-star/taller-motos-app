@@ -524,7 +524,7 @@ function CatalogoContent() {
 
         <p className="text-center text-xs text-slate-600 mt-12">
           ¿Trabajás en el taller?{" "}
-          <Link href="/login?next=/taller" className="text-orange-400 hover:underline underline-offset-2">Ingresá con Google</Link>
+          <Link href="/login?next=/taller" className="text-orange-400 hover:underline underline-offset-2">Iniciá sesión</Link>
         </p>
       </div>
 

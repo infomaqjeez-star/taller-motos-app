@@ -1,8 +1,13 @@
 import { jwtVerify, SignJWT } from "jose";
 import { getSupabaseServer } from "./supabase-server";
 
+// ADMIN_JWT_SECRET es obligatorio en produccion. Si no esta seteado,
+// se usa un secret derivado del entorno como ultimo recurso (NO seguro).
+// Importante: NO usar NEXT_PUBLIC_* aqui porque esos van al cliente.
 const SECRET = new TextEncoder().encode(
-  process.env.ADMIN_JWT_SECRET || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "fallback-secret"
+  process.env.ADMIN_JWT_SECRET ||
+  process.env.SUPABASE_SERVICE_ROLE_KEY ||
+  "DEV-ONLY-INSECURE-ROTATE-ME-IMMEDIATELY"
 );
 
 export async function createAdminToken(adminId: string, email: string) {

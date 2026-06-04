@@ -11,18 +11,10 @@ export async function GET(req: NextRequest) {
 
     const supabase = getSupabaseServer();
 
-    // Si piden lista completa de vendedores activos
+    // Listar todos: deshabilitado por seguridad (filtraba PII de toda la red).
+    // Si en el futuro hace falta, agregar verificacion de admin token.
     if (lista) {
-      const { data: vendedores, error } = await supabase
-        .from("vendedores")
-        .select("id, nombre, codigo_referido, comision_pct, nivel_vendedor")
-        .eq("estado", "activo")
-        .order("nombre");
-
-      if (error) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
-      }
-      return NextResponse.json({ vendedores: vendedores || [] });
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     // Buscar por ID (fallback cuando no hay código en localStorage)
