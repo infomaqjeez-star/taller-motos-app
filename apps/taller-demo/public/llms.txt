@@ -1,0 +1,48 @@
+# Taller MAQJEEZ / AppJeezPro
+
+> Ecosistema de software para talleres mecanicos y venta de moto-implementos y repuestos en Argentina. Catalogo B2B con mas de 2375 productos para desmalezadoras, motosierras, motovehiculos y herramientas. Ubicacion: Carlos Spegazzini, Buenos Aires, Argentina.
+
+## Que ofrecemos
+
+- **Catalogo B2B**: repuestos y accesorios para moto-implementos (desmalezadoras, motosierras, hidrolavadoras, etc.) con precios corporativos y 3% OFF fijo para clientes registrados.
+- **Sistema de gestion de taller**: ventas, inventario, agenda, tareas, sincronizacion con Mercado Libre, etiquetas de envio, entregas Flex.
+- **Red de vendedores**: programa de afiliados con comisiones 10-15% por venta referida.
+
+## Paginas principales
+
+- [/catalogo](https://appjeezpro.store/catalogo): catalogo publico de productos con busqueda y filtros.
+- [/landing](https://appjeezpro.store/landing): descripcion del ecosistema AppJeezPro, MadsJeez y MaqJeez.
+- [/ayuda](https://appjeezpro.store/ayuda): centro de ayuda con 33 tutoriales para clientes, vendedores y administradores del taller.
+- [/catalogo/cliente/login](https://appjeezpro.store/catalogo/cliente/login): registro y acceso para compradores B2B.
+- [/catalogo/vendedor/login](https://appjeezpro.store/catalogo/vendedor/login): registro y acceso para vendedores referidos.
+
+## Productos destacados
+
+Categorias: Filtros y Bobinas, Motosierras, Desmalezadoras, Repuestos, Hidrolavadoras, Tanques, Herramientas, Accesorios.
+
+## Formas de pago
+
+Transferencia bancaria, MercadoPago, efectivo en local, tarjeta de credito/debito.
+
+## Entregas
+
+- CABA y GBA: 24 a 72 horas habiles tras confirmacion de pago.
+- Interior del pais: 3 a 7 dias habiles via Correo Argentino, Andreani, Mercado Envios.
+- Retiro en local: Carlos Spegazzini, Buenos Aires.
+
+## Garantia
+
+Todos los productos nuevos tienen garantia de fabrica (3 a 12 meses segun marca). Cambios y devoluciones aceptados hasta 10 dias corridos en producto sin uso.
+
+## Contacto
+
+- WhatsApp: +54 9 11 5900-0486
+- Sitio: https://appjeezpro.store
+- Email de soporte disponible desde /ayuda
+
+## Legal
+
+- [/terminos](https://appjeezpro.store/terminos)
+- [/privacidad](https://appjeezpro.store/privacidad)
+- [/cookies](https://appjeezpro.store/cookies)
+- [/cancelacion](https://appjeezpro.store/cancelacion)
