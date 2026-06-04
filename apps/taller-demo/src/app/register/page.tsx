@@ -3,8 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { 
-  Chrome, Mail, Lock, Eye, EyeOff, ArrowLeft,
+import {
+  Mail, Lock, Eye, EyeOff, ArrowLeft,
   Loader2, CheckCircle, User
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
@@ -20,16 +20,6 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
-
-  const handleGoogleRegister = async () => {
-    setLoading(true);
-    await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: `https://appjeezpro.store/auth/callback?next=/taller`,
-      },
-    });
-  };
 
   const handleEmailRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -111,28 +101,6 @@ export default function RegisterPage() {
 
         {/* Register Card */}
         <div className="bg-white/5 border border-white/10 rounded-2xl p-8">
-          {/* Google Button */}
-          <button
-            onClick={handleGoogleRegister}
-            disabled={loading}
-            className="w-full flex items-center justify-center gap-3 py-3 px-4 bg-white text-gray-900 rounded-xl font-semibold hover:bg-gray-100 transition disabled:opacity-50"
-          >
-            {loading ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
-            ) : (
-              <>
-                <Chrome className="w-5 h-5 text-blue-500" />
-                Continuar con Google
-              </>
-            )}
-          </button>
-
-          <div className="flex items-center gap-4 my-6">
-            <div className="flex-1 h-px bg-white/10" />
-            <span className="text-sm text-gray-500">o</span>
-            <div className="flex-1 h-px bg-white/10" />
-          </div>
-
           {/* Email Form */}
           <form onSubmit={handleEmailRegister} className="space-y-4">
             <div>

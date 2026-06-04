@@ -3,19 +3,11 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { 
-  Chrome, Mail, Lock, Eye, EyeOff, ArrowLeft, User,
-  Loader2, KeyRound, HelpCircle
+import {
+  Mail, Lock, Eye, EyeOff, ArrowLeft, User,
+  Loader2, KeyRound
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-
-/**
- * Modo opcional: solo Google (sin email/contraseña en pantalla).
- * Por defecto: mail + Google. Activar con NEXT_PUBLIC_GOOGLE_ONLY_LOGIN=true en el build.
- */
-const GOOGLE_ONLY =
-  process.env.NEXT_PUBLIC_GOOGLE_ONLY_LOGIN === "true" ||
-  process.env.NEXT_PUBLIC_GOOGLE_ONLY_LOGIN === "1";
 
 function safeNextPath(raw: string | null): string {
   if (!raw || !raw.startsWith("/") || raw.startsWith("//")) return "/taller";
@@ -39,17 +31,6 @@ export default function LoginPage() {
   const [showForgotUsername, setShowForgotUsername] = useState(false);
   /** Tras signUp sin sesión (Supabase pide confirmar email antes de entrar). */
   const [registerEmailSent, setRegisterEmailSent] = useState(false);
-
-  const handleGoogleLogin = async () => {
-    setLoading(true);
-    const next = safeNextPath(new URLSearchParams(window.location.search).get("next"));
-    await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: `https://appjeezpro.store/auth/callback?next=${encodeURIComponent(next)}`,
-      },
-    });
-  };
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -221,67 +202,6 @@ export default function LoginPage() {
     );
   }
 
-  if (GOOGLE_ONLY && !showRecovery && !showForgotUsername) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[#0a0a0a] p-4">
-        <div className="w-full max-w-md">
-          <div className="mb-8 text-center">
-            <Link href="/landing" className="mb-6 inline-flex items-center gap-2">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#FFE600]">
-                <span className="font-black text-[#003087]">MJ</span>
-              </div>
-              <span className="text-xl font-bold text-white">MaqJeez</span>
-            </Link>
-            <h1 className="mb-2 text-2xl font-bold text-white">Acceso al taller</h1>
-            <p className="text-sm text-gray-400">
-              Ingresá con tu cuenta de Google. El catálogo de precios es público y no requiere cuenta.
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-8">
-            <button
-              type="button"
-              onClick={handleGoogleLogin}
-              disabled={loading}
-              className="flex w-full items-center justify-center gap-3 rounded-xl bg-white px-4 py-3 font-semibold text-gray-900 transition hover:bg-gray-100 disabled:opacity-50"
-            >
-              {loading ? (
-                <Loader2 className="h-5 w-5 animate-spin" />
-              ) : (
-                <>
-                  <Chrome className="h-5 w-5 text-blue-500" />
-                  Continuar con Google
-                </>
-              )}
-            </button>
-
-            <p className="mt-6 text-center text-xs leading-relaxed text-gray-500">
-              Al continuar con Google aceptás los{" "}
-              <Link href="/terminos" className="text-[#FFE600] underline underline-offset-2 hover:text-white">
-                términos de uso
-              </Link>{" "}
-              y la{" "}
-              <Link href="/privacidad" className="text-[#FFE600] underline underline-offset-2 hover:text-white">
-                política de privacidad
-              </Link>
-              .
-            </p>
-
-            <div className="mt-6 flex flex-col gap-3 border-t border-white/10 pt-6 text-center text-sm">
-              <Link href="/catalogo" className="font-semibold text-[#FDB71A] hover:underline">
-                Ver catálogo público (sin iniciar sesión)
-              </Link>
-              <Link href="/landing" className="inline-flex items-center justify-center gap-2 text-gray-400 hover:text-white">
-                <ArrowLeft className="h-4 w-4" />
-                Volver a la página principal
-              </Link>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   if (showForgotUsername) {
     return (
       <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-4">
@@ -355,43 +275,6 @@ export default function LoginPage() {
 
         {/* Login/Register Card */}
         <div className="bg-white/5 border border-white/10 rounded-2xl p-8">
-          {/* Google Button */}
-          <button
-            onClick={handleGoogleLogin}
-            disabled={loading}
-            className="w-full flex items-center justify-center gap-3 py-3 px-4 bg-white text-gray-900 rounded-xl font-semibold hover:bg-gray-100 transition disabled:opacity-50"
-          >
-            {loading ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
-            ) : (
-              <>
-                <Chrome className="w-5 h-5 text-blue-500" />
-                Continuar con Google
-              </>
-            )}
-          </button>
-
-          <p className="mb-4 mt-4 text-center text-[11px] leading-relaxed text-gray-500">
-            Al iniciar sesión aceptás los{" "}
-            <Link href="/terminos" className="text-[#FFE600] underline underline-offset-2 hover:text-white">
-              términos
-            </Link>{" "}
-            y la{" "}
-            <Link href="/privacidad" className="text-[#FFE600] underline underline-offset-2 hover:text-white">
-              privacidad
-            </Link>
-            .{" "}
-            <Link href="/catalogo" className="text-gray-400 hover:text-[#FDB71A]">
-              Catálogo público (sin cuenta)
-            </Link>
-          </p>
-
-          <div className="my-6 flex items-center gap-4">
-            <div className="h-px flex-1 bg-white/10" />
-            <span className="text-sm text-gray-500">o</span>
-            <div className="h-px flex-1 bg-white/10" />
-          </div>
-
           {/* Login/Register Toggle */}
           <div className="flex gap-2 mb-6">
             <button
