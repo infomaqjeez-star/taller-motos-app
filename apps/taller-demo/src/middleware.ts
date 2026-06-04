@@ -1,22 +1,28 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-/** Rutas accesibles sin sesión (catálogo público, login, legales, callback OAuth). */
+/** Rutas accesibles sin sesión (catálogo público, login, legales, robots/sitemap, etc). */
 function isPublicPath(pathname: string): boolean {
   if (pathname.startsWith("/catalogo")) return true;
-  /* APIs públicas del catálogo (sin sesión Google) */
+  /* APIs públicas */
   if (pathname.startsWith("/api/catalogo")) return true;
   if (pathname.startsWith("/api/admin")) return true;
-  if (pathname.startsWith("/api/debug-catalogo")) return true;
   if (pathname.startsWith("/api/vendedor")) return true;
   if (pathname.startsWith("/api/cliente")) return true;
   if (pathname.startsWith("/api/pedidos")) return true;
   if (pathname.startsWith("/api/comprobante")) return true;
+  if (pathname.startsWith("/api/health")) return true;
+  if (pathname.startsWith("/api/auth")) return true;
+  /* Auth flows */
   if (pathname.startsWith("/login")) return true;
   if (pathname.startsWith("/register")) return true;
   if (pathname.startsWith("/auth")) return true;
+  /* Landing y ayuda */
   if (pathname.startsWith("/landing")) return true;
   if (pathname.startsWith("/ayuda")) return true;
+  /* SEO + crawlers + well-known */
+  if (pathname === "/robots.txt" || pathname === "/sitemap.xml" || pathname === "/llms.txt" || pathname === "/ads.txt") return true;
+  if (pathname.startsWith("/.well-known")) return true;
   const legal = ["/terminos", "/privacidad", "/cookies", "/cancelacion"];
   if (legal.some((p) => pathname === p || pathname.startsWith(`${p}/`))) return true;
   return false;
@@ -66,6 +72,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|manifest.json|sw\\.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|mp3|mp4|woff2?)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|manifest.json|robots.txt|sitemap.xml|llms.txt|ads.txt|sw\\.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|mp3|mp4|woff2?)$).*)",
   ],
 };
