@@ -737,14 +737,14 @@ export default function AyudaPage() {
               </p>
               <div className="mt-5 space-y-2.5">
                 <a
-                  href="https://wa.me/5491100000000"
+                  href="https://wa.me/5491159000486"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 hover:bg-white/[0.07] transition group"
                 >
                   <span className="flex items-center gap-3">
                     <Phone className="h-4 w-4 text-white/60 group-hover:text-white" />
-                    <span className="text-sm">WhatsApp</span>
+                    <span className="text-sm">WhatsApp 11 5900-0486</span>
                   </span>
                   <ChevronDown className="h-4 w-4 -rotate-90 text-white/40" />
                 </a>
