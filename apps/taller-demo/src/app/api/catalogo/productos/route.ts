@@ -23,15 +23,14 @@ export async function GET(_req: NextRequest) {
 
     const supabase = getSupabaseServer();
 
-    // 2) Paralelizar ambas queries
-    // Intentar con columnas nuevas; si fallan (no existen en la tabla aun), hacer fallback
+    // 2) Query principal — usar original_price + catalog_price (el descuento se calcula aqui).
+    //    Si la columna no existe (legacy), fallback al schema viejo.
     let productosRes: any = await supabase
       .from("catalog_products")
-      .select("sku, name, catalog_price, discount_price, on_sale, discount_pct, image_url, category")
+      .select("sku, name, catalog_price, original_price, image_url, category")
       .eq("active", true);
 
-    // Fallback si faltan las columnas nuevas (discount_price, on_sale, discount_pct)
-    if (productosRes.error && productosRes.error.message?.includes("discount_price")) {
+    if (productosRes.error && productosRes.error.message?.includes("original_price")) {
       productosRes = await supabase
         .from("catalog_products")
         .select("sku, name, catalog_price, image_url, category")
@@ -41,6 +40,39 @@ export async function GET(_req: NextRequest) {
     if (productosRes.error) {
       return NextResponse.json({ error: productosRes.error.message }, { status: 500 });
     }
+
+    // 2b) Mapear original_price (DB) -> shape esperado por la UI:
+    //   catalog_price  = precio tachado (lo que era antes)
+    //   discount_price = precio actual a cobrar
+    //   on_sale        = true si hay descuento
+    //   discount_pct   = % calculado
+    productosRes.data = (productosRes.data || []).map((p: any) => {
+      const priceActual = Number(p.catalog_price) || 0;
+      const priceOriginal = Number(p.original_price) || 0;
+      if (priceOriginal > 0 && priceOriginal > priceActual) {
+        const pct = Math.round((1 - priceActual / priceOriginal) * 100);
+        return {
+          sku: p.sku,
+          name: p.name,
+          image_url: p.image_url,
+          category: p.category,
+          catalog_price: priceOriginal,
+          discount_price: priceActual,
+          on_sale: true,
+          discount_pct: pct,
+        };
+      }
+      return {
+        sku: p.sku,
+        name: p.name,
+        image_url: p.image_url,
+        category: p.category,
+        catalog_price: priceActual,
+        discount_price: null,
+        on_sale: false,
+        discount_pct: 0,
+      };
+    });
 
     // 3) Contar ventas por SKU (opcional — si la tabla no existe, ignorar)
     const ventasPorSku: Record<string, number> = {};
