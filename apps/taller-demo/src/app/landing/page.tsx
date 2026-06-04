@@ -266,7 +266,7 @@ export default function LandingPage() {
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[
               { icon: <Layers className="w-6 h-6 text-[#FFE600]" />, title: "Todo Integrado", desc: "Las 3 plataformas comparten datos. Tu inventario de taller se sincroniza con tu tienda online automáticamente." },
-              { icon: <Shield className="w-6 h-6 text-purple-400" />, title: "Seguridad Total", desc: "Autenticación con Google, seguridad por tarea y control de accesos por rol para proteger tu negocio." },
+              { icon: <Shield className="w-6 h-6 text-purple-400" />, title: "Seguridad Total", desc: "Autenticación cifrada con email y contraseña, seguridad por tarea y control de accesos por rol para proteger tu negocio." },
               { icon: <TrendingUp className="w-6 h-6 text-green-400" />, title: "Reportes Avanzados", desc: "Estadísticas de ventas, tiempos de taller, rendimiento de equipo y métricas de MercadoLibre unificadas." },
               { icon: <MessageSquare className="w-6 h-6 text-blue-400" />, title: "IA para ML", desc: "Responde preguntas de compradores automáticamente con inteligencia artificial entrenada para tu negocio." },
               { icon: <Globe className="w-6 h-6 text-orange-400" />, title: "Marketplace Propio", desc: "Vende sin depender de terceros. Crea tu propio canal de ventas digital con productos físicos y digitales." },
@@ -384,7 +384,7 @@ export default function LandingPage() {
               { q:"¿Necesito conocimientos técnicos para usar las plataformas?", a:"No. Todas las plataformas están diseñadas para ser intuitivas. Si sabés usar WhatsApp, podés usar AppJeez. Además, te acompañamos en el onboarding." },
               { q:"¿Puedo cancelar mi suscripción en cualquier momento?", a:"Sí. No hay contratos de permanencia. Podés cancelar cuando quieras desde tu panel. El acceso se mantiene hasta el fin del período pagado." },
               { q:"¿Los precios son en pesos argentinos?", a:"Sí. Todos los precios están expresados en pesos argentinos (ARS). Aceptamos transferencia bancaria, Mercado Pago y tarjetas de crédito/débito." },
-              { q:"¿Mis datos están seguros?", a:"Absolutamente. Usamos Supabase con encriptación de datos en reposo y en tránsito, autenticación OAuth2 y backups automáticos diarios. Nunca vendemos tus datos a terceros." },
+              { q:"¿Mis datos están seguros?", a:"Absolutamente. Usamos Supabase con encriptación de datos en reposo y en tránsito, autenticación con email y contraseña, y backups automáticos diarios. Nunca vendemos tus datos a terceros." },
               { q:"¿Puedo usar más de una plataforma?", a:"Sí. Podés contratar cada plataforma por separado. Si usás más de una, contactanos para un precio combinado personalizado." },
               { q:"¿Hay período de prueba gratuito?", a:"Sí. Ofrecemos 14 días de prueba gratuita en cualquier plataforma sin necesidad de tarjeta de crédito. Solo creá tu cuenta y empezá." },
               { q:"¿Qué pasa si tengo un problema técnico?", a:"Tenemos soporte por email y WhatsApp. Los planes Pro y Business tienen soporte prioritario con respuesta en menos de 4 horas hábiles." },
