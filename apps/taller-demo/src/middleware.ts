@@ -16,6 +16,7 @@ function isPublicPath(pathname: string): boolean {
   if (pathname.startsWith("/register")) return true;
   if (pathname.startsWith("/auth")) return true;
   if (pathname.startsWith("/landing")) return true;
+  if (pathname.startsWith("/ayuda")) return true;
   const legal = ["/terminos", "/privacidad", "/cookies", "/cancelacion"];
   if (legal.some((p) => pathname === p || pathname.startsWith(`${p}/`))) return true;
   return false;
