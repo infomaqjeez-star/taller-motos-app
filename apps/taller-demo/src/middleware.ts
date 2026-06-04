@@ -23,6 +23,8 @@ function isPublicPath(pathname: string): boolean {
   /* SEO + crawlers + well-known */
   if (pathname === "/robots.txt" || pathname === "/sitemap.xml" || pathname === "/llms.txt" || pathname === "/ads.txt") return true;
   if (pathname.startsWith("/.well-known")) return true;
+  /* Imagenes generadas por Next 14 Metadata API (sin extension) */
+  if (pathname === "/icon" || pathname === "/apple-icon" || pathname === "/opengraph-image" || pathname === "/twitter-image") return true;
   const legal = ["/terminos", "/privacidad", "/cookies", "/cancelacion"];
   if (legal.some((p) => pathname === p || pathname.startsWith(`${p}/`))) return true;
   return false;
@@ -72,6 +74,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|manifest.json|robots.txt|sitemap.xml|llms.txt|ads.txt|sw\\.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|mp3|mp4|woff2?)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|manifest.json|robots.txt|sitemap.xml|llms.txt|ads.txt|icon|apple-icon|opengraph-image|twitter-image|sw\\.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|mp3|mp4|woff2?)$).*)",
   ],
 };
