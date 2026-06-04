@@ -25,16 +25,20 @@ export async function GET(_req: NextRequest) {
 
     // 2) Query principal — usar original_price + catalog_price (el descuento se calcula aqui).
     //    Si la columna no existe (legacy), fallback al schema viejo.
+    // Solo productos activos con precio mayor a 0 (los que no tienen precio
+    // pueden ser editados desde el panel admin para asignar precio).
     let productosRes: any = await supabase
       .from("catalog_products")
       .select("sku, name, catalog_price, original_price, image_url, category")
-      .eq("active", true);
+      .eq("active", true)
+      .gt("catalog_price", 0);
 
     if (productosRes.error && productosRes.error.message?.includes("original_price")) {
       productosRes = await supabase
         .from("catalog_products")
         .select("sku, name, catalog_price, image_url, category")
-        .eq("active", true);
+        .eq("active", true)
+        .gt("catalog_price", 0);
     }
 
     if (productosRes.error) {
