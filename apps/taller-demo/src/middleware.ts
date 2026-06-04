@@ -25,6 +25,10 @@ function isPublicPath(pathname: string): boolean {
   if (pathname.startsWith("/.well-known")) return true;
   /* Imagenes generadas por Next 14 Metadata API (sin extension) */
   if (pathname === "/icon" || pathname === "/apple-icon" || pathname === "/opengraph-image" || pathname === "/twitter-image") return true;
+  /* Archivos de verificacion de search engines (Google Search Console, Bing, etc) */
+  if (/^\/google[a-f0-9]{16}\.html$/.test(pathname)) return true;
+  if (/^\/BingSiteAuth\.xml$/.test(pathname)) return true;
+  if (/^\/yandex_[a-f0-9]+\.html$/.test(pathname)) return true;
   const legal = ["/terminos", "/privacidad", "/cookies", "/cancelacion"];
   if (legal.some((p) => pathname === p || pathname.startsWith(`${p}/`))) return true;
   return false;
@@ -74,6 +78,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|manifest.json|robots.txt|sitemap.xml|llms.txt|ads.txt|icon|apple-icon|opengraph-image|twitter-image|sw\\.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|mp3|mp4|woff2?)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|manifest.json|robots.txt|sitemap.xml|llms.txt|ads.txt|icon|apple-icon|opengraph-image|twitter-image|sw\\.js|google[a-f0-9]{16}\\.html|BingSiteAuth\\.xml|yandex_.*\\.html|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|mp3|mp4|woff2?)$).*)",
   ],
 };
