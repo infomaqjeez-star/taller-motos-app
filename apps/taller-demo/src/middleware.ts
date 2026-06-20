@@ -20,6 +20,9 @@ function isPublicPath(pathname: string): boolean {
   /* Landing y ayuda */
   if (pathname.startsWith("/landing")) return true;
   if (pathname.startsWith("/ayuda")) return true;
+  if (pathname.startsWith("/blog")) return true;
+  if (pathname.startsWith("/api/blog")) return true;
+  if (pathname === "/feed.xml") return true;
   /* SEO + crawlers + well-known */
   if (pathname === "/robots.txt" || pathname === "/sitemap.xml" || pathname === "/llms.txt" || pathname === "/ads.txt") return true;
   if (pathname.startsWith("/.well-known")) return true;
@@ -78,6 +81,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|manifest.json|robots.txt|sitemap.xml|llms.txt|ads.txt|icon|apple-icon|opengraph-image|twitter-image|sw\\.js|google[a-f0-9]{16}\\.html|BingSiteAuth\\.xml|yandex_.*\\.html|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|mp3|mp4|woff2?)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|manifest.json|robots.txt|sitemap.xml|llms.txt|ads.txt|feed.xml|icon|apple-icon|opengraph-image|twitter-image|sw\\.js|google[a-f0-9]{16}\\.html|BingSiteAuth\\.xml|yandex_.*\\.html|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|mp3|mp4|woff2?)$).*)",
   ],
 };

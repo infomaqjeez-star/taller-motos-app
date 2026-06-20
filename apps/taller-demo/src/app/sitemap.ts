@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { getAllPosts } from "@/lib/blog/store";
 
 const BASE = "https://appjeezpro.store";
 
@@ -23,6 +24,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${BASE}/catalogo/promo`, lastModified: now, changeFrequency: "daily", priority: 0.85 },
     { url: `${BASE}/catalogo/descuentos`, lastModified: now, changeFrequency: "daily", priority: 0.85 },
     { url: `${BASE}/ayuda`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
+    { url: `${BASE}/blog`, lastModified: now, changeFrequency: "daily", priority: 0.8 },
     { url: `${BASE}/terminos`, lastModified: now, changeFrequency: "yearly", priority: 0.3 },
     { url: `${BASE}/privacidad`, lastModified: now, changeFrequency: "yearly", priority: 0.3 },
     { url: `${BASE}/cookies`, lastModified: now, changeFrequency: "yearly", priority: 0.3 },
@@ -63,5 +65,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // ignorar errores: si Supabase no responde devolvemos solo paginas estaticas
   }
 
-  return [...staticItems, ...productItems];
+  // 3) Posts del blog (file-based)
+  let blogItems: SitemapItem[] = [];
+  try {
+    const posts = getAllPosts();
+    blogItems = posts.map((p) => ({
+      url: `${BASE}/blog/${p.slug}`,
+      lastModified: p.updatedAt ? new Date(p.updatedAt) : new Date(p.publishedAt),
+      changeFrequency: "weekly" as const,
+      priority: 0.7,
+    }));
+  } catch {
+    // ignorar si el store falla
+  }
+
+  return [...staticItems, ...productItems, ...blogItems];
 }
